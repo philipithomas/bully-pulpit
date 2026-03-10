@@ -57,7 +57,7 @@ test('contraption redirect: /posts/:slug -> /:slug', async ({ request }) => {
 test('redirected postcard URL resolves to a real page', async ({ page }) => {
   await page.goto('/posts/what-i-m-up-to-january-2025')
   await expect(page).toHaveURL('/2025-01')
-  await expect(page.locator('h1')).toHaveText('January 2025')
+  await expect(page.locator('h1')).toHaveText("What I'm up to - January 2025")
 })
 
 test('redirected contraption URL resolves to a real page', async ({ page }) => {
