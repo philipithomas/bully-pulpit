@@ -121,12 +121,14 @@ export default async function SlugPage({ params }: Props) {
 
         {/* Cover image */}
         {item.frontmatter.coverImage && (
-          <div className="relative aspect-[2/1] overflow-hidden rounded-sm mb-10 max-w-3xl mx-auto">
+          <div className="mb-10 max-w-3xl mx-auto">
             <Image
               src={item.frontmatter.coverImage}
               alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}
-              fill
-              className="object-cover"
+              width={768}
+              height={384}
+              data-zoomable=""
+              className="w-full rounded-sm cursor-zoom-in"
               priority
               sizes="(max-width: 768px) 100vw, 768px"
             />
