@@ -1,0 +1,277 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* ============================
+   Fonts from fonts.contraption.co
+   ============================ */
+
+@font-face {
+  font-family: "Sohne";
+  src: url("https://fonts.contraption.co/klim/soehne-buch.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sohne";
+  src: url("https://fonts.contraption.co/klim/soehne-buch-kursiv.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sohne";
+  src: url("https://fonts.contraption.co/klim/soehne-halbfett.woff2")
+    format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sohne";
+  src: url("https://fonts.contraption.co/klim/soehne-halbfett-kursiv.woff2")
+    format("woff2");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Tiempos Text";
+  src: url("https://fonts.contraption.co/klim/tiempos-text-regular.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Tiempos Text";
+  src: url("https://fonts.contraption.co/klim/tiempos-text-regular-italic.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sohne Mono";
+  src: url("https://fonts.contraption.co/klim/soehne-mono-buch.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sohne Mono";
+  src: url("https://fonts.contraption.co/klim/soehne-mono-halbfett.woff2")
+    format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================
+   Theme configuration
+   ============================ */
+
+@theme {
+  --font-sans:
+    "Sohne", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-serif: "Tiempos Text", Georgia, "Times New Roman", serif;
+  --font-mono:
+    "Sohne Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+    monospace;
+
+  /* Accent colors */
+  --color-forest: #2b4a3e;
+  --color-indigo: #2c3e6b;
+  --color-walnut: #6b4d3a;
+  --color-brass: #b8956a;
+
+  /* Backgrounds */
+  --color-offwhite: #f5f3f0;
+  --color-offwhite-warm: #f6f4f1;
+  --color-offwhite-cool: #f5f6fa;
+  --color-offwhite-dark: #edebe7;
+  --color-offwhite-light: #faf9f7;
+
+  /* Grays */
+  --color-gray-050: #f7f6f4;
+  --color-gray-075: #eceae6;
+  --color-gray-100: #e0ddd8;
+  --color-gray-200: #cfcbc4;
+  --color-gray-300: #b1ada6;
+  --color-gray-400: #9e9a93;
+  --color-gray-500: #7e7a73;
+  --color-gray-600: #625e58;
+  --color-gray-700: #514d48;
+  --color-gray-800: #3b3834;
+  --color-gray-850: #2f2c28;
+  --color-gray-900: #222120;
+  --color-gray-925: #1a1918;
+  --color-gray-950: #111110;
+  --color-gray-975: #090908;
+
+  /* Brand */
+  --color-yellow: #fee53f;
+  --color-blue: #54759e;
+  --color-vivid-blue: #0056ac;
+  --color-red: #c43e2a;
+  --color-black: #0a0a0a;
+  --color-white: #ffffff;
+}
+
+/* ============================
+   Base styles
+   ============================ */
+
+::selection {
+  background-color: var(--color-yellow);
+  color: var(--color-black);
+}
+
+body {
+  background-color: var(--color-offwhite);
+}
+
+/* ============================
+   Component classes
+   ============================ */
+
+@utility container {
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  @utility container {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  @utility container {
+    padding-inline: 2rem;
+  }
+}
+
+@utility tracked-caps {
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+@utility editorial-link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0% 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 1px;
+  transition: background-size 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* hover state handled via Tailwind hover: variant on the element */
+
+/* ============================
+   Reveal animation
+   ============================ */
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.reveal.revealed {
+  animation: reveal-up 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .reveal.revealed {
+    animation: none;
+  }
+}
+
+/* ============================
+   Prose overrides (post content)
+   ============================ */
+
+.prose {
+  --tw-prose-body: var(--color-gray-800);
+  --tw-prose-headings: var(--color-gray-950);
+  --tw-prose-links: var(--color-gray-950);
+  --tw-prose-bold: var(--color-gray-900);
+  --tw-prose-code: var(--color-gray-900);
+  --tw-prose-pre-bg: var(--color-gray-900);
+  --tw-prose-pre-code: var(--color-gray-100);
+  --tw-prose-quotes: var(--color-gray-800);
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.prose blockquote {
+  border-left-color: var(--color-gray-200);
+}
+
+.prose blockquote::before,
+.prose blockquote::after {
+  content: none;
+}
+
+.prose :where(code):not(:where(pre *)) {
+  background-color: var(--color-gray-100);
+  padding: 0.25rem 0.25rem 0.125rem;
+  border-radius: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+.prose pre {
+  background-color: var(--color-gray-900);
+  color: var(--color-gray-100);
+  border-radius: 0.5rem;
+}
+
+.prose a {
+  text-decoration-color: var(--color-gray-300);
+  text-underline-offset: 2px;
+  transition: color 0.3s ease;
+}
+
+.prose a:hover {
+  color: var(--color-forest);
+}
+
+.prose img {
+  border-radius: 0.25rem;
+}

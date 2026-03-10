@@ -1,0 +1,99 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on",
+        "noDuplicateClasses": "on"
+      }
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!node_modules",
+      "!.next",
+      "!dist",
+      "!build",
+      "!next-env.d.ts",
+      "!tsconfig.json"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80
+  },
+  "javascript": {
+    "formatter": {
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "bracketSpacing": true,
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "quoteStyle": "single",
+      "semicolons": "asNeeded",
+      "trailingCommas": "es5"
+    }
+  },
+  "linter": {
+    "domains": {
+      "next": "recommended",
+      "react": "all",
+      "test": "recommended"
+    },
+    "enabled": true,
+    "rules": {
+      "a11y": "off",
+      "complexity": {
+        "noImportantStyles": "off"
+      },
+      "recommended": true,
+      "security": {
+        "noDangerouslySetInnerHtml": "off"
+      },
+      "style": {
+        "noNonNullAssertion": "off",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": [
+                  "./**",
+                  "../**",
+                  "!./src/env.ts",
+                  "!./**/public/**",
+                  "!../**/public/**"
+                ],
+                "message": "Relative imports are not allowed (except into /public/)."
+              }
+            ]
+          }
+        },
+        "useConsistentCurlyBraces": "error",
+        "useImportType": {
+          "level": "error",
+          "options": {
+            "style": "auto"
+          }
+        },
+        "useSelfClosingElements": "error",
+        "useComponentExportOnlyModules": "off"
+      }
+    }
+  },
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
+  }
+}
