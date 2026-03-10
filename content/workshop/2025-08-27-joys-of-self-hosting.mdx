@@ -1,0 +1,31 @@
+---
+title: "The joys of self-hosting"
+publishedAt: "2025-08-27"
+coverImage: "/images/covers/joys-of-self-hosting-cover.jpg"
+---
+
+When I checked my phone this morning, the first notification was that my [home server "Toolbox"](/a-mini-data-center) was down. Everything on it was offline - [Postcard](https://postcard.page), [Booklet](https://booklet.group), this blog, and more.
+
+I pulled out my laptop, and began investigating the outage with some coffee [\[1\]](#fn1). I could SSH in, so that meant the computer was online.
+
+It seemed unusual that every single app was down. That could typically indicate a database outage. But, this blog and my apps use separate databases - so I ruled that out.
+
+I checked the logs, and saw that none of the apps were receiving any traffic. I dove down a rabbit hole of debugging the [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) that routes traffic to the apps, because that seemed to make sense as the common point of failiure. But, after awhile I realized - the tunnel was working fine.
+
+Stuck, I looked at the stats on the machine. I thought that the [AI I had installed might have gone haywire](/adding-a-brain-to-my-toolbox). But, memory was fine. CPU was fine. Then, I found it. The disk was full.
+
+With the help of ChatGPT, I debugged the full disk. What had filled up a terabyte of space? I quickly narrowed in on Docker as the problem. [Docker](https://en.wikipedia.org/wiki/Docker_\(software\)) is a common tool for running apps in isolated containers. [Docker is known to hoard disk space](https://forum.gitlab.com/t/docker-images-taking-up-disk-space/41717/2), so I began running some common commands to clean up old images. That got 50 gigabytes back, which restored functionality to the apps. But, 400 gigs were still being used. Ugh.
+
+Continuing my investigation, I realized my [Signal API proxy](https://github.com/bbernhard/signal-cli-rest-api) was the app hoarding space. I've used this service to send myself notifications on the Signal Messenger for months, but I began accessing it more frequently as I [connected Signal to my local AI](/claude-launching-and-tools). My AI code polls Signal every few seconds now to check for incoming messages. And, it turns out that the library I use has a bug that [writes to disk way too often](https://github.com/bbernhard/signal-cli-rest-api/issues/688), quickly taking up 400 gigabytes of space.
+
+The short-term solution was simple: I deleted the container. It runs in a way where it re-boots with the correct configuration almost immediately. The Toolbox should be able to run smoothly for another week or two before the disk fills up again.
+
+Now, I need to figure out the long-term fix. As a junior coder, I would have been lazy - delete the container every day, automatically. As a mid-career coder, I would have rewritten the system to be more efficient to avoid filling up the disk. But, with my experience today, I will probably take the same approach as my earlycareer self. Over-engineering the solution creates no benefit for the end user (me), and could introduce new bugs. My time is better spent elsewhere. [\[2\]](#fn2)
+
+Honestly, enjoyed fixing this outage this morning. It's fun to maintain a little server. Every day has the potential for amusing side quests.
+
+* * *
+
+1.  A delicious Honduran Bourbon from [Tim Wendelboe](https://timwendelboe.no/). [↩︎](#fnref1)
+    
+2.  Nobody wants to admit it, but the internet is held together by duct tape. [↩︎](#fnref2)

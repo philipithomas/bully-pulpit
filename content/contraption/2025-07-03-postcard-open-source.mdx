@@ -1,0 +1,22 @@
+---
+title: "Postcard is now open source"
+description: "Self-host a personal website + newsletter"
+publishedAt: "2025-07-03"
+coverImage: "/images/covers/postcard-open-source-cover.jpg"
+---
+
+In 2022, I launched [Postcard](/launching-postcard) as a personal website + newsletter. I had deleted social media, and [wanted a way to stay in touch with friends via email](https://www.philipithomas.com/posts/how-to-replace-social-media-with-a-personal-newsletter). It powers my personal website, [philipithomas.com](https://philipithomas.com), where [I've published monthly "What I'm up to" every month since](https://www.philipithomas.com/posts/).
+
+[Postcard's launch was well-received](https://news.ycombinator.com/item?id=33549267) and thousands of people signed up. Today, many people continue to use and maintain their Postcard sites. Revenue is modest - I make dozens of dollars per month on it. But, I'm happy to maintain it because I believe [dependable tools matter](/introducing-contraption-co). Today, I still maintain Postcard and the hosted service runs on a [Mac Mini on my desk.](/a-mini-data-center)
+
+I've decided to release the source code for Postcard. I update the service only occasionally, several developers have asked to contribute, and I no longer expect meaningful revenue from the project. Open-sourcing it feels right.
+
+In the age of vibe coding, I think it would be fun to give people a working app they can customize. Postcard is a fairly simple application, written in [Ruby on Rails](/rails-versus-nextjs), that works with few dependencies. So, it should be easy to run and customize.
+
+In order to open-source Postcard, I made some changes to the code. Most significant is that I rewrote the application to support a "Solo" mode for running one single site, which simplifies the hosting and deployment for most open-source users. The hosted service runs in "Multiuser" mode to support multiple users, custom domains, payments, and other options. The codebase includes both modes on the same `main` branch.
+
+Deployment is straightforward. A Dockerfile is included, and a `render.yaml` file lets you ship Postcard to [Render](https://render.com) with minimal setup.
+
+Check it out, fork it, and let me know what you build:
+
+[**github.com/contraptionco/postcard**](https://github.com/contraptionco/postcard)

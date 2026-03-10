@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
 import '@/styles/globals.css'
+import { AuthProvider } from '@/components/auth/auth-provider'
 import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
+import { ImageZoom } from '@/components/ui/image-zoom'
+import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { siteConfig } from '@/lib/config'
 
 export const metadata: Metadata = {
@@ -47,16 +50,20 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans font-normal antialiased text-gray-900 bg-offwhite">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-gray-950"
-        >
-          Skip to content
-        </a>
-        <Header />
-        {/* biome-ignore lint/correctness/useUniqueElementIds: root layout renders once */}
-        <main id="main">{children}</main>
-        <Footer />
+        <AuthProvider>
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-gray-950"
+          >
+            Skip to content
+          </a>
+          <Header />
+          {/* biome-ignore lint/correctness/useUniqueElementIds: root layout renders once */}
+          <main id="main">{children}</main>
+          <Footer />
+          <ScrollReveal />
+          <ImageZoom />
+        </AuthProvider>
       </body>
     </html>
   )

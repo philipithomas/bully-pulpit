@@ -6,6 +6,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
+import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
 import {
   getAllPosts,
@@ -61,6 +62,11 @@ export default async function SlugPage({ params }: Props) {
 
   return (
     <article className={isWorkshop ? 'bg-offwhite-warm' : undefined}>
+      <JsonLd
+        type="article"
+        post={post ?? undefined}
+        page={page ?? undefined}
+      />
       <div className="container py-12 md:py-16 max-w-3xl mx-auto">
         {/* Header */}
         <header className="mb-10">

@@ -1,0 +1,51 @@
+---
+title: "Chroma for Ruby"
+publishedAt: "2026-01-14"
+coverImage: "/images/covers/chroma-for-ruby-cover.jpg"
+---
+
+Last week, I shared a personal project I built over the holidays - [Trivet](/trivet-adds-google-sign-in-to-ghost), which adds Google sign-in to Ghost.
+
+Here, I'm sharing a work-focused holiday project I built: [an official Ruby client for Chroma](https://github.com/chroma-core/chroma/pull/6120).
+
+Ruby is a programming language I enjoy and appreciate. I wrote _[Why Ruby on Rails still matters](/rails-versus-nextjs)_ about its elegance, and continue to maintain projects like [Booklet](https://booklet.group) and [Postcard](https://postcard.page) in Ruby.
+
+When I joined Chroma last year, I switched Booklet to use Chroma Cloud for search and [wrote about it here](/chroma). At the time, Chroma did not have an official Ruby client, so I used an unofficial community package. Unfortunately, that package has not been maintained and is no longer compatible with Chroma Cloud, leaving Booklet search broken.
+
+Over the holidays I spent some time with [Codex](https://openai.com/codex/) building a new Chroma library for Ruby. This new library supports all of Chroma's newest features, and will be part of the [core Chroma monorepo](https://github.com/chroma-core/chroma). It is [published to RubyGems as `chromadb-experimental`](https://rubygems.org/gems/chromadb-experimental)[\[1\]](#fn1) - so you can use it right now.
+
+Chroma's search functions have gotten more powerful over the last year. Last month, Chroma released a [new Search API](https://www.trychroma.com/project/sparse-vector-search) with support for sparse vector searches and hybrid search. This overcomes many limitations of "traditional" vector search and turns Chroma Cloud into a powerful search product.
+
+Traditional dense vector search, like that built on [OpenAI's vector embedding models](https://platform.openai.com/docs/guides/embeddings), is good at semantic search - searching "marketing" would match "advertising" in Booklet's search results. But this method does not handle keyword search well - searching for a person's name would not return their user profile as you would expect.
+
+I originally got around this by wrapping Booklet's search function with a full-text search layer:
+
+```
+@search = current_member.searches.create(query: query).embed
+
+member_name_matches = if @community.directory_enabled? || current_member.admin?
+  @community.members.active
+    .where("lower(members.name) LIKE ?", "%#{@search.query.downcase}%")
+    .order(Arel.sql("CASE WHEN lower(members.name) LIKE ? THEN 1 ELSE 2 END, members.name", "#{@search.query.downcase}%"))
+else
+  @community.members.active.where(id: 0)
+end
+```
+
+This meant that if I searched "Philip", my profile would come to the top of the list, separate from the semantic search.
+
+With Chroma's new sparse vector support, I was able to remove this wrapper entirely. Sparse vector search is built to match on keywords: proper nouns, people's names, function calls. [BM25](https://docs.trychroma.com/integrations/embedding-models/chroma-bm25#chroma-bm25) is the best-known sparse algorithm, but has limitations with misspellings ("Philip" vs. "Phillip") and variations ("Person" vs. "People"). A more powerful implementation is [SPLADE](https://docs.trychroma.com/integrations/embedding-models/chroma-cloud-splade), which handles fuzziness in keyword encoding better - it brings up my profile even if you search "phillip". Many Chroma applications power their entire search on SPLADE embeddings alone.
+
+Dense and sparse vectors each have their own benefits. Chroma now lets you combine them into a single [hybrid search](https://www.trychroma.com/project/sparse-vector-search#hybrid-search), bringing the best of both into one API. This is what I implemented for Booklet's new search - combining SPLADE sparse vectors with [Qwen](https://docs.trychroma.com/integrations/embedding-models/chroma-cloud-qwen#chroma-cloud-qwen) dense vectors. The result matches keywords like member names, but also handles generic queries like "marketing freelancing".
+
+Some Booklet posts are long, so I [chunk](https://research.trychroma.com/evaluating-chunking) documents into smaller pieces for retrieval. This means that when running a search, the same post could show up multiple times in the results. To solve this, I implemented Chroma Cloud's [new GroupBy functionality](https://www.trychroma.com/changelog/groupby), which de-duplicates results for a better experience.
+
+This post got technical. But the takeaway is simple: Chroma let me build a powerful, production-ready search system for a side project - with [usage-based pricing](https://trychroma.com/pricing), no servers to manage, and cutting-edge retrieval techniques.
+
+[Learn more about Chroma for Ruby here](https://github.com/chroma-core/chroma/pull/6120), try it out, and let me know what you think.
+
+And, you can demo this new search functionality on [FRCTNL](https://frctnl.xyz) after logging in.
+
+* * *
+
+1.  Please consider the package name temporary and the API unstable until the [PR has been merged](https://github.com/chroma-core/chroma/pull/6120), and feel free to provide feedback on that GitHub thread. [↩︎](#fnref1)

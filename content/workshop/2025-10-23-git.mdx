@@ -1,0 +1,21 @@
+---
+title: "GitHub syncing"
+publishedAt: "2025-10-23"
+coverImage: "/images/covers/git-cover.jpg"
+---
+
+Something I worked on just launched: [Chroma GitHub Sync](https://www.trychroma.com/changelog/introducing-chroma-sync).
+
+I love the mental model of businesses having a "shadow business" - a non-obvious skill they must master to achieve their main goal. My favorite example is the clothing rental company Rent the Runway, which also happens to be [the largest dry cleaner in the country](https://d3.harvard.edu/platform-rctom/submission/rent-the-runway-digitizes-high-fashion/?utm_source=chatgpt.com). Other examples include payment processors, which must build strong fraud detection systems, and insurance companies, which must excel at [float management](https://finmasters.com/warren-buffett-insurance-float/).
+
+One of the top uses of AI today is writing and fixing code. To do that effectively, AI needs context on the existing codebase - which is often large, complex, and difficult to traverse. Many people have been using [Chroma](https://trychroma.com) to index code so their agents can search it. It turns out that, for anyone building AI integrations with code today, the real challenge is not AI itself - it’s downloading code, making it searchable, and keeping it up to date. We heard from many coding agent startups that most of their engineering time wasn’t spent on AI, but on making their code searchable in the first place.
+
+At Chroma, we’ve now published code ingestion as a service. The core offering is a [platform](https://docs.trychroma.com/cloud/sync/overview#platform-sync) that connects to your custom GitHub app and lets you sync customer repositories. It follows best-in-class chunking and embedding logic, and uses [collection forking](https://www.trychroma.com/changelog/forking) to keep costs low and speed high.
+
+I didn’t work on the sync system directly - but I became the first “customer” of this syncing platform while building the Chroma Cloud dashboard. We wanted to create an “easy mode” of GitHub Sync for Chroma Cloud users, using the Chroma Cloud GitHub app. That way, customers could quickly sync their own code without setting up a GitHub app themselves. In effect, the Chroma Cloud dashboard acted like a normal user of Cloud Sync, letting us dogfood the product while shipping a great feature.
+
+Try it out - I think it’s a very cool product. Chroma built [Package Search MCP](https://www.trychroma.com/package-search) with this infrastructure, and now that the barrier to helping AI understand code is lower, there are many interesting use cases.
+
+For instance, I’m contemplating a “Support Q&A bot” for [Postcard](https://postcard.page), which would have access to the raw source code through Chroma and could answer questions like “How do I reset my password?” or “Is my site optimized for mobile?”
+
+We’re in the [installation phase of AI](https://avc.com/2015/02/the-carlota-perez-framework/): the core technology has matured, and now there’s so much work to do to make it useful.

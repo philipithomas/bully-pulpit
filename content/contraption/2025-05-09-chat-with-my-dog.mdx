@@ -1,0 +1,93 @@
+---
+title: "How I built a chatbot with my dog"
+description: "Lessons for AI prompting and retrieval"
+publishedAt: "2025-05-09"
+coverImage: "/images/covers/chat-with-my-dog-cover.jpg"
+---
+
+Last week, I spoke at a meetup about [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding) a chatbot with my dog. A few years ago, an app like this would have taken me multiple days to build. With current AI tooling, I wrote a short prompt, pressed _Enter_, and the LLM built a working prototype in ten minutes.
+
+Today's AI models are smart, but they're not perfect. Getting the results I wanted relied clear and structured inputs. In this post I share the prompt I used to build a working application in one message, and distill tips for getting the results you want from AI coding tools.
+
+First, check out the [presentation video](https://www.youtube.com/watch?v=-3muonMwiqY) and a [live demo of the tool](https://quesogpt.contraption.co/). The [source code is on GitHub](https://github.com/philipithomas/quesogpt).
+
+## The prompt
+
+Below is the prompt I gave [OpenAI’s Codex tool](https://github.com/openai/codex). I chose Codex with the **o3** model out of curiosity. After spending more time with [Claude Code](https://www.anthropic.com/claude-code), I wanted a comparison.
+
+> We're making a chat app.
+> 
+> This is an empty Next.js repo with a .env file with credentials for Chromadb and OpenAI, and I've already installed chromadb package and openai package and vercel ai package (read package.json)
+> 
+> How to work with ChromaDB:
+> 
+> import \{ ChromaClient \} from "chromadb";  
+> const client = new ChromaClient(\{  
+> path: "[https://api.trychroma.com:8000](https://api.trychroma.com:8000)",  
+> auth: \{ provider: "token", credentials: 'put your api key here, tokenHeaderType: "X\_CHROMA\_TOKEN" \},  
+> tenant: 'tenant id here',  
+> database: 'database name here'  
+> \});
+> 
+> const collection = await client.getOrCreateCollection(\{ name: "queso" \});  
+> await collection.add(\{  
+> ids: \["1", "2", "3"\],  
+> documents: \["apple", "oranges", "pineapple"\],  
+> \});  
+> console.log(await collection.query(\{ queryTexts: "hawaii", nResults: 1 \}));
+> 
+> Your task has two parts:
+> 
+> # Data ingestion
+> 
+> I want to be able to run `npm run memorize` and it will go through each photo in public/queso/ (all jpegs from 1.jpeg, 2.jpeg, ..., 46.jpeg) and do the following in a script for every image:
+> 
+> 1.  Use OpenAI o3 model, pass the image in and ask OpenAI to generate a caption like this: "Describe what's happening in the photo from the perspective of the white dog, ascribing detailed emotions and a story to the photo, like 'hiding scared under the couch' or 'having a happy walk in the Washington Square park in the Fall leaves' or 'playing with my friend, a golden-doodle who's bigger than me'"
+> 2.  Add that caption to chromadb using the environment variables from the .env file. The ID should be the file name and the document should be file name.Ensure that it iterates through all images in that folder every time.
+> 
+> # Querying
+> 
+> I want you to build a simple chatbot, like ChatGPT, using the OpenAI SDK and this chromadb data. But, instead of the system responding with text - it responds with images. The system is pretending to be a dog, and responds with images that we stored in data ingestion. The chat functionality should be the homepage of the app.Here's how it works.1. It's a simple chat interface, all in memory. (No sidebar or anything)2. When User sends a message, the system responds by having access to chromadb as a tool. It searches Chroma using collection.query to find 10 matching images, then in a light "Reranking" the llm approach (using O4-mini model) responds to the user message with a photo. IT should be intstructed to not send photos that have already been sent in the same chat. So, if the user asks "what's your favorite time of year", it might respond with a photo from Fall.  
+> 3\. User can ask follow-up questions to continue the chat in-memory
+> 
+> # Testing
+> 
+> Ensure `npm run build` succeeds and fix any issues if it does not.
+
+## Tip :Have the framework and libraries in place
+
+Before involving AI, I set up the repository by selecting the language, framework, and key libraries. AI coding tools struggle with an empty folder and benefit from guardrails. I prefer to make these choices myself; when given too much freedom, AI can act unpredictably.
+
+I chose [Next.js](https://github.com/vercel/next.js) for its strong AI ecosystem, including [Vercel’s AI library](https://ai-sdk.dev/docs/introduction) which simplifies building chatbots.
+
+AI tools often misunderstand third-party libraries. Because they train on historical data, they some historical APIs — such as older OpenAI SDK versions — but not the latest releases. Even after a library is installed, tools like Cursor, Codex, and Claude don't seem to inspect the local code to learn its interface. To ensure my app used the Chroma library correctly, I copied the relevant documentation directly into my prompt so the AI could correctly use the library.
+
+It's best to rely on AI coding tools for writing application logic, not doing research about the right language or libraries to choose.
+
+## Tip: Write acceptance criteria
+
+Manage AI developers the way you manage human developers.
+
+As a product manager, I wrote many tickets structured as a story plus acceptance criteria. The story — “A user can send a message” — captures the flow. Acceptance criteria — “Given an empty text box, when the user clicks Send, the system displays an error message” — define logic and tests.
+
+This repetition may feel tedious, but thinking through edge cases is the best way to get the AI to address them. For help, consider asking a separate LLM to draft stories and acceptance criteria before handing them to the coding tool.
+
+I split my app into two commands: `memorize`, which loads images into the database, and `run`, the chat interface.
+
+I end the prompt with build instructions. Current AI tools don’t run the code or try clicking buttons in teh UI. I use TypeScript because its build step runs static analysis and catches many issues, which the AI can proactively address. Providing the build command gives the AI a lightweight compilation check.
+
+## Explanation: Retrieval basics
+
+LLMs interpret images well, but my project includes about 50 photos. Uploading all 50 for every call would slow responses, exhaust the context window, and raise costs, since providers bill by context length.
+
+I index photos in a [Chroma](https://trycrhoma.com) database via captions. Chroma’s semantic search links concepts like “hiding under the couch” with “being scared,” helping the app select the right image for a question. I work on Chroma, so I’m biased, but this approach lets you add enough photos to keep the experience engaging.
+
+Rather than index raw images with an image-embedding model, I asked an LLM to describe each photo in plain language from Queso’s perspective, then stored those captions. This let me tune the system to focus on my dog and his emotions.
+
+Pro tip: I add a [reranking](https://medium.com/@sahin.samia/what-is-reranking-in-retrieval-augmented-generation-rag-ee3dd93540ee) to get high-quality responses. After the vector database returns semantic matches, instead of directly returning the top match - run the results through an LLM to select the best one. Reranking improves retrieval accuracy.
+
+## Try it out
+
+With AI tools, you can quickly prototype applications like this for your own problems. To get the results you want, I recommend: set up the framework and libraries first, write clear stories with acceptance criteria, and add a retrieval layer for handling data in AI systems.
+
+My dog chatbot may seem like a toy, but it's quite similar to enterprise software like support chatbots and document analysis. With AI coding tools, it's remarkably easy to build custom tools - even if they are just for fun.

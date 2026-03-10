@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { MemberMenu } from '@/components/auth/member-menu'
 import { Logo } from '@/components/layout/logo'
 
 export function Header() {
@@ -25,12 +26,7 @@ export function Header() {
           >
             Postcard
           </Link>
-          <button
-            type="button"
-            className="text-[13px] font-semibold tracking-[0.04em] uppercase text-gray-700 hover:text-gray-900 transition-colors"
-          >
-            Sign in
-          </button>
+          <MemberMenu />
         </nav>
       </div>
     </header>

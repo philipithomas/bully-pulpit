@@ -1,0 +1,71 @@
+---
+title: "Behind the scenes of the Find AI API"
+publishedAt: "2024-11-14"
+coverImage: "/images/covers/bts-find-api-cover.jpg"
+---
+
+We recently released a [Search API](https://usefind.ai/api/search) for Find AI, and announced [its integration with Clay.com](https://www.clay.com/university/lesson/find-ai-integration-overview).
+
+APIs allow developers to interact with a product using code. There are many different ways to build an API, and many tools to make it easier for customers to adopt. In this post, I’ll take you behind the scenes of how we built the Find AI API, from its technical foundations to the tools we used to simplify developer adoption.
+
+I'll start with the end customer experience, then work our way back to the internal architecture.
+
+## Explainer video
+
+Here's a video I created to explain how to use the Find AI API:
+
+I recorded the video using a [DJI Pocket 3](https://amzn.to/4evxf7q) with their [lavalier mic](https://www.amazon.com/DJI-Lavalier-Mic-Compatibility/dp/B0CJXR9YZF?source=ps-sl-shoppingads-lpcontext&ref_=fplfs&psc=1&smid=ATVPDKIKX0DER) and edited it in [Descript](https://descript.com). I recorded almost an hour of footage - so I spent a lot of time editing the video to be as short and clear as possible. Descript's text-based editing tool, originally designed for podcasts, made it easy to scan through retakes and figure out which was best.
+
+Video tutorials help people understand the end-to-end integration process of an API before diving into detailed documentation. Every customer who has integrated with our API started by watching this video, so it was a good use of time.
+
+## Generated client libraries
+
+In the video, calling the API looks straightforward because you can install a Find AI client library and call `import FindAI from "find-ai"` to make requests. Client libraries save developers time by abstracting away boilerplate code and reducing the need to read extensive documentation.
+
+We provide [official client libraries](https://github.com/find-ai/) in Python, Node, Ruby, and Go, making integration accessible across multiple programming languages.
+
+Companies like Stripe and OpenAI have set a high standard, making libraries a key part of their developer ecosystems. So, developers now expect client libraries in multiple languages whenever integrating with a new API. Writing and maintaining these libraries manually, however, would be both time-consuming and error-prone.
+
+This is where [Stainless](https://stainlessapi.com) comes in. Stainless reads our [OpenAPI](https://www.openapis.org/) specification and automatically generates client libraries in multiple languages. The tool was created by [Alex](https://www.linkedin.com/in/alexrattray/), who built similar systems at Stripe, and it now powers libraries for OpenAI, Anthropic, and Cloudflare.
+
+For the Find AI API, every single user I’ve spoken to relies on one of our Stainless-generated client libraries. If you’re building an API, providing robust client libraries isn’t just a nice-to-have—it’s the new standard.
+
+## Interactive docs
+
+Clear documentation is the foundation of a great developer experience. It helps users understand how to interact with your API and what data they can send or retrieve.
+
+Initially, we used [Swagger](https://swagger.io/) to generate our API documentation. Swagger reads an OpenAPI spec and creates interactive docs, allowing users to input their API key and test endpoints directly. This interactivity is a fantastic way for developers to use an API before writing any code. It’s also what I use in the explainer video. Our Swagger docs are still available at [usefind.ai/api/docs](https://usefind.ai/api/docs).
+
+However, Swagger had limitations. Its design felt dated, and it wasn’t easy to add additional text or media to guide users through setup or multi-step calls.
+
+To address this, we switched to [Mintlify](https://mintlify.com/) for our primary documentation. Mintlify offers the same interactive features as Swagger but provides more flexibility for customization. For example, we embedded the explainer video and added step-by-step guides to explain each function in detail.
+
+Mintlify’s docs are now our main resource, available at [usefind.ai/docs](https://usefind.ai/docs). They’re clean, easy to navigate, and SEO-friendly, thanks to an [installation via Cloudflare Workers](https://www.mintlify.com/docs/advanced/subpath/cloudflare).
+
+## OpenAPI at the core
+
+When designing the Find AI API, we opted for a [RESTful](https://en.wikipedia.org/wiki/REST) architecture. While newer paradigms like [GraphQL](https://graphql.org/) and [gRPC](https://grpc.io/) are gaining popularity, we chose REST because the ecosystem has largely standardized around OpenAPI for documenting APIs.
+
+The OpenAPI specification serves as the backbone of our API ecosystem. It’s a machine-readable file that defines what the API can do. When we update the spec, tools like Stainless automatically regenerate client libraries in multiple languages, and our documentation on Mintlify and Swaggerupdates automatically.
+
+This unified workflow ensures that our API is consistent and always up-to-date for developers.
+
+## Usage-based billing
+
+One of the key architectural decisions we made was to adopt usage-based billing. We wanted our pricing model to reflect the value provided to users. For example, if a query requests 100 matches but only 50 exist, the user is billed for 50. This ensures fairness and aligns costs with usage.
+
+To implement this model, we used [Stripe’s usage-based billing](https://docs.stripe.com/billing/subscriptions/usage-based). Setting up usage tracking and integrating with Stripe was surprisingly straightforward. Customers simply add a credit card to begin using the API, and Stripe charges their credit card weekly based on their usage.
+
+This approach has worked well for our customers and ensures a seamless payment experience while scaling with their needs.
+
+## Demo mode
+
+Another important decision was to include a demo environment in the API. Since using the full API requires adding a credit card, we wanted to provide a way for developers to experiment with the product risk-free.
+
+To achieve this, we allow developers to issue a demo-mode API key. This key returns placeholder data (e.g., results like `example.com`) without incurring any costs. It’s particularly useful for mimicking the API’s functionality in development environments.
+
+Looking at our analytics, however, demo mode hasn’t been widely used. Most developers were comfortable testing with the production API and seemed hesitant to rely on test-mode data. If I were to rebuild the API, I’d likely skip the demo mode entirely.
+
+## Try it out
+
+If you want to incorporate search of people and companies into your application, check out the [Find AI API](https://usefind.ai/api).

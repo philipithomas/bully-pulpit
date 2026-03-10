@@ -1,0 +1,19 @@
+---
+title: "Hacking YC (again)"
+publishedAt: "2025-10-01"
+coverImage: "/images/covers/hacking-yc-again-cover.jpg"
+---
+
+I like seeing how things work. Digitally, that often means keeping the network tab open to watch how websites talk to servers. Sometimes, I find mistakes.
+
+Last month, while browsing [Y Combinator](https://ycombinator.com)’s software, I noticed my browser was loading data it shouldn’t have. An API call exposed an investor-only feed with confidential information about YC startups. I checked and confirmed that others had access to it as well.
+
+I reported the issue to the YC security team, who quickly fixed the authorization bug.
+
+This was the third vulnerability I’ve found in YC’s software. The previous two are listed on [their security page](https://ycombinator.com/security), though the new one isn’t credited there[\[1\]](#fn1). But, for the first time, they sent me a bounty: $500.
+
+None of the three issues I reported were technically advanced. They only required curiosity and noticing when something looked out of place. This also highlights the importance (and difficulty) of building robust authorization logic into applications.
+
+* * *
+
+1.  I asked YC about credit on the security page, and they didn't respond. It's possible they no longer give public credit. [↩︎](#fnref1)

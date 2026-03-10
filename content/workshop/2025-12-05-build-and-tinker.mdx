@@ -1,0 +1,35 @@
+---
+title: "Building less, tinkering more, and walking away sooner"
+publishedAt: "2025-12-05"
+coverImage: "/images/covers/build-and-tinker-cover.jpg"
+---
+
+I'm back from my vacation to Japan, slowly adjusting to California time. It was a fun and inspiring trip – I'm thinking about it now while listening to the Eric Dolphy album _Out There_ on vinyl, which I bought after hearing it at the [Eigakin](https://www.google.com/maps/place/Eigakan+Jazz/@35.7220369,139.7523016,17z/data=!3m1!4b1!4m6!3m5!1s0x60188db601888faf:0xd45aed956dea453c!8m2!3d35.7220369!4d139.7523016!16s%2Fg%2F1vq9m8tq?entry=ttu&g_ep=EgoyMDI1MTIwMi4wIKXMDSoASAFQAw%3D%3D) jazz kissa during the trip. (I used to play cello, so I appreciate its use in this album instead of a bass.)
+
+I first went to Japan last year for a [residency at Almost Perfect](/almost-perfect), with the goal of exploring _shokunin_ culture – people who devote themselves to a craft. I kept following that thread on this trip, from tempura to coffee to clothing. All these craftspeople seemed to share a certain lightness and [flow](https://www.amazon.com/Flow-Psychology-Experience-Perennial-Classics/dp/0061339202) in their work—something I aspire to.
+
+In the back of my mind, I kept returning to the question of how to make Contraption posts available as a paper newsletter through the mail, something I originally explored in [Snail Mail](/snail-mail). Throughout the week I ruminated on an elaborate multi-part system for letter delivery. Reader information would live in the [Ghost](https://ghost.org) blog account system. I’d build a web app for managing shipping addresses. I would also build a unified single sign-on service, connecting Ghost to this portal and also to future apps.
+
+This multi-app setup seemed elegant – and with AI, it felt _possible_. I even had a coding agent build most of the login system while I read on the plane home.
+
+Back on my couch today, I realize how much I was overcomplicating the system. I think that's the danger of being away from building too long – I can romanticize systems, but then never find time to implement them. As my obligations to my past self began to mount, I stopped and asked: What would letter delivery look like if it were easy?
+
+[Contraption Co. is not my job](/chroma), so [I want my work here to be fun](/the-next-iteration-of-contraption-company).
+
+Looking at Stripe's free no-code tools, I found a way to hack together something that syncs with my blogging system but also enables shipping address collection and management. Stripe payment links can collect addresses; the customer portal lets people update their info later. Ten minutes of tinkering saved me weeks of work.
+
+Now, the remaining work for letter delivery is straightforward: write a script that detects when a new post is published, look up subscribers in Stripe, and trigger letters through [Lob](https://lob.com). That logic can live in my ["Junk drawer"](/app-of-ones-own) instead of some fancy new app.
+
+The takeaway here isn’t “don’t think big.” It’s to be comfortable abandoning projects and walking away from them. It’s the same strategy I’ve learned with books: I used to force myself to finish boring ones, and then I’d just stop reading altogether. At some point I realized it’s better to follow my motivation than to cling to sunk costs. When I notice myself procrastinating, it's a sign that my current self isn't bought into the work I had previously committed to.
+
+Even though I won’t use the login system I started on the plane, I did stumble into a new AI coding pattern that I like. Building a login system required low-level knowledge of how Ghost works, plus some awareness of my theme for logos and branding. So I created a new `working/` folder on my computer, copied the Ghost source and my blog theme into subfolders, and added a blank `login/` folder.
+
+I told the coding agent to write all new code into `login/`, but to reference the Ghost and theme folders as needed – copying over components, styles, and patterns instead of reinventing them. This worked surprisingly well: it copied styling correctly and could analyze the _actual_ Ghost and theme code, rather than relying on out-of-date documentation.
+
+If you're working on a project that needs to cross-reference multiple repos, I recommend trying this **working directory** pattern – put all the relevant source code side-by-side with the folder where the agent is generating new code.
+
+So: I’m not using the login system, but I _did_ learn something by tinkering. That’s the balance I want: keep tinkering, but be willing to walk away from projects that begin to feel too heavy.
+
+This ended up being a bit of a meandering Workshop post – but [that’s what Workshop is for](/introducing-workshop).
+
+Stay tuned – paper newsletters will (hopefully) be available soon.

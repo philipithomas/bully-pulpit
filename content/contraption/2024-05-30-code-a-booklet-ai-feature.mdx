@@ -1,0 +1,37 @@
+---
+title: "Coding a Booklet AI feature"
+publishedAt: "2024-05-30"
+coverImage: "/images/covers/code-a-booklet-ai-feature-cover.jpg"
+---
+
+This morning, I added a new feature to [Booklet](https://booklet.group). I used OpenAI to suggest new posts to write, to make it easier for members to post. It looks like this:
+
+0:00
+
+/0:09
+
+ 1× 
+
+Booklet AI post suggestions
+
+Inspired by a [podcast I was listening to on the way to my office](https://www.youtube.com/watch?v=MtrkDoQFArU), I decided to record the process of building the feature and publish it as a video.
+
+You can watch the full video below, where I go from idea to launching the feature to all Booklet communities in two and a half hours. I hope it's helpful to see how I work, the tools I use, and the process of building an AI-powered feature from scratch.
+
+I start with an idea, implement multiple-draft post support, write an OpenAI prompt to suggest new posts, test the AI in production, tweak the prompt based on its performance, implement a skeleton loader to display the suggestions, connect the suggestions to the editor, then deploy it to [all Booklet communities](https://www.booklet.group/community-index).
+
+Recording a coding video is a bit of a crazy experiment, but I hope some people find it useful. If you have questions or feedback, [email me](mailto:philip@contraption.co).
+
+[**Watch the video on YouTube →**](https://www.youtube.com/watch?v=FxZM4_SQH7w)
+
+## Notes from the recording
+
+-   [Booklet](https://www.booklet.group) is an async community app as an alternative to chat
+-   Coded using [Ruby on Rails](https://rubyonrails.org) and [Hotwire](https://hotwired.dev)
+-   Used Apple Note as a [Working Memory](https://calnewport.com/deep-habits-workingmemory-txt-the-most-important-productivity-tool-youve-never-heard-of/) file.
+-   Edited code with [Cursor](https://cursor.sh/)
+-   Used [Arc](https://arc.dev) as the main web browser, but I use [Responsively](https://responsively.app/) to view the app in multiple screen sizes
+-   Styled the app using [Tailwind](https://tailwindcss.com) with help from [Tailwind UI](https://tailwindui.com), [Heroicons](https://heroicons.com), and some [Tailwind Stimulus Components](https://github.com/excid3/tailwindcss-stimulus-components)
+-   Monitored OpenAI calls with [Helicone](https://helicone.ai)
+-   Recorded the video with [Loom](https://www.loom.com) _(and will hide its recording button on future recordings!)_
+-   Listened to [this recording from a Four Tet concert I attended](https://www.youtube.com/watch?v=SAlmIZAcpQs) while working

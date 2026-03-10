@@ -1,0 +1,53 @@
+---
+title: "Sync, phone numbers, and webhooks"
+publishedAt: "2026-03-05"
+coverImage: "/images/covers/sync-phone-numbers-and-webhooks-cover.jpg"
+---
+
+A couple of weeks have passed since I last posted. If this were an email, it would start with "Sorry for the slow response."
+
+## Sync
+
+A project I built just shipped at [Chroma](/chroma?ref=contraption.co). I added [Amazon S3](https://en.wikipedia.org/wiki/Amazon_S3) sync support to Chroma Cloud. This service lets people easily add arbitrary data from object storage to Chroma: PDFs, ebooks, images, and more.
+
+This was my first project in the [Rust programming language](https://rust-lang.org/). I used lower-level features and data structures to tune the system for high-volume ingestions and [auto-syncing workloads](https://docs.trychroma.com/cloud/sync/s3#auto-sync). The end result is a elegant product that conceals a lot of complexity.
+
+S3 Sync is live and is already being used at production scale. To explain it and the entire sync system, I recorded a video tutorial:
+
+TJ, who runs Chroma's content, posted behind the scenes:
+
+> My in house production setup for content at [@trychroma](https://twitter.com/trychroma?ref_src=twsrc%5Etfw) [pic.twitter.com/RGtUAMU7eM](https://t.co/RGtUAMU7eM)
+> 
+> — TJ (@TJkrusinski) [February 27, 2026](https://twitter.com/TJkrusinski/status/2027184160528638031?ref_src=twsrc%5Etfw)
+
+_(Sorry to_ [_Print Edition_](/press) _subscribers - these embeds may not render well on paper, but the cover letter has a QR code you can scan to access this)._
+
+## Phone calls
+
+In college, I built a project called [Text Reject](https://www.studlife.com/news/2012/11/15/you-are-unwanted-student-business-offers-humorous-text-rejections) that was a "[rejection hotline](https://en.wikipedia.org/wiki/Rejection_hotline)" but over text messages. The project made the cover of the student newspaper, and I walked away with a deeper understanding and curiosity about telephony. Though Text Reject shut down, one vestige of that era is that I switched my personal cell phone number to end in my name (-PHIL).
+
+![](/images/posts/sync-phone-numbers-and-webhooks/12-11-15-1.jpg)
+
+At a poker game last week, the person next to me mentioned getting banned from a restaurant after having their [OpenClaw](/openclaw-is-my-new-coworker?ref=contraption.co) try to place an order over the phone. And I thought: how fun! So, I set out to give my [OpenClaw named Bell](/openclaw-is-my-new-coworker) a phone number.
+
+I bought an aftermarket 212 area code phone number, because [they are so rare and cool](https://en.wikipedia.org/wiki/Area_codes_212,_646,_and_332#history). I connected it to [Bell](/openclaw-is-my-new-coworker). And, I had no calls to make.
+
+So, instead I built a voicemail system for the phone number. But I went a little overkill. I do not actually want to answer the phone, so based on the current date, time, and weather in New York City, an LLM dynamically generates an excuse for why nobody answered the phone, then uses [OpenAI Text to Speech](https://developers.openai.com/api/docs/guides/text-to-speech/) to speak it. Then, callers can leave a voicemail, which is transcribed and emailed to me.
+
+If you want to try it, call [+1 212 347 3190](tel:+12123473190) for a timely greeting. And maybe I will call you back. Though, more likely Bell will.
+
+There are murmurs in the industry that AI is making UIs obsolete - that people want to buy APIs, then vibe-code their own custom interfaces. And that rang true with this voicemail mini-project. In the past, I would have used [Twilio's low-code builder](https://www.twilio.com/docs/studio) to make a simple voicemail. But with AI, I found it easier to custom code the integration I wanted (hosted in my [Junk Drawer](/app-of-ones-own?ref=contraption.co)).
+
+## Webhooks
+
+Webhooks are a way for one application to send information to another. And [OpenClaw supports receiving them](https://docs.openclaw.ai/automation/webhook#webhooks), an overlooked feature that I think has a lot of potential. So, I set out to explore it.
+
+OpenClaw webhooks let you receive arbitrary data and set natural language rules for how to handle it. The first experiment I did was send [Booklet](https://booklet.group) posts to my OpenClaw, with the rule "watch messages and alert me only of spam." Sending Booklet posts to this endpoint is pretty trivial, and enables [Zapier](https://zapier.com/)\-like flows, and it caught some spam successfully while keeping communications calm.
+
+The next thing I did was start sending errors from my applications to OpenClaw. I instructed it to code a fix for any errors it received and open a pull request. And, the system helped me build my voicemail - quickly finding and fixing bugs. Sending errors through webhooks goes beyond "if this, then that" rules into a true feedback loop where my applications self-heal without human intervention.
+
+Feedback loops are the next horizon of applied AI.
+
+* * *
+
+Building S3 sync took a lot of my focus. And now I intend to build some new projects. I plan to hack on a new project codenamed "Manicule" this weekend. And I will keep thinking about new applications for my 212 phone number.

@@ -1,0 +1,166 @@
+---
+title: "How to host web apps on a Mac Mini"
+description: "Open-sourcing Toolbox, a framework for Mac-based home web servers"
+publishedAt: "2025-04-11"
+coverImage: "/images/covers/how-to-host-web-apps-on-a-mac-mini-cover.jpg"
+---
+
+A few weeks ago, I published [A mini data center](/a-mini-data-center) describing my home Mac Mini that hosts web applications, including this blog.
+
+I explained the motivation at the end of that post:
+
+> It lacks the reliability and redundancy of a distributed system. But, its pricing structure offers longevity, which most applications never achieve.
+
+Recently, I finished migrating my remaining apps — [Postcard](https://postcard.page) and [Booklet](https://booklet.group) — to the Mac Mini, then shut down my Digital Ocean account. The transition to a home lab is complete. My ongoing costs are $0.33 per month for AWS S3 and email, and $3.56 per month for Mailgun.[\[1\]](#fn1) The home server has served tens of thousands of visitors while using minimal CPU and memory. Testing an app, such as [FRCTNL](https://frctnl.xyz), reveals that it now runs faster.
+
+Setting up my home server, which I call “Toolbox,” has been enjoyable. I can build and host personal tools and run them without marginal monthly expenses.
+
+Many people emailed me asking for details about how to set up a Mac home server. This post explains the process on a Mac Mini. With it, I'm [open-sourcing the scripts I use to run my home server](https://github.com/contraptionco/toolbox).
+
+## Goals
+
+-   Configure the Mac to function as a server, including power failure recovery
+-   Use Cloudflare for public access to hosted apps
+-   Enable SSH for remote computer access
+-   Simplify hosting multiple web applications and automate code deployment
+
+## Philosophy
+
+I wanted the home lab to remain as simple as possible. This is a personal project, so I do take security to paraoid levels. My automation scripts are a minimal wrapper around Docker, and they do not rely on external libraries. Sometimes I need to run manual commands, which I expect - though it may be too technical for some. Kubernetes would likely be more comprehensive, but I prefer a simpler solution that avoids the [pain of navigating its features and updates](https://turso.tech/blog/turso-cloud-goes-diskless#disks-and-wasps--the-pain-of-kubernetes-stateful-sets).
+
+This guide assumes familiarity with SSH, DNS, and Docker.
+
+## Equipment
+
+The Mac Mini models include high-performance multi-core CPUs and solid disk capacity. Memory tends to be the limiting factor. I use a model with 24 GB of RAM, but they vary from 16 GB to 64 GB. For greater capacity, the Mac Studio goes up to 512 GB. The advantage of Macs is their unified memory, which can help with self-hosting LLMs.
+
+On reflection, I wish I had chosen a higher memory configuration to experiment more with self-hosted models.
+
+Some performance observations:
+
+-   My entire setup ([Ghost](https://ghost.org/), two [Rails](https://rubyonrails.org/) apps, PostgreSQL, [Chroma](https://trychroma.com), MySQL, and [Plausible Analytics](https://github.com/plausible/analytics) running Clickhouse) uses about 8 GB of memory and one CPU core.
+-   A local [Metabase](https://www.metabase.com/) instance would need about 8 GB of RAM.[\[2\]](#fn2)
+-   A local [Posthog](https://github.com/PostHog/posthog) instance would need about 16 GB of RAM.
+
+For self-hosting large language models:
+
+-   6 GB of memory accommodates GPT‑3.5-style models like [Mistral‑7B](https://mistralai.github.io/) or [Llama 3 8B](https://ai.meta.com/llama), in 4‑bit quantized form.
+-   60 GB of memory supports GPT‑4-like models such as [Llama 3 70B](https://ai.meta.com/llama) in 4‑bit quantized form.
+
+## Services
+
+The primary services I rely on include:
+
+-   [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) for exposing the computer to the internet (free)
+-   [Cloudflare Access](https://www.cloudflare.com/zero-trust/products/access/) for remote access (free)
+-   [1Password](https://1password.com/) for secure secret storage ($2.99/month)
+-   [Docker](https://www.docker.com/) for running web apps (free)
+
+Some optional additions:
+
+-   [UptimeRobot](https://uptimerobot.com/?red=contra) for uptime monitoring and heartbeat checks ($8/month)
+-   [Papertrail](https://www.papertrail.com/) for log monitoring (free)
+
+## Basic computer setup
+
+Attach a monitor to the Mac and follow these steps:
+
+-   **Create a user account.**
+-   **Enable “Automatic login.”** This ensures apps continue running after a reboot. Automatic login disables fingerprint login.
+-   **Under “Energy,” turn on “Startup automatically after a power failure.”** This allows the computer to restart on its own.
+-   **Set up the screen to lock after a period of inactivity, requiring a password for access.**
+
+Then, install the core tech used for Toolbox:
+
+-   **Install [Brew](https://brew.sh)**, then run `brew install asdf`.
+-   **Configure Git and authenticate to GitHub.**
+-   **Fork [Toolbox](https://github.com/contraptionco/toolbox) to your own Github account, then clone it to `~/code/toolbox/`.**
+-   **In “Users & Groups → Login Items,” add the `lock_screen_on_login.app` script from Toolbox.** Automatic login allows a reboot to bypass login. This script, built in Automator, locks the screen at login, so the user interface still requires a password, yet background scripts keep running.
+
+## Setting up Cloudflare
+
+[Cloudflare](https://cloudflare.com) serves as the DNS and tunnel for this project. And, these tools all fall within free tiers.
+
+In the past, having a home computer involved static IP addresses, but Cloudflare simplifies that. The local Mac connects to Cloudflare through a secure tunnel, which funnels internet traffic to specific ports on the Mac. It also constrains incoming requests, improving security.
+
+Cloudflare’s [Access](https://developers.cloudflare.com/cloudflare-one/) product can limit certain services to authorized access, which helps secure them. For new services, setting up Access first is safer.
+
+A thorough overview of [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) on macOS is available through a guide archived at [web.archive.org](https://web.archive.org/web/20241113053641/https://blog.samrhea.com/posts/2021/zero-trust-mac-browser/). That tutorial, by a a Cloudflare employee, explains how to create a tunnel configuration. Use the `config.yml` in the Toolbox repo as the Cloudflare tunnel configuration file.
+
+Afterwards:
+
+-   Cloudflare Tunnel runs on the Mac, referencing the Toolbox configuration.
+-   Public DNS routes to the tunnel.
+-   Remote screen access through Cloudflare is available, though I found it slow in practice.
+
+Following these directions, you can also set up SSH access via Cloudflare Access, which I find more reliable.
+
+Tip: Enabling “Always Online” on any websites hosted behind the Tunnel can keep them reachable during downtime.
+
+## 1Password
+
+All secrets for Toolbox are stored in 1Password.
+
+Suggested setup:
+
+1.  Create a dedicated vault named `Toolbox`, containing only server secrets.
+2.  Install the [1Password CLI](https://1password.com/downloads/command-line).
+3.  Create a [service account token](https://developer.1password.com/docs/service-accounts/get-started/) with access to the dedicated vault.
+4.  Test authentication with `op signin`.
+5.  Save the Vault ID and update it in the `config.rb`.
+
+## Setting up the Heartbeat script
+
+Toolbox depends on a `heartbeat.sh` script, which launches every minute using a `.plist` file.
+
+To install:
+
+1.  Run `ruby install_launch_agent.rb`.
+2.  Edit the generated `.plist` file, inserting the 1Password Vault ID.
+3.  Follow the instructions from the script to load the file, which begins the process.
+
+## Set up web apps
+
+Confirm that the script is running with `tail -f ~/code/toolbox/*.log`
+
+Expect a message every 60 seconds from `heartbeat.sh`. Then, you can begin adding apps. The [open-source Toolbox repository](https://github.com/contraptionco/toolbox) controls all my apps, so it shows how to configure and modify them.
+
+General points:
+
+1.  Services can come from public Docker Hub images or Git repositories with Dockerfiles.
+2.  Updates for Git repositories trigger on push, while Docker images use pinned version tags for consistency.
+3.  Each Docker service exposes a local port, and a corresponding public host is mapped in `config.yml`. Point DNS for that host at the tunnel. Traffic flows once the DNS updates.
+
+## Finishing up
+
+The `config.rb` file includes optional features:
+
+-   Integration with [UptimeRobot](https://uptimerobot.com/?red=contra) to monitor whether the heartbeat script stops running. This requires a cron job monitor from UptimeRobot.
+-   Configuration for [Papertrail](https://www.papertrail.com/) to allow remote log viewing. The free plan is sufficient. A template `log_files.yml` can be edited, then `ruby install_papertrail.rb` will install the relevant daemon.
+
+## Migrating data
+
+Transferring data from other databases requires some care. I moved Postgres data for Postcard and Booklet.
+
+Some practical tips:
+
+-   Install [Postico](https://eggerapps.at/postico2/) on the Mac to view and manage the database.
+-   Use [`pgsync`](https://github.com/ankane/pgsync) with the `--defer-constraints` flag to copy tables.
+
+## Disaster recovery
+
+Backing up data remains challenging. I use an external hard drive for [Time Machine](https://support.apple.com/en-us/104984), which simplifies restoration if the internal disk fails. For fire or theft, I plan to back up databases to iCloud or S3 periodically. \*(When I build this, the scripts will be in Github!)
+
+## Contribute
+
+This is just the beginning. I'm sure the Toolbox project will improve over time because my personal computer runs off of its `main` branch. And, [all code is open-source under an MIT license](https://github.com/contraptionco/toolbox). Even if you don't use these scripts directly, hopefully this project motivates you to build your own home server.
+
+This project has brought me many small moments of joy. As a software engineer, the professional tools and workflows in technology companies can be complex and controlled (and, for good reason). But, personal projects can be simple - and restore a sense of fun and freedom to experiment.
+
+Try it out, and let me know how it goes.
+
+* * *
+
+1.  Internet costs $40 per month, which remained unchanged. The Mac Mini’s power usage has not been noticed in the home electricity bill. I reused an existing UptimeRobot account, though the paid plan is $8 per month. Papertrail is on the free plan. Other minor expenses may exist. [↩︎](#fnref1)
+    
+2.  Metabase was a frequent part of my workflows in the past. While installing it on the Mac Mini, I noticed that AI text-to-SQL support still had not arrived, so I set it aside. Let me know if you recommend an alternative. [↩︎](#fnref2)

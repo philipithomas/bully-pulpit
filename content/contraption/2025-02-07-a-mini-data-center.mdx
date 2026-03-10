@@ -1,0 +1,38 @@
+---
+title: "A mini data center"
+description: "Hosting web apps on a Mac Mini"
+publishedAt: "2025-02-07"
+coverImage: "/images/covers/a-mini-data-center-cover.jpg"
+---
+
+Hello from my new home in San Francisco. And, thanks for visiting. But really - you're reading this web page from a Mac Mini sitting on my desk. The text and images on this page travel through my home wifi to reach you.
+
+Last year, [DHH](https://dhh.dk/) began advocating to "[leave the cloud](https://world.hey.com/dhh/why-we-re-leaving-the-cloud-654b47e0)" by moving applications from managed hosting providers to physical hardware. Marketing departments have long insisted that running applications on our own hardware is impractical, and that we should instead rely on services like [AWS](https://aws.amazon.com/) to run applications. However, a wave of open-source tools have made it easy to self-host applications without the [markup](https://www.geekwire.com/2024/aws-tops-10b-in-quarterly-operating-for-the-first-time-as-jassy-cites-reacceleration-of-cloud-business/) of managed hosting providers.
+
+I encountered the high costs of cloud hosting while building apps for Contraption Company. I initially hosted [Postcard](/launching-postcard) and [Booklet](/launching-booklet) on [Render](https://render.com), which offers a good developer experience for distributed, auto-scaling applications. But, each new app cost me $100-200 monthly, adding up to nearly $500 in monthly costs for three apps. These per-app costs made me hesitant to build more projects, yet none required the complexity of such an abstracted hosting setup.
+
+I later switched to managing my apps with [Hatchbox](https://hatchbox.io), which runs multiple Ruby on Rails apps on one cloud machine. Backed by a single [Digital Ocean](https://digitalocean.com) server, adding new Ruby on Rails apps became free, encouraging more experimentation.
+
+When I moved my Contraption Company website to [Ghost](https://ghost.org) blogging software last year, I started with their managed service. The bill quickly grew to $90 monthly for a low-traffic hobby website. I wanted to self-host, but Ghost uses Node.js, which my Ruby-focused Hatchbox setup couldn't support. This prompted me to reconsider my hosting approach.
+
+I was inspired by [Kamal](https://kamal-deploy.org/), a free tool from DHH for language-agnostic app hosting on any cloud provider. While comparing cloud server prices, I noticed they cost around $100 monthly for less power than a $600 Mac Mini. This led me to wonder - could I just use a Mac Mini instead?
+
+The main challenge of self-hosting is getting a static IP address, as home internet isn't designed for hosting servers. Things changed when I discovered [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), a [free tool](https://blog.cloudflare.com/tunnel-for-everyone/) for connecting private servers to the public internet. It lets my Mac Mini host web servers from anywhere with internet access.
+
+I set up a Mac Mini server, and named it "Toolbox." The configuration includes:
+
+-   A daemon I coded to ensure the tunnel is live
+-   [Docker](https://docker.com) for local app running, configured for [auto-updating](https://github.com/containrrr/watchtower)
+-   Secrets management through a [1Password service account](https://developer.1password.com/docs/service-accounts/)
+
+It's a straightforward (though technical) setup that still functions as a home computer for tasks like music streaming and looking up recipes.
+
+The Mac Mini now hosts this website, and I'm moving Postcard and Booklet to it soon. Some services I pay for, like [Fathom Analytics](https://usefathom.com/), have [self-hosted alternatives](https://github.com/plausible/community-edition) that I plan to use to further reduce my software costs.
+
+My cloud server costs peaked at $500 monthly with multiple apps on Render. Last month cost $250 with Hatchbox and Ghost. This month my recurring cloud costs will be zero.
+
+I often think about the concept of "Dependability" in software - it was one of the [original tenets of Contraption Company](/introducing-contraption-co) - to not shut down products that have paying customers. With the upfront cost of the Mac Mini, I can now conceivably run software forever without worrying about ongoing costs. I also have the capacity to host more apps or even run local LLMs.
+
+The Mac Mini isn't as performant as a data center. Latency is a little slower. It can't scale to massive amounts of traffic. It lacks the reliability and redundancy of a distributed system. But, its pricing structure offers longevity - which most applications never achieve.
+
+_**Update:** I published_ [_How to host web apps on a Mac Mini_](/how-to-host-web-apps-on-a-mac-mini) _as a follow-up to this piece with specific details of my hosting setup._

@@ -1,0 +1,21 @@
+---
+title: "Maintenance"
+publishedAt: "2025-10-30"
+coverImage: "/images/covers/maintenance-cover.jpg"
+---
+
+I’m preparing to launch [Workshop](/workshop) here as an independent newsletter within Contraption Company. I [started it as an experiment](/workshop-welcome), and I’m ready to graduate it from “experiment” to “project.”
+
+Before doing that, I wanted to clean up this website and a few projects that had fallen into disrepair.
+
+A few weeks ago, I launched the [Contraption Company MCP](/mcp-and-the-future-of-ai). Well, surprise - this project was secretly a test of the new [Chroma Cloud sparse vector support](https://docs.trychroma.com/cloud/schema/sparse-vector-search), which we launched yesterday. I did some maintenance to upgrade it from test to production APIs. If you peek at the code, you’ll see it uses the new [Schema support](https://docs.trychroma.com/cloud/schema/overview), [hosted embedding functions](https://github.com/chroma-core/chroma/blob/47287c40804fd6d6816d3dd188fe5de82fcdae48/chromadb/utils/embedding_functions/chroma_cloud_splade_embedding_function.py#L15), the [new Search API](https://docs.trychroma.com/cloud/search-api/overview), and [RRF hybrid search](https://docs.trychroma.com/cloud/search-api/hybrid-search). Sparse vectors enable embedding functions like BM25 and SPLADE that add strong “keyword” matching to searches, significantly improving accuracy - especially when combined with dense vectors via in a hybrid search. Chroma Cloud is the only object-storage-backed database with generic sparse vector support, and this MCP server is a great use case of the technology.
+
+Back by popular demand—[QuesoGPT](https://quesogpt.contraption.co)! At a meetup earlier this year, I presented [QuesoGPT as a chatbot featuring my dog](/chat-with-my-dog). Many people enjoyed it, began mentioning to me that it was no longer online. As a quick hack, I hadn’t set up proper hosting - and it broke and went offline at some point. So I updated the code to be a bit more performant and set it up as a container on my [Mac Mini home server](/a-mini-data-center) so it should stay online indefinitely.
+
+A few months ago, I [open-sourced Postcard](/postcard-open-source). As people keep signing up for the hosted service, they didn’t always realize Postcard is open source. I [updated the homepage](https://postcard.page) to make that clear. Please [open issues on GitHub](https://github.com/contraptionco/postcard/issues/new) with any feature requests - I’d like to make some improvements soon.
+
+I committed the first [Booklet](https://booklet.group) code in about eight months. I added the ability for admins to “quarantine” posts manually - excluding them from the newsletter without deleting them. [FRCTNL](/introducing-frctnl) has now been running for over two years, and I needed better moderation tools for it. I enjoyed working on Booklet again—it’s a fun project, and I’d like to open-source it and keep tinkering.
+
+I updated the Contraption Company site. Posts in the Workshop newsletter (like this one!) now show the Workshop logo in the header. I refreshed the monospace font on the site. And I updated the [Projects page](/projects) to show more of my work. This turned into a fun use case for the Contraption MCP server—I had my coding agent use it to research projects mentioned in Contraption Company posts and add them to the Projects page, which worked surprisingly well.
+
+Next up: introducing Workshop as a standalone newsletter - and some other tinkering.

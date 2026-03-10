@@ -1,0 +1,41 @@
+---
+title: "Outage, tacit knowledge, and a new project"
+publishedAt: "2025-12-24"
+coverImage: "/images/covers/tacit-knowledge-in-softwar-cover.jpg"
+---
+
+Hello from Boulder, Colorado - where we've been dealing with power outages due to high wind. Alas, as I lost power in Boulder, my apartment in San Francisco also lost power. I knew because my [Mac Mini home datacenter](/a-mini-data-center) went offline. This resulted in a few hours of downtime for this blog, [Postcard websites](https://postcard.page), and [Booklet](https://booklet.group). I apologize for the outage.
+
+I'm coming up on the one-year anniversary of moving all of my websites to run on a Mac Mini on my desk. This setup is not built for high uptime - there's no redundancy in power or internet. But I'm ending the year at 99.8% uptime, which seems reasonable. (While occasional downtime is expected, I take [off-site backups seriously](/disaster-recovery) to prevent data loss.)
+
+## Tacit knowledge
+
+I've been thinking a lot this week about tacit knowledge.
+
+It started while reading [New Nordic Cuisine, Aesthetics, and Place: A Compendium](https://petermiller.com/products/new-nordic-cuisine-aesthetics-and-place-a-compendium-new-exhibit-arriving-in-seattle-november-15th), which had a section entitled "Tacit knowledge":
+
+> Cooking in general can, to a large extent, be said to be about tacit knowledge – a certain kind of knowledge that can’t be described and taught with words (recipes) or through simple imitation and repetition. It must be experienced, through the act of making, with our hands and bodies and senses. Tacit knowledge could, therefore, be described as a form of embodied knowledge, reminiscent of the philosophies of Tim Ingold’s book Making from 2013, where he argues the importance of making material things rather than just learning about them from an external – intellectual – perspective. The interest in traditional cooking techniques, preservation methods, curing processes, and foraging amongst the new Nordic chefs is, at least in part, based on tacit knowledge.
+
+Tacit knowledge popped up again while I was re-reading part of [Shop Class as Soulcraft](https://www.amazon.com/Shop-Class-Soulcraft-Inquiry-Value/dp/0143117467?&linkCode=ll1&tag=contraption-20&linkId=d1ba3803813991ede5237ede71f08f70&language=en_US&ref_=as_li_ss_tl), which explores the erosion of tacit knowledge and intuition in the transition to knowledge work.
+
+Finally, Stripe Press announced a new video series called "[Tacit](https://www.stripe.press/tacit)":
+
+> The mechanism for developing tacit knowledge is straightforward but slow: repeated practice that gradually moves skills from conscious effort to automatic execution. The mechanism for transmitting it is even slower: apprenticeship, where a learner works alongside someone experienced, observing and imitating until their own judgment develops. This is why tacit knowledge often concentrates in lineages, unbroken chains of practitioners passing expertise to the next generation.
+
+With so much discussion of tacit knowledge, I find myself reflecting on its role in software teams. At my job, I work with many people who are eight to ten years younger than me. I think often about what can be taught versus learned in software, and junior engineers are more current on theory than I am. But taste and experience are tough to replicate. An example that comes to mind happened a few months ago, when an on-call engineer was alerted about an outage and began poring through logs. I noticed three people crowded around them at the computer, trying to figure out why all of the servers had gone offline. I joined the group, glanced at the logs, then walked over to the computer and turned off webhooks from a third-party service - restoring the service.
+
+In the age of AI, building software is becoming easier. But knowing what to build, understanding systems, and running applications are becoming more important skills - and that kind of tacit knowledge isn't easy to teach.
+
+## A new project
+
+I start new projects with a name. I keep a list of project name ideas in Apple Notes and continue to expand it. ("Carnet" was added this week.) I even [picked a dog name](/chat-with-my-dog) long before adopting a dog.
+
+A name I've liked for a while has been "Trivet" - referring originally to the three-legged contraption for hanging a pot over a fire, but over time coming to mean a potholder. I like the name as being "something that sits in-between." I went as far as to make a logo for it over a year ago.
+
+I explored some different project ideas for the name "Trivet," including an email-based personal assistant I hacked on last holiday.
+
+But for the past month I've been ruminating on a new project, and the name "Trivet" has stuck.
+
+The current iteration of Trivet is a Google sign-in service for blogs hosted on [Ghost](https://ghost.org), like this one. Any product manager will tell you that people prefer Google sign-in over passwords or magic links. But Ghost blogs do not have support for Google sign-in. While exploring Ghost's source code while building [backups of my posts](/disaster-recovery), I found some internal APIs that would make it possible to add middleware to enable Google sign-in—a "trivet," if you will.
+
+I'm currently building it out as a holiday project, and hope to have it in a testable shape soon. Stay tuned, and happy holidays.

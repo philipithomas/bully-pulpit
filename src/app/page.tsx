@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { EmailSignupForm } from '@/components/auth/email-signup-form'
+import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
 
 export default function HomePage() {
@@ -8,6 +9,7 @@ export default function HomePage() {
 
   return (
     <div className="container py-16 md:py-24 lg:py-36">
+      <JsonLd type="website" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
         {/* Left: Portrait */}
         <div>

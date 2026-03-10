@@ -1,0 +1,97 @@
+---
+title: "Booklet's architecture"
+publishedAt: "2023-12-04"
+coverImage: "/images/covers/booklet-architecture-cover.jpg"
+---
+
+[Booklet](https://www.booklet.group) is a modern email group software from Contraption Company. Think "Google Groups," but with a modern interface and features. If you haven't tried Booklet, [here is a 3-minute video showing how it works](https://www.youtube.com/watch?v=yf03XsD4pvo).
+
+In this post, I'll share technical details about how I built Booklet. I'll cover the architecture, the technology stack, and the infrastructure. I'll also share some of the lessons I've learned.
+
+## Background
+
+I'm [Philip](https://www.philipithomas.com) - owner of [Contraption Company](/), which makes dependable software tools such as [Booklet](https://www.booklet.group). I've been building software products for over a decade, ranging from [dorm room hacks](https://www.studlife.com/news/2012/11/15/you-are-unwanted-student-business-offers-humorous-text-rejections) to [enterprise software](https://umbrella.cisco.com/opendns-cisco-umbrella) to [startups](https://github.com/staffjoy). I've coded in dozens of different languages and frameworks. Over time, I've developed an appreciation for boring technology that just works.
+
+I built my last startup, [Moonlight](https://moonlightwork.com), with Go, gRPC, Kubernetes, and a Vue.js single-page app. While it was fun to use cutting-edge technologies, it was a pain to maintain them, and new developers had to learn a lot of new tools before becoming productive. I wasted time rebuilding common patterns and integrations that I could have gotten for free with a more established stack. I also found that the cutting-edge tools were often less reliable, and I spent much time debugging issues I wouldn't have had with more mature tools. In particular, maintaining the versions and dependencies of frontend frameworks can feel like a full-time job (especially when using [Next.js](https://nextjs.org/)).
+
+In developing Booklet, I aimed for simplicity in tool selection, aligning with Contraption Company's [philosophy of dependability](/essays/one-year-of-dependable-software). I seek to create software that remains functional for decades and is easily maintainable by future developers. [Hotwire](https://hotwired.dev/), a minimalistic framework for dynamic and real-time frontends from the creator of Rails, largely influenced my adoption of Rails. In most modern web applications, the backend and frontend are separate in language, framework, and logic. Hotwire feels like an extension of the backend, which reduces the context from two frameworks to one - making development faster and more enjoyable. (Knowledge workers grossly underestimate the costs of context switching.)
+
+Contraption Company's other main product, [Postcard](https://www.postcard.page), is also built in Rails. It's a similar stack, but I learned some valuable lessons from Postcard. Specifically, Postcard hosts on [Render](https://render.com), and I chose a different host for Booklet because I found that Render's [DDOS protections](https://render.com/blog/free-ddos-protection) slowed down requests by hundreds of milliseconds each, which didn't work well with server-rendered HTML. I recommend Render for apps with simple frontends, but I wanted something faster and more flexible for Booklet.
+
+The secret is that Booklet started before Postcard, back in 2020. The original iteration of Booklet hosted all communities on the same domain. This year, I decided to restart Booklet with a multi-tenant architecture, taking more of a B2B approach to the product and adding the core functionality of custom domains. As you browse the code, you'll see that all of the code references `bklt` instead of `booklet`. The naming follows this pattern because `booklet` was the old repo, and `bklt` the new one. (I was listening to [bzrp](https://www.youtube.com/channel/UCmS75G-98QihSusY7NfCZtw) when I picked the name.)
+
+## Basics
+
+[Ruby on Rails](https://rubyonrails.org/) is the coding framework powering Booklet. I first used Ruby on Rails in 2011, then didn't return to it for ten years. When I did, I discovered a newfound appreciation for its [omakase](https://dhh.dk/2012/rails-is-omakase.html) approach because everything worked together, including testing, caching, and internationalization. In addition, Booklet has a slightly complex permissions system. I prefer to use server-rendered HTML with complex permissions systems because it avoids duplicating logic between the backend and frontend.
+
+Instead of a complicated frontend, I rely on [Stimulus](https://stimulus.hotwired.dev/) and [Turbo](https://turbo.hotwired.dev/) from the Hotwired framework. These tools lightly enhance server-rendered HTML. But, the simplicity allows me to go deeper - for instance, by building [real-time support into Booklet](https://hq.booklet.group/posts/introducing-real-time-replies-on-booklet), which I would never have done with a more complicated frontend.
+
+Here is a simple architecture diagram of Booklet. In this section, I'll explain the basic setup, and later I'll go into more advanced details about the configuration.
+
+![](/images/posts/booklet-architecture/basic.jpg)
+
+Basic Booklet architecture
+
+-   Requests route to `bklt`, the main Rails application where the business logic lives.
+-   `bklt-db` is the Postgres database powering Booklet.
+-   A queue for background jobs runs in a separate Redis instance, `bklt-q`, with disk-backed persistence.
+-   Rate limiting is applied using `bklt-throttle`, a Redis instance with no persistence.
+-   `bklt-cache` is a Memcached instance for caching. Memcached is simpler and more predictable than Redis for simple caching.
+-   `bklt-bg` is a Rails application for background jobs. It reads jobs of `bklt-q` using [Sidekiq](https://sidekiq.org/). Most of its work is asynchronous email delivery and [AI analysis](https://hq.booklet.group/posts/new-in-booklet-notification-controls-moderation-an).
+-   [Postmark](https://postmarkapp.com/) sends emails. I've used Postmark for years, and I like it because it's simple and reliable.
+-   `bklt-logs` forwards logs to [Mezmo](https://www.mezmo.com/) for storage and analysis.
+-   [AWS Cloudfront](https://aws.amazon.com/cloudfront/) is the CDN that caches static assets.
+
+Having two distinct Redis instances and a separate Memcached instance might seem more complex than just using one Redis for all tasks. However, in engineering terms, complexity is measured by the interdependence between systems. By employing independent systems for different functions, we make the system less _complexed_, thus simplifying scaling and troubleshooting. Each system has unique requirements, particularly in responding to memory or CPU shortages. Managing these responses is more straightforward when the systems are isolated. For example, `bklt-q` is set up to preserve data, `bklt-cache` is designed to remove old data regularly, and `bklt-throttle` is optimized for speed.
+
+## Advanced
+
+Booklet hosts on [Fly.io](https://fly.io). I chose Fly.io because it allows you to distribute an application globally. I currently operate data centers in New Jersey and Los Angeles. Data centers are traditionally named using airport codes, so I refer to the data centers as `ewr` and `lax` in the diagrams. As traffic increases, I can add additional data centers around the world. So, if you're using Booklet in San Francisco, your requests route to Los Angeles instead of New Jersey, speeding up the response times. And, if I add many customers in Tokyo, I can spin up a `nrt` data center to speed up requests for those customers.
+
+The issue with a distributed application is the [CAP theorem](https://en.wikipedia.org/wiki/CAP_theorem), which means that real-time data syncing between data centers is nearly impossible to do safely. [Google figured out how](https://cloud.google.com/blog/products/databases/inside-cloud-spanner-and-the-cap-theorem), but most common database technologies have yet to catch up. So, I opted to use a hybrid approach recommended by Fly.io: `ewr` is my primary data center, and `lax` is a read-only copy. So, if you're reading a Booklet post from San Francisco, you're reading from `lax`. But, if you're writing a post from San Francisco, that request forwards to `ewr`. Most requests are for reading data, not writing it - so this approach keeps the app snappy. Write requests are already slower than read requests because they have to write to a physical disk, so the additional latency of forwarding to `ewr` is less noticeable for these infrequent requests.
+
+Fortunately, setting up this distributed application in Rails is trivial with the [`fly-ruby`](https://github.com/superfly/fly-ruby) gem. It automatically handles all requests routing within the Fly.io network to make this hybrid approach work.
+
+Here's a diagram of the more advanced architecture:
+
+![](/images/posts/booklet-architecture/advanced.jpg)
+
+Advanced architecture of Booklet
+
+Because `lax` is a read-only data center, it only has a read-only copy of the Postgres database. I maintain local cache and rate-limiting infrastructure locally to speed up requests. However, I don't duplicate the queue logic right now - background jobs run out of `ewr` only for simplicity. The speed of enqueuing jobs from `lax` is a potential area of improvement.
+
+## Additional tools
+
+-   [Docker](https://www.docker.com/) for deployments.
+-   [Sentry](https://sentry.io) for error reporting.
+-   [AWS S3](https://aws.amazon.com/s3/) for file storage.
+-   [OpenAI](https://openai.com/) for AI and moderation.
+-   [Helicone](https://helicone.ai) provides OpenAI monitoring and caching.
+-   [Fly.io](https://fly.io) handles custom domains and TLS certificates.
+-   [AWS CloudWatch](https://aws.amazon.com/cloudwatch/) for monitoring uptime.
+-   [Pagerduty](https://www.pagerduty.com/) wakes me up for every single error or downtime.
+-   [Stripe](https://stripe.com/) for payments.
+-   [TailwindCSS](https://tailwindcss.com/) and [TailwindUI](https://tailwindui.com/) for styling.
+-   [Skylight](https://www.skylight.io/) for performance monitoring.
+
+## How it's working
+
+Overall, this stack has been fast. As a user, clicking around a community is snappy and pleasant.
+
+Overall, I'm happy with Fly.io. I appreciate the low-level access it gives to machines. They're a startup with growing pains - I've had to manually restart machines or reroute traffic a few times due to a lack of auto-healing. But, with proper monitoring and alerting, I've made the system more stable.
+
+The primary source of instability within Booklet has been occasional database connectivity issues. After encountering recurring database connectivity issues, I discovered that Fly.io uses HAProxy in front of Postgres but doesn't document well that [their HAProxy has a 30m timeout](https://community.fly.io/t/postgresql-connection-issues-have-returned/6424). So, occasionally, HAProxy would terminate an active database connection, [Rails would not immediately reconnect](https://dalibornasevic.com/posts/77-auto-reconnect-for-activerecord-connections), and the result would be 500 errors from a particular container. Fortunately, with some health check improvements and connection configuration changes, I've prevented the issue from affecting customers.
+
+## What's next
+
+The next feature with infrastructure implications is search. Booklet users should be able to search posts, replies, and profiles.
+
+I haven't finalized the approach yet, but it will likely involve [Elasticsearch](https://www.elastic.co/). However, I'm also investigating vector-based search as an alternative using [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings) and [pgvector](https://github.com/pgvector/pgvector).
+
+Eventually, I could see moving toward [CockroachDB](https://www.cockroachlabs.com/) for a distributed database to improve latency and reliability further. But, the additional complexity is not worth it right now.
+
+## Conclusion
+
+If Booklet's architecture meaningfully changes in the future, I'll publish a follow-up post.
+
+If you have any questions or feedback, email me at [philip@contraption.co](mailto:philip@contraption.co). And, if you're interested in trying Booklet, you can [join an existing group](https://www.booklet.group/community-index) or [create your own for free](https://www.booklet.group/).

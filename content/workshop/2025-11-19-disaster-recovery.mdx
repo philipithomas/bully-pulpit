@@ -1,0 +1,45 @@
+---
+title: "Disaster recovery"
+publishedAt: "2025-11-19"
+coverImage: "/images/covers/disaster-recovery-cover.jpg"
+---
+
+I'm headed off on holiday later this week. As the trip approached, I found myself thinking about how to best back up my [Mac Mini home server](/a-mini-data-center).
+
+I've had an abnormal number of conversations about SOC 2 compliance this year, so “disaster recovery” has been a concept stuck in my mind. [Backup plans](/backup-plans), if you will.
+
+I've had a [Time Machine](https://support.apple.com/en-us/104984) external drive attached to the server, keeping a local backup - which would protect in case of disk failure. But many [correlated risks](https://www.worldfinance.com/home/risk-encyclopaedia/correlated-risks) exist - for instance, a fire would destroy the computer _and_ its backup, permanently losing [Postcard](https://postcard.page) user accounts and blog subscribers[\[1\]](#fn1).
+
+To feel confident, I wanted off-site backups of important data.
+
+I considered just paying for a service like [Backblaze](https://www.backblaze.com/) and calling it a day. But this has two issues. First, it goes against the spirit of my home data center, where I want to avoid recurring SaaS costs. Second, Backblaze isn't built to safely store databases - and I was afraid of data corruption issues.
+
+The core data I needed to back up were this blog and the [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL) database that powers all my projects, including [Postcard](https://www.postcard.page), [Booklet](https://booklet.group), and ["Junk Drawer"](/app-of-ones-own).
+
+I was disappointed in how difficult it is to back up this self-hosted [Ghost](https://ghost.org) blog. Content, analytics, and subscribers have to each be seprately downloaded. Then, all of the post images on the website have to be copied manually from a folder on the server. Even then, there's no way to back up the site settings and blog comments.[\[2\]](#fn2) (Ghost sells a [hosted product](https://ghost.org/), so I think they're not incentivized to help users who self-host their [software](https://github.com/TryGhost/Ghost)).
+
+I chose to export the blog to a private [GitHub](https://github.com/contraptionco) repo. Git isn't intended for storing websites, but at the scale of this project, it works fine. Part of the reason I chose GitHub was a bit macabre: I've been thinking about people's digital footprints after they die. Website domains are surprisingly ephemeral - `contraption.co` will stop working as soon as the first renewal payment is missed. But, a content archive on GitHub could last for a long time. So, I'm considering a “public archive” of Contraption posts on GitHub.[\[3\]](#fn3)
+
+I edited my [Toolbox configuration script](https://github.com/contraptionco/toolbox) to incrementally export Ghost data to the private GitHub repo every hour. Alas, I got it working, and my Ghost blog is now securely backed up on GitHub every hour. In hindsight, Ghost's export features are a bit of a faff, and I should have directly exported the MySQL database.
+
+Next up was exporting the Postgres database powering all of my apps.
+
+As I dug in, I found that the databases were quite large due to dormant analytics data. Postcard sends a weekly email to accounts about how many visits their site has had that week, and Booklet aspires to do something similar. But years of page views were bloating the database, so I [set up a 2-week retention period on analytics data](https://github.com/contraptionco/postcard/blob/main/app/jobs/cleanup_tracking_data_job.rb), which let me purge gigabytes from the databases before beginning backups[\[4\]](#fn4).
+
+After that, I updated the same Toolbox script to export Postgres to [Amazon S3](https://aws.amazon.com/s3/) every single day. Its simple usage-based pricing matches Toolbox vibes better. If you're unfamiliar with Amazon S3, I consider it a modern wonder of the world. It's developer infrastructure for replicated storage, and it holds [350 trillion objects](https://aws.amazon.com/blogs/aws/aws-pi-day-2024-use-your-data-to-power-generative-ai/). To put that in perspective - that's about 50,000 objects per human on Earth. (Does this also make you wonder about latent digital footprints for the deceased?)
+
+Finally, if there's one thing I've learned from SOC 2 discussions, it's that backups are only useful if you test them. So, to finish my whole backups adventure, I restored all of my applications on my laptop and logged into the personal accounts.
+
+With everything wired up and tested, I feel comfortable leaving the Mac Mini alone for a while. If my home data center were truly destroyed, recovery would still be a bit of a slog - probably a trip to the Apple Store and a few hours of reinstalling things. But at least I’ve already rehearsed the recovery process, and I know the important bits wouldn't go up in smoke with the hardware.
+
+This whole exercise also nudged me to zoom out. We collect an incredible amount of data, much of it sitting quietly in object stores and databases around the world. Some of it will outlive today's servers. Some of it will outlive us. As disaster recovery teams at companies work diligently to preserve our data, perhaps we can be more intentional about deciding which data we want to preserve ourselves.
+
+* * *
+
+1.  Data loss sounds unlikely, but unfortunately [it happens](https://www.reuters.com/world/asia-pacific/south-korea-restores-46-services-after-data-centre-fire-safety-minister-says-2025-09-29/). [↩︎](#fnref1)
+    
+2.  I don't use Ghost's comments functionality, but this discourages me from using it. [↩︎](#fnref2)
+    
+3.  My current backup includes members and drafts, which I wouldn't want in a public archive. [↩︎](#fnref3)
+    
+4.  "Wait, you decided to delete a ton of data _before_ starting backups?" [↩︎](#fnref4)

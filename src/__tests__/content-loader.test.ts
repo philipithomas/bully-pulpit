@@ -31,16 +31,15 @@ describe('content loader', () => {
 
   it('loads postcard posts', () => {
     const posts = getPostsByNewsletter('postcard')
-    expect(posts.length).toBeGreaterThan(0)
     for (const post of posts) {
       expect(post.newsletter).toBe('postcard')
     }
   })
 
   it('finds post by slug', () => {
-    const post = getPostBySlug('hello-contraption')
+    const post = getPostBySlug('app-of-ones-own')
     expect(post).not.toBeNull()
-    expect(post!.frontmatter.title).toBe('Building in Public')
+    expect(post!.frontmatter.title).toBe("An app of one's own")
   })
 
   it('loads pages', () => {

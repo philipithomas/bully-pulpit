@@ -1,0 +1,45 @@
+import { NextResponse } from 'next/server'
+import { siteConfig } from '@/lib/config'
+
+export async function POST(request: Request) {
+  const body = await request.json()
+  const { email, name, googleVerified } = body
+
+  if (!email) {
+    return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+  }
+
+  try {
+    const res = await fetch(
+      `${siteConfig.printingPressUrl}/api/v1/subscribers`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': siteConfig.m2mApiKey,
+        },
+        body: JSON.stringify({
+          email,
+          name,
+          google_verified: googleVerified ?? false,
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      const data = await res.json()
+      return NextResponse.json(
+        { error: data.error ?? 'Subscription failed' },
+        { status: res.status }
+      )
+    }
+
+    const subscriber = await res.json()
+    return NextResponse.json({ subscriber })
+  } catch {
+    return NextResponse.json(
+      { error: 'Unable to reach subscription service' },
+      { status: 502 }
+    )
+  }
+}

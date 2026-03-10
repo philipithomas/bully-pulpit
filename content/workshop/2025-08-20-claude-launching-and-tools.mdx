@@ -1,0 +1,49 @@
+---
+title: "Claude, Launching, and Tools"
+publishedAt: "2025-08-20"
+coverImage: "/images/covers/claude-launching-and-tools-cover.jpg"
+---
+
+For the last week, I’ve been leaning into Claude Code for development. I used to think of it as more of a hobbyist tool, rather than a professional one.
+
+Cursor had been the main way I used AI to write code professionally. It's an AI-augmented text editor- you see code and can be prescriptive about which files the AI should read and what it should do. Using it, I feel like I‘m an engineer. I know the code I want written, and I’m supervising Cursor to build the way I expect.
+
+Claude Code is a more autonomous - a chatbot rather than a text editor. It isn’t optimized for supervising the exact code that’s been written. When using Claude Code, I feel like a product manager - I inspect the results, instead of the methods. Does the page look right and behave how I want?
+
+Each tool has its place. I tend to use Cursor for more backend code, where security and implementation details matter, and Claude Code for UI, where work tends to be more constrained to one or two files.
+
+* * *
+
+This week we launched [Chroma Cloud](https://trychroma.com/cloud), the product I’ve been working on since I joined Chroma in January. It’s a search engine for AI applications.
+
+On Friday, I found out that there had been a miscommunication, and the landing page [trychroma.com/cloud](https://trychroma.com/cloud) had not been started yet. We had a design in Figma, but just one business day to build a complex, high-polish, and high-profile landing page.
+
+I took over building the page, and tried using Claude Code. I worked section by section, and passed screenshots to Claude to have it build the UI. I looked at the results in my web browser, and provided UI feedback instead of code-level feedback. There were some tricky interactions, mobile responsiveness concerns, and lots of text. I built the entire page in about four hours.
+
+Yes, this kind of work would have taken me a week prior to AI. But, even three months ago - I would have had to take a more low-level, prescriptive approach to building this page - probably using Cursor.
+
+AI models have gotten so good that I barely looked at the code. I could work at a higher level of abstraction.
+
+* * *
+
+I'm currently exploring tools for LLMs.
+
+Tools are functions that LLMs can call. ChatGPT has tools - memory, web search, and code execution. Cursor and Claude Code have tools for viewing files, searching, editing, and running commands.
+
+I think we've only begun to scratch the surface of how to use tools with LLMs. My hypothesis is that we're building only generic tools today. But, each person or business may begin building custom tools for agents.
+
+In [_Adding a brain to my toolbox_](/adding-a-brain-to-my-toolbox), I wrote about running a local LLM on my home server. Since then, I set up Signal, and hooked it into the LLM. So, now I can have an (encrypted) conversation with my home server LLM via chat.
+
+![](/images/posts/claude-launching-and-tools/Screenshot-2025-08-19-at-20.14.37.png)
+
+Yesterday, I began giving the LLM access to tools. As a proof of concept, I let it add items to my todo list (via the [Things](https://culturedcode.com/things/support/articles/2908262/)), and the ability to look up the weather.
+
+![](/images/posts/claude-launching-and-tools/Screenshot-2025-08-20-at-09.31.01.png)
+
+The LLM can handle basic tasks pretty well. But, I still need to figure out how to do chained or compound tasks. For instance, I can say "Add buying milk to my todo list", but I can't say "add 'bring an umbrella' to my todo list if it's going to rain tomorrow."
+
+The question I keep asking is, "What would be a fun tool?" Things that may be a little too dangerous for mainstream users. For instance, could I give a tool for it to send emails? Access to all of my past emails? Read code I've written? The ability to query [Postcard](https://postcard.page) or [Booklet](https://booklet.group) databases?
+
+Tools may also be dynamically available based on context. Perhaps customer-facing chatbots have access to limited tools, while employees may have more sensitive tool access.
+
+The hypothesis I have emerging is that people and companies may begin maintaining their own libraries of tools for personal LLMs. Generic tools, like web search, are everywhere. But, perhaps specialized tools are the future.

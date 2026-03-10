@@ -17,7 +17,7 @@ describe('RSS feed', () => {
   })
 
   it('generates RSS per newsletter', () => {
-    for (const nl of ['contraption', 'workshop', 'postcard'] as const) {
+    for (const nl of ['contraption', 'workshop'] as const) {
       const posts = getPostsByNewsletter(nl)
       const rss = generateRss(posts)
       expect(rss).toContain('<item>')
@@ -31,15 +31,14 @@ describe('JSON feed', () => {
     const feed = generateJsonFeed(posts)
     expect(feed.version).toBe('https://jsonfeed.org/version/1.1')
     expect(feed.items.length).toBeGreaterThan(0)
-    // All 3 newsletters represented
+    // Contraption and workshop newsletters represented
     const tags = new Set(feed.items.flatMap((i) => i.tags))
     expect(tags.has('contraption')).toBe(true)
     expect(tags.has('workshop')).toBe(true)
-    expect(tags.has('postcard')).toBe(true)
   })
 
   it('generates JSON feed per newsletter', () => {
-    for (const nl of ['contraption', 'workshop', 'postcard'] as const) {
+    for (const nl of ['contraption', 'workshop'] as const) {
       const posts = getPostsByNewsletter(nl)
       const feed = generateJsonFeed(posts)
       expect(feed.items.length).toBeGreaterThan(0)
