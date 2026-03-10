@@ -42,16 +42,26 @@ export default function HomePage() {
             <EmailSignupForm />
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-5">
             <p className="text-xs font-semibold tracking-[0.15em] uppercase text-gray-500">
               Three newsletters
             </p>
             {newsletters.map((nl) => (
-              <Link key={nl.slug} href={`/${nl.slug}`} className="block group">
-                <h3 className="text-lg font-semibold text-gray-950 group-hover:text-forest transition-colors">
-                  {nl.name}
-                </h3>
-                <p className="font-serif text-sm text-gray-600">{nl.tagline}</p>
+              <Link
+                key={nl.slug}
+                href={`/${nl.slug}`}
+                className="flex items-center gap-3 group"
+              >
+                <Image
+                  src={`/images/${nl.slug === 'postcard' ? 'postcard' : `${nl.slug}-brand`}.svg`}
+                  alt={nl.name}
+                  width={100}
+                  height={20}
+                  className="h-4 w-auto shrink-0 opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+                />
+                <span className="font-serif text-sm text-gray-500 group-hover:text-gray-700 transition-colors duration-300">
+                  {nl.tagline}
+                </span>
               </Link>
             ))}
           </div>

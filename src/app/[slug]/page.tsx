@@ -79,14 +79,14 @@ export default async function SlugPage({ params }: Props) {
           {post?.newsletter && (
             <Link href={`/${post.newsletter}`} className="mb-4">
               <Image
-                src={`/images/${post.newsletter}.svg`}
+                src={`/images/${post.newsletter === 'postcard' ? 'postcard' : `${post.newsletter}-brand`}.svg`}
                 alt={
                   post.newsletter.charAt(0).toUpperCase() +
                   post.newsletter.slice(1)
                 }
                 width={120}
                 height={20}
-                className="h-5 w-auto opacity-60 hover:opacity-100 transition-opacity duration-300"
+                className="h-5 w-auto opacity-70 hover:opacity-100 transition-opacity duration-300"
               />
             </Link>
           )}
