@@ -13,7 +13,7 @@ export default function WorkshopPage() {
   const posts = getPostsByNewsletter('workshop')
 
   return (
-    <div className="bg-offwhite-warm">
+    <div className="bg-offwhite-warm" data-bg="offwhite-warm">
       <div className="bg-gray-850 py-10 md:py-14">
         <div className="container flex flex-col items-center text-center">
           <Image

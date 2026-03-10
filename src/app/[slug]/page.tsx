@@ -61,7 +61,10 @@ export default async function SlugPage({ params }: Props) {
   const isWorkshop = post?.newsletter === 'workshop'
 
   return (
-    <article className={isWorkshop ? 'bg-offwhite-warm' : undefined}>
+    <article
+      className={isWorkshop ? 'bg-offwhite-warm' : undefined}
+      data-bg={isWorkshop ? 'offwhite-warm' : undefined}
+    >
       <JsonLd
         type="article"
         post={post ?? undefined}
@@ -84,11 +87,18 @@ export default async function SlugPage({ params }: Props) {
             </p>
           )}
           {post && (
-            <div className="flex items-center gap-3 mt-6">
-              <span className="font-sans text-sm font-medium text-gray-700">
+            <a href="/" className="flex items-center gap-3 mt-6 group">
+              <Image
+                src="/images/portrait.jpg"
+                alt="Philip I. Thomas"
+                width={36}
+                height={36}
+                className="w-9 h-9 rounded-full"
+              />
+              <span className="font-sans text-sm font-medium text-gray-600 group-hover:text-forest transition-colors duration-300">
                 Philip I. Thomas
               </span>
-            </div>
+            </a>
           )}
         </header>
 

@@ -1,6 +1,5 @@
 import type { NextConfig } from 'next'
 
-// Postcard redirects: /posts/what-i-m-up-to-{month}-{year} -> /{month}-{year}
 const postcardMonths = [
   'january',
   'february',
@@ -16,12 +15,25 @@ const postcardMonths = [
   'december',
 ]
 const postcardYears = [2022, 2023, 2024, 2025, 2026, 2027, 2028]
+
+// Ghost legacy: /posts/what-i-m-up-to-{month}-{year} -> /{year}-{mm}
+// Old slug format: /{month}-{year} -> /{year}-{mm}
 const postcardRedirects = postcardYears.flatMap((year) =>
-  postcardMonths.map((month) => ({
-    source: `/posts/what-i-m-up-to-${month}-${year}`,
-    destination: `/${month}-${year}`,
-    permanent: true,
-  }))
+  postcardMonths.map((month, i) => {
+    const mm = String(i + 1).padStart(2, '0')
+    return [
+      {
+        source: `/posts/what-i-m-up-to-${month}-${year}`,
+        destination: `/${year}-${mm}`,
+        permanent: true,
+      },
+      {
+        source: `/${month}-${year}`,
+        destination: `/${year}-${mm}`,
+        permanent: true,
+      },
+    ]
+  })
 )
 
 const nextConfig: NextConfig = {
@@ -38,8 +50,8 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      // Postcard: /posts/what-i-m-up-to-{month}-{year} -> /{month}-{year}
-      ...postcardRedirects,
+      // Postcard redirects (Ghost legacy + old month-name slugs)
+      ...postcardRedirects.flat(),
       // All other old philipithomas.com posts: /posts/:slug -> /:slug
       {
         source: '/posts/:slug',

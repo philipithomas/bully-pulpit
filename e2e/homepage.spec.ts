@@ -36,14 +36,14 @@ test('newsletter pages load', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('Postcard')
 })
 
-test('postcard redirect: /posts/what-i-m-up-to-{month}-{year} -> /{month}-{year}', async ({
+test('postcard redirect: /posts/what-i-m-up-to-{month}-{year} -> /{year}-{mm}', async ({
   request,
 }) => {
   const resp = await request.get('/posts/what-i-m-up-to-march-2026', {
     maxRedirects: 0,
   })
   expect(resp.status()).toBe(308)
-  expect(resp.headers().location).toBe('/march-2026')
+  expect(resp.headers().location).toBe('/2026-03')
 })
 
 test('contraption redirect: /posts/:slug -> /:slug', async ({ request }) => {
@@ -56,7 +56,7 @@ test('contraption redirect: /posts/:slug -> /:slug', async ({ request }) => {
 
 test('redirected postcard URL resolves to a real page', async ({ page }) => {
   await page.goto('/posts/what-i-m-up-to-january-2025')
-  await expect(page).toHaveURL('/january-2025')
+  await expect(page).toHaveURL('/2025-01')
   await expect(page.locator('h1')).toHaveText('January 2025')
 })
 

@@ -143,6 +143,15 @@ body {
   background-color: var(--color-offwhite);
 }
 
+/* Propagate page backgrounds to body so the header matches */
+body:has(> * [data-bg="offwhite-warm"]) {
+  background-color: var(--color-offwhite-warm);
+}
+
+body:has(> * [data-bg="offwhite-cool"]) {
+  background-color: var(--color-offwhite-cool);
+}
+
 /* ============================
    Component classes
    ============================ */

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
@@ -8,33 +9,57 @@ export const metadata: Metadata = {
   description: siteConfig.newsletters.postcard.tagline,
 }
 
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+]
+
 export default function PostcardPage() {
   const posts = getPostsByNewsletter('postcard')
 
-  // Build calendar grid: group posts by year and month
+  // Build calendar grid: group posts by YYYY-MM key
+  // Parse publishedAt as a plain string to avoid timezone off-by-1
   const postsByMonth = new Map<string, (typeof posts)[0]>()
   for (const post of posts) {
-    const date = new Date(post.frontmatter.publishedAt)
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    // publishedAt is "YYYY-MM-DD" — take first 7 chars for "YYYY-MM"
+    const key = post.frontmatter.publishedAt.slice(0, 7)
     postsByMonth.set(key, post)
   }
 
   // Generate all months from earliest post to now
   const months: { key: string; label: string; year: number }[] = []
   if (posts.length > 0) {
-    const earliest = new Date(posts[posts.length - 1].frontmatter.publishedAt)
+    const earliestKey = posts[posts.length - 1].frontmatter.publishedAt.slice(
+      0,
+      7
+    )
+    const startYear = Number.parseInt(earliestKey.slice(0, 4), 10)
+    const startMonth = Number.parseInt(earliestKey.slice(5, 7), 10) - 1
+
     const now = new Date()
-    const current = new Date(earliest.getFullYear(), earliest.getMonth(), 1)
-    while (current <= now) {
-      const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`
-      months.push({
-        key,
-        label: current.toLocaleDateString('en-US', {
-          month: 'short',
-        }),
-        year: current.getFullYear(),
-      })
-      current.setMonth(current.getMonth() + 1)
+    const endYear = now.getFullYear()
+    const endMonth = now.getMonth()
+
+    let y = startYear
+    let m = startMonth
+    while (y < endYear || (y === endYear && m <= endMonth)) {
+      const key = `${y}-${String(m + 1).padStart(2, '0')}`
+      months.push({ key, label: MONTH_LABELS[m], year: y })
+      m++
+      if (m > 11) {
+        m = 0
+        y++
+      }
     }
   }
 
@@ -47,12 +72,18 @@ export default function PostcardPage() {
   }
 
   return (
-    <div className="bg-offwhite-cool min-h-screen">
+    <div className="bg-offwhite-cool min-h-screen" data-bg="offwhite-cool">
       <div className="container py-12 md:py-16">
-        <div className="mb-12">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-gray-950">
-            Postcard
-          </h1>
+        <div className="mb-12 flex flex-col items-center text-center">
+          <Image
+            src="/images/postcard.svg"
+            alt="Postcard"
+            width={200}
+            height={48}
+            className="h-10 md:h-12 w-auto mx-auto"
+            priority
+          />
+          <h1 className="sr-only">Postcard</h1>
           <p className="font-serif text-lg text-gray-600 mt-3">
             {siteConfig.newsletters.postcard.tagline}
           </p>
