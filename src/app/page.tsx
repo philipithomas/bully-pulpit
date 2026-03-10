@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { EmailSignupForm } from '@/components/auth/email-signup-form'
+import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
 
@@ -25,6 +26,9 @@ export default function HomePage() {
 
         {/* Right: Bio + Newsletter signup */}
         <div>
+          <div className="mb-6">
+            <LatestPostPill />
+          </div>
           <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-gray-950 mb-6">
             Philip I. Thomas
           </h1>

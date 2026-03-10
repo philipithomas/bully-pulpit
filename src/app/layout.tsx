@@ -54,14 +54,14 @@ export default function RootLayout({
       <body className="font-sans font-normal antialiased text-gray-900 bg-offwhite">
         <AuthProvider>
           <a
-            href="#main"
+            href="#content"
             className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-gray-950"
           >
             Skip to content
           </a>
           <Header />
           {/* biome-ignore lint/correctness/useUniqueElementIds: root layout renders once */}
-          <main id="main">{children}</main>
+          <main id="content">{children}</main>
           <Footer />
           <SignInModal />
           <GoogleOneTap />

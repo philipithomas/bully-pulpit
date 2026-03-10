@@ -89,7 +89,7 @@ export default async function SlugPage({ params }: Props) {
           {post && (
             <a href="/" className="flex items-center gap-3 mt-6 group">
               <Image
-                src="/images/portrait.jpg"
+                src="/images/author.jpg"
                 alt="Philip I. Thomas"
                 width={36}
                 height={36}
