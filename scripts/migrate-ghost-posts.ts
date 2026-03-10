@@ -260,7 +260,7 @@ function main() {
 
     frontmatterLines.push('---')
 
-    const mdxContent = frontmatterLines.join('\n') + '\n\n' + markdown + '\n'
+    const mdxContent = `${frontmatterLines.join('\n')}\n\n${markdown}\n`
 
     // Write MDX file
     fs.writeFileSync(outputPath, mdxContent, 'utf-8')

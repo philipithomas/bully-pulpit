@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import '@/styles/globals.css'
 import { AuthProvider } from '@/components/auth/auth-provider'
+import { GoogleOneTap } from '@/components/auth/google-one-tap'
+import { SignInModal } from '@/components/auth/sign-in-modal'
 import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
 import { ImageZoom } from '@/components/ui/image-zoom'
@@ -61,6 +63,8 @@ export default function RootLayout({
           {/* biome-ignore lint/correctness/useUniqueElementIds: root layout renders once */}
           <main id="main">{children}</main>
           <Footer />
+          <SignInModal />
+          <GoogleOneTap />
           <ScrollReveal />
           <ImageZoom />
         </AuthProvider>

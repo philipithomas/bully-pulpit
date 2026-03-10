@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { PostGrid } from '@/components/posts/post-grid'
+import { InfinitePostGrid } from '@/components/posts/infinite-post-grid'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 
@@ -22,7 +22,7 @@ export default function ContraptionPage() {
             {siteConfig.newsletters.contraption.tagline}
           </p>
         </div>
-        <PostGrid posts={posts} />
+        <InfinitePostGrid initialPosts={posts} newsletter="contraption" />
       </div>
     </div>
   )

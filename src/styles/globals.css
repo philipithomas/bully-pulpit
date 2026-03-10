@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@plugin "tailwindcss-animate";
 
 /* ============================
    Fonts from fonts.contraption.co
@@ -175,6 +176,84 @@ body {
   background-repeat: no-repeat;
   background-size: 0% 1px;
   transition: background-size 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ============================
+   Button component
+   ============================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-decoration: none;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.3s ease-in-out;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background-color: var(--color-gray-950);
+  color: white;
+  border-color: var(--color-gray-950);
+  padding-inline: 1.25rem;
+  height: 2.5rem;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.btn-primary:hover {
+  padding-right: 2rem;
+}
+
+.btn-primary .btn-text {
+  transition: transform 0.3s ease-in-out;
+  color: white;
+  position: relative;
+  z-index: 10;
+}
+
+.btn-primary .btn-arrow {
+  position: absolute;
+  right: 1rem;
+  opacity: 0;
+  transform: translateX(0.5rem);
+  transition: all 0.3s ease-in-out;
+  width: 1rem;
+  height: 1rem;
+  z-index: 20;
+  color: white;
+}
+
+.btn-primary:hover .btn-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.btn-primary:hover .btn-text {
+  transform: translateX(-0.25rem);
+}
+
+/* ============================
+   Workshop logo filter
+   ============================ */
+
+.workshop-logo-light {
+  filter: invert(90%) sepia(5%) saturate(200%) hue-rotate(345deg)
+    brightness(110%);
 }
 
 /* ============================

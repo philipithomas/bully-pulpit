@@ -1,8 +1,12 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 
 export function ScrollReveal() {
+  const pathname = usePathname()
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run observer on route change to animate new elements
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       document.querySelectorAll('.reveal').forEach((el) => {
@@ -27,13 +31,15 @@ export function ScrollReveal() {
       { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
     )
 
-    document.querySelectorAll('.reveal:not(.revealed)').forEach((el, i) => {
-      ;(el as HTMLElement).dataset.revealIndex = String(i % 3)
-      observer.observe(el)
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.reveal:not(.revealed)').forEach((el, i) => {
+        ;(el as HTMLElement).dataset.revealIndex = String(i % 3)
+        observer.observe(el)
+      })
     })
 
     return () => observer.disconnect()
-  }, [])
+  }, [pathname])
 
   return null
 }

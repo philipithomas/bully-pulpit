@@ -67,15 +67,15 @@ export default async function SlugPage({ params }: Props) {
         post={post ?? undefined}
         page={page ?? undefined}
       />
-      <div className="container py-12 md:py-16 max-w-3xl mx-auto">
+      <div className="container py-12 md:py-16">
         {/* Header */}
-        <header className="mb-10">
+        <header className="flex flex-col items-center text-center mx-auto max-w-3xl mb-10">
           {post && (
             <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
               {format(new Date(item.frontmatter.publishedAt), 'yyyy-MM-dd')}
             </time>
           )}
-          <h1 className="font-sans font-semibold text-3xl sm:text-4xl md:text-5xl tracking-tight text-gray-950 mt-3">
+          <h1 className="font-sans font-semibold text-3xl leading-tight tracking-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl text-pretty mt-3">
             {item.frontmatter.title}
           </h1>
           {item.frontmatter.description && (
@@ -83,11 +83,18 @@ export default async function SlugPage({ params }: Props) {
               {item.frontmatter.description}
             </p>
           )}
+          {post && (
+            <div className="flex items-center gap-3 mt-6">
+              <span className="font-sans text-sm font-medium text-gray-700">
+                Philip I. Thomas
+              </span>
+            </div>
+          )}
         </header>
 
         {/* Cover image */}
         {item.frontmatter.coverImage && (
-          <div className="relative aspect-[2/1] overflow-hidden rounded-sm mb-10">
+          <div className="relative aspect-[2/1] overflow-hidden rounded-sm mb-10 max-w-3xl mx-auto">
             <Image
               src={item.frontmatter.coverImage}
               alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}

@@ -43,7 +43,7 @@ test('postcard redirect: /posts/what-i-m-up-to-{month}-{year} -> /{month}-{year}
     maxRedirects: 0,
   })
   expect(resp.status()).toBe(308)
-  expect(resp.headers()['location']).toBe('/march-2026')
+  expect(resp.headers().location).toBe('/march-2026')
 })
 
 test('contraption redirect: /posts/:slug -> /:slug', async ({ request }) => {
@@ -51,7 +51,7 @@ test('contraption redirect: /posts/:slug -> /:slug', async ({ request }) => {
     maxRedirects: 0,
   })
   expect(resp.status()).toBe(308)
-  expect(resp.headers()['location']).toBe('/buyers-define-marketplaces')
+  expect(resp.headers().location).toBe('/buyers-define-marketplaces')
 })
 
 test('redirected postcard URL resolves to a real page', async ({ page }) => {
@@ -64,4 +64,28 @@ test('redirected contraption URL resolves to a real page', async ({ page }) => {
   await page.goto('/posts/advice-for-marketplace-startups')
   await expect(page).toHaveURL('/advice-for-marketplace-startups')
   await expect(page.locator('h1')).toContainText('Advice')
+})
+
+test('terms page loads', async ({ page }) => {
+  await page.goto('/terms')
+  await expect(page).toHaveTitle(/Terms of Service/)
+  await expect(page.locator('h1')).toHaveText('Terms of Service')
+})
+
+test('privacy page loads', async ({ page }) => {
+  await page.goto('/privacy')
+  await expect(page).toHaveTitle(/Privacy Policy/)
+  await expect(page.locator('h1')).toHaveText('Privacy Policy')
+})
+
+test('sitemap includes pages and posts', async ({ request }) => {
+  const resp = await request.get('/sitemap.xml')
+  expect(resp.status()).toBe(200)
+  expect(resp.headers()['content-type']).toContain('application/xml')
+  const body = await resp.text()
+  expect(body).toContain('/terms')
+  expect(body).toContain('/privacy')
+  expect(body).toContain('/contraption')
+  expect(body).toContain('/workshop')
+  expect(body).toContain('/postcard')
 })

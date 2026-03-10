@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-import { PostGrid } from '@/components/posts/post-grid'
+import Image from 'next/image'
+import { InfinitePostGrid } from '@/components/posts/infinite-post-grid'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 
@@ -14,17 +15,23 @@ export default function WorkshopPage() {
   return (
     <div className="bg-offwhite-warm">
       <div className="bg-gray-850 py-10 md:py-14">
-        <div className="container">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-white">
-            Workshop
-          </h1>
+        <div className="container flex flex-col items-center text-center">
+          <Image
+            src="/images/workshop.svg"
+            alt="Workshop"
+            width={200}
+            height={48}
+            className="h-10 md:h-12 w-auto mx-auto workshop-logo-light"
+            priority
+          />
+          <h1 className="sr-only">Workshop</h1>
           <p className="font-serif text-lg text-gray-400 mt-3">
             {siteConfig.newsletters.workshop.tagline}
           </p>
         </div>
       </div>
       <div className="container py-12 md:py-16">
-        <PostGrid posts={posts} />
+        <InfinitePostGrid initialPosts={posts} newsletter="workshop" />
       </div>
     </div>
   )
