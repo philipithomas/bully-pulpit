@@ -58,13 +58,15 @@ export default async function SlugPage({ params }: Props) {
   if (!post && !page) notFound()
 
   const item = post ?? page!
-  const isWorkshop = post?.newsletter === 'workshop'
+  const bgMap: Record<string, { className: string; dataBg: string }> = {
+    workshop: { className: 'bg-offwhite-warm', dataBg: 'offwhite-warm' },
+    contraption: { className: 'bg-gray-050', dataBg: 'gray-050' },
+    postcard: { className: 'bg-offwhite-cool', dataBg: 'offwhite-cool' },
+  }
+  const bg = post?.newsletter ? bgMap[post.newsletter] : undefined
 
   return (
-    <article
-      className={isWorkshop ? 'bg-offwhite-warm' : undefined}
-      data-bg={isWorkshop ? 'offwhite-warm' : undefined}
-    >
+    <article className={bg?.className} data-bg={bg?.dataBg}>
       <JsonLd
         type="article"
         post={post ?? undefined}

@@ -13,7 +13,7 @@ export default function ContraptionPage() {
   const posts = getPostsByNewsletter('contraption')
 
   return (
-    <div className="bg-offwhite">
+    <div className="bg-gray-050" data-bg="gray-050">
       <div className="container py-12 md:py-16">
         <div className="mb-12">
           <Image

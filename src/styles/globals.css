@@ -152,6 +152,10 @@ body:has(> * [data-bg="offwhite-cool"]) {
   background-color: var(--color-offwhite-cool);
 }
 
+body:has(> * [data-bg="gray-050"]) {
+  background-color: var(--color-gray-050);
+}
+
 /* ============================
    Component classes
    ============================ */
