@@ -35,3 +35,33 @@ test('newsletter pages load', async ({ page }) => {
   await page.goto('/postcard')
   await expect(page.locator('h1')).toHaveText('Postcard')
 })
+
+test('postcard redirect: /posts/what-i-m-up-to-{month}-{year} -> /{month}-{year}', async ({
+  request,
+}) => {
+  const resp = await request.get('/posts/what-i-m-up-to-march-2026', {
+    maxRedirects: 0,
+  })
+  expect(resp.status()).toBe(308)
+  expect(resp.headers()['location']).toBe('/march-2026')
+})
+
+test('contraption redirect: /posts/:slug -> /:slug', async ({ request }) => {
+  const resp = await request.get('/posts/buyers-define-marketplaces', {
+    maxRedirects: 0,
+  })
+  expect(resp.status()).toBe(308)
+  expect(resp.headers()['location']).toBe('/buyers-define-marketplaces')
+})
+
+test('redirected postcard URL resolves to a real page', async ({ page }) => {
+  await page.goto('/posts/what-i-m-up-to-january-2025')
+  await expect(page).toHaveURL('/january-2025')
+  await expect(page.locator('h1')).toHaveText('January 2025')
+})
+
+test('redirected contraption URL resolves to a real page', async ({ page }) => {
+  await page.goto('/posts/advice-for-marketplace-startups')
+  await expect(page).toHaveURL('/advice-for-marketplace-startups')
+  await expect(page.locator('h1')).toContainText('Advice')
+})
