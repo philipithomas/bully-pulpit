@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { EmailSignupForm } from '@/components/auth/email-signup-form'
+import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
@@ -39,7 +39,7 @@ export default function HomePage() {
           </div>
 
           <div className="mb-10">
-            <EmailSignupForm />
+            <InlineSignupForm />
           </div>
 
           <div className="space-y-5">
@@ -57,7 +57,7 @@ export default function HomePage() {
                   alt={nl.name}
                   width={100}
                   height={20}
-                  className="h-4 w-auto shrink-0 opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+                  className="h-4 w-auto shrink-0"
                 />
                 <span className="font-serif text-sm text-gray-500 group-hover:text-gray-700 transition-colors duration-300">
                   {nl.tagline}

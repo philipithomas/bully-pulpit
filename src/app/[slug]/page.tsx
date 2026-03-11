@@ -86,7 +86,7 @@ export default async function SlugPage({ params }: Props) {
                 }
                 width={120}
                 height={20}
-                className="h-5 w-auto opacity-70 hover:opacity-100 transition-opacity duration-300"
+                className="h-5 w-auto"
               />
             </Link>
           )}
@@ -121,16 +121,16 @@ export default async function SlugPage({ params }: Props) {
 
         {/* Cover image */}
         {item.frontmatter.coverImage && (
-          <div className="mb-10 max-w-3xl mx-auto">
+          <div className="w-full overflow-hidden mb-10">
             <Image
               src={item.frontmatter.coverImage}
               alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}
-              width={768}
-              height={384}
+              width={1280}
+              height={640}
               data-zoomable=""
-              className="w-full rounded-sm cursor-zoom-in"
+              className="w-full cursor-zoom-in"
               priority
-              sizes="(max-width: 768px) 100vw, 768px"
+              sizes="(min-width: 800px) 100vw, 700px"
             />
           </div>
         )}
