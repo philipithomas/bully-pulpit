@@ -3,7 +3,7 @@ import { siteConfig } from '@/lib/config'
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { email, name, googleVerified } = body
+  const { email, name, googleVerified, newsletters } = body
 
   if (!email) {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 })
@@ -35,6 +35,26 @@ export async function POST(request: Request) {
     }
 
     const subscriber = await res.json()
+
+    // Update newsletter preferences if specified
+    if (newsletters && subscriber.uuid) {
+      await fetch(
+        `${siteConfig.printingPressUrl}/api/v1/subscribers/${subscriber.uuid}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': siteConfig.m2mApiKey,
+          },
+          body: JSON.stringify({
+            subscribed_contraption: newsletters.includes('contraption'),
+            subscribed_workshop: newsletters.includes('workshop'),
+            subscribed_postcard: newsletters.includes('postcard'),
+          }),
+        }
+      )
+    }
+
     return NextResponse.json({ subscriber })
   } catch {
     return NextResponse.json(

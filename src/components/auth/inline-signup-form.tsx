@@ -3,23 +3,55 @@
 import { useState } from 'react'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 
-export function InlineSignupForm() {
+interface Props {
+  showNewsletterPicker?: boolean
+}
+
+const newsletters = [
+  { id: 'contraption', label: 'Contraption', desc: 'Essays and launches.' },
+  {
+    id: 'workshop',
+    label: 'Workshop',
+    desc: 'Journal about work in progress.',
+  },
+  { id: 'postcard', label: 'Postcard', desc: "What I'm up to." },
+] as const
+
+export function InlineSignupForm({ showNewsletterPicker = false }: Props) {
   const [email, setEmail] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(
+    new Set(['contraption', 'workshop', 'postcard'])
+  )
   const [status, setStatus] = useState<
     'idle' | 'loading' | 'success' | 'error'
   >('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
+  function toggleNewsletter(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email) return
+    if (showNewsletterPicker && selected.size === 0) return
 
     setStatus('loading')
     try {
       const res = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          newsletters: showNewsletterPicker
+            ? Array.from(selected)
+            : ['contraption', 'workshop', 'postcard'],
+        }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -45,6 +77,31 @@ export function InlineSignupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col items-start">
+      {showNewsletterPicker && (
+        <fieldset className="mb-5 space-y-3">
+          {newsletters.map((nl) => (
+            <label
+              key={nl.id}
+              className="flex items-start gap-3 cursor-pointer group"
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(nl.id)}
+                onChange={() => toggleNewsletter(nl.id)}
+                className="mt-1 h-4 w-4 accent-gray-950 shrink-0"
+              />
+              <span>
+                <span className="font-sans text-sm font-semibold text-gray-900">
+                  {nl.label}
+                </span>
+                <span className="font-serif text-sm text-gray-500 ml-2">
+                  {nl.desc}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
       <div className="flex items-center w-full sm:w-2/3">
         <input
           type="email"

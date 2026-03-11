@@ -5,6 +5,12 @@ import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
 
+const newsletterLogos: Record<string, string> = {
+  contraption: '/images/contraption-brand.svg',
+  workshop: '/images/workshop-brand.svg',
+  postcard: '/images/postcard.svg',
+}
+
 export default function HomePage() {
   const newsletters = Object.values(siteConfig.newsletters)
 
@@ -32,7 +38,7 @@ export default function HomePage() {
           <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-gray-950 mb-6">
             Crafting digital tools
           </h1>
-          <div className="font-serif text-lg text-gray-600 leading-relaxed mb-10 max-w-prose">
+          <div className="font-serif text-lg text-gray-600 leading-relaxed mb-12 max-w-prose">
             <p className="mb-4">
               I build at the intersection of math, business, and software. I
               work on the engineering team at{' '}
@@ -51,14 +57,24 @@ export default function HomePage() {
             <p>In the past, I made Find AI, Moonlight, and Staffjoy.</p>
           </div>
 
-          <div className="mb-10">
-            <InlineSignupForm />
+          {/* Newsletter subscribe section */}
+          <div className="border-t border-gray-200 pt-8">
+            <p className="font-sans text-sm font-semibold text-gray-950 mb-1">
+              Subscribe to my updates
+            </p>
+            <p className="font-serif text-sm text-gray-500 mb-6">
+              Three newsletters — pick your interests.
+            </p>
+
+            <InlineSignupForm showNewsletterPicker />
+
+            <p className="font-sans text-xs text-gray-400 mt-4">
+              You can unsubscribe at any time.
+            </p>
           </div>
 
-          <div className="space-y-5">
-            <p className="text-xs font-semibold tracking-[0.15em] uppercase text-gray-500">
-              Three newsletters
-            </p>
+          {/* Newsletter directory */}
+          <div className="border-t border-gray-200 mt-10 pt-8 space-y-4">
             {newsletters.map((nl) => (
               <Link
                 key={nl.slug}
@@ -66,7 +82,7 @@ export default function HomePage() {
                 className="flex items-center gap-3 group"
               >
                 <Image
-                  src={`/images/${nl.slug === 'postcard' ? 'postcard' : `${nl.slug}-brand`}.svg`}
+                  src={newsletterLogos[nl.slug]}
                   alt={nl.name}
                   width={100}
                   height={20}
