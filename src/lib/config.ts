@@ -1,7 +1,7 @@
 export const siteConfig = {
   title: 'Philip I. Thomas',
   description:
-    'Personal website and blog of Philip I. Thomas — essays, launches, and notes on work in progress.',
+    'I build at the intersection of math, business, and software. I write about crafting digital tools at Contraption Company.',
   url: 'https://philipithomas.com',
   author: 'Philip I. Thomas',
   email: 'mail@philipithomas.com',

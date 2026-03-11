@@ -8,7 +8,7 @@ test('homepage has correct title', async ({ page }) => {
 test('homepage has h1', async ({ page }) => {
   await page.goto('/')
   const h1 = page.locator('h1')
-  await expect(h1).toHaveText('Philip I. Thomas')
+  await expect(h1).toHaveText('Crafting digital tools')
 })
 
 test('homepage has OG tags', async ({ page }) => {

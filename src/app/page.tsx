@@ -30,12 +30,25 @@ export default function HomePage() {
             <LatestPostPill />
           </div>
           <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-gray-950 mb-6">
-            Philip I. Thomas
+            Crafting digital tools
           </h1>
           <div className="font-serif text-lg text-gray-600 leading-relaxed mb-10 max-w-prose">
             <p className="mb-4">
-              I build companies and write about it. Currently based in New York.
+              I build at the intersection of math, business, and software. I
+              work on the engineering team at{' '}
+              <a
+                href="https://www.trychroma.com"
+                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+              >
+                Chroma
+              </a>
+              . I write about crafting digital tools at Contraption Company.
             </p>
+            <p className="mb-4">
+              I live in San Francisco. I&apos;m interested in coffee,
+              fermentation, and urbanism.
+            </p>
+            <p>In the past, I made Find AI, Moonlight, and Staffjoy.</p>
           </div>
 
           <div className="mb-10">
