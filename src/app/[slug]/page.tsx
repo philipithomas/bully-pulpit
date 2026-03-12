@@ -1,11 +1,11 @@
 import { format } from 'date-fns'
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
+import { SetNewsletter } from '@/components/layout/newsletter-context'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
@@ -68,6 +68,7 @@ export default async function SlugPage({ params }: Props) {
 
   return (
     <article className={bg?.className} data-bg={bg?.dataBg}>
+      <SetNewsletter newsletter={post?.newsletter ?? null} />
       <JsonLd
         type="article"
         post={post ?? undefined}
@@ -76,20 +77,6 @@ export default async function SlugPage({ params }: Props) {
       <div className="container py-12 md:py-16">
         {/* Header */}
         <header className="flex flex-col items-center text-center mx-auto max-w-3xl mb-10">
-          {post?.newsletter && (
-            <Link href={`/${post.newsletter}`} className="mb-4">
-              <Image
-                src={`/images/${post.newsletter === 'postcard' ? 'postcard' : `${post.newsletter}-brand`}.svg`}
-                alt={
-                  post.newsletter.charAt(0).toUpperCase() +
-                  post.newsletter.slice(1)
-                }
-                width={120}
-                height={20}
-                className="h-5 w-auto"
-              />
-            </Link>
-          )}
           {post && post.newsletter !== 'postcard' && (
             <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
               {format(new Date(item.frontmatter.publishedAt), 'yyyy-MM-dd')}

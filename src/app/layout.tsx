@@ -6,6 +6,7 @@ import { GoogleOneTap } from '@/components/auth/google-one-tap'
 import { SignInModal } from '@/components/auth/sign-in-modal'
 import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
+import { NewsletterProvider } from '@/components/layout/newsletter-context'
 import { ImageZoom } from '@/components/ui/image-zoom'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { siteConfig } from '@/lib/config'
@@ -54,21 +55,23 @@ export default function RootLayout({
       </head>
       <body className="font-sans font-normal antialiased text-gray-900 bg-offwhite">
         <AuthProvider>
-          <a
-            href="#content"
-            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-gray-950"
-          >
-            Skip to content
-          </a>
-          <Header />
-          {/* biome-ignore lint/correctness/useUniqueElementIds: root layout renders once */}
-          <main id="content">{children}</main>
-          <Footer />
-          <SignInModal />
-          <GoogleOneTap />
-          <ScrollReveal />
-          <ImageZoom />
-          <Plausible />
+          <NewsletterProvider>
+            <a
+              href="#content"
+              className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-gray-950"
+            >
+              Skip to content
+            </a>
+            <Header />
+            {/* biome-ignore lint/correctness/useUniqueElementIds: root layout renders once */}
+            <main id="content">{children}</main>
+            <Footer />
+            <SignInModal />
+            <GoogleOneTap />
+            <ScrollReveal />
+            <ImageZoom />
+            <Plausible />
+          </NewsletterProvider>
         </AuthProvider>
       </body>
     </html>
