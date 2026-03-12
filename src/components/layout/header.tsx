@@ -9,10 +9,19 @@ import { Logo } from '@/components/layout/logo'
 import { useNewsletter } from '@/components/layout/newsletter-context'
 import { SearchDialog } from '@/components/search/search-dialog'
 
-const newsletterLogoSrc: Record<string, string> = {
-  contraption: '/images/contraption-brand.svg',
-  workshop: '/images/workshop-brand.svg',
-  postcard: '/images/postcard.svg',
+const newsletterLogos: Record<string, { src: string; className: string }> = {
+  contraption: {
+    src: '/images/contraption-brand.svg',
+    className: 'h-[14px] w-auto',
+  },
+  workshop: {
+    src: '/images/workshop-brand.svg',
+    className: 'h-4 w-auto',
+  },
+  postcard: {
+    src: '/images/postcard.svg',
+    className: 'h-3 w-auto',
+  },
 }
 
 export function Header() {
@@ -34,14 +43,14 @@ export function Header() {
   return (
     <header className="py-4 md:py-6">
       <div className="container flex items-center justify-between">
-        {newsletter ? (
+        {newsletter && newsletterLogos[newsletter] ? (
           <Link href={`/${newsletter}`} className="flex items-center">
             <Image
-              src={newsletterLogoSrc[newsletter]}
+              src={newsletterLogos[newsletter].src}
               alt={newsletter.charAt(0).toUpperCase() + newsletter.slice(1)}
               width={160}
               height={20}
-              className="h-4 w-auto"
+              className={newsletterLogos[newsletter].className}
             />
           </Link>
         ) : (

@@ -1,14 +1,22 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
 
-const newsletterLogos: Record<string, string> = {
-  contraption: '/images/contraption-brand.svg',
-  workshop: '/images/workshop-brand.svg',
-  postcard: '/images/postcard.svg',
+const newsletterLogos: Record<string, { src: string; className: string }> = {
+  contraption: {
+    src: '/images/contraption-brand.svg',
+    className: 'h-[14px] w-auto shrink-0',
+  },
+  workshop: {
+    src: '/images/workshop-brand.svg',
+    className: 'h-4 w-auto shrink-0',
+  },
+  postcard: {
+    src: '/images/postcard.svg',
+    className: 'h-3 w-auto shrink-0',
+  },
 }
 
 export default function HomePage() {
@@ -57,42 +65,31 @@ export default function HomePage() {
             <p>In the past, I made Find AI, Moonlight, and Staffjoy.</p>
           </div>
 
-          {/* Newsletter subscribe section */}
-          <div className="border-t border-gray-200 pt-8">
-            <p className="font-sans text-sm font-semibold text-gray-950 mb-1">
-              Subscribe to my updates
-            </p>
-            <p className="font-serif text-sm text-gray-500 mb-6">
-              Three newsletters — pick your interests.
-            </p>
-
-            <InlineSignupForm showNewsletterPicker />
-
-            <p className="font-sans text-xs text-gray-400 mt-4">
-              You can unsubscribe at any time.
-            </p>
-          </div>
-
           {/* Newsletter directory */}
-          <div className="border-t border-gray-200 mt-10 pt-8 space-y-4">
-            {newsletters.map((nl) => (
-              <Link
-                key={nl.slug}
-                href={`/${nl.slug}`}
-                className="flex items-center gap-3 group"
-              >
-                <Image
-                  src={newsletterLogos[nl.slug]}
-                  alt={nl.name}
-                  width={100}
-                  height={20}
-                  className="h-4 w-auto shrink-0"
-                />
-                <span className="font-serif text-sm text-gray-500 group-hover:text-gray-700 transition-colors duration-300">
-                  {nl.tagline}
-                </span>
-              </Link>
-            ))}
+          <div className="border-t border-gray-200 pt-8">
+            <p className="font-serif text-sm text-gray-500 mb-6">
+              I publish three newsletters:
+            </p>
+            <div className="space-y-4">
+              {newsletters.map((nl) => (
+                <Link
+                  key={nl.slug}
+                  href={`/${nl.slug}`}
+                  className="flex items-center gap-3 group"
+                >
+                  <Image
+                    src={newsletterLogos[nl.slug].src}
+                    alt={nl.name}
+                    width={100}
+                    height={20}
+                    className={newsletterLogos[nl.slug].className}
+                  />
+                  <span className="font-serif text-sm text-gray-500 group-hover:text-gray-700 transition-colors duration-300">
+                    {nl.tagline}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </div>
