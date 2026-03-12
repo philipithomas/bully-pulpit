@@ -21,6 +21,7 @@
     "@base-ui-components/react": "1.0.0-rc.0",
     "@chroma-core/chroma-cloud-qwen": "^0.1.11",
     "@chroma-core/chroma-cloud-splade": "^0.1.11",
+    "@plausible-analytics/tracker": "^0.4.4",
     "@radix-ui/react-dialog": "^1.1.15",
     "@tanstack/react-query": "^5.90.21",
     "@vercel/functions": "^3.4.3",

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import '@/styles/globals.css'
+import { Plausible } from '@/components/analytics/plausible'
 import { AuthProvider } from '@/components/auth/auth-provider'
 import { GoogleOneTap } from '@/components/auth/google-one-tap'
 import { SignInModal } from '@/components/auth/sign-in-modal'
@@ -67,6 +68,7 @@ export default function RootLayout({
           <GoogleOneTap />
           <ScrollReveal />
           <ImageZoom />
+          <Plausible />
         </AuthProvider>
       </body>
     </html>
