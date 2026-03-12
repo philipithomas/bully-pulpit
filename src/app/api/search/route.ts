@@ -1,3 +1,4 @@
+import { waitUntil } from '@vercel/functions'
 import type { SparseVector } from 'chromadb'
 import { K, Knn, Search } from 'chromadb'
 import type { NextRequest } from 'next/server'
@@ -138,16 +139,18 @@ export async function GET(request: NextRequest) {
     const searchId = crypto.randomUUID()
     const topMatch = results[0] ?? null
 
-    // Async log — fire and forget
-    logSearch({
-      searchId,
-      sessionId,
-      query: q,
-      durationMs,
-      resultCount: results.length,
-      topMatchSlug: topMatch?.slug ?? '',
-      topMatchUrl: topMatch?.url ?? '',
-    }).catch((err) => console.error('Search log failed:', err))
+    // Log after response — waitUntil keeps the function alive on Vercel
+    waitUntil(
+      logSearch({
+        searchId,
+        sessionId,
+        query: q,
+        durationMs,
+        resultCount: results.length,
+        topMatchSlug: topMatch?.slug ?? '',
+        topMatchUrl: topMatch?.url ?? '',
+      }).catch((err) => console.error('Search log failed:', err))
+    )
 
     return NextResponse.json({ results, searchId, durationMs })
   } catch (err) {
