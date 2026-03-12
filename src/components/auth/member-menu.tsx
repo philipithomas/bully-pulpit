@@ -29,9 +29,7 @@ export function MemberMenu() {
     }
   }, [])
 
-  if (loading) return null
-
-  if (!user) {
+  if (loading || !user) {
     return (
       <div className="flex items-center gap-4 md:gap-5">
         <button

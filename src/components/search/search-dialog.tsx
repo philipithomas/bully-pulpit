@@ -49,7 +49,6 @@ function highlightQuery(text: string, query: string) {
         {part}
       </mark>
     ) : (
-      // biome-ignore lint/suspicious/noArrayIndexKey: stable split output
       <span key={key}>{part}</span>
     )
   })
