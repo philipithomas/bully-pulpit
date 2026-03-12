@@ -1,22 +1,45 @@
+'use client'
+
 import { Search } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { MemberMenu } from '@/components/auth/member-menu'
 import { Logo } from '@/components/layout/logo'
+import { SearchDialog } from '@/components/search/search-dialog'
 
 export function Header() {
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault()
+      setSearchOpen((prev) => !prev)
+    }
+  }, [])
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
+
   return (
     <header className="py-4 md:py-6">
       <div className="container flex items-center justify-between">
         <Logo />
         <nav className="flex items-center gap-3">
-          <span title="Search coming soon">
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search"
+          >
             <Search
-              className="h-[18px] w-[18px] text-gray-400 cursor-default"
+              className="h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600"
               aria-hidden="true"
             />
-          </span>
+          </button>
           <MemberMenu />
         </nav>
       </div>
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   )
 }

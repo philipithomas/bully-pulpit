@@ -11,12 +11,21 @@ importers:
       '@base-ui-components/react':
         specifier: 1.0.0-rc.0
         version: 1.0.0-rc.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@chroma-core/chroma-cloud-qwen':
+        specifier: ^0.1.11
+        version: 0.1.11(chromadb@3.3.3)
+      '@chroma-core/chroma-cloud-splade':
+        specifier: ^0.1.11
+        version: 0.1.11(chromadb@3.3.3)
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.90.21(react@19.2.4)
+      chromadb:
+        specifier: ^3.3.3
+        version: 3.3.3
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -211,6 +220,22 @@ packages:
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [win32]
+
+  '@chroma-core/ai-embeddings-common@0.1.10':
+    resolution: {integrity: sha512-MF7Ye/XgQblWqNJsp/1US2NylgubsfTAKuVlzkVOttmtC/blLr3X3jxEtaCscADHEo+zo9sfkMzYZBYlgQKrPg==}
+    engines: {node: '>=20'}
+
+  '@chroma-core/chroma-cloud-qwen@0.1.11':
+    resolution: {integrity: sha512-EvkbROTwTG68gTfVeR7t6F3k4aNddNGLBjP9IWm6/6wZcOBR5P1kSOJrE+I5YH9ZirQNCn+LTxkDRsLAW/3bIA==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      chromadb: ^3.3.2
+
+  '@chroma-core/chroma-cloud-splade@0.1.11':
+    resolution: {integrity: sha512-M4x0OCh2nL84nZYsG+7dAaBEQQDcxNOx6gWJ7ltF0kKWNxfktEHdP28G9M9Sc3f4XK9hwsq1XFUUwuM5irdqdg==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      chromadb: ^3.3.2
 
   '@emnapi/runtime@1.8.1':
     resolution: {integrity: sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg==}
@@ -1099,6 +1124,9 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
+  ajv@8.18.0:
+    resolution: {integrity: sha512-PlXPeEWMXMZ7sPYOHqmDyCJzcfNrUr3fGNKtezX14ykXOEIvyK81d+qydx89KY5O71FKMPaQ2vBfBFI5NHR63A==}
+
   ansi-escapes@7.3.0:
     resolution: {integrity: sha512-BvU8nYgGQBxcmMuEeUEmNTvrMVjJNSH7RgW24vXexN4Ven6qCvy4TntnvlnwnMLTVlcRQQdbRY8NKnaIoeWDNg==}
     engines: {node: '>=18'}
@@ -1159,6 +1187,41 @@ packages:
 
   character-reference-invalid@2.0.1:
     resolution: {integrity: sha512-iBZ4F4wRbyORVsu0jPV7gXkOsGYjGHPmAyv+HiHG8gi5PtC9KI2j1+v8/tlibRvjoWX027ypmG/n0HtO5t7unw==}
+
+  chromadb-js-bindings-darwin-arm64@1.3.1:
+    resolution: {integrity: sha512-MMo+TX8tRrhy/0KGrA30kVTZ+EwrRoXRSQA7EGLuKW6FTEVX7hbF5l0EFWgDTw6YPX/KY2ySYNQH3VFwRyxYFA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  chromadb-js-bindings-darwin-x64@1.3.1:
+    resolution: {integrity: sha512-zboZ29wtP7vrevfYhNXFToSM9sTaXP+KALYF4B6wJNp4jymBRSAzhAsHBrVmAJQxgPEJatoODAWqsVxaGLYkog==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  chromadb-js-bindings-linux-arm64-gnu@1.3.1:
+    resolution: {integrity: sha512-JPzoIy5vb4Gzu7kZnCkcMtsv+HPx/LWBFu72IDbnkUp8UleNyXup7fVX/tUvwHq+OPtj7ZB4YWwiP3SzKIWEgA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  chromadb-js-bindings-linux-x64-gnu@1.3.1:
+    resolution: {integrity: sha512-nQvVhmHs2XXbzA+Xka8A4UMiyMlk86AFmiy1Pt+kzQkuJT5vOMKOcgJW/Nh2m0CtEjkzvj4Mxr2/31BiLil7Hg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  chromadb-js-bindings-win32-x64-msvc@1.3.1:
+    resolution: {integrity: sha512-3B3WwT1aM9vxFZBqlDgnA+R025b8pOudGM4hEZTmxV2rHND3Hn7C87mQO5WsUMarOUmX4Sd1NlhC2ANKCIWfLw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  chromadb@3.3.3:
+    resolution: {integrity: sha512-PXrbiDn8Q34fA1ot8G9oT8iwIbAFasBNCEr2KDLNfNTARIjKV7D5LAbBJSUQWTKMwLADuFXclUYvTDozfhSMZQ==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   class-variance-authority@0.7.1:
     resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
@@ -1297,6 +1360,12 @@ packages:
   extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
 
+  fast-deep-equal@3.1.3:
+    resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
+
+  fast-uri@3.1.0:
+    resolution: {integrity: sha512-iPeeDKJSWf4IEOasVVrknXpaBV0IApz/gp7S2bb7Z4Lljbl2MGJRqInZiUrQwV16cpzw/D3S5j5Julj/gT52AA==}
+
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
@@ -1399,6 +1468,9 @@ packages:
   js-yaml@3.14.2:
     resolution: {integrity: sha512-PMSmkqxr106Xa156c2M265Z+FTrPl+oxd/rgOQy2tijQeK5TxQ43psO1ZCwhVOSdnn+RzkzlRz/eY4BgJBYVpg==}
     hasBin: true
+
+  json-schema-traverse@1.0.0:
+    resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
 
   kind-of@6.0.3:
     resolution: {integrity: sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==}
@@ -1827,6 +1899,10 @@ packages:
   remark-stringify@11.0.0:
     resolution: {integrity: sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw==}
 
+  require-from-string@2.0.2:
+    resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
+    engines: {node: '>=0.10.0'}
+
   reselect@5.1.1:
     resolution: {integrity: sha512-K/BG6eIky/SBpzfHZv/dd+9JBFiS4SWV7FIujVyJRux6e45+73RaUHXLmIR1f7WOMaQ0U1km6qwklRQxpJJY0w==}
 
@@ -2246,6 +2322,20 @@ snapshots:
 
   '@biomejs/cli-win32-x64@2.4.6':
     optional: true
+
+  '@chroma-core/ai-embeddings-common@0.1.10':
+    dependencies:
+      ajv: 8.18.0
+
+  '@chroma-core/chroma-cloud-qwen@0.1.11(chromadb@3.3.3)':
+    dependencies:
+      '@chroma-core/ai-embeddings-common': 0.1.10
+      chromadb: 3.3.3
+
+  '@chroma-core/chroma-cloud-splade@0.1.11(chromadb@3.3.3)':
+    dependencies:
+      '@chroma-core/ai-embeddings-common': 0.1.10
+      chromadb: 3.3.3
 
   '@emnapi/runtime@1.8.1':
     dependencies:
@@ -2929,6 +3019,13 @@ snapshots:
 
   acorn@8.16.0: {}
 
+  ajv@8.18.0:
+    dependencies:
+      fast-deep-equal: 3.1.3
+      fast-uri: 3.1.0
+      json-schema-traverse: 1.0.0
+      require-from-string: 2.0.2
+
   ansi-escapes@7.3.0:
     dependencies:
       environment: 1.1.0
@@ -2970,6 +3067,31 @@ snapshots:
   character-entities@2.0.2: {}
 
   character-reference-invalid@2.0.1: {}
+
+  chromadb-js-bindings-darwin-arm64@1.3.1:
+    optional: true
+
+  chromadb-js-bindings-darwin-x64@1.3.1:
+    optional: true
+
+  chromadb-js-bindings-linux-arm64-gnu@1.3.1:
+    optional: true
+
+  chromadb-js-bindings-linux-x64-gnu@1.3.1:
+    optional: true
+
+  chromadb-js-bindings-win32-x64-msvc@1.3.1:
+    optional: true
+
+  chromadb@3.3.3:
+    dependencies:
+      semver: 7.7.4
+    optionalDependencies:
+      chromadb-js-bindings-darwin-arm64: 1.3.1
+      chromadb-js-bindings-darwin-x64: 1.3.1
+      chromadb-js-bindings-linux-arm64-gnu: 1.3.1
+      chromadb-js-bindings-linux-x64-gnu: 1.3.1
+      chromadb-js-bindings-win32-x64-msvc: 1.3.1
 
   class-variance-authority@0.7.1:
     dependencies:
@@ -3121,6 +3243,10 @@ snapshots:
 
   extend@3.0.2: {}
 
+  fast-deep-equal@3.1.3: {}
+
+  fast-uri@3.1.0: {}
+
   fdir@6.5.0(picomatch@4.0.3):
     optionalDependencies:
       picomatch: 4.0.3
@@ -3238,6 +3364,8 @@ snapshots:
     dependencies:
       argparse: 1.0.10
       esprima: 4.0.1
+
+  json-schema-traverse@1.0.0: {}
 
   kind-of@6.0.3: {}
 
@@ -3976,6 +4104,8 @@ snapshots:
       '@types/mdast': 4.0.4
       mdast-util-to-markdown: 2.1.2
       unified: 11.0.5
+
+  require-from-string@2.0.2: {}
 
   reselect@5.1.1: {}
 

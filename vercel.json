@@ -1,0 +1,3 @@
+{
+  "buildCommand": "pnpm chroma:sync && pnpm build"
+}
