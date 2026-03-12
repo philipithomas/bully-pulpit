@@ -8,7 +8,7 @@ import { siteConfig } from '@/lib/config'
 const newsletterLogos: Record<string, { src: string; className: string }> = {
   contraption: {
     src: '/images/contraption-brand.svg',
-    className: 'h-[14px] w-auto shrink-0',
+    className: 'h-[13px] w-auto shrink-0',
   },
   workshop: {
     src: '/images/workshop-brand.svg',
@@ -16,7 +16,7 @@ const newsletterLogos: Record<string, { src: string; className: string }> = {
   },
   postcard: {
     src: '/images/postcard.svg',
-    className: 'h-3 w-auto shrink-0',
+    className: 'h-[14px] w-auto shrink-0',
   },
 }
 

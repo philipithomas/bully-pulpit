@@ -12,7 +12,7 @@ import { SearchDialog } from '@/components/search/search-dialog'
 const newsletterLogos: Record<string, { src: string; className: string }> = {
   contraption: {
     src: '/images/contraption-brand.svg',
-    className: 'h-[14px] w-auto',
+    className: 'h-[13px] w-auto',
   },
   workshop: {
     src: '/images/workshop-brand.svg',
@@ -20,7 +20,7 @@ const newsletterLogos: Record<string, { src: string; className: string }> = {
   },
   postcard: {
     src: '/images/postcard.svg',
-    className: 'h-3 w-auto',
+    className: 'h-[14px] w-auto',
   },
 }
 
