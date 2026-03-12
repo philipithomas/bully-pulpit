@@ -77,11 +77,13 @@ export default async function SlugPage({ params }: Props) {
       <div className="container py-12 md:py-16">
         {/* Header */}
         <header className="flex flex-col items-center text-center mx-auto max-w-3xl mb-10">
-          {post && post.newsletter !== 'postcard' && (
-            <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
-              {format(new Date(item.frontmatter.publishedAt), 'yyyy-MM-dd')}
-            </time>
-          )}
+          {post &&
+            post.newsletter !== 'postcard' &&
+            post.frontmatter.publishedAt && (
+              <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
+                {format(new Date(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
+              </time>
+            )}
           <h1 className="font-sans font-semibold text-3xl leading-tight tracking-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl text-pretty mt-3">
             {item.frontmatter.title}
           </h1>

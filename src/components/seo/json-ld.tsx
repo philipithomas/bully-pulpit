@@ -36,7 +36,9 @@ export function JsonLd({ type, post, page }: JsonLdProps) {
       '@type': 'Article',
       headline: item.frontmatter.title,
       description: item.frontmatter.description ?? siteConfig.description,
-      datePublished: item.frontmatter.publishedAt,
+      ...(item.frontmatter.publishedAt && {
+        datePublished: item.frontmatter.publishedAt,
+      }),
       author: {
         '@type': 'Person',
         name: siteConfig.author,

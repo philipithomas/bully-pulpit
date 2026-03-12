@@ -18,7 +18,9 @@ export async function GET(_request: Request, { params }: Props) {
   const markdown = [
     `# ${item.frontmatter.title}`,
     item.frontmatter.description ? `\n> ${item.frontmatter.description}` : '',
-    `\nDate: ${item.frontmatter.publishedAt}`,
+    item.frontmatter.publishedAt
+      ? `\nDate: ${item.frontmatter.publishedAt}`
+      : '',
     '\n---\n',
     item.content,
   ].join('\n')

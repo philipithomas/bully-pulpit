@@ -39,11 +39,12 @@ export function getPostsByNewsletter(newsletter: Newsletter): Post[] {
       }
 
       if (parsed.data.draft) return null
+      if (!parsed.data.publishedAt) return null
 
       return {
         slug: extractSlug(filename),
         newsletter,
-        frontmatter: parsed.data,
+        frontmatter: { ...parsed.data, publishedAt: parsed.data.publishedAt },
         content,
         excerpt: parsed.data.description ?? extractExcerpt(content),
       } satisfies Post

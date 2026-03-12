@@ -19,7 +19,7 @@ export type Frontmatter = z.infer<typeof frontmatterSchema>
 export interface Post {
   slug: string
   newsletter: Newsletter
-  frontmatter: Frontmatter
+  frontmatter: Frontmatter & { publishedAt: string }
   content: string
   excerpt: string
 }
