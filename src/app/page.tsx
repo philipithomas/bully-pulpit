@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
@@ -65,8 +66,14 @@ export default function HomePage() {
             <p>In the past, I made Find AI, Moonlight, and Staffjoy.</p>
           </div>
 
+          {/* Subscribe (hidden when logged in) */}
+          <InlineSignupForm
+            hideWhenLoggedIn
+            className="border-t border-gray-200 pt-8"
+          />
+
           {/* Newsletter directory */}
-          <div className="border-t border-gray-200 pt-8">
+          <div className="border-t border-gray-200 mt-8 pt-8">
             <p className="font-serif text-sm text-gray-500 mb-6">
               I publish three newsletters:
             </p>

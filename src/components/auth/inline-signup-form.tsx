@@ -2,9 +2,12 @@
 
 import { useState } from 'react'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
+import { useAuth } from '@/hooks/use-auth'
 
 interface Props {
   showNewsletterPicker?: boolean
+  hideWhenLoggedIn?: boolean
+  className?: string
 }
 
 const newsletters = [
@@ -17,7 +20,12 @@ const newsletters = [
   { id: 'postcard', label: 'Postcard', desc: "What I'm up to." },
 ] as const
 
-export function InlineSignupForm({ showNewsletterPicker = false }: Props) {
+export function InlineSignupForm({
+  showNewsletterPicker = false,
+  hideWhenLoggedIn = false,
+  className,
+}: Props) {
+  const { user, loading } = useAuth()
   const [email, setEmail] = useState('')
   const [selected, setSelected] = useState<Set<string>>(
     new Set(['contraption', 'workshop', 'postcard'])
@@ -67,16 +75,23 @@ export function InlineSignupForm({ showNewsletterPicker = false }: Props) {
     }
   }
 
+  if (hideWhenLoggedIn && (loading || user)) return null
+
   if (status === 'success') {
     return (
-      <p className="text-forest text-sm font-sans">
-        Check your inbox for a confirmation link.
-      </p>
+      <div className={className}>
+        <p className="text-forest text-sm font-sans">
+          Check your inbox for a confirmation link.
+        </p>
+      </div>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col items-start">
+    <form
+      onSubmit={handleSubmit}
+      className={`flex flex-col items-start ${className ?? ''}`}
+    >
       {showNewsletterPicker && (
         <fieldset className="mb-5 space-y-3">
           {newsletters.map((nl) => (
