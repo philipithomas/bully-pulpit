@@ -9,7 +9,7 @@
     "check": "biome check .",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "chroma:sync": "tsx --env-file=.env scripts/sync-chroma.ts",
+    "chroma:sync": "tsx --env-file-if-exists=.env scripts/sync-chroma.ts",
     "prepare": "husky"
   },
   "lint-staged": {
