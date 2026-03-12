@@ -26,7 +26,7 @@ pnpm check        # Biome lint + format check
 - Path aliases: `@/*` maps to `./src/*` (relative imports banned by biome)
 - Biome for linting/formatting (not ESLint/Prettier)
 - Single quotes, no semicolons (biome config)
-- Fonts loaded from fonts.contraption.co CDN
+- Fonts loaded from fonts.philipithomas.com CDN
 
 ## Key paths
 

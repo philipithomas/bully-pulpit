@@ -3,12 +3,12 @@
 @plugin "tailwindcss-animate";
 
 /* ============================
-   Fonts from fonts.contraption.co
+   Fonts from fonts.philipithomas.com
    ============================ */
 
 @font-face {
   font-family: "Sohne";
-  src: url("https://fonts.contraption.co/klim/soehne-buch.woff2")
+  src: url("https://fonts.philipithomas.com/klim/soehne-buch.woff2")
     format("woff2");
   font-weight: 400;
   font-style: normal;
@@ -17,7 +17,7 @@
 
 @font-face {
   font-family: "Sohne";
-  src: url("https://fonts.contraption.co/klim/soehne-buch-kursiv.woff2")
+  src: url("https://fonts.philipithomas.com/klim/soehne-buch-kursiv.woff2")
     format("woff2");
   font-weight: 400;
   font-style: italic;
@@ -26,7 +26,7 @@
 
 @font-face {
   font-family: "Sohne";
-  src: url("https://fonts.contraption.co/klim/soehne-halbfett.woff2")
+  src: url("https://fonts.philipithomas.com/klim/soehne-halbfett.woff2")
     format("woff2");
   font-weight: 600;
   font-style: normal;
@@ -35,7 +35,7 @@
 
 @font-face {
   font-family: "Sohne";
-  src: url("https://fonts.contraption.co/klim/soehne-halbfett-kursiv.woff2")
+  src: url("https://fonts.philipithomas.com/klim/soehne-halbfett-kursiv.woff2")
     format("woff2");
   font-weight: 600;
   font-style: italic;
@@ -44,7 +44,7 @@
 
 @font-face {
   font-family: "Tiempos Text";
-  src: url("https://fonts.contraption.co/klim/tiempos-text-regular.woff2")
+  src: url("https://fonts.philipithomas.com/klim/tiempos-text-regular.woff2")
     format("woff2");
   font-weight: 400;
   font-style: normal;
@@ -53,7 +53,7 @@
 
 @font-face {
   font-family: "Tiempos Text";
-  src: url("https://fonts.contraption.co/klim/tiempos-text-regular-italic.woff2")
+  src: url("https://fonts.philipithomas.com/klim/tiempos-text-regular-italic.woff2")
     format("woff2");
   font-weight: 400;
   font-style: italic;
@@ -62,7 +62,7 @@
 
 @font-face {
   font-family: "Sohne Mono";
-  src: url("https://fonts.contraption.co/klim/soehne-mono-buch.woff2")
+  src: url("https://fonts.philipithomas.com/klim/soehne-mono-buch.woff2")
     format("woff2");
   font-weight: 400;
   font-style: normal;
@@ -71,7 +71,7 @@
 
 @font-face {
   font-family: "Sohne Mono";
-  src: url("https://fonts.contraption.co/klim/soehne-mono-halbfett.woff2")
+  src: url("https://fonts.philipithomas.com/klim/soehne-mono-halbfett.woff2")
     format("woff2");
   font-weight: 600;
   font-style: normal;
