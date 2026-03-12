@@ -2,6 +2,7 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Search } from 'lucide-react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -17,6 +18,7 @@ interface SearchResult {
   title: string
   url: string
   newsletter: string
+  coverImage: string
   matches: SearchMatch[]
 }
 
@@ -217,13 +219,23 @@ export function SearchDialog({
                             : 'hover:bg-gray-050'
                         )}
                       >
-                        <span
-                          className={cn(
-                            'mt-1.5 h-2 w-2 shrink-0 rounded-full',
-                            NEWSLETTER_COLORS[result.newsletter] ??
-                              'bg-gray-300'
-                          )}
-                        />
+                        {result.coverImage ? (
+                          <Image
+                            src={result.coverImage}
+                            alt=""
+                            width={40}
+                            height={27}
+                            className="mt-0.5 h-[27px] w-10 shrink-0 rounded-sm object-cover"
+                          />
+                        ) : (
+                          <span
+                            className={cn(
+                              'mt-1.5 h-2 w-2 shrink-0 rounded-full',
+                              NEWSLETTER_COLORS[result.newsletter] ??
+                                'bg-gray-300'
+                            )}
+                          />
+                        )}
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-sans text-sm font-semibold text-gray-950">
                             {highlightQuery(result.title, query)}

@@ -34,6 +34,7 @@ function buildDocuments(): DocEntry[] {
         title: post.frontmatter.title,
         url,
         newsletter: post.newsletter,
+        category: 'post',
         type: 'title',
         hash: hash(titleDoc),
       },
@@ -51,9 +52,29 @@ function buildDocuments(): DocEntry[] {
           title: post.frontmatter.title,
           url,
           newsletter: post.newsletter,
+          category: 'post',
           type: 'content',
           line: i,
           hash: hash(line),
+        },
+      })
+    }
+
+    // Cover image chunk
+    if (post.frontmatter.coverImage && post.frontmatter.coverImageAlt) {
+      const altText = post.frontmatter.coverImageAlt
+      docs.push({
+        id: `${post.slug}-cover`,
+        document: altText,
+        metadata: {
+          slug: post.slug,
+          title: post.frontmatter.title,
+          url,
+          newsletter: post.newsletter,
+          category: 'image',
+          type: 'image',
+          coverImage: post.frontmatter.coverImage,
+          hash: hash(altText),
         },
       })
     }
@@ -77,6 +98,7 @@ function buildDocuments(): DocEntry[] {
         title: page.frontmatter.title,
         url,
         newsletter: 'page',
+        category: 'post',
         type: 'title',
         hash: hash(titleDoc),
       },
@@ -93,6 +115,7 @@ function buildDocuments(): DocEntry[] {
           title: page.frontmatter.title,
           url,
           newsletter: 'page',
+          category: 'post',
           type: 'content',
           line: i,
           hash: hash(line),

@@ -54,6 +54,7 @@ interface GroupedResult {
   title: string
   url: string
   newsletter: string
+  coverImage: string
   matches: SearchMatch[]
 }
 
@@ -92,7 +93,9 @@ export async function GET(request: NextRequest) {
         K('title'),
         K('url'),
         K('newsletter'),
-        K('type')
+        K('type'),
+        K('category'),
+        K('coverImage')
       )
 
     const result = await collection.search(search)
@@ -113,11 +116,20 @@ export async function GET(request: NextRequest) {
             title: meta.title as string,
             url: meta.url as string,
             newsletter: meta.newsletter as string,
+            coverImage: '',
             matches: [],
           })
         }
 
-        grouped.get(slug)!.matches.push({
+        const entry = grouped.get(slug)!
+
+        // Capture coverImage from any matching row that has it
+        const coverImage = meta.coverImage as string | undefined
+        if (coverImage && !entry.coverImage) {
+          entry.coverImage = coverImage
+        }
+
+        entry.matches.push({
           document: row.document ?? '',
           score,
           type: meta.type as string,
@@ -126,12 +138,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Sort each group's matches by score (lower = better for distance)
-    // and limit to top 3 matches per slug
+    // and limit to top 3 matches per slug.
+    // Exclude image-only results from typeahead (they exist for agent use).
     const results = Array.from(grouped.values())
       .map((g) => ({
         ...g,
         matches: g.matches.sort((a, b) => a.score - b.score).slice(0, 3),
       }))
+      .filter((g) => g.matches.some((m) => m.type !== 'image'))
       .sort((a, b) => a.matches[0].score - b.matches[0].score)
       .slice(0, 10)
 
