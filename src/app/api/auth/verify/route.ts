@@ -55,6 +55,13 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 30,
       path: '/',
     })
+    response.cookies.set('bp_has_session', '1', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 30,
+      path: '/',
+    })
 
     return response
   } catch {

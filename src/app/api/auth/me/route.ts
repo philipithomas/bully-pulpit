@@ -24,6 +24,7 @@ export async function GET() {
   } catch {
     const response = NextResponse.json({ user: null })
     response.cookies.delete('bp_token')
+    response.cookies.delete('bp_has_session')
     return response
   }
 }
