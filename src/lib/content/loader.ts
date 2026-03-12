@@ -1,10 +1,71 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import matter from 'gray-matter'
-import type { Newsletter, Page, Post } from '@/lib/content/types'
+import type {
+  ImageDimensions,
+  Newsletter,
+  Page,
+  Post,
+} from '@/lib/content/types'
 import { frontmatterSchema } from '@/lib/content/types'
 
 const CONTENT_DIR = path.join(process.cwd(), 'content')
+const PUBLIC_DIR = path.join(process.cwd(), 'public')
+
+const dimensionsCache = new Map<string, ImageDimensions>()
+
+function getCoverDimensions(
+  coverImage: string | undefined
+): ImageDimensions | undefined {
+  if (!coverImage) return undefined
+  const cached = dimensionsCache.get(coverImage)
+  if (cached) return cached
+  const filePath = path.join(PUBLIC_DIR, coverImage)
+  if (!fs.existsSync(filePath)) return undefined
+  try {
+    const buf = fs.readFileSync(filePath)
+    const dims = parseImageDimensions(buf)
+    if (dims) dimensionsCache.set(coverImage, dims)
+    return dims
+  } catch {
+    return undefined
+  }
+}
+
+function parseImageDimensions(buf: Buffer): ImageDimensions | undefined {
+  // JPEG: scan for SOFn markers
+  if (buf[0] === 0xff && buf[1] === 0xd8) {
+    let i = 2
+    while (i < buf.length - 1) {
+      if (buf[i] !== 0xff) break
+      const marker = buf[i + 1]
+      if (
+        (marker >= 0xc0 && marker <= 0xc3) ||
+        (marker >= 0xc5 && marker <= 0xc7) ||
+        (marker >= 0xc9 && marker <= 0xcb) ||
+        (marker >= 0xcd && marker <= 0xcf)
+      ) {
+        const height = buf.readUInt16BE(i + 5)
+        const width = buf.readUInt16BE(i + 7)
+        return { width, height }
+      }
+      const segLen = buf.readUInt16BE(i + 2)
+      i += 2 + segLen
+    }
+  }
+  // PNG: IHDR at byte 16
+  if (
+    buf[0] === 0x89 &&
+    buf[1] === 0x50 &&
+    buf[2] === 0x4e &&
+    buf[3] === 0x47
+  ) {
+    const width = buf.readUInt32BE(16)
+    const height = buf.readUInt32BE(20)
+    return { width, height }
+  }
+  return undefined
+}
 
 function extractSlug(filename: string): string {
   return filename.replace(/^\d{4}-\d{2}-\d{2}-/, '').replace(/\.mdx?$/, '')
@@ -47,6 +108,7 @@ export function getPostsByNewsletter(newsletter: Newsletter): Post[] {
         frontmatter: { ...parsed.data, publishedAt: parsed.data.publishedAt },
         content,
         excerpt: parsed.data.description ?? extractExcerpt(content),
+        coverDimensions: getCoverDimensions(parsed.data.coverImage),
       } satisfies Post
     })
     .filter((p): p is Post => p !== null)

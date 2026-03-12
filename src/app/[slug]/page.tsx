@@ -114,8 +114,8 @@ export default async function SlugPage({ params }: Props) {
             <Image
               src={item.frontmatter.coverImage}
               alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}
-              width={1280}
-              height={640}
+              width={post?.coverDimensions?.width ?? 1280}
+              height={post?.coverDimensions?.height ?? 640}
               data-zoomable=""
               className="w-full cursor-zoom-in"
               priority

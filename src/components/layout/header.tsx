@@ -11,7 +11,7 @@ import { SearchDialog } from '@/components/search/search-dialog'
 
 const newsletterLogos: Record<string, { src: string; className: string }> = {
   contraption: {
-    src: '/images/contraption-brand.svg',
+    src: '/images/contraption.svg',
     className: 'h-[13px] w-auto',
   },
   workshop: {
@@ -61,6 +61,7 @@ export function Header() {
             type="button"
             onClick={() => setSearchOpen(true)}
             aria-label="Search"
+            className="p-2 -m-2"
           >
             <Search
               className="h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600"

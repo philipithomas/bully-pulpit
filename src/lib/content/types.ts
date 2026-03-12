@@ -16,12 +16,18 @@ export const frontmatterSchema = z.object({
 
 export type Frontmatter = z.infer<typeof frontmatterSchema>
 
+export interface ImageDimensions {
+  width: number
+  height: number
+}
+
 export interface Post {
   slug: string
   newsletter: Newsletter
   frontmatter: Frontmatter & { publishedAt: string }
   content: string
   excerpt: string
+  coverDimensions?: ImageDimensions
 }
 
 export interface Page {
