@@ -52,12 +52,46 @@ test('postcard redirect: /posts/what-i-m-up-to-{month}-{year} -> /{year}-{mm}', 
   expect(resp.headers().location).toBe('/2026-03')
 })
 
-test('contraption redirect: /posts/:slug -> /:slug', async ({ request }) => {
-  const resp = await request.get('/posts/buyers-define-marketplaces', {
-    maxRedirects: 0,
-  })
-  expect(resp.status()).toBe(308)
-  expect(resp.headers().location).toBe('/buyers-define-marketplaces')
+test('philipithomas.com legacy post redirects', async ({ request }) => {
+  const cases: [string, string][] = [
+    ['/posts/buyers-define-marketplaces', '/buyers-define-marketplaces'],
+    ['/posts/moonlight-s-pitch-deck', '/moonlight-s-pitch-deck'],
+    [
+      '/posts/advice-for-marketplace-startups',
+      '/advice-for-marketplace-startups',
+    ],
+    [
+      '/posts/sharing-a-project-i-built-postcard',
+      '/sharing-a-project-i-built-postcard',
+    ],
+    [
+      '/posts/when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks',
+      '/when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks',
+    ],
+    [
+      '/posts/why-i-built-postcard-a-calmer-alternative-to-social-networks',
+      '/why-i-built-postcard-a-calmer-alternative-to-social-networks',
+    ],
+    [
+      '/posts/how-to-replace-social-media-with-a-personal-newsletter',
+      '/how-to-replace-social-media-with-a-personal-newsletter',
+    ],
+    ['/posts/slow-travel-in-paris-discovering-substance-cafe', '/slow-travel'],
+    // Not migrated — redirect to /contraption
+    [
+      '/posts/hacking-dopamine-for-entrepreneurial-success-lessons-from-neuroscience',
+      '/contraption',
+    ],
+    [
+      '/posts/openai-the-path-for-openai-powered-startups-and-the-ai-hype-cycle',
+      '/contraption',
+    ],
+  ]
+  for (const [source, destination] of cases) {
+    const resp = await request.get(source, { maxRedirects: 0 })
+    expect(resp.status()).toBe(308)
+    expect(resp.headers().location).toBe(destination)
+  }
 })
 
 test('redirected postcard URL resolves to a real page', async ({ page }) => {
@@ -84,6 +118,46 @@ test('privacy page loads', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('Privacy Policy')
 })
 
+test('contraption.co legacy redirects', async ({ request }) => {
+  const cases: [string, string][] = [
+    ['/projects', '/'],
+    ['/security', '/policies'],
+    ['/cancellation', '/policies'],
+    ['/recruitment', '/policies'],
+    ['/rss', '/feed/rss.xml'],
+  ]
+  for (const [source, destination] of cases) {
+    const resp = await request.get(source, { maxRedirects: 0 })
+    expect(resp.status()).toBe(308)
+    expect(resp.headers().location).toBe(destination)
+  }
+})
+
+test('new content pages load', async ({ page }) => {
+  await page.goto('/policies')
+  await expect(page.locator('h1')).toHaveText('Policies')
+
+  await page.goto('/contact')
+  await expect(page.locator('h1')).toHaveText('Contact')
+
+  await page.goto('/blogroll')
+  await expect(page.locator('h1')).toHaveText('Blogroll')
+
+  await page.goto('/media')
+  await expect(page.locator('h1')).toHaveText('Media')
+
+  await page.goto('/audio')
+  await expect(page.locator('h1')).toHaveText('Audio')
+})
+
+test('press page shows retired notice', async ({ page }) => {
+  await page.goto('/press')
+  await expect(page.locator('h1')).toHaveText('Print Edition')
+  await expect(
+    page.locator('a[href="/introducing-the-print-edition"]')
+  ).toBeVisible()
+})
+
 test('sitemap includes pages and posts', async ({ request }) => {
   const resp = await request.get('/sitemap.xml')
   expect(resp.status()).toBe(200)
@@ -94,4 +168,10 @@ test('sitemap includes pages and posts', async ({ request }) => {
   expect(body).toContain('/contraption')
   expect(body).toContain('/workshop')
   expect(body).toContain('/postcard')
+  expect(body).toContain('/policies')
+  expect(body).toContain('/blogroll')
+  expect(body).toContain('/media')
+  expect(body).toContain('/contact')
+  expect(body).toContain('/audio')
+  expect(body).toContain('/press')
 })

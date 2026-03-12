@@ -58,10 +58,106 @@ const nextConfig: NextConfig = {
       },
       // Postcard redirects (Ghost legacy + old month-name slugs)
       ...postcardRedirects.flat(),
-      // All other old philipithomas.com posts: /posts/:slug -> /:slug
+      // philipithomas.com legacy post redirects (explicit per-post mapping)
+      {
+        source: '/posts/buyers-define-marketplaces',
+        destination: '/buyers-define-marketplaces',
+        permanent: true,
+      },
+      {
+        source: '/posts/moonlight-s-pitch-deck',
+        destination: '/moonlight-s-pitch-deck',
+        permanent: true,
+      },
+      {
+        source: '/posts/advice-for-marketplace-startups',
+        destination: '/advice-for-marketplace-startups',
+        permanent: true,
+      },
+      {
+        source: '/posts/sharing-a-project-i-built-postcard',
+        destination: '/sharing-a-project-i-built-postcard',
+        permanent: true,
+      },
+      {
+        source:
+          '/posts/when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks',
+        destination:
+          '/when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks',
+        permanent: true,
+      },
+      {
+        source:
+          '/posts/why-i-built-postcard-a-calmer-alternative-to-social-networks',
+        destination:
+          '/why-i-built-postcard-a-calmer-alternative-to-social-networks',
+        permanent: true,
+      },
+      {
+        source: '/posts/how-to-replace-social-media-with-a-personal-newsletter',
+        destination: '/how-to-replace-social-media-with-a-personal-newsletter',
+        permanent: true,
+      },
+      {
+        source: '/posts/slow-travel-in-paris-discovering-substance-cafe',
+        destination: '/slow-travel',
+        permanent: true,
+      },
+      // These 2 philipithomas.com posts were not migrated
+      {
+        source:
+          '/posts/hacking-dopamine-for-entrepreneurial-success-lessons-from-neuroscience',
+        destination: '/contraption',
+        permanent: true,
+      },
+      {
+        source:
+          '/posts/openai-the-path-for-openai-powered-startups-and-the-ai-hype-cycle',
+        destination: '/contraption',
+        permanent: true,
+      },
+      // Catch-all fallback: /posts/:slug -> /:slug
       {
         source: '/posts/:slug',
         destination: '/:slug',
+        permanent: true,
+      },
+      // contraption.co legacy redirects
+      { source: '/projects', destination: '/', permanent: true },
+      { source: '/check-email', destination: '/', permanent: true },
+      { source: '/live-analytics', destination: '/', permanent: true },
+      { source: '/rss', destination: '/feed/rss.xml', permanent: true },
+      // Deprecated policy pages -> /policies
+      { source: '/security', destination: '/policies', permanent: true },
+      { source: '/copyright', destination: '/policies', permanent: true },
+      { source: '/cancellation', destination: '/policies', permanent: true },
+      { source: '/refund', destination: '/policies', permanent: true },
+      { source: '/abuse', destination: '/policies', permanent: true },
+      {
+        source: '/how-we-handle-abusive-usage',
+        destination: '/policies',
+        permanent: true,
+      },
+      { source: '/recruitment', destination: '/policies', permanent: true },
+      { source: '/taxes', destination: '/policies', permanent: true },
+      {
+        source: '/company-processors',
+        destination: '/policies',
+        permanent: true,
+      },
+      {
+        source: '/booklet-subprocessors',
+        destination: '/policies',
+        permanent: true,
+      },
+      {
+        source: '/postcard-subprocessors',
+        destination: '/policies',
+        permanent: true,
+      },
+      {
+        source: '/ownership-booklet',
+        destination: '/policies',
         permanent: true,
       },
     ]
