@@ -161,9 +161,9 @@ async function main() {
 
   console.log(`Upserting ${toUpsert.length} changed/new documents`)
 
-  // Batch upserts: 300 per batch, 10 concurrent writers
-  const BATCH_SIZE = 300
-  const CONCURRENCY = 10
+  // Batch upserts: 50 per batch, 3 concurrent writers
+  const BATCH_SIZE = 50
+  const CONCURRENCY = 3
   const batches: DocEntry[][] = []
   for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
     batches.push(toUpsert.slice(i, i + BATCH_SIZE))
