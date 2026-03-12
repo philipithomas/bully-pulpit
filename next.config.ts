@@ -50,6 +50,12 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Ghost legacy: /posts index -> /contraption
+      {
+        source: '/posts',
+        destination: '/contraption',
+        permanent: true,
+      },
       // Postcard redirects (Ghost legacy + old month-name slugs)
       ...postcardRedirects.flat(),
       // All other old philipithomas.com posts: /posts/:slug -> /:slug

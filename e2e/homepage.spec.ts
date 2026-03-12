@@ -36,6 +36,12 @@ test('newsletter pages load', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('Postcard')
 })
 
+test('posts index redirect: /posts -> /contraption', async ({ request }) => {
+  const resp = await request.get('/posts', { maxRedirects: 0 })
+  expect(resp.status()).toBe(308)
+  expect(resp.headers().location).toBe('/contraption')
+})
+
 test('postcard redirect: /posts/what-i-m-up-to-{month}-{year} -> /{year}-{mm}', async ({
   request,
 }) => {
