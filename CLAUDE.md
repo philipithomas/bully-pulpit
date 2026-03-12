@@ -39,7 +39,7 @@ pnpm check        # Biome lint + format check
 
 ## Prose style guide
 
-When writing or editing prose content (blog posts, page copy, descriptions), follow the style guide in the [colophon](/colophon) (`content/pages/colophon.mdx`).
+When writing or editing prose content (blog posts, page copy, descriptions), follow the style guide in `content/pages/colophon.mdx`.
 
 ## Newsletters
 
