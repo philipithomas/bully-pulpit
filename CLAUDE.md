@@ -39,22 +39,7 @@ pnpm check        # Biome lint + format check
 
 ## Prose style guide
 
-When writing or editing prose content (blog posts, page copy, descriptions):
-
-- Active voice
-- No redundant questions
-- Do not use contractions
-- Never use the word "very"
-- Never use em dashes (use other punctuation instead)
-- Oxford commas (always use the serial comma)
-- Sentence case titles
-- Do not use "+" in place of "and"
-- Avoid exclamation points
-- Dates always ISO-8601
-- Units always metric and Celsius
-- Assume international readers. Always specify international country code on phone numbers, country in addresses, etc.
-- Do not be negative
-- Never use structure like "it is not (this), it is (that)"
+When writing or editing prose content (blog posts, page copy, descriptions), follow the style guide in the [colophon](/colophon) (`content/pages/colophon.mdx`).
 
 ## Newsletters
 
