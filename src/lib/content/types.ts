@@ -6,7 +6,7 @@ export type Newsletter = z.infer<typeof newsletterSchema>
 export const frontmatterSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
-  publishedAt: z.string(),
+  publishedAt: z.string().optional(),
   coverImage: z.string().optional(),
   coverImageAlt: z.string().optional(),
   subtitle: z.string().optional(),
