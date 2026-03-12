@@ -87,7 +87,7 @@ export function getPostsByNewsletter(newsletter: Newsletter): Post[] {
 
   const files = fs.readdirSync(dir).filter((f) => /\.mdx?$/.test(f))
 
-  return files
+  const posts = files
     .map((filename) => {
       const filePath = path.join(dir, filename)
       const raw = fs.readFileSync(filePath, 'utf-8')
@@ -109,14 +109,15 @@ export function getPostsByNewsletter(newsletter: Newsletter): Post[] {
         content,
         excerpt: parsed.data.description ?? extractExcerpt(content),
         coverDimensions: getCoverDimensions(parsed.data.coverImage),
-      } satisfies Post
+      } as Post
     })
     .filter((p): p is Post => p !== null)
-    .sort(
-      (a, b) =>
-        new Date(b.frontmatter.publishedAt).getTime() -
-        new Date(a.frontmatter.publishedAt).getTime()
-    )
+
+  return posts.sort(
+    (a, b) =>
+      new Date(b.frontmatter.publishedAt).getTime() -
+      new Date(a.frontmatter.publishedAt).getTime()
+  )
 }
 
 export function getAllPosts(): Post[] {
