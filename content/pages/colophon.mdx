@@ -1,0 +1,41 @@
+---
+title: "Colophon"
+description: "How this site is made."
+publishedAt: "2026-03-12"
+---
+
+## Typographical
+
+Three typefaces from [Klim Type Foundry](https://klim.co.nz/) in Wellington, New Zealand.
+
+**Söhne** is the sans-serif for headings, navigation, and interface elements. Book and semibold weights, with italics for both.
+
+**Tiempos Text** is the serif for body copy and long-form prose. Book weight with italics.
+
+**Söhne Mono** is the monospace for code blocks, dates, and metadata. Book and semibold weights.
+
+All fonts are self-hosted and served as WOFF2.
+
+## Technical
+
+This site runs on a Mac Mini at my home in San Francisco. The machine handles web serving, email delivery, and a handful of other services through Docker containers behind a Cloudflare Tunnel. I wrote about the motivation in [A mini data center](/a-mini-data-center) and published a complete setup guide in [How to host web apps on a Mac Mini](/how-to-host-web-apps-on-a-mac-mini). The framework powering it, [Toolbox](https://github.com/contraptionco/toolbox), is open source.
+
+The [site](https://github.com/philipithomas/bully-pulpit) is a Next.js application with MDX content, statically generated at build time. Email delivery runs through [Printing Press](https://github.com/philipithomas/printing-press). Search uses [Chroma](https://www.trychroma.com/) with SPLADE embeddings. Analytics run through a self-hosted [Plausible](https://plausible.io/) instance on the same Mac Mini. No cookies, no tracking scripts from third parties, no personal data collected.
+
+## Editorial
+
+Rules I try to follow when writing:
+
+- Active voice
+- No contractions
+- No em dashes (use other punctuation instead)
+- Never use the word "very"
+- Avoid exclamation points
+- Oxford commas (always use the serial comma)
+- Sentence case titles
+- Do not use "+" in place of "and"
+- No redundant questions
+- Dates in ISO-8601 format
+- Units in metric, temperatures in Celsius
+- Assume international readers (country codes on phone numbers, country in addresses)
+- Never use the structure "it is not (this), it is (that)"

@@ -35,6 +35,12 @@ export function Footer() {
             <Link href="/terms" className="hover:text-white transition-colors">
               Policies
             </Link>
+            <Link
+              href="/colophon"
+              className="hover:text-white transition-colors"
+            >
+              Colophon
+            </Link>
           </nav>
         </div>
         <div className="mt-12 pt-8 border-t border-gray-900">
