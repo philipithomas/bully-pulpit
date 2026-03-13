@@ -36,15 +36,10 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
           {format(new Date(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
         </time>
         <h2
-          className={`font-semibold tracking-tight text-gray-950 group-hover:text-forest transition-colors duration-300 mt-1 ${large ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
+          className={`tracking-tight text-gray-950 group-hover:text-forest transition-colors duration-300 mt-1 ${large ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
         >
           {post.frontmatter.title}
         </h2>
-        {post.frontmatter.description && (
-          <p className="font-serif text-sm text-gray-600 mt-1">
-            {post.frontmatter.description}
-          </p>
-        )}
       </div>
       <span className="absolute bottom-4 right-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         <ArrowIcon className="w-5 h-5" />
@@ -96,7 +91,11 @@ export default function ContraptionPage() {
 
         {/* Remaining posts */}
         {rest.length > 0 && (
-          <InfinitePostGrid initialPosts={rest} newsletter="contraption" />
+          <InfinitePostGrid
+            initialPosts={rest}
+            newsletter="contraption"
+            minimal
+          />
         )}
       </div>
     </div>
