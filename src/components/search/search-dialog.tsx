@@ -273,8 +273,8 @@ export function SearchDialog({
                               ) : (
                                 <span
                                   className={cn(
-                                    'h-2 w-2 shrink-0 rounded-full',
-                                    snippet && 'mt-1.5',
+                                    'h-[27px] w-10 shrink-0 rounded-sm',
+                                    snippet && 'mt-0.5',
                                     NEWSLETTER_COLORS[result.newsletter] ??
                                       'bg-gray-300'
                                   )}

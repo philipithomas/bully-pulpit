@@ -36,6 +36,7 @@ function buildDocuments(): DocEntry[] {
         newsletter: post.newsletter,
         category: 'post',
         type: 'title',
+        coverImage: post.frontmatter.coverImage ?? '',
         hash: hash(titleDoc),
       },
     })
@@ -54,6 +55,7 @@ function buildDocuments(): DocEntry[] {
           newsletter: post.newsletter,
           category: 'post',
           type: 'content',
+          coverImage: post.frontmatter.coverImage ?? '',
           line: i,
           hash: hash(line),
         },
