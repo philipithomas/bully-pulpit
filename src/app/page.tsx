@@ -111,6 +111,29 @@ export default function HomePage() {
           {/* Subscribe (hidden when logged in) */}
           <InlineSignupForm hideWhenLoggedIn autoFocus />
 
+          {/* Social links */}
+          <p className="mt-8 font-serif text-sm text-gray-500">
+            Connect with me on{' '}
+            <a
+              href="https://github.com/philipithomas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-700 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+            >
+              GitHub
+            </a>{' '}
+            and{' '}
+            <a
+              href="https://linkedin.com/in/philipithomas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-700 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+            >
+              LinkedIn
+            </a>
+            .
+          </p>
+
           {/* Newsletter directory */}
           <div className="mt-8">
             <p className="font-serif text-sm text-gray-500 mb-6">

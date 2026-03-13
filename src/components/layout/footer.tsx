@@ -45,7 +45,7 @@ export function Footer() {
         </div>
         <div className="mt-12 pt-8 border-t border-gray-900">
           <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-gray-600">
-            &copy; {new Date().getFullYear()} Philip I. Thomas
+            &copy; {new Date().getFullYear()} The Contraption Company LLC
           </p>
         </div>
       </div>
