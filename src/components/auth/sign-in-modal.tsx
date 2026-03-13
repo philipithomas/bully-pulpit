@@ -125,7 +125,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
             <DialogHeader>
               <DialogTitle>Check your email</DialogTitle>
               <DialogDescription>
-                We sent a 6-digit code to {email}.
+                A 6-digit code was sent to {email}.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCodeSubmit} className="mt-6 space-y-4">

@@ -12,8 +12,8 @@ export default function CheckEmailPage() {
           Check your email
         </h1>
         <p className="text-white/70 font-serif text-lg">
-          We just sent you a sign-in code. Enter the code or click the link in
-          the email to continue.
+          A sign-in code is on its way. Enter the code or click the link in the
+          email to continue.
         </p>
       </div>
     </div>
