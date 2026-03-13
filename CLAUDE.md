@@ -27,7 +27,7 @@ pnpm check        # Biome lint + format check
 - Biome for linting/formatting (not ESLint/Prettier)
 - Single quotes, no semicolons (biome config)
 - Fonts loaded from fonts.philipithomas.com CDN
-- Always run `pnpm install && pnpm build` to verify the production build passes before pushing
+- Pre-commit hook runs `pnpm build` — no need to build manually before pushing
 
 ## Key paths
 
