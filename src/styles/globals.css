@@ -310,7 +310,7 @@ body:has(> * [data-bg="gray-050"]) {
 .prose {
   --tw-prose-body: var(--color-gray-800);
   --tw-prose-headings: var(--color-gray-950);
-  --tw-prose-links: var(--color-gray-950);
+  --tw-prose-links: var(--tw-prose-body);
   --tw-prose-bold: var(--color-gray-900);
   --tw-prose-code: var(--color-gray-900);
   --tw-prose-pre-bg: var(--color-gray-900);
@@ -352,14 +352,25 @@ body:has(> * [data-bg="gray-050"]) {
   border-radius: 0.5rem;
 }
 
+/* Newsletter accent colors for prose underlines */
+[data-bg="gray-050"] {
+  --prose-accent: var(--color-forest);
+}
+[data-bg="offwhite-warm"] {
+  --prose-accent: var(--color-walnut);
+}
+[data-bg="offwhite-cool"] {
+  --prose-accent: var(--color-indigo);
+}
+
 .prose a {
-  text-decoration-color: var(--color-gray-300);
+  text-decoration-color: var(--prose-accent, var(--color-gray-400));
   text-underline-offset: 2px;
-  transition: color 0.3s ease;
+  transition: text-decoration-color 0.3s ease;
 }
 
 .prose a:hover {
-  color: var(--color-forest);
+  text-decoration-color: currentColor;
 }
 
 .prose img {
