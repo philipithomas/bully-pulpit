@@ -1,7 +1,16 @@
+import { checkBotId } from 'botid/server'
 import { NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
 
 export async function POST(request: Request) {
+  const { isBot } = await checkBotId()
+  if (isBot) {
+    return NextResponse.json(
+      { error: 'Request blocked. Please try again from the website.' },
+      { status: 403 }
+    )
+  }
+
   const body = await request.json()
   const { email, name, newsletters } = body
 
