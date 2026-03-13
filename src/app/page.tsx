@@ -82,7 +82,7 @@ export default function HomePage() {
           </div>
 
           {/* Subscribe (hidden when logged in) */}
-          <InlineSignupForm hideWhenLoggedIn />
+          <InlineSignupForm hideWhenLoggedIn autoFocus />
 
           {/* Newsletter directory */}
           <div className="mt-8">

@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth'
 interface Props {
   showNewsletterPicker?: boolean
   hideWhenLoggedIn?: boolean
+  autoFocus?: boolean
   className?: string
 }
 
@@ -23,6 +24,7 @@ const newsletters = [
 export function InlineSignupForm({
   showNewsletterPicker = false,
   hideWhenLoggedIn = false,
+  autoFocus = false,
   className,
 }: Props) {
   const { user, loading } = useAuth()
@@ -125,6 +127,7 @@ export function InlineSignupForm({
           placeholder="Your email"
           aria-label="Email address"
           required
+          autoFocus={autoFocus}
           className="border border-gray-300 bg-white px-3 py-2 flex-grow w-full focus:outline-none focus:ring-0 focus:border-gray-900 text-sm h-10 font-sans"
         />
         <button

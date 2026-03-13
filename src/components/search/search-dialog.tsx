@@ -78,11 +78,12 @@ export function SearchDialog({
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
+  const [recentPosts, setRecentPosts] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const searchIdRef = useRef<string | null>(null)
 
-  // Focus input when dialog opens
+  // Focus input and load recent posts when dialog opens
   useEffect(() => {
     if (open) {
       setQuery('')
@@ -90,8 +91,33 @@ export function SearchDialog({
       setActiveIndex(0)
       searchIdRef.current = null
       setTimeout(() => inputRef.current?.focus(), 50)
+
+      if (recentPosts.length === 0) {
+        fetch('/api/posts?limit=8')
+          .then((r) => r.json())
+          .then((data) => {
+            setRecentPosts(
+              (data.posts ?? []).map(
+                (p: {
+                  slug: string
+                  title: string
+                  newsletter: string
+                  coverImage: string
+                }) => ({
+                  slug: p.slug,
+                  title: p.title,
+                  url: `/${p.slug}`,
+                  newsletter: p.newsletter,
+                  coverImage: p.coverImage,
+                  matches: [],
+                })
+              )
+            )
+          })
+          .catch(() => {})
+      }
     }
-  }, [open])
+  }, [open, recentPosts.length])
 
   const abortRef = useRef<AbortController>(null)
 
@@ -202,67 +228,85 @@ export function SearchDialog({
               )}
             </div>
 
-            {results.length > 0 && (
-              <ul className="max-h-80 overflow-y-auto p-2">
-                {results.map((result, i) => {
-                  const snippet = result.matches.find(
-                    (m) => m.type === 'content'
-                  )
-                  return (
-                    <li key={result.slug}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(result.slug, result.url)}
-                        onMouseEnter={() => setActiveIndex(i)}
-                        className={cn(
-                          'flex w-full items-start gap-3 rounded px-3 py-2.5 text-left transition-colors',
-                          i === activeIndex
-                            ? 'bg-gray-050'
-                            : 'hover:bg-gray-050'
-                        )}
-                      >
-                        {result.coverImage ? (
-                          <Image
-                            src={result.coverImage}
-                            alt=""
-                            width={40}
-                            height={27}
-                            className="mt-0.5 h-[27px] w-10 shrink-0 rounded-sm object-cover"
-                          />
-                        ) : (
-                          <span
-                            className={cn(
-                              'mt-1.5 h-2 w-2 shrink-0 rounded-full',
-                              NEWSLETTER_COLORS[result.newsletter] ??
-                                'bg-gray-300'
-                            )}
-                          />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-sans text-sm font-semibold text-gray-950">
-                            {highlightQuery(result.title, query)}
-                          </p>
-                          {snippet && (
-                            <p className="mt-0.5 line-clamp-2 font-serif text-xs text-gray-500">
-                              {highlightQuery(
-                                stripMarkdown(snippet.document),
-                                query
-                              )}
-                            </p>
-                          )}
-                        </div>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
+            {(() => {
+              const displayResults = query.length < 2 ? recentPosts : results
+              const isRecent = query.length < 2
 
-            {query.length >= 2 && !loading && results.length === 0 && (
-              <div className="px-4 py-8 text-center font-sans text-sm text-gray-400">
-                No results found
-              </div>
-            )}
+              if (displayResults.length > 0) {
+                return (
+                  <>
+                    {isRecent && (
+                      <p className="px-4 pt-3 pb-1 font-mono text-[10px] font-semibold tracking-[0.15em] uppercase text-gray-400">
+                        Recent
+                      </p>
+                    )}
+                    <ul className="max-h-80 overflow-y-auto p-2">
+                      {displayResults.map((result, i) => {
+                        const snippet = result.matches.find(
+                          (m) => m.type === 'content'
+                        )
+                        return (
+                          <li key={result.slug}>
+                            <button
+                              type="button"
+                              onClick={() => navigate(result.slug, result.url)}
+                              onMouseEnter={() => setActiveIndex(i)}
+                              className={cn(
+                                'flex w-full items-start gap-3 rounded px-3 py-2.5 text-left transition-colors',
+                                i === activeIndex
+                                  ? 'bg-gray-050'
+                                  : 'hover:bg-gray-050'
+                              )}
+                            >
+                              {result.coverImage ? (
+                                <Image
+                                  src={result.coverImage}
+                                  alt=""
+                                  width={40}
+                                  height={27}
+                                  className="mt-0.5 h-[27px] w-10 shrink-0 rounded-sm object-cover"
+                                />
+                              ) : (
+                                <span
+                                  className={cn(
+                                    'mt-1.5 h-2 w-2 shrink-0 rounded-full',
+                                    NEWSLETTER_COLORS[result.newsletter] ??
+                                      'bg-gray-300'
+                                  )}
+                                />
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-sans text-sm font-semibold text-gray-950">
+                                  {highlightQuery(result.title, query)}
+                                </p>
+                                {snippet && (
+                                  <p className="mt-0.5 line-clamp-2 font-serif text-xs text-gray-500">
+                                    {highlightQuery(
+                                      stripMarkdown(snippet.document),
+                                      query
+                                    )}
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </>
+                )
+              }
+
+              if (query.length >= 2 && !loading) {
+                return (
+                  <div className="px-4 py-8 text-center font-sans text-sm text-gray-400">
+                    No results found
+                  </div>
+                )
+              }
+
+              return null
+            })()}
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
