@@ -156,7 +156,7 @@ export function InlineSignupForm({
               setCode('')
               setErrorMsg('')
             }}
-            className="text-xs text-gray-500 hover:text-gray-700 transition-colors mt-2 font-sans"
+            className="text-xs text-gray-500 underline underline-offset-2 decoration-gray-300 hover:text-gray-700 cursor-pointer transition-colors mt-2 font-sans"
           >
             Use a different email
           </button>
