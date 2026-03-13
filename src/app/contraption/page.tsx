@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { InfinitePostGrid } from '@/components/posts/infinite-post-grid'
+import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
@@ -16,7 +17,7 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
   return (
     <Link
       href={`/${post.slug}`}
-      className="block group bg-offwhite-light rounded-sm overflow-hidden h-full"
+      className="relative block group bg-offwhite-light border border-gray-100 rounded-sm overflow-hidden h-full"
     >
       {post.frontmatter.coverImage && (
         <div className="relative overflow-hidden aspect-[3/2]">
@@ -45,6 +46,9 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
           </p>
         )}
       </div>
+      <span className="absolute bottom-4 right-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <ArrowIcon className="w-5 h-5" />
+      </span>
     </Link>
   )
 }
