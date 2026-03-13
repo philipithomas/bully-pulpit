@@ -24,7 +24,7 @@ export default function HomePage() {
   const newsletters = Object.values(siteConfig.newsletters)
 
   return (
-    <div className="container py-16 md:py-24 lg:py-36">
+    <div className="container py-16 md:py-20 lg:py-28">
       <JsonLd type="website" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
         {/* Left: Portrait (desktop only) */}
