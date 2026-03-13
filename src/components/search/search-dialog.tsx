@@ -252,7 +252,8 @@ export function SearchDialog({
                               onClick={() => navigate(result.slug, result.url)}
                               onMouseEnter={() => setActiveIndex(i)}
                               className={cn(
-                                'flex w-full items-start gap-3 rounded px-3 py-2.5 text-left transition-colors',
+                                'flex w-full gap-3 rounded px-3 py-2.5 text-left transition-colors',
+                                snippet ? 'items-start' : 'items-center',
                                 i === activeIndex
                                   ? 'bg-gray-050'
                                   : 'hover:bg-gray-050'
@@ -264,12 +265,16 @@ export function SearchDialog({
                                   alt=""
                                   width={40}
                                   height={27}
-                                  className="mt-0.5 h-[27px] w-10 shrink-0 rounded-sm object-cover"
+                                  className={cn(
+                                    'h-[27px] w-10 shrink-0 rounded-sm object-cover',
+                                    snippet && 'mt-0.5'
+                                  )}
                                 />
                               ) : (
                                 <span
                                   className={cn(
-                                    'mt-1.5 h-2 w-2 shrink-0 rounded-full',
+                                    'h-2 w-2 shrink-0 rounded-full',
+                                    snippet && 'mt-1.5',
                                     NEWSLETTER_COLORS[result.newsletter] ??
                                       'bg-gray-300'
                                   )}
