@@ -63,6 +63,9 @@ export default function PostcardPage() {
     }
   }
 
+  const latestKey =
+    posts.length > 0 ? posts[0].frontmatter.publishedAt.slice(0, 7) : ''
+
   // Group months by year
   const years = new Map<number, typeof months>()
   for (const m of months) {
@@ -104,8 +107,14 @@ export default function PostcardPage() {
                       <Link
                         key={m.key}
                         href={`/${post.slug}`}
-                        className="flex flex-col items-center justify-center p-3 bg-indigo text-white rounded-sm hover:bg-indigo/90 transition-colors text-center"
+                        className="relative flex flex-col items-center justify-center p-3 bg-indigo text-white rounded-sm hover:bg-indigo/90 transition-colors text-center"
                       >
+                        {m.key === latestKey && (
+                          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/70" />
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+                          </span>
+                        )}
                         <span className="font-mono text-xs font-semibold">
                           {m.label}
                         </span>
