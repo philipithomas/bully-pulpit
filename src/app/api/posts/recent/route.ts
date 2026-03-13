@@ -4,7 +4,7 @@ import { getAllPosts } from '@/lib/content/loader'
 export const dynamic = 'force-static'
 
 export function GET() {
-  const posts = getAllPosts().slice(0, 8)
+  const posts = getAllPosts().slice(0, 5)
 
   return NextResponse.json({
     posts: posts.map((p) => ({
