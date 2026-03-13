@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
 
-const SOURCE = path.resolve(__dirname, '../../ptsq_color.jpg')
+const SOURCE = path.resolve(__dirname, '../icon.png')
 const PUBLIC = path.resolve(__dirname, '../public')
 
 async function main() {
@@ -33,6 +33,43 @@ async function main() {
     .png()
     .toFile(path.join(PUBLIC, 'favicon.ico'))
   console.log('Generated favicon.ico (32x32)')
+
+  // Generate OG image (1200x630) with icon centered on dark background
+  const ogWidth = 1200
+  const ogHeight = 630
+  const iconSize = 400
+  const bg = '#111110'
+
+  const resizedIcon = await sharp(SOURCE)
+    .resize(iconSize, iconSize, { fit: 'contain' })
+    .png()
+    .toBuffer()
+
+  await sharp({
+    create: {
+      width: ogWidth,
+      height: ogHeight,
+      channels: 4,
+      background: bg,
+    },
+  })
+    .composite([
+      {
+        input: resizedIcon,
+        left: Math.round((ogWidth - iconSize) / 2),
+        top: Math.round((ogHeight - iconSize) / 2),
+      },
+    ])
+    .png()
+    .toFile(path.join(PUBLIC, 'og-image.png'))
+  console.log(`Generated og-image.png (${ogWidth}x${ogHeight})`)
+
+  // Copy SVG icon to public for modern browsers
+  const svgSource = path.resolve(__dirname, '../icon.svg')
+  if (fs.existsSync(svgSource)) {
+    fs.copyFileSync(svgSource, path.join(PUBLIC, 'icon.svg'))
+    console.log('Copied icon.svg to public/')
+  }
 
   console.log('\nAll icons generated in public/')
 }

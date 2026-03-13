@@ -64,7 +64,7 @@ export default function HomePage() {
               I live in San Francisco. I&apos;m interested in coffee,
               fermentation, and urbanism.
             </p>
-            <p>
+            <p className="mb-4">
               In the past, I made{' '}
               <a
                 href="/internal-tools-of-find-ai"
@@ -92,6 +92,27 @@ export default function HomePage() {
               </a>
               .
             </p>
+            <p>
+              Connect with me on{' '}
+              <a
+                href="https://github.com/philipithomas"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+              >
+                GitHub
+              </a>{' '}
+              and{' '}
+              <a
+                href="https://linkedin.com/in/philipithomas"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+              >
+                LinkedIn
+              </a>
+              .
+            </p>
           </div>
 
           {/* Horizontal portrait (mobile only) */}
@@ -107,29 +128,6 @@ export default function HomePage() {
               priority
             />
           </div>
-
-          {/* Social links */}
-          <p className="mb-8 font-serif text-sm text-gray-500">
-            Connect with me on{' '}
-            <a
-              href="https://github.com/philipithomas"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-700 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
-            >
-              GitHub
-            </a>{' '}
-            and{' '}
-            <a
-              href="https://linkedin.com/in/philipithomas"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-700 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
-            >
-              LinkedIn
-            </a>
-            .
-          </p>
 
           {/* Subscribe (hidden when logged in) */}
           <InlineSignupForm hideWhenLoggedIn autoFocus />
