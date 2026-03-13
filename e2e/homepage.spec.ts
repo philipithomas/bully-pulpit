@@ -118,13 +118,25 @@ test('privacy page loads', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('Privacy Policy')
 })
 
+test('legacy RSS feed redirects', async ({ request }) => {
+  // contraption.co used /rss/, philipithomas.com used /posts.rss
+  const cases: [string, string][] = [
+    ['/rss', '/feed/rss.xml'],
+    ['/posts.rss', '/feed/rss.xml'],
+  ]
+  for (const [source, destination] of cases) {
+    const resp = await request.get(source, { maxRedirects: 0 })
+    expect(resp.status()).toBe(308)
+    expect(resp.headers().location).toBe(destination)
+  }
+})
+
 test('contraption.co legacy redirects', async ({ request }) => {
   const cases: [string, string][] = [
     ['/projects', '/'],
     ['/security', '/policies'],
     ['/cancellation', '/policies'],
     ['/recruitment', '/policies'],
-    ['/rss', '/feed/rss.xml'],
   ]
   for (const [source, destination] of cases) {
     const resp = await request.get(source, { maxRedirects: 0 })

@@ -8,8 +8,12 @@ interface DocEntry {
   metadata: Record<string, string | number>
 }
 
-function hash(text: string): string {
-  return crypto.createHash('sha256').update(text).digest('hex').slice(0, 16)
+function hash(...parts: string[]): string {
+  return crypto
+    .createHash('sha256')
+    .update(parts.join('\0'))
+    .digest('hex')
+    .slice(0, 16)
 }
 
 function buildDocuments(): DocEntry[] {
@@ -37,7 +41,7 @@ function buildDocuments(): DocEntry[] {
         category: 'post',
         type: 'title',
         coverImage: post.frontmatter.coverImage ?? '',
-        hash: hash(titleDoc),
+        hash: hash(titleDoc, post.frontmatter.coverImage ?? ''),
       },
     })
 
@@ -57,7 +61,7 @@ function buildDocuments(): DocEntry[] {
           type: 'content',
           coverImage: post.frontmatter.coverImage ?? '',
           line: i,
-          hash: hash(line),
+          hash: hash(line, post.frontmatter.coverImage ?? ''),
         },
       })
     }
