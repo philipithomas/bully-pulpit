@@ -12,7 +12,7 @@ interface Props {
 }
 
 const newsletters = [
-  { id: 'contraption', label: 'Contraption', desc: 'Essays and launches.' },
+  { id: 'contraption', label: 'Contraption', desc: 'Essays and projects.' },
   {
     id: 'workshop',
     label: 'Workshop',

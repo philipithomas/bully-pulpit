@@ -64,7 +64,34 @@ export default function HomePage() {
               I live in San Francisco. I&apos;m interested in coffee,
               fermentation, and urbanism.
             </p>
-            <p>In the past, I made Find AI, Moonlight, and Staffjoy.</p>
+            <p>
+              In the past, I made{' '}
+              <a
+                href="/internal-tools-of-find-ai"
+                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+              >
+                Find AI
+              </a>
+              ,{' '}
+              <a
+                href="https://techcrunch.com/2020/02/17/pullrequest-snags-remote-developer-hiring-platform-moonlight-in-case-of-startup-buying-startup/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+              >
+                Moonlight
+              </a>
+              , and{' '}
+              <a
+                href="https://techcrunch.com/2015/10/22/staffjoy-launches-from-yc-fellowship-helping-businesses-automate-their-workforce-scheduling/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+              >
+                Staffjoy
+              </a>
+              .
+            </p>
           </div>
 
           {/* Horizontal portrait (mobile only) */}

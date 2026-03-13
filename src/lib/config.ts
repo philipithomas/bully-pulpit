@@ -10,7 +10,7 @@ export const siteConfig = {
   newsletters: {
     contraption: {
       name: 'Contraption',
-      tagline: 'Essays and launches.',
+      tagline: 'Essays and projects.',
       slug: 'contraption',
       color: 'forest',
     },

@@ -21,7 +21,7 @@ ${siteConfig.author}
 
 ## Newsletters
 
-- Contraption: Essays and launches.
+- Contraption: Essays and projects.
 - Workshop: Journal about work in progress.
 - Postcard: What I'm up to.
 
