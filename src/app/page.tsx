@@ -27,8 +27,8 @@ export default function HomePage() {
     <div className="container py-16 md:py-24 lg:py-36">
       <JsonLd type="website" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-        {/* Left: Portrait */}
-        <div>
+        {/* Left: Portrait (desktop only) */}
+        <div className="hidden lg:block">
           <Image
             src="/images/portrait.jpg"
             alt="Philip I. Thomas"
@@ -47,7 +47,7 @@ export default function HomePage() {
           <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-gray-950 mb-6">
             Crafting digital tools
           </h1>
-          <div className="font-serif text-lg text-gray-600 leading-relaxed mb-12 max-w-prose">
+          <div className="font-serif text-lg text-gray-600 leading-relaxed mb-8 lg:mb-12 max-w-prose">
             <p className="mb-4">
               I build at the intersection of math, business, and software. I
               work on the engineering team at{' '}
@@ -57,7 +57,7 @@ export default function HomePage() {
               >
                 Chroma
               </a>
-              . I write about crafting digital tools at Contraption Company.
+              .
             </p>
             <p className="mb-4">
               I live in San Francisco. I&apos;m interested in coffee,
@@ -66,14 +66,23 @@ export default function HomePage() {
             <p>In the past, I made Find AI, Moonlight, and Staffjoy.</p>
           </div>
 
+          {/* Horizontal portrait (mobile only) */}
+          <div className="lg:hidden mb-8">
+            <Image
+              src="/images/philip-horizontal.jpg"
+              alt="Philip I. Thomas"
+              width={4000}
+              height={2563}
+              className="w-full rounded-sm"
+              priority
+            />
+          </div>
+
           {/* Subscribe (hidden when logged in) */}
-          <InlineSignupForm
-            hideWhenLoggedIn
-            className="border-t border-gray-200 pt-8"
-          />
+          <InlineSignupForm hideWhenLoggedIn />
 
           {/* Newsletter directory */}
-          <div className="border-t border-gray-200 mt-8 pt-8">
+          <div className="mt-8">
             <p className="font-serif text-sm text-gray-500 mb-6">
               I publish three newsletters:
             </p>

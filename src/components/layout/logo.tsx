@@ -9,7 +9,7 @@ export function Logo() {
         alt="Philip I. Thomas"
         width={160}
         height={20}
-        className="h-4 w-auto"
+        className="h-[14px] w-auto"
         priority
       />
     </Link>

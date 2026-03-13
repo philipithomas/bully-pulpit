@@ -6,6 +6,11 @@ import { useEffect } from 'react'
 export function ScrollReveal() {
   const pathname = usePathname()
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll to top on route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [pathname])
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-run observer on route change to animate new elements
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

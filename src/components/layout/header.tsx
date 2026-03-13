@@ -12,15 +12,15 @@ import { SearchDialog } from '@/components/search/search-dialog'
 const newsletterLogos: Record<string, { src: string; className: string }> = {
   contraption: {
     src: '/images/contraption.svg',
-    className: 'h-[13px] w-auto',
+    className: 'h-[17px] w-auto',
   },
   workshop: {
     src: '/images/workshop-brand.svg',
-    className: 'h-4 w-auto',
+    className: 'h-[24px] w-auto',
   },
   postcard: {
     src: '/images/postcard.svg',
-    className: 'h-[14px] w-auto',
+    className: 'h-[18px] w-auto',
   },
 }
 

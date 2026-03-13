@@ -75,6 +75,8 @@ function extractExcerpt(content: string, maxLength = 200): string {
   const text = content
     .replace(/^---[\s\S]*?---/, '')
     .replace(/<[^>]+>/g, '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/[#*_`~[\]]/g, '')
     .replace(/\n+/g, ' ')
     .trim()
