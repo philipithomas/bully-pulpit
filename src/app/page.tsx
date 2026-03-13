@@ -34,7 +34,8 @@ export default function HomePage() {
             alt="Philip I. Thomas"
             width={600}
             height={750}
-            className="w-full max-w-md rounded-sm"
+            className="w-full max-w-md rounded-sm cursor-zoom-in"
+            data-zoomable=""
             priority
           />
         </div>
@@ -73,7 +74,9 @@ export default function HomePage() {
               alt="Philip I. Thomas"
               width={4000}
               height={2563}
-              className="w-full rounded-sm"
+              className="w-full rounded-sm cursor-zoom-in"
+              data-zoomable=""
+              data-zoom-src="/images/portrait.jpg"
               priority
             />
           </div>
