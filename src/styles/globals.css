@@ -261,6 +261,48 @@ body:has(> * [data-bg="gray-050"]) {
 }
 
 /* ============================
+   Dark viewport (404, check-email)
+   ============================ */
+
+body.dark-viewport {
+  background-color: var(--color-gray-950);
+}
+
+body.dark-viewport header img:not(.rounded-full) {
+  filter: invert(1);
+}
+
+body.dark-viewport header nav a {
+  color: #b1ada6;
+}
+
+body.dark-viewport header nav a:hover {
+  color: #fff;
+}
+
+body.dark-viewport header nav button:has(svg) {
+  color: #b1ada6;
+}
+
+body.dark-viewport header nav button:has(svg):hover {
+  color: #fff;
+}
+
+body.dark-viewport header .btn-primary {
+  background-color: #fff;
+  border-color: #fff;
+  color: var(--color-gray-950);
+}
+
+body.dark-viewport header .btn-primary .btn-text {
+  color: var(--color-gray-950);
+}
+
+body.dark-viewport header .btn-primary .btn-arrow {
+  color: var(--color-gray-950);
+}
+
+/* ============================
    Workshop logo filter
    ============================ */
 
