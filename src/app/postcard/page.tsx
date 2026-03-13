@@ -72,7 +72,7 @@ export default function PostcardPage() {
   }
 
   return (
-    <div className="bg-offwhite-cool min-h-screen" data-bg="offwhite-cool">
+    <div className="bg-offwhite-cool" data-bg="offwhite-cool">
       <div className="container py-12 md:py-16">
         <div className="mb-12 flex flex-col items-center text-center">
           <Image
