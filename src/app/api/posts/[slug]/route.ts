@@ -19,6 +19,9 @@ export async function GET(
     title: post.frontmatter.title,
     newsletter: post.newsletter,
     published_at: post.frontmatter.publishedAt,
+    subtitle: post.frontmatter.subtitle || null,
+    cover_image: post.frontmatter.coverImage || null,
+    cover_image_alt: post.frontmatter.coverImageAlt || null,
     email_html: emailHtml,
   })
 }
