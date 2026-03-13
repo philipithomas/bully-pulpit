@@ -29,6 +29,5 @@ export const siteConfig = {
   },
   printingPressUrl: process.env.PRINTING_PRESS_URL ?? 'http://localhost:8080',
   m2mApiKey: process.env.M2M_API_KEY ?? 'dev-api-key',
-  googleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '',
   jwtSecret: process.env.JWT_SECRET ?? 'dev-jwt-secret-change-in-production',
 } as const

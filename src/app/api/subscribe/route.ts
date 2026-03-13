@@ -3,7 +3,7 @@ import { siteConfig } from '@/lib/config'
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { email, name, googleVerified, newsletters } = body
+  const { email, name, newsletters } = body
 
   if (!email) {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 })
@@ -21,7 +21,6 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           email,
           name,
-          google_verified: googleVerified ?? false,
         }),
       }
     )
