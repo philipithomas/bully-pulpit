@@ -157,6 +157,16 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
+            <p className="font-serif text-sm text-gray-500 mt-6">
+              Available by email or{' '}
+              <Link
+                href="/press"
+                className="underline decoration-gray-300 underline-offset-2 hover:text-gray-700 transition-colors duration-300"
+              >
+                snail mail
+              </Link>
+              .
+            </p>
           </div>
         </div>
       </div>
