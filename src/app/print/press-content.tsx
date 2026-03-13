@@ -9,7 +9,7 @@ const STRIPE_BILLING_PORTAL =
 
 export function PressContent() {
   return (
-    <div className="bg-offwhite-cool">
+    <div className="bg-offwhite-cool" data-bg="offwhite-cool">
       <div className="container">
         <div
           className="flex flex-col md:flex-row md:gap-8 lg:gap-12 py-8 items-center justify-center"
@@ -52,7 +52,7 @@ export function PressContent() {
                   Already subscribed?{' '}
                   <a
                     href={STRIPE_BILLING_PORTAL}
-                    className="underline underline-offset-4 decoration-gray-400 hover:text-gray-900 transition-colors duration-300"
+                    className="underline underline-offset-4 decoration-indigo hover:text-indigo transition-colors duration-300"
                   >
                     Manage billing &amp; shipping
                   </a>

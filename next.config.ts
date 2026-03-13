@@ -160,6 +160,8 @@ const nextConfig: NextConfig = {
         destination: '/policies',
         permanent: true,
       },
+      // /press renamed to /print
+      { source: '/press', destination: '/print', permanent: true },
     ]
   },
 }

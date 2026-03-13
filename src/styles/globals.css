@@ -449,14 +449,23 @@ body.dark-viewport header .btn-primary .btn-arrow {
 .prose a {
   text-decoration-color: var(--prose-accent, var(--color-gray-400));
   text-underline-offset: 2px;
-  transition: text-decoration-color 0.3s ease;
+  transition: color 0.3s ease;
 }
 
 .prose a:hover {
-  text-decoration-color: currentColor;
+  color: var(--prose-accent, var(--color-gray-800));
 }
 
 .prose img {
   border-radius: 0.25rem;
   cursor: zoom-in;
+}
+
+/* ============================
+   Medium-zoom overlay
+   ============================ */
+
+.medium-zoom-overlay,
+.medium-zoom-image--opened {
+  z-index: 60;
 }

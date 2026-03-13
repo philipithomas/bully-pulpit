@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { PressContent } from '@/app/press/press-content'
+import { PressContent } from '@/app/print/press-content'
 
 export const metadata: Metadata = {
   title: 'Print Edition',

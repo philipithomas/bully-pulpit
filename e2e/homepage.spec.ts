@@ -150,12 +150,15 @@ test('new content pages load', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('Audio')
 })
 
-test('press page shows retired notice', async ({ page }) => {
-  await page.goto('/press')
-  await expect(page.locator('h1')).toHaveText('Print Edition')
-  await expect(
-    page.locator('a[href="/introducing-the-print-edition"]')
-  ).toBeVisible()
+test('print page loads', async ({ page }) => {
+  await page.goto('/print')
+  await expect(page.locator('h1')).toHaveText('Print edition')
+})
+
+test('/press redirects to /print', async ({ request }) => {
+  const resp = await request.get('/press', { maxRedirects: 0 })
+  expect(resp.status()).toBe(308)
+  expect(resp.headers().location).toBe('/print')
 })
 
 test('sitemap includes pages and posts', async ({ request }) => {
@@ -173,5 +176,5 @@ test('sitemap includes pages and posts', async ({ request }) => {
   expect(body).toContain('/media')
   expect(body).toContain('/contact')
   expect(body).toContain('/audio')
-  expect(body).toContain('/press')
+  expect(body).toContain('/print')
 })

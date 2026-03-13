@@ -242,8 +242,14 @@ export function SearchDialog({
                     )}
                     <ul className="max-h-80 overflow-y-auto p-2">
                       {displayResults.map((result, i) => {
+                        const titleLower = result.title.toLowerCase().trim()
                         const snippet = result.matches.find(
-                          (m) => m.type === 'content'
+                          (m) =>
+                            m.type === 'content' &&
+                            !m.document
+                              .toLowerCase()
+                              .trim()
+                              .startsWith(titleLower)
                         )
                         return (
                           <li key={result.slug}>

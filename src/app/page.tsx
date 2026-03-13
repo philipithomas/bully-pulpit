@@ -54,7 +54,7 @@ export default function HomePage() {
               work on the engineering team at{' '}
               <a
                 href="https://www.trychroma.com"
-                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 Chroma
               </a>
@@ -68,7 +68,7 @@ export default function HomePage() {
               In the past, I made{' '}
               <a
                 href="/internal-tools-of-find-ai"
-                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 Find AI
               </a>
@@ -77,7 +77,7 @@ export default function HomePage() {
                 href="https://techcrunch.com/2020/02/17/pullrequest-snags-remote-developer-hiring-platform-moonlight-in-case-of-startup-buying-startup/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 Moonlight
               </a>
@@ -86,7 +86,7 @@ export default function HomePage() {
                 href="https://techcrunch.com/2015/10/22/staffjoy-launches-from-yc-fellowship-helping-businesses-automate-their-workforce-scheduling/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 Staffjoy
               </a>
@@ -98,7 +98,7 @@ export default function HomePage() {
                 href="https://github.com/philipithomas"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 GitHub
               </a>{' '}
@@ -107,7 +107,7 @@ export default function HomePage() {
                 href="https://linkedin.com/in/philipithomas"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-800 underline decoration-gray-300 underline-offset-2 hover:text-forest transition-colors duration-300"
+                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 LinkedIn
               </a>
@@ -158,10 +158,17 @@ export default function HomePage() {
               ))}
             </div>
             <p className="font-serif text-sm text-gray-500 mt-6">
-              Available by email or{' '}
+              Available by email,{' '}
               <Link
-                href="/press"
-                className="underline decoration-gray-300 underline-offset-2 hover:text-gray-700 transition-colors duration-300"
+                href="/feed/rss.xml"
+                className="underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
+              >
+                RSS
+              </Link>
+              , or{' '}
+              <Link
+                href="/print"
+                className="underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 snail mail
               </Link>
