@@ -14,33 +14,37 @@ export const metadata: Metadata = {
 
 function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
   return (
-    <Link href={`/${post.slug}`} className="block group">
+    <Link
+      href={`/${post.slug}`}
+      className="block group bg-offwhite-light rounded-sm overflow-hidden h-full"
+    >
       {post.frontmatter.coverImage && (
-        <div className="overflow-hidden rounded-sm mb-4">
+        <div className="relative overflow-hidden aspect-[3/2]">
           <Image
             src={post.frontmatter.coverImage}
             alt={post.frontmatter.coverImageAlt ?? post.frontmatter.title}
-            width={post.coverDimensions?.width ?? 1280}
-            height={post.coverDimensions?.height ?? 640}
-            className="w-full transition-transform duration-300 group-hover:scale-[1.02]"
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             priority={large}
             sizes={large ? '(max-width: 1024px) 100vw, 66vw' : '33vw'}
           />
         </div>
       )}
-      <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
-        {format(new Date(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
-      </time>
-      <h2
-        className={`font-semibold tracking-tight text-gray-950 group-hover:text-forest transition-colors duration-300 mt-1 ${large ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
-      >
-        {post.frontmatter.title}
-      </h2>
-      {post.frontmatter.description && (
-        <p className="font-serif text-sm text-gray-600 mt-1">
-          {post.frontmatter.description}
-        </p>
-      )}
+      <div className="p-4 md:p-5">
+        <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
+          {format(new Date(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
+        </time>
+        <h2
+          className={`font-semibold tracking-tight text-gray-950 group-hover:text-forest transition-colors duration-300 mt-1 ${large ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
+        >
+          {post.frontmatter.title}
+        </h2>
+        {post.frontmatter.description && (
+          <p className="font-serif text-sm text-gray-600 mt-1">
+            {post.frontmatter.description}
+          </p>
+        )}
+      </div>
     </Link>
   )
 }
