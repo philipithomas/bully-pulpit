@@ -53,7 +53,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className="font-sans font-normal antialiased text-gray-900 bg-offwhite">
+      <body className="font-sans font-normal antialiased text-gray-900 bg-offwhite flex flex-col min-h-screen">
         <AuthProvider>
           <NewsletterProvider>
             <a
@@ -64,7 +64,9 @@ export default function RootLayout({
             </a>
             <Header />
             {/* biome-ignore lint/correctness/useUniqueElementIds: root layout renders once */}
-            <main id="content">{children}</main>
+            <main id="content" className="flex-1">
+              {children}
+            </main>
             <Footer />
             <SignInModal />
             <GoogleOneTap />
