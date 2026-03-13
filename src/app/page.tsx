@@ -108,11 +108,8 @@ export default function HomePage() {
             />
           </div>
 
-          {/* Subscribe (hidden when logged in) */}
-          <InlineSignupForm hideWhenLoggedIn autoFocus />
-
           {/* Social links */}
-          <p className="mt-8 font-serif text-sm text-gray-500">
+          <p className="mb-8 font-serif text-sm text-gray-500">
             Connect with me on{' '}
             <a
               href="https://github.com/philipithomas"
@@ -133,6 +130,9 @@ export default function HomePage() {
             </a>
             .
           </p>
+
+          {/* Subscribe (hidden when logged in) */}
+          <InlineSignupForm hideWhenLoggedIn autoFocus />
 
           {/* Newsletter directory */}
           <div className="mt-8">
