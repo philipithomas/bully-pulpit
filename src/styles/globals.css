@@ -260,6 +260,47 @@ body:has(> * [data-bg="gray-050"]) {
   transform: translateX(-0.25rem);
 }
 
+.btn-indigo {
+  background-color: var(--color-indigo);
+  color: white;
+  border-color: var(--color-indigo);
+  padding-inline: 1.25rem;
+  height: 2.5rem;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.btn-indigo:hover {
+  padding-right: 2rem;
+}
+
+.btn-indigo .btn-text {
+  transition: transform 0.3s ease-in-out;
+  color: white;
+  position: relative;
+  z-index: 10;
+}
+
+.btn-indigo .btn-arrow {
+  position: absolute;
+  right: 1rem;
+  opacity: 0;
+  transform: translateX(0.5rem);
+  transition: all 0.3s ease-in-out;
+  width: 1rem;
+  height: 1rem;
+  z-index: 20;
+  color: white;
+}
+
+.btn-indigo:hover .btn-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.btn-indigo:hover .btn-text {
+  transform: translateX(-0.25rem);
+}
+
 /* ============================
    Dark viewport (404, check-email)
    ============================ */
