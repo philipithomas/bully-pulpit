@@ -93,7 +93,7 @@ export function SearchDialog({
       setTimeout(() => inputRef.current?.focus(), 50)
 
       if (recentPosts.length === 0) {
-        fetch('/api/posts?limit=8')
+        fetch('/api/posts/recent')
           .then((r) => r.json())
           .then((data) => {
             setRecentPosts(
