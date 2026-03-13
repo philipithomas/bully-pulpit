@@ -5,12 +5,12 @@ export const siteConfig = {
   url: 'https://philipithomas.com',
   author: 'Philip I. Thomas',
   email: 'mail@philipithomas.com',
-  image: '/images/portrait.jpg',
+  image: '/og-image.png',
   favicon: '/favicon.ico',
   newsletters: {
     contraption: {
       name: 'Contraption',
-      tagline: 'Essays and projects.',
+      tagline: 'Projects and essays.',
       slug: 'contraption',
       color: 'forest',
     },

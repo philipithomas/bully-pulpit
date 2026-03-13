@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     siteName: siteConfig.title,
     title: siteConfig.title,
     description: siteConfig.description,
-    images: [{ url: '/images/portrait.jpg', width: 1200, height: 630 }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -33,7 +33,10 @@ export const metadata: Metadata = {
     description: siteConfig.description,
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
     apple: '/apple-touch-icon.png',
   },
   manifest: '/manifest.webmanifest',
@@ -45,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en">
       <head>
         <link
           rel="preconnect"

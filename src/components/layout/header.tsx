@@ -43,19 +43,28 @@ export function Header() {
   return (
     <header className="py-4 md:py-6">
       <div className="container flex items-center justify-between">
-        {newsletter && newsletterLogos[newsletter] ? (
-          <Link href={`/${newsletter}`} className="flex items-center">
-            <Image
-              src={newsletterLogos[newsletter].src}
-              alt={newsletter.charAt(0).toUpperCase() + newsletter.slice(1)}
-              width={160}
-              height={20}
-              className={newsletterLogos[newsletter].className}
-            />
-          </Link>
-        ) : (
-          <Logo />
-        )}
+        <div className="relative h-6 flex items-center">
+          <div
+            className={`transition-opacity duration-200 ${newsletter && newsletterLogos[newsletter] ? 'opacity-0' : 'opacity-100'}`}
+          >
+            <Logo />
+          </div>
+          {Object.entries(newsletterLogos).map(([slug, logo]) => (
+            <Link
+              key={slug}
+              href={`/${slug}`}
+              className={`absolute left-0 top-1/2 -translate-y-1/2 flex items-center transition-opacity duration-200 ${newsletter === slug ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            >
+              <Image
+                src={logo.src}
+                alt={slug.charAt(0).toUpperCase() + slug.slice(1)}
+                width={160}
+                height={20}
+                className={logo.className}
+              />
+            </Link>
+          ))}
+        </div>
         <nav className="flex items-center gap-3">
           <button
             type="button"
