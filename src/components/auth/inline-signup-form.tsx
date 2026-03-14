@@ -109,7 +109,7 @@ export function InlineSignupForm({
     return (
       <div className={className}>
         <p className="font-serif text-sm text-gray-600 mb-3">
-          A 6-digit code was sent to {email}.
+          Check {email} for a 6-digit code.
         </p>
         <form onSubmit={handleCodeSubmit} className="flex flex-col items-start">
           <div className="flex items-center w-full sm:w-2/3">
