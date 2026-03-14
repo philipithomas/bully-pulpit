@@ -353,6 +353,26 @@ body.dark-viewport header .btn-primary .btn-arrow {
 }
 
 /* ============================
+   Caret blink (OTP input)
+   ============================ */
+
+@keyframes caret-blink {
+  0%,
+  70%,
+  100% {
+    opacity: 1;
+  }
+  20%,
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-caret-blink {
+  animation: caret-blink 1.2s ease-out infinite;
+}
+
+/* ============================
    Reveal animation
    ============================ */
 

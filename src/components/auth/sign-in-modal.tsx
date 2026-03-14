@@ -9,6 +9,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@/components/ui/input-otp'
 import { useAuthModal } from '@/stores/auth-store'
 
 type Step = 'email' | 'code'
@@ -19,7 +24,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
-  const codeInputRef = useRef<HTMLInputElement>(null)
+  const submittingRef = useRef(false)
 
   const reset = useCallback(() => {
     setStep('email')
@@ -52,7 +57,6 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
       }
 
       setStep('code')
-      setTimeout(() => codeInputRef.current?.focus(), 100)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -60,32 +64,38 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
     }
   }
 
-  async function handleCodeSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
+  const verifyCode = useCallback(
+    async (value: string) => {
+      if (submittingRef.current) return
+      submittingRef.current = true
+      setLoading(true)
 
-    try {
-      const res = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
-      })
+      try {
+        const res = await fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code: value }),
+        })
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error ?? 'Verification failed')
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error ?? 'Verification failed')
+        }
+
+        closeModal()
+        toast.success('Signed in successfully')
+        onSuccess?.()
+        window.location.reload()
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Something went wrong')
+        setCode('')
+      } finally {
+        setLoading(false)
+        submittingRef.current = false
       }
-
-      closeModal()
-      toast.success('Signed in successfully')
-      onSuccess?.()
-      window.location.reload()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Something went wrong')
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    [email, closeModal, onSuccess]
+  )
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -128,26 +138,30 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                 Check {email} for a 6-digit code.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCodeSubmit} className="mt-6 space-y-4">
-              <input
-                ref={codeInputRef}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
+            <div className="mt-6 space-y-4">
+              <InputOTP
                 maxLength={6}
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="000000"
-                required
-                className="w-full border border-gray-300 bg-white px-4 py-3 text-center text-2xl font-mono tracking-[0.3em] text-gray-900 placeholder:text-gray-300 focus:border-gray-900 focus:outline-none focus:ring-0"
-              />
-              <button
-                type="submit"
-                disabled={loading || code.length < 6}
-                className="w-full bg-gray-950 text-white py-3 text-sm font-semibold tracking-wide uppercase hover:bg-gray-800 transition-colors disabled:opacity-70"
+                onChange={setCode}
+                onComplete={verifyCode}
+                disabled={loading}
+                autoFocus
+                containerClassName="justify-center"
               >
-                {loading ? 'Verifying...' : 'Verify'}
-              </button>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+              {loading && (
+                <p className="text-center text-sm text-gray-500">
+                  Verifying...
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -158,7 +172,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
               >
                 Use a different email
               </button>
-            </form>
+            </div>
           </>
         )}
       </DialogContent>

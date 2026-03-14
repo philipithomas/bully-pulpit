@@ -1,8 +1,13 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@/components/ui/input-otp'
 import { useAuth } from '@/hooks/use-auth'
 
 interface Props {
@@ -38,7 +43,7 @@ export function InlineSignupForm({
   )
   const [step, setStep] = useState<Step>('email')
   const [loading, setLoading] = useState(false)
-  const codeInputRef = useRef<HTMLInputElement>(null)
+  const submittingRef = useRef(false)
 
   function toggleNewsletter(id: string) {
     setSelected((prev) => {
@@ -72,7 +77,6 @@ export function InlineSignupForm({
         return
       }
       setStep('code')
-      setTimeout(() => codeInputRef.current?.focus(), 100)
     } catch {
       toast.error('Unable to reach subscription service')
     } finally {
@@ -80,28 +84,35 @@ export function InlineSignupForm({
     }
   }
 
-  async function handleCodeSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      const res = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        toast.error(data.error ?? 'Verification failed')
-        return
+  const verifyCode = useCallback(
+    async (value: string) => {
+      if (submittingRef.current) return
+      submittingRef.current = true
+      setLoading(true)
+      try {
+        const res = await fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code: value }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          toast.error(data.error ?? 'Verification failed')
+          setCode('')
+          return
+        }
+        toast.success('Signed in successfully')
+        window.location.reload()
+      } catch {
+        toast.error('Unable to verify code')
+        setCode('')
+      } finally {
+        setLoading(false)
+        submittingRef.current = false
       }
-      toast.success('Signed in successfully')
-      window.location.reload()
-    } catch {
-      toast.error('Unable to verify code')
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    [email]
+  )
 
   if (hideWhenLoggedIn && (authLoading || user)) return null
 
@@ -111,31 +122,27 @@ export function InlineSignupForm({
         <p className="font-serif text-sm text-gray-600 mb-3">
           Check {email} for a 6-digit code.
         </p>
-        <form onSubmit={handleCodeSubmit} className="flex flex-col items-start">
-          <div className="flex items-center w-full sm:w-2/3">
-            <input
-              ref={codeInputRef}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-              placeholder="000000"
-              required
-              className="border border-gray-300 bg-white px-3 py-2 flex-grow w-full focus:outline-none focus:ring-0 focus:border-gray-900 text-center text-lg font-mono tracking-[0.3em] h-10"
-            />
-            <button
-              type="submit"
-              disabled={loading || code.length < 6}
-              className="btn btn-primary h-10 shrink-0"
-            >
-              <span className="btn-text">{loading ? '...' : 'Verify'}</span>
-              <span className="btn-arrow">
-                <ArrowIcon className="w-4 h-4" />
-              </span>
-            </button>
-          </div>
+        <div className="flex flex-col items-start">
+          <InputOTP
+            maxLength={6}
+            value={code}
+            onChange={setCode}
+            onComplete={verifyCode}
+            disabled={loading}
+            autoFocus
+          >
+            <InputOTPGroup>
+              <InputOTPSlot index={0} />
+              <InputOTPSlot index={1} />
+              <InputOTPSlot index={2} />
+              <InputOTPSlot index={3} />
+              <InputOTPSlot index={4} />
+              <InputOTPSlot index={5} />
+            </InputOTPGroup>
+          </InputOTP>
+          {loading && (
+            <p className="text-xs text-gray-500 mt-2 font-sans">Verifying...</p>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -146,7 +153,7 @@ export function InlineSignupForm({
           >
             Use a different email
           </button>
-        </form>
+        </div>
       </div>
     )
   }
