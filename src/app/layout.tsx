@@ -8,6 +8,7 @@ import { Header } from '@/components/layout/header'
 import { NewsletterProvider } from '@/components/layout/newsletter-context'
 import { ImageZoom } from '@/components/ui/image-zoom'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
+import { Toaster } from '@/components/ui/sonner'
 import { siteConfig } from '@/lib/config'
 
 export const metadata: Metadata = {
@@ -71,6 +72,7 @@ export default function RootLayout({
             </main>
             <Footer />
             <SignInModal />
+            <Toaster />
             <ScrollReveal />
             <ImageZoom />
             <Plausible />

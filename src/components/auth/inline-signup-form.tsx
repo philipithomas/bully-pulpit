@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -21,7 +22,7 @@ const newsletters = [
   { id: 'postcard', label: 'Postcard', desc: "What I'm up to." },
 ] as const
 
-type Step = 'email' | 'code' | 'done'
+type Step = 'email' | 'code'
 
 export function InlineSignupForm({
   showNewsletterPicker = false,
@@ -37,7 +38,6 @@ export function InlineSignupForm({
   )
   const [step, setStep] = useState<Step>('email')
   const [loading, setLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
   const codeInputRef = useRef<HTMLInputElement>(null)
 
   function toggleNewsletter(id: string) {
@@ -55,7 +55,6 @@ export function InlineSignupForm({
     if (showNewsletterPicker && selected.size === 0) return
 
     setLoading(true)
-    setErrorMsg('')
     try {
       const res = await fetch('/api/subscribe', {
         method: 'POST',
@@ -69,13 +68,13 @@ export function InlineSignupForm({
       })
       if (!res.ok) {
         const data = await res.json()
-        setErrorMsg(data.error ?? 'Subscription failed')
+        toast.error(data.error ?? 'Subscription failed')
         return
       }
       setStep('code')
       setTimeout(() => codeInputRef.current?.focus(), 100)
     } catch {
-      setErrorMsg('Unable to reach subscription service')
+      toast.error('Unable to reach subscription service')
     } finally {
       setLoading(false)
     }
@@ -84,7 +83,6 @@ export function InlineSignupForm({
   async function handleCodeSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    setErrorMsg('')
     try {
       const res = await fetch('/api/auth/verify', {
         method: 'POST',
@@ -93,27 +91,19 @@ export function InlineSignupForm({
       })
       if (!res.ok) {
         const data = await res.json()
-        setErrorMsg(data.error ?? 'Verification failed')
+        toast.error(data.error ?? 'Verification failed')
         return
       }
-      setStep('done')
+      toast.success('Signed in successfully')
       window.location.reload()
     } catch {
-      setErrorMsg('Unable to verify code')
+      toast.error('Unable to verify code')
     } finally {
       setLoading(false)
     }
   }
 
   if (hideWhenLoggedIn && (authLoading || user)) return null
-
-  if (step === 'done') {
-    return (
-      <div className={className}>
-        <p className="text-forest text-sm font-sans">Signed in successfully.</p>
-      </div>
-    )
-  }
 
   if (step === 'code') {
     return (
@@ -146,15 +136,11 @@ export function InlineSignupForm({
               </span>
             </button>
           </div>
-          {errorMsg && (
-            <p className="text-red text-xs mt-2 font-sans">{errorMsg}</p>
-          )}
           <button
             type="button"
             onClick={() => {
               setStep('email')
               setCode('')
-              setErrorMsg('')
             }}
             className="text-xs text-gray-500 underline underline-offset-2 decoration-gray-300 hover:text-gray-700 cursor-pointer transition-colors mt-2 font-sans"
           >
@@ -219,9 +205,6 @@ export function InlineSignupForm({
           </span>
         </button>
       </div>
-      {errorMsg && (
-        <p className="text-red text-xs mt-2 font-sans">{errorMsg}</p>
-      )}
     </form>
   )
 }

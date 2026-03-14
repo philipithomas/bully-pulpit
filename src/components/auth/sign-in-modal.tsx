@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -18,14 +19,12 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const codeInputRef = useRef<HTMLInputElement>(null)
 
   const reset = useCallback(() => {
     setStep('email')
     setEmail('')
     setCode('')
-    setError('')
     setLoading(false)
   }, [])
 
@@ -39,7 +38,6 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    setError('')
 
     try {
       const res = await fetch('/api/subscribe', {
@@ -56,7 +54,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
       setStep('code')
       setTimeout(() => codeInputRef.current?.focus(), 100)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      toast.error(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -65,7 +63,6 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
   async function handleCodeSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    setError('')
 
     try {
       const res = await fetch('/api/auth/verify', {
@@ -80,10 +77,11 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
       }
 
       closeModal()
+      toast.success('Signed in successfully')
       onSuccess?.()
       window.location.reload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      toast.error(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -113,7 +111,6 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                 autoFocus
                 className="w-full border border-gray-300 bg-white px-4 py-3 text-sm font-sans text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-0"
               />
-              {error && <p className="text-sm text-red">{error}</p>}
               <button
                 type="submit"
                 disabled={loading}
@@ -144,7 +141,6 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                 required
                 className="w-full border border-gray-300 bg-white px-4 py-3 text-center text-2xl font-mono tracking-[0.3em] text-gray-900 placeholder:text-gray-300 focus:border-gray-900 focus:outline-none focus:ring-0"
               />
-              {error && <p className="text-sm text-red">{error}</p>}
               <button
                 type="submit"
                 disabled={loading || code.length < 6}
@@ -157,7 +153,6 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                 onClick={() => {
                   setStep('email')
                   setCode('')
-                  setError('')
                 }}
                 className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
               >
