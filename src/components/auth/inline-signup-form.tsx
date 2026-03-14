@@ -198,6 +198,8 @@ export function InlineSignupForm({
       <div className="flex items-center w-full sm:w-2/3">
         <input
           type="email"
+          name="email"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Your email"

@@ -103,6 +103,9 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
             <form onSubmit={handleEmailSubmit} className="mt-6 space-y-4">
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
+                aria-label="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
