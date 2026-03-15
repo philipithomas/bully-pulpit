@@ -1,0 +1,75 @@
+name: Draft Postcard
+
+on:
+  schedule:
+    - cron: '0 12 2 * *' # 2nd of each month at noon UTC
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  create-postcard-draft:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Calculate next month
+        id: date
+        run: |
+          # Get the first day of next month
+          next_month=$(date -d "$(date +%Y-%m-01) +1 month" +%Y-%m)
+          year=$(date -d "${next_month}-01" +%Y)
+          month_name=$(date -d "${next_month}-01" +%B)
+          prev_month_name=$(date -d "$(date +%Y-%m-01)" +%B)
+          echo "next_month=${next_month}" >> "$GITHUB_OUTPUT"
+          echo "year=${year}" >> "$GITHUB_OUTPUT"
+          echo "month_name=${month_name}" >> "$GITHUB_OUTPUT"
+          echo "prev_month_name=${prev_month_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if file already exists
+        id: check
+        run: |
+          if [ -f "content/postcard/${{ steps.date.outputs.next_month }}.mdx" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create postcard draft
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          cat > "content/postcard/${{ steps.date.outputs.next_month }}.mdx" << 'ENDOFFILE'
+          ---
+          title: "What I'm up to - ${{ steps.date.outputs.month_name }} ${{ steps.date.outputs.year }}"
+          publishedAt: "${{ steps.date.outputs.next_month }}-01"
+          ---
+
+          My monthly newsletter about what I'm up to, which [I send in place of social media](https://www.philipithomas.com/posts/how-to-replace-social-media-with-a-personal-newsletter):
+
+          ## What I did in ${{ steps.date.outputs.prev_month_name }}
+
+          -
+
+          ## Things to share
+
+          -
+
+          ## Plans for ${{ steps.date.outputs.month_name }}
+
+          -
+          ENDOFFILE
+
+      - name: Create pull request
+        if: steps.check.outputs.exists == 'false'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: postcard/${{ steps.date.outputs.next_month }}
+          commit-message: "Draft postcard for ${{ steps.date.outputs.month_name }} ${{ steps.date.outputs.year }}"
+          title: "Postcard: ${{ steps.date.outputs.month_name }} ${{ steps.date.outputs.year }}"
+          body: |
+            Draft postcard for ${{ steps.date.outputs.month_name }} ${{ steps.date.outputs.year }}.
+
+            Fill in the sections and merge when ready to publish.
