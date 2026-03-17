@@ -63,7 +63,6 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json()
-  console.log(`[auth/preferences] PATCH for ${uuid}:`, body)
 
   try {
     const res = await fetch(
@@ -91,7 +90,6 @@ export async function PATCH(request: Request) {
     }
 
     const subscriber = await res.json()
-    console.log(`[auth/preferences] Updated: ${subscriber.email}`)
     return NextResponse.json({ subscriber })
   } catch (err) {
     console.error('[auth/preferences] PATCH network error:', err)
@@ -107,8 +105,6 @@ export async function DELETE() {
   if (!uuid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
-  console.log(`[auth/preferences] DELETE for ${uuid}`)
 
   try {
     const res = await fetch(
@@ -130,7 +126,6 @@ export async function DELETE() {
       )
     }
 
-    console.log(`[auth/preferences] Account deleted: ${uuid}`)
     const response = NextResponse.json({ ok: true })
     response.cookies.delete('bp_token')
     response.cookies.delete('bp_has_session')

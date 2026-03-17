@@ -1,6 +1,7 @@
 import { checkBotId } from 'botid/server'
 import { NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   const { isBot } = await checkBotId()
@@ -16,11 +17,18 @@ export async function POST(request: Request) {
   const { email, name, newsletters } = body
 
   if (!email) {
-    console.warn('[subscribe] Missing email')
     return NextResponse.json({ error: 'Email is required' }, { status: 400 })
   }
 
-  console.log(`[subscribe] Request for ${email}`)
+  // Rate limit: 3 subscribe requests per email per 15 minutes
+  const emailKey = `subscribe:${email.toLowerCase()}`
+  if (!checkRateLimit(emailKey, 3, 15 * 60 * 1000)) {
+    console.warn(`[subscribe] Rate limited: ${emailKey}`)
+    return NextResponse.json(
+      { error: 'Too many attempts. Please try again later.' },
+      { status: 429 }
+    )
+  }
 
   try {
     const res = await fetch(
@@ -41,20 +49,18 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       const data = await res.json()
-      console.error(
-        `[subscribe] Printing-press error for ${email}: ${res.status} ${data.error}`
-      )
+      console.error(`[subscribe] Backend error: ${res.status} ${data.error}`)
+      const safeErrors: Record<number, string> = {
+        400: 'Invalid email address',
+        409: 'Subscription already exists',
+      }
       return NextResponse.json(
-        { error: data.error ?? 'Subscription failed' },
+        { error: safeErrors[res.status] ?? 'Subscription failed' },
         { status: res.status }
       )
     }
 
     const subscriber = await res.json()
-    const isNew = !subscriber.confirmed_at
-    console.log(
-      `[subscribe] ${isNew ? 'New' : 'Existing'} subscriber: ${email} (uuid=${subscriber.uuid})`
-    )
 
     // Update newsletter preferences if specified
     if (newsletters && subscriber.uuid) {
@@ -74,14 +80,16 @@ export async function POST(request: Request) {
           cache: 'no-store',
         }
       )
-      console.log(
-        `[subscribe] Updated preferences for ${email}: ${newsletters.join(', ')} (status=${prefRes.status})`
-      )
+      if (!prefRes.ok) {
+        console.error(
+          `[subscribe] Failed to update preferences: ${prefRes.status}`
+        )
+      }
     }
 
     return NextResponse.json({ subscriber })
   } catch (err) {
-    console.error(`[subscribe] Network error for ${email}:`, err)
+    console.error('[subscribe] Network error:', err)
     return NextResponse.json(
       { error: 'Unable to reach subscription service' },
       { status: 502 }

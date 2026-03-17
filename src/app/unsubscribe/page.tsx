@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Spinner } from '@/components/ui/spinner'
 import { siteConfig } from '@/lib/config'
 
 const newsletterInfo = [
@@ -123,8 +124,8 @@ function UnsubscribeContent() {
   if (!prefs) {
     return (
       <div className="bg-offwhite min-h-[60vh]">
-        <div className="container max-w-lg py-16 text-center text-gray-500">
-          Loading...
+        <div className="container max-w-lg py-16 flex justify-center">
+          <Spinner className="h-6 w-6 text-gray-400" />
         </div>
       </div>
     )
@@ -234,7 +235,14 @@ function UnsubscribeContent() {
                 disabled={deleting}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
-                {deleting ? 'Deleting...' : 'Delete my data'}
+                {deleting ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner className="h-3.5 w-3.5" />
+                    Deleting
+                  </span>
+                ) : (
+                  'Delete my data'
+                )}
               </button>
             </div>
           </div>
@@ -249,8 +257,8 @@ export default function UnsubscribePage() {
     <Suspense
       fallback={
         <div className="bg-offwhite min-h-[60vh]">
-          <div className="container max-w-lg py-16 text-center text-gray-500">
-            Loading...
+          <div className="container max-w-lg py-16 flex justify-center">
+            <Spinner className="h-6 w-6 text-gray-400" />
           </div>
         </div>
       }

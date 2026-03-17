@@ -44,9 +44,6 @@ export async function POST(request: Request) {
     }
 
     const subscriber = await res.json()
-    console.log(
-      `[verify] Verified: ${subscriber.email} (uuid=${subscriber.uuid})`
-    )
 
     // Mint JWT
     const secret = new TextEncoder().encode(siteConfig.jwtSecret)

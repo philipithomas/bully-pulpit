@@ -14,6 +14,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from '@/components/ui/input-otp'
+import { Spinner } from '@/components/ui/spinner'
 import { useAuthModal } from '@/stores/auth-store'
 
 type Step = 'email' | 'code'
@@ -126,7 +127,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                 disabled={loading}
                 className="w-full bg-gray-950 text-white py-3 text-sm font-semibold tracking-wide uppercase hover:bg-gray-800 transition-colors disabled:opacity-70"
               >
-                {loading ? 'Sending...' : 'Continue'}
+                {loading ? <Spinner className="h-4 w-4 mx-auto" /> : 'Continue'}
               </button>
             </form>
           </>
@@ -158,9 +159,10 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                 </InputOTPGroup>
               </InputOTP>
               {loading && (
-                <p className="text-center text-sm text-gray-500">
-                  Verifying...
-                </p>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                  <Spinner className="h-3.5 w-3.5" />
+                  <span>Verifying</span>
+                </div>
               )}
               <button
                 type="button"

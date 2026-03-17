@@ -8,6 +8,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from '@/components/ui/input-otp'
+import { Spinner } from '@/components/ui/spinner'
 import { useAuth } from '@/hooks/use-auth'
 
 interface Props {
@@ -141,7 +142,10 @@ export function InlineSignupForm({
             </InputOTPGroup>
           </InputOTP>
           {loading && (
-            <p className="text-xs text-gray-500 mt-2 font-sans">Verifying...</p>
+            <div className="flex items-center gap-2 mt-2">
+              <Spinner className="h-3 w-3 text-gray-500" />
+              <p className="text-xs text-gray-500 font-sans">Verifying</p>
+            </div>
           )}
           <button
             type="button"
@@ -206,9 +210,11 @@ export function InlineSignupForm({
           disabled={loading}
           className="btn btn-primary h-10 shrink-0"
         >
-          <span className="btn-text">{loading ? '...' : 'Subscribe'}</span>
+          <span className="btn-text">
+            {loading ? <Spinner className="h-4 w-4" /> : 'Subscribe'}
+          </span>
           <span className="btn-arrow">
-            <ArrowIcon className="w-4 h-4" />
+            {loading ? null : <ArrowIcon className="w-4 h-4" />}
           </span>
         </button>
       </div>

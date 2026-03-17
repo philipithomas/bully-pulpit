@@ -2,6 +2,7 @@ import { checkBotId } from 'botid/server'
 import { SignJWT } from 'jose'
 import { NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   const { isBot } = await checkBotId()
@@ -17,14 +18,21 @@ export async function POST(request: Request) {
   const { email, code } = body
 
   if (!email || !code) {
-    console.warn('[auth/verify] Missing email or code')
     return NextResponse.json(
       { error: 'Email and code are required' },
       { status: 400 }
     )
   }
 
-  console.log(`[auth/verify] Verifying code for ${email}`)
+  // Rate limit: 5 attempts per email per 15 minutes
+  const emailKey = `verify:${email.toLowerCase()}`
+  if (!checkRateLimit(emailKey, 5, 15 * 60 * 1000)) {
+    console.warn(`[auth/verify] Rate limited: ${emailKey}`)
+    return NextResponse.json(
+      { error: 'Too many attempts. Please try again later.' },
+      { status: 429 }
+    )
+  }
 
   try {
     const res = await fetch(
@@ -35,26 +43,26 @@ export async function POST(request: Request) {
           'Content-Type': 'application/json',
           'x-api-key': siteConfig.m2mApiKey,
         },
-        body: JSON.stringify({ email, token: code }),
+        body: JSON.stringify({ token: code, email }),
         cache: 'no-store',
       }
     )
 
     if (!res.ok) {
       const data = await res.json()
-      console.error(
-        `[auth/verify] Failed for ${email}: ${res.status} ${data.error}`
-      )
+      console.error(`[auth/verify] Failed: ${res.status} ${data.error}`)
+      // Only pass through expected client-facing messages
+      const safeErrors: Record<number, string> = {
+        400: 'Invalid or expired code',
+        404: 'Account not found',
+      }
       return NextResponse.json(
-        { error: data.error ?? 'Verification failed' },
+        { error: safeErrors[res.status] ?? 'Verification failed' },
         { status: res.status }
       )
     }
 
     const subscriber = await res.json()
-    console.log(
-      `[auth/verify] Verified: ${subscriber.email} (uuid=${subscriber.uuid})`
-    )
 
     const secret = new TextEncoder().encode(siteConfig.jwtSecret)
     const jwt = await new SignJWT({
@@ -85,7 +93,7 @@ export async function POST(request: Request) {
 
     return response
   } catch (err) {
-    console.error(`[auth/verify] Network error for ${email}:`, err)
+    console.error('[auth/verify] Network error:', err)
     return NextResponse.json(
       { error: 'Unable to reach verification service' },
       { status: 502 }
