@@ -65,7 +65,7 @@ export function Header() {
             </Link>
           ))}
         </div>
-        <nav className="flex items-center gap-3">
+        <nav className="flex items-center gap-5">
           <button
             type="button"
             onClick={() => setSearchOpen(true)}

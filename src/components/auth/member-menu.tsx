@@ -87,32 +87,38 @@ export function MemberMenu() {
         </svg>
       </button>
       <div
-        className={`absolute right-0 mt-3 w-56 border border-gray-200 bg-white shadow-lg overflow-hidden transition duration-150 ease-out z-50 ${
-          open
-            ? 'opacity-100 translate-y-0 scale-100'
-            : 'opacity-0 translate-y-1 scale-95 pointer-events-none'
+        className={`absolute right-0 top-full pt-3 z-50 ${
+          open ? '' : 'pointer-events-none'
         }`}
       >
-        <div className="w-full px-4 pt-3 pb-3 border-b border-gray-100 text-xs font-medium text-gray-600 truncate">
-          {user.email}
+        <div
+          className={`w-56 border border-gray-200 bg-white shadow-lg overflow-hidden transition duration-150 ease-out ${
+            open
+              ? 'opacity-100 translate-y-0 scale-100'
+              : 'opacity-0 translate-y-1 scale-95'
+          }`}
+        >
+          <div className="w-full px-4 pt-3 pb-3 border-b border-gray-100 text-xs font-medium text-gray-600 truncate">
+            {user.email}
+          </div>
+          <Link
+            href="/account"
+            className="block px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-075 transition-colors duration-200"
+            onClick={() => setOpen(false)}
+          >
+            Account
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              logout()
+              setOpen(false)
+            }}
+            className="block w-full text-left px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-075 border-t border-gray-100 transition-colors duration-200"
+          >
+            Sign out
+          </button>
         </div>
-        <Link
-          href="/account"
-          className="block px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-075 transition-colors duration-200"
-          onClick={() => setOpen(false)}
-        >
-          Account
-        </Link>
-        <button
-          type="button"
-          onClick={() => {
-            logout()
-            setOpen(false)
-          }}
-          className="block w-full text-left px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-075 border-t border-gray-100 transition-colors duration-200"
-        >
-          Sign out
-        </button>
       </div>
     </div>
   )
