@@ -3,6 +3,7 @@ import '@/styles/globals.css'
 import { Plausible } from '@/components/analytics/plausible'
 import { AuthProvider } from '@/components/auth/auth-provider'
 import { SignInModal } from '@/components/auth/sign-in-modal'
+import { SignInToast } from '@/components/auth/sign-in-toast'
 import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
 import { NewsletterProvider } from '@/components/layout/newsletter-context'
@@ -72,6 +73,7 @@ export default function RootLayout({
             </main>
             <Footer />
             <SignInModal />
+            <SignInToast />
             <Toaster />
             <ScrollReveal />
             <ImageZoom />

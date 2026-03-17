@@ -41,7 +41,9 @@ export async function GET(request: NextRequest) {
       .setExpirationTime('30d')
       .sign(secret)
 
-    const response = NextResponse.redirect(new URL('/', request.url))
+    const response = NextResponse.redirect(
+      new URL('/?signed-in=1', request.url)
+    )
     response.cookies.set('bp_token', jwt, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
