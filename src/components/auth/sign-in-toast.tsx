@@ -9,10 +9,17 @@ function SignInToastInner() {
   const router = useRouter()
 
   useEffect(() => {
+    const error = searchParams.get('error')
     if (searchParams.get('signed-in') === '1') {
       toast.success('Signed in successfully')
-      router.replace(window.location.pathname, { scroll: false })
+    } else if (error === 'invalid-token') {
+      toast.error('Invalid or expired sign-in link')
+    } else if (error === 'verify-failed') {
+      toast.error('Sign-in failed — please try again')
+    } else {
+      return
     }
+    router.replace(window.location.pathname, { scroll: false })
   }, [searchParams, router])
 
   return null

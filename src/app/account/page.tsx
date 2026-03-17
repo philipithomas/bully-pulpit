@@ -70,15 +70,14 @@ export default function AccountPage() {
         method: 'DELETE',
       })
       if (res.ok) {
-        // biome-ignore lint/suspicious/noDocumentCookie: clearing session indicator
-        document.cookie = 'bp_has_session=; path=/; max-age=0'
+        await logout()
         setDeleted(true)
         setShowDeleteModal(false)
       }
     } finally {
       setDeleting(false)
     }
-  }, [])
+  }, [logout])
 
   if (loading) {
     return (
