@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
-import rehypeSanitize from 'rehype-sanitize'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import { SetNewsletter } from '@/components/layout/newsletter-context'
 import { RelatedPosts } from '@/components/posts/related-posts'
@@ -51,6 +51,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       }),
     },
   }
+}
+
+const sanitizeSchema = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), 'video', 'source'],
+  attributes: {
+    ...defaultSchema.attributes,
+    video: [
+      'src',
+      'poster',
+      'width',
+      'height',
+      'autoPlay',
+      'muted',
+      'loop',
+      'playsInline',
+      'controls',
+      'preload',
+    ],
+    source: ['src', 'type'],
+  },
 }
 
 export default async function SlugPage({ params }: Props) {
@@ -134,7 +155,7 @@ export default async function SlugPage({ params }: Props) {
             options={{
               mdxOptions: {
                 remarkPlugins: [remarkGfm],
-                rehypePlugins: [rehypeSanitize],
+                rehypePlugins: [[rehypeSanitize, sanitizeSchema]],
               },
             }}
           />
