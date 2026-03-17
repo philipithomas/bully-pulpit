@@ -9,7 +9,9 @@ export async function GET(
 ) {
   const { token } = await params
 
-  const res = await fetch(`${ppUrl}/api/v1/unsubscribe/${token}/preferences`)
+  const res = await fetch(`${ppUrl}/api/v1/unsubscribe/${token}/preferences`, {
+    cache: 'no-store',
+  })
 
   if (!res.ok) {
     return NextResponse.json(
@@ -33,6 +35,7 @@ export async function PATCH(
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    cache: 'no-store',
   })
 
   if (!res.ok) {
@@ -54,6 +57,7 @@ export async function DELETE(
 
   const res = await fetch(`${ppUrl}/api/v1/unsubscribe/${token}/account`, {
     method: 'DELETE',
+    cache: 'no-store',
   })
 
   if (!res.ok) {

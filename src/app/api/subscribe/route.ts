@@ -31,6 +31,7 @@ export async function POST(request: Request) {
           email,
           name,
         }),
+        cache: 'no-store',
       }
     )
 
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
             subscribed_workshop: newsletters.includes('workshop'),
             subscribed_postcard: newsletters.includes('postcard'),
           }),
+          cache: 'no-store',
         }
       )
     }

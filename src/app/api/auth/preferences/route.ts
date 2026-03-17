@@ -28,6 +28,7 @@ export async function GET() {
       `${siteConfig.printingPressUrl}/api/v1/subscribers/${uuid}`,
       {
         headers: { 'x-api-key': siteConfig.m2mApiKey },
+        cache: 'no-store',
       }
     )
 
@@ -71,6 +72,7 @@ export async function PATCH(request: Request) {
           'x-api-key': siteConfig.m2mApiKey,
         },
         body: JSON.stringify(body),
+        cache: 'no-store',
       }
     )
 
@@ -104,6 +106,7 @@ export async function DELETE() {
       {
         method: 'DELETE',
         headers: { 'x-api-key': siteConfig.m2mApiKey },
+        cache: 'no-store',
       }
     )
 

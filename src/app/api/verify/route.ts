@@ -28,6 +28,7 @@ export async function POST(request: Request) {
           'x-api-key': siteConfig.m2mApiKey,
         },
         body: JSON.stringify({ token }),
+        cache: 'no-store',
       }
     )
 
