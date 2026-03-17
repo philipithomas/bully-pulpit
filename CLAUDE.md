@@ -47,3 +47,7 @@ When writing or editing prose content (blog posts, page copy, descriptions), fol
 - **Contraption** (`/contraption/`): Essays and launches. Forest (#2B4A3E) accent.
 - **Workshop** (`/workshop/`): Work in progress notes. Walnut (#6B4D3A) accent.
 - **Postcard** (`/postcard/`): Monthly updates. Indigo (#2C3E6B) accent.
+
+## Maintaining this file
+
+When making major changes (new features, architectural changes, new scripts, new conventions), update this CLAUDE.md to reflect them. This file is the primary onboarding document for future sessions.

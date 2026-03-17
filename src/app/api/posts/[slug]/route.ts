@@ -1,6 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { siteConfig } from '@/lib/config'
 import { getPostBySlug } from '@/lib/content/loader'
-import { renderMarkdownToHtml } from '@/lib/content/render-html'
+import { getRelatedPosts } from '@/lib/content/related'
+import {
+  renderMarkdownToHtml,
+  renderRelatedPostsHtml,
+} from '@/lib/content/render-html'
 
 export async function GET(
   _request: NextRequest,
@@ -13,7 +18,10 @@ export async function GET(
     return NextResponse.json({ error: 'Post not found' }, { status: 404 })
   }
 
-  const emailHtml = await renderMarkdownToHtml(post.content)
+  const relatedPosts = getRelatedPosts(slug)
+  const markdownHtml = await renderMarkdownToHtml(post.content)
+  const relatedPostsHtml = renderRelatedPostsHtml(relatedPosts, siteConfig.url)
+  const emailHtml = markdownHtml + relatedPostsHtml
 
   return NextResponse.json({
     title: post.frontmatter.title,
@@ -23,5 +31,12 @@ export async function GET(
     cover_image: post.frontmatter.coverImage || null,
     cover_image_alt: post.frontmatter.coverImageAlt || null,
     email_html: emailHtml,
+    related_posts: relatedPosts.map((p) => ({
+      slug: p.slug,
+      title: p.frontmatter.title,
+      newsletter: p.newsletter,
+      cover_image: p.frontmatter.coverImage || null,
+      excerpt: p.excerpt,
+    })),
   })
 }

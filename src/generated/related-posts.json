@@ -1,0 +1,1877 @@
+{
+  "generatedAt": "2026-03-17T04:53:12.109Z",
+  "posts": {
+    "sync-phone-numbers-and-webhooks": {
+      "related": [
+        {
+          "slug": "code-a-booklet-ai-feature",
+          "score": 0.42513418
+        },
+        {
+          "slug": "git",
+          "score": 0.4328481
+        },
+        {
+          "slug": "openclaw-is-my-new-coworker",
+          "score": 0.4459017
+        }
+      ]
+    },
+    "2026-03": {
+      "related": [
+        {
+          "slug": "2025-05",
+          "score": 0.25914484
+        },
+        {
+          "slug": "2025-03",
+          "score": 0.26040107
+        },
+        {
+          "slug": "2026-01",
+          "score": 0.26188415
+        }
+      ]
+    },
+    "fresh-coat-of-paint": {
+      "related": [
+        {
+          "slug": "launching-postcard",
+          "score": 0.52964395
+        },
+        {
+          "slug": "build-and-tinker",
+          "score": 0.59128904
+        },
+        {
+          "slug": "introducing-the-print-edition",
+          "score": 0.59877336
+        }
+      ]
+    },
+    "three-ring-binder": {
+      "related": [
+        {
+          "slug": "adding-a-brain-to-my-toolbox",
+          "score": 0.45416528
+        },
+        {
+          "slug": "code-as-content-and-digital-proprioception",
+          "score": 0.46125054
+        },
+        {
+          "slug": "launching-booklet",
+          "score": 0.4786272
+        }
+      ]
+    },
+    "openclaw-is-my-new-coworker": {
+      "related": [
+        {
+          "slug": "claude-launching-and-tools",
+          "score": 0.36940008
+        },
+        {
+          "slug": "mcp-and-the-future-of-ai",
+          "score": 0.4191351
+        },
+        {
+          "slug": "rethink-chat",
+          "score": 0.43581855
+        }
+      ]
+    },
+    "2026-02": {
+      "related": [
+        {
+          "slug": "2025-05",
+          "score": 0.22157371
+        },
+        {
+          "slug": "2025-11",
+          "score": 0.2232554
+        },
+        {
+          "slug": "2025-10",
+          "score": 0.23249954
+        }
+      ]
+    },
+    "code-as-content-and-digital-proprioception": {
+      "related": [
+        {
+          "slug": "build-and-tinker",
+          "score": 0.42966652
+        },
+        {
+          "slug": "craft-in-the-digital-era",
+          "score": 0.43270975
+        },
+        {
+          "slug": "app-of-ones-own",
+          "score": 0.43304336
+        }
+      ]
+    },
+    "chroma-for-ruby": {
+      "related": [
+        {
+          "slug": "chroma",
+          "score": 0.4015566
+        },
+        {
+          "slug": "internal-tools-of-find-ai",
+          "score": 0.5042757
+        },
+        {
+          "slug": "booklet-architecture",
+          "score": 0.566609
+        }
+      ]
+    },
+    "trivet-adds-google-sign-in-to-ghost": {
+      "related": [
+        {
+          "slug": "sharing-a-project-i-built-postcard",
+          "score": 0.6364274
+        },
+        {
+          "slug": "bts-find-api",
+          "score": 0.64488286
+        },
+        {
+          "slug": "postcard-open-source",
+          "score": 0.65223587
+        }
+      ]
+    },
+    "2026-01": {
+      "related": [
+        {
+          "slug": "2025-12",
+          "score": 0.23631817
+        },
+        {
+          "slug": "2025-02",
+          "score": 0.24793154
+        },
+        {
+          "slug": "2023-01",
+          "score": 0.24971521
+        }
+      ]
+    },
+    "tacit-knowledge-in-softwar": {
+      "related": [
+        {
+          "slug": "joys-of-self-hosting",
+          "score": 0.392619
+        },
+        {
+          "slug": "backup-plans",
+          "score": 0.41376
+        },
+        {
+          "slug": "maintenance",
+          "score": 0.45715368
+        }
+      ]
+    },
+    "digital-gardening": {
+      "related": [
+        {
+          "slug": "maintenance",
+          "score": 0.34956497
+        },
+        {
+          "slug": "build-and-tinker",
+          "score": 0.3676154
+        },
+        {
+          "slug": "2024-06",
+          "score": 0.37019122
+        }
+      ]
+    },
+    "introducing-the-print-edition": {
+      "related": [
+        {
+          "slug": "snail-mail",
+          "score": 0.3295638
+        },
+        {
+          "slug": "workshop-welcome",
+          "score": 0.36321962
+        },
+        {
+          "slug": "sharing-a-project-i-built-postcard",
+          "score": 0.38683128
+        }
+      ]
+    },
+    "build-and-tinker": {
+      "related": [
+        {
+          "slug": "digital-gardening",
+          "score": 0.3676154
+        },
+        {
+          "slug": "2024-06",
+          "score": 0.40716588
+        },
+        {
+          "slug": "introducing-workshop",
+          "score": 0.4086901
+        }
+      ]
+    },
+    "2025-12": {
+      "related": [
+        {
+          "slug": "2025-08",
+          "score": 0.21723974
+        },
+        {
+          "slug": "2026-01",
+          "score": 0.23631817
+        },
+        {
+          "slug": "2025-02",
+          "score": 0.24439251
+        }
+      ]
+    },
+    "disaster-recovery": {
+      "related": [
+        {
+          "slug": "joys-of-self-hosting",
+          "score": 0.35900563
+        },
+        {
+          "slug": "how-to-host-web-apps-on-a-mac-mini",
+          "score": 0.45339364
+        },
+        {
+          "slug": "tacit-knowledge-in-softwar",
+          "score": 0.46484917
+        }
+      ]
+    },
+    "snail-mail": {
+      "related": [
+        {
+          "slug": "introducing-the-print-edition",
+          "score": 0.3295638
+        },
+        {
+          "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
+          "score": 0.35487258
+        },
+        {
+          "slug": "how-to-replace-social-media-with-a-personal-newsletter",
+          "score": 0.37700713
+        }
+      ]
+    },
+    "introducing-workshop": {
+      "related": [
+        {
+          "slug": "workshop-welcome",
+          "score": 0.15346384
+        },
+        {
+          "slug": "craft-in-the-digital-era",
+          "score": 0.33435297
+        },
+        {
+          "slug": "2024-03",
+          "score": 0.33572578
+        }
+      ]
+    },
+    "2025-11": {
+      "related": [
+        {
+          "slug": "2025-03",
+          "score": 0.15817869
+        },
+        {
+          "slug": "2025-05",
+          "score": 0.17688215
+        },
+        {
+          "slug": "2025-09",
+          "score": 0.191226
+        }
+      ]
+    },
+    "maintenance": {
+      "related": [
+        {
+          "slug": "digital-gardening",
+          "score": 0.34956497
+        },
+        {
+          "slug": "2022-11",
+          "score": 0.39575464
+        },
+        {
+          "slug": "2024-06",
+          "score": 0.3968277
+        }
+      ]
+    },
+    "backup-plans": {
+      "related": [
+        {
+          "slug": "tacit-knowledge-in-softwar",
+          "score": 0.41376
+        },
+        {
+          "slug": "joys-of-self-hosting",
+          "score": 0.46923012
+        },
+        {
+          "slug": "disaster-recovery",
+          "score": 0.47783566
+        }
+      ]
+    },
+    "git": {
+      "related": [
+        {
+          "slug": "chat-with-my-dog",
+          "score": 0.39189792
+        },
+        {
+          "slug": "claude-launching-and-tools",
+          "score": 0.39234602
+        },
+        {
+          "slug": "code-a-booklet-ai-feature",
+          "score": 0.41230088
+        }
+      ]
+    },
+    "mcp-and-the-future-of-ai": {
+      "related": [
+        {
+          "slug": "claude-launching-and-tools",
+          "score": 0.2869782
+        },
+        {
+          "slug": "openclaw-is-my-new-coworker",
+          "score": 0.4191351
+        },
+        {
+          "slug": "chroma",
+          "score": 0.42044526
+        }
+      ]
+    },
+    "hacking-yc-again": {
+      "related": [
+        {
+          "slug": "joys-of-self-hosting",
+          "score": 0.4997303
+        },
+        {
+          "slug": "one-year-of-dependable-software",
+          "score": 0.52820826
+        },
+        {
+          "slug": "postcard-open-source",
+          "score": 0.57576174
+        }
+      ]
+    },
+    "2025-10": {
+      "related": [
+        {
+          "slug": "2025-05",
+          "score": 0.18062526
+        },
+        {
+          "slug": "2024-10",
+          "score": 0.18493652
+        },
+        {
+          "slug": "2025-02",
+          "score": 0.19216806
+        }
+      ]
+    },
+    "2025-09": {
+      "related": [
+        {
+          "slug": "2025-05",
+          "score": 0.16462833
+        },
+        {
+          "slug": "2025-03",
+          "score": 0.19051999
+        },
+        {
+          "slug": "2025-11",
+          "score": 0.191226
+        }
+      ]
+    },
+    "taste-skill-gaps": {
+      "related": [
+        {
+          "slug": "tacit-knowledge-in-softwar",
+          "score": 0.5729906
+        },
+        {
+          "slug": "software-is-bread-not-burgers",
+          "score": 0.59718776
+        },
+        {
+          "slug": "introducing-workshop",
+          "score": 0.6044984
+        }
+      ]
+    },
+    "joys-of-self-hosting": {
+      "related": [
+        {
+          "slug": "disaster-recovery",
+          "score": 0.35900563
+        },
+        {
+          "slug": "tacit-knowledge-in-softwar",
+          "score": 0.392619
+        },
+        {
+          "slug": "a-mini-data-center",
+          "score": 0.40277869
+        }
+      ]
+    },
+    "claude-launching-and-tools": {
+      "related": [
+        {
+          "slug": "mcp-and-the-future-of-ai",
+          "score": 0.2869782
+        },
+        {
+          "slug": "archetypes-of-llm-apps",
+          "score": 0.36846948
+        },
+        {
+          "slug": "openclaw-is-my-new-coworker",
+          "score": 0.36940008
+        }
+      ]
+    },
+    "adding-a-brain-to-my-toolbox": {
+      "related": [
+        {
+          "slug": "how-to-host-web-apps-on-a-mac-mini",
+          "score": 0.3632477
+        },
+        {
+          "slug": "a-mini-data-center",
+          "score": 0.37996733
+        },
+        {
+          "slug": "app-of-ones-own",
+          "score": 0.41089308
+        }
+      ]
+    },
+    "rethink-chat": {
+      "related": [
+        {
+          "slug": "launching-booklet",
+          "score": 0.3839624
+        },
+        {
+          "slug": "digital-quiet",
+          "score": 0.42094243
+        },
+        {
+          "slug": "openclaw-is-my-new-coworker",
+          "score": 0.43581855
+        }
+      ]
+    },
+    "software-is-bread-not-burgers": {
+      "related": [
+        {
+          "slug": "digital-product-studios",
+          "score": 0.36344022
+        },
+        {
+          "slug": "one-year-of-dependable-software",
+          "score": 0.42739868
+        },
+        {
+          "slug": "creator-vs-software-businesses",
+          "score": 0.47266912
+        }
+      ]
+    },
+    "my-favorite-tool-for-making-email-less-stressful": {
+      "related": [
+        {
+          "slug": "snail-mail",
+          "score": 0.40510523
+        },
+        {
+          "slug": "sharing-a-project-i-built-postcard",
+          "score": 0.49319065
+        },
+        {
+          "slug": "how-to-replace-social-media-with-a-personal-newsletter",
+          "score": 0.49829996
+        }
+      ]
+    },
+    "workshop-welcome": {
+      "related": [
+        {
+          "slug": "introducing-workshop",
+          "score": 0.15346384
+        },
+        {
+          "slug": "introducing-the-print-edition",
+          "score": 0.36321962
+        },
+        {
+          "slug": "2024-02",
+          "score": 0.37113774
+        }
+      ]
+    },
+    "2025-08": {
+      "related": [
+        {
+          "slug": "2024-08",
+          "score": 0.19561899
+        },
+        {
+          "slug": "2025-02",
+          "score": 0.19726819
+        },
+        {
+          "slug": "2025-05",
+          "score": 0.2103324
+        }
+      ]
+    },
+    "postcard-open-source": {
+      "related": [
+        {
+          "slug": "launching-postcard",
+          "score": 0.37561226
+        },
+        {
+          "slug": "introducing-the-print-edition",
+          "score": 0.39692044
+        },
+        {
+          "slug": "sharing-a-project-i-built-postcard",
+          "score": 0.39954466
+        }
+      ]
+    },
+    "2025-07": {
+      "related": [
+        {
+          "slug": "2025-08",
+          "score": 0.26590884
+        },
+        {
+          "slug": "2024-10",
+          "score": 0.3136775
+        },
+        {
+          "slug": "2025-06",
+          "score": 0.31381822
+        }
+      ]
+    },
+    "2025-06": {
+      "related": [
+        {
+          "slug": "2025-09",
+          "score": 0.2521032
+        },
+        {
+          "slug": "2025-11",
+          "score": 0.26293778
+        },
+        {
+          "slug": "2025-05",
+          "score": 0.27478427
+        }
+      ]
+    },
+    "app-of-ones-own": {
+      "related": [
+        {
+          "slug": "digital-product-studios",
+          "score": 0.36204576
+        },
+        {
+          "slug": "a-mini-data-center",
+          "score": 0.38104117
+        },
+        {
+          "slug": "adding-a-brain-to-my-toolbox",
+          "score": 0.41089308
+        }
+      ]
+    },
+    "chat-with-my-dog": {
+      "related": [
+        {
+          "slug": "git",
+          "score": 0.39189792
+        },
+        {
+          "slug": "code-a-booklet-ai-feature",
+          "score": 0.3993411
+        },
+        {
+          "slug": "claude-launching-and-tools",
+          "score": 0.40001667
+        }
+      ]
+    },
+    "2025-05": {
+      "related": [
+        {
+          "slug": "2025-09",
+          "score": 0.16462833
+        },
+        {
+          "slug": "2025-11",
+          "score": 0.17688215
+        },
+        {
+          "slug": "2025-10",
+          "score": 0.18062526
+        }
+      ]
+    },
+    "how-to-host-web-apps-on-a-mac-mini": {
+      "related": [
+        {
+          "slug": "a-mini-data-center",
+          "score": 0.21118408
+        },
+        {
+          "slug": "adding-a-brain-to-my-toolbox",
+          "score": 0.3632477
+        },
+        {
+          "slug": "joys-of-self-hosting",
+          "score": 0.40398192
+        }
+      ]
+    },
+    "2025-04": {
+      "related": [
+        {
+          "slug": "2025-05",
+          "score": 0.2318567
+        },
+        {
+          "slug": "2025-11",
+          "score": 0.23852605
+        },
+        {
+          "slug": "2024-10",
+          "score": 0.24164516
+        }
+      ]
+    },
+    "finding-a-software-jojb": {
+      "related": [
+        {
+          "slug": "moonlight-s-pitch-deck",
+          "score": 0.48110777
+        },
+        {
+          "slug": "2022-09",
+          "score": 0.5095369
+        },
+        {
+          "slug": "tech-talent-agents",
+          "score": 0.5416252
+        }
+      ]
+    },
+    "2025-03": {
+      "related": [
+        {
+          "slug": "2025-11",
+          "score": 0.15817869
+        },
+        {
+          "slug": "2025-09",
+          "score": 0.19051999
+        },
+        {
+          "slug": "2025-05",
+          "score": 0.19967866
+        }
+      ]
+    },
+    "rails-versus-nextjs": {
+      "related": [
+        {
+          "slug": "booklet-architecture",
+          "score": 0.5245651
+        },
+        {
+          "slug": "introducing-contraption-co",
+          "score": 0.5298878
+        },
+        {
+          "slug": "a-mini-data-center",
+          "score": 0.5334004
+        }
+      ]
+    },
+    "a-mini-data-center": {
+      "related": [
+        {
+          "slug": "how-to-host-web-apps-on-a-mac-mini",
+          "score": 0.21118408
+        },
+        {
+          "slug": "adding-a-brain-to-my-toolbox",
+          "score": 0.37996733
+        },
+        {
+          "slug": "app-of-ones-own",
+          "score": 0.38104117
+        }
+      ]
+    },
+    "2025-02": {
+      "related": [
+        {
+          "slug": "2025-10",
+          "score": 0.19216806
+        },
+        {
+          "slug": "2025-08",
+          "score": 0.19726819
+        },
+        {
+          "slug": "2025-03",
+          "score": 0.21013236
+        }
+      ]
+    },
+    "chroma": {
+      "related": [
+        {
+          "slug": "chroma-for-ruby",
+          "score": 0.4015566
+        },
+        {
+          "slug": "git",
+          "score": 0.41698533
+        },
+        {
+          "slug": "internal-tools-of-find-ai",
+          "score": 0.41867077
+        }
+      ]
+    },
+    "craft-in-the-digital-era": {
+      "related": [
+        {
+          "slug": "rethinking-work-beyond-the-factory",
+          "score": 0.30942714
+        },
+        {
+          "slug": "introducing-workshop",
+          "score": 0.33435297
+        },
+        {
+          "slug": "2024-03",
+          "score": 0.34506422
+        }
+      ]
+    },
+    "lost-and-found": {
+      "related": [
+        {
+          "slug": "2025-01",
+          "score": 0.40670192
+        },
+        {
+          "slug": "the-next-iteration-of-contraption-company",
+          "score": 0.46532625
+        },
+        {
+          "slug": "build-and-tinker",
+          "score": 0.49259293
+        }
+      ]
+    },
+    "2025-01": {
+      "related": [
+        {
+          "slug": "2025-02",
+          "score": 0.2726236
+        },
+        {
+          "slug": "2025-12",
+          "score": 0.2825778
+        },
+        {
+          "slug": "2024-05",
+          "score": 0.29474252
+        }
+      ]
+    },
+    "archetypes-of-llm-apps": {
+      "related": [
+        {
+          "slug": "claude-launching-and-tools",
+          "score": 0.36846948
+        },
+        {
+          "slug": "chat-with-my-dog",
+          "score": 0.4225759
+        },
+        {
+          "slug": "using-data-to-optimize-ai-apps",
+          "score": 0.43388164
+        }
+      ]
+    },
+    "bts-find-api": {
+      "related": [
+        {
+          "slug": "sync-phone-numbers-and-webhooks",
+          "score": 0.46459222
+        },
+        {
+          "slug": "chroma",
+          "score": 0.5014404
+        },
+        {
+          "slug": "using-data-to-optimize-ai-apps",
+          "score": 0.5096694
+        }
+      ]
+    },
+    "2024-11": {
+      "related": [
+        {
+          "slug": "2024-10",
+          "score": 0.17083222
+        },
+        {
+          "slug": "2024-09",
+          "score": 0.18836147
+        },
+        {
+          "slug": "2025-05",
+          "score": 0.20754254
+        }
+      ]
+    },
+    "having-a-tj": {
+      "related": [
+        {
+          "slug": "indie-to-micro",
+          "score": 0.5399303
+        },
+        {
+          "slug": "how-i-build-multiple-products",
+          "score": 0.55540955
+        },
+        {
+          "slug": "introducing-contraption-co",
+          "score": 0.56557417
+        }
+      ]
+    },
+    "distribution-vs-innovation": {
+      "related": [
+        {
+          "slug": "creator-vs-software-businesses",
+          "score": 0.4778735
+        },
+        {
+          "slug": "talking-shop-aaron-cohn-realnice",
+          "score": 0.49661547
+        },
+        {
+          "slug": "advice-for-marketplace-startups",
+          "score": 0.55581766
+        }
+      ]
+    },
+    "internal-tools-of-find-ai": {
+      "related": [
+        {
+          "slug": "chroma",
+          "score": 0.41867077
+        },
+        {
+          "slug": "git",
+          "score": 0.43448842
+        },
+        {
+          "slug": "using-data-to-optimize-ai-apps",
+          "score": 0.4521531
+        }
+      ]
+    },
+    "2024-10": {
+      "related": [
+        {
+          "slug": "2024-11",
+          "score": 0.17083222
+        },
+        {
+          "slug": "2024-09",
+          "score": 0.17328846
+        },
+        {
+          "slug": "2025-10",
+          "score": 0.18493652
+        }
+      ]
+    },
+    "wine-craft": {
+      "related": [
+        {
+          "slug": "introducing-workshop",
+          "score": 0.5673813
+        },
+        {
+          "slug": "digital-product-studios",
+          "score": 0.5703808
+        },
+        {
+          "slug": "slow-travel",
+          "score": 0.57545495
+        }
+      ]
+    },
+    "using-data-to-optimize-ai-apps": {
+      "related": [
+        {
+          "slug": "archetypes-of-llm-apps",
+          "score": 0.43388164
+        },
+        {
+          "slug": "internal-tools-of-find-ai",
+          "score": 0.4521531
+        },
+        {
+          "slug": "bts-find-api",
+          "score": 0.5096694
+        }
+      ]
+    },
+    "is-fractional-work-the-future": {
+      "related": [
+        {
+          "slug": "introducing-frctnl",
+          "score": 0.23013592
+        },
+        {
+          "slug": "rethinking-work-beyond-the-factory",
+          "score": 0.39092934
+        },
+        {
+          "slug": "2022-09",
+          "score": 0.46704984
+        }
+      ]
+    },
+    "how-and-to-publish-an-indie-programming-book": {
+      "related": [
+        {
+          "slug": "workshop-welcome",
+          "score": 0.47894877
+        },
+        {
+          "slug": "code-a-booklet-ai-feature",
+          "score": 0.4916885
+        },
+        {
+          "slug": "introducing-workshop",
+          "score": 0.49986225
+        }
+      ]
+    },
+    "the-next-iteration-of-contraption-company": {
+      "related": [
+        {
+          "slug": "introducing-contraption-co",
+          "score": 0.3464222
+        },
+        {
+          "slug": "indie-to-micro",
+          "score": 0.40523404
+        },
+        {
+          "slug": "lost-and-found",
+          "score": 0.46532625
+        }
+      ]
+    },
+    "2024-09": {
+      "related": [
+        {
+          "slug": "2024-10",
+          "score": 0.17328846
+        },
+        {
+          "slug": "2024-11",
+          "score": 0.18836147
+        },
+        {
+          "slug": "2024-04",
+          "score": 0.20449567
+        }
+      ]
+    },
+    "2024-08": {
+      "related": [
+        {
+          "slug": "2025-08",
+          "score": 0.19561899
+        },
+        {
+          "slug": "2024-10",
+          "score": 0.20720541
+        },
+        {
+          "slug": "2024-11",
+          "score": 0.25105524
+        }
+      ]
+    },
+    "tech-talent-agents": {
+      "related": [
+        {
+          "slug": "introducing-frctnl",
+          "score": 0.4103194
+        },
+        {
+          "slug": "moonlight-s-pitch-deck",
+          "score": 0.45559168
+        },
+        {
+          "slug": "2022-09",
+          "score": 0.49622113
+        }
+      ]
+    },
+    "almost-perfect": {
+      "related": [
+        {
+          "slug": "2024-02",
+          "score": 0.41695642
+        },
+        {
+          "slug": "introducing-workshop",
+          "score": 0.43834305
+        },
+        {
+          "slug": "2024-01",
+          "score": 0.43849045
+        }
+      ]
+    },
+    "2024-06": {
+      "related": [
+        {
+          "slug": "2024-01",
+          "score": 0.18995136
+        },
+        {
+          "slug": "2024-02",
+          "score": 0.20586109
+        },
+        {
+          "slug": "2024-03",
+          "score": 0.21965432
+        }
+      ]
+    },
+    "code-a-booklet-ai-feature": {
+      "related": [
+        {
+          "slug": "chat-with-my-dog",
+          "score": 0.3993411
+        },
+        {
+          "slug": "git",
+          "score": 0.41230088
+        },
+        {
+          "slug": "sync-phone-numbers-and-webhooks",
+          "score": 0.42513418
+        }
+      ]
+    },
+    "creator-vs-software-businesses": {
+      "related": [
+        {
+          "slug": "one-year-of-dependable-software",
+          "score": 0.39719528
+        },
+        {
+          "slug": "digital-product-studios",
+          "score": 0.40251052
+        },
+        {
+          "slug": "talking-shop-aaron-cohn-realnice",
+          "score": 0.40675288
+        }
+      ]
+    },
+    "2024-05": {
+      "related": [
+        {
+          "slug": "2025-02",
+          "score": 0.21501952
+        },
+        {
+          "slug": "2025-05",
+          "score": 0.22234255
+        },
+        {
+          "slug": "2024-10",
+          "score": 0.22492039
+        }
+      ]
+    },
+    "2024-04": {
+      "related": [
+        {
+          "slug": "2024-09",
+          "score": 0.20449567
+        },
+        {
+          "slug": "2024-01",
+          "score": 0.20794237
+        },
+        {
+          "slug": "2024-10",
+          "score": 0.21625662
+        }
+      ]
+    },
+    "how-i-build-multiple-products": {
+      "related": [
+        {
+          "slug": "digital-product-studios",
+          "score": 0.39901102
+        },
+        {
+          "slug": "introducing-contraption-co",
+          "score": 0.40025032
+        },
+        {
+          "slug": "digital-gardening",
+          "score": 0.40887654
+        }
+      ]
+    },
+    "talking-shop-aaron-cohn-realnice": {
+      "related": [
+        {
+          "slug": "creator-vs-software-businesses",
+          "score": 0.40675288
+        },
+        {
+          "slug": "launching-postcard",
+          "score": 0.42376953
+        },
+        {
+          "slug": "how-i-build-multiple-products",
+          "score": 0.43531626
+        }
+      ]
+    },
+    "2024-03": {
+      "related": [
+        {
+          "slug": "2024-02",
+          "score": 0.1530186
+        },
+        {
+          "slug": "2024-06",
+          "score": 0.21965432
+        },
+        {
+          "slug": "2023-04",
+          "score": 0.2309838
+        }
+      ]
+    },
+    "rethinking-work-beyond-the-factory": {
+      "related": [
+        {
+          "slug": "craft-in-the-digital-era",
+          "score": 0.30942714
+        },
+        {
+          "slug": "digital-quiet",
+          "score": 0.36386585
+        },
+        {
+          "slug": "digital-product-studios",
+          "score": 0.38261688
+        }
+      ]
+    },
+    "2024-02": {
+      "related": [
+        {
+          "slug": "2024-03",
+          "score": 0.1530186
+        },
+        {
+          "slug": "2024-01",
+          "score": 0.19154978
+        },
+        {
+          "slug": "2024-06",
+          "score": 0.20586109
+        }
+      ]
+    },
+    "digital-product-studios": {
+      "related": [
+        {
+          "slug": "introducing-contraption-co",
+          "score": 0.31042415
+        },
+        {
+          "slug": "one-year-of-dependable-software",
+          "score": 0.32244194
+        },
+        {
+          "slug": "app-of-ones-own",
+          "score": 0.36204576
+        }
+      ]
+    },
+    "2024-01": {
+      "related": [
+        {
+          "slug": "2024-06",
+          "score": 0.18995136
+        },
+        {
+          "slug": "2024-02",
+          "score": 0.19154978
+        },
+        {
+          "slug": "2024-04",
+          "score": 0.20794237
+        }
+      ]
+    },
+    "digital-quiet": {
+      "related": [
+        {
+          "slug": "rethinking-work-beyond-the-factory",
+          "score": 0.36386585
+        },
+        {
+          "slug": "launching-booklet",
+          "score": 0.4063095
+        },
+        {
+          "slug": "craft-in-the-digital-era",
+          "score": 0.40667808
+        }
+      ]
+    },
+    "engineering-over-enforcement": {
+      "related": [
+        {
+          "slug": "build-and-tinker",
+          "score": 0.5510125
+        },
+        {
+          "slug": "digital-gardening",
+          "score": 0.5880575
+        },
+        {
+          "slug": "sync-phone-numbers-and-webhooks",
+          "score": 0.6029625
+        }
+      ]
+    },
+    "community-media-companies": {
+      "related": [
+        {
+          "slug": "launching-booklet",
+          "score": 0.4075892
+        },
+        {
+          "slug": "workshop-welcome",
+          "score": 0.4264815
+        },
+        {
+          "slug": "sharing-a-project-i-built-postcard",
+          "score": 0.42769027
+        }
+      ]
+    },
+    "booklet-architecture": {
+      "related": [
+        {
+          "slug": "build-and-tinker",
+          "score": 0.4767263
+        },
+        {
+          "slug": "how-to-host-web-apps-on-a-mac-mini",
+          "score": 0.49014932
+        },
+        {
+          "slug": "postcard-open-source",
+          "score": 0.50045794
+        }
+      ]
+    },
+    "2023-12": {
+      "related": [
+        {
+          "slug": "2024-10",
+          "score": 0.20094043
+        },
+        {
+          "slug": "2024-11",
+          "score": 0.22762704
+        },
+        {
+          "slug": "2023-11",
+          "score": 0.22810888
+        }
+      ]
+    },
+    "indie-to-micro": {
+      "related": [
+        {
+          "slug": "the-next-iteration-of-contraption-company",
+          "score": 0.40523404
+        },
+        {
+          "slug": "creator-vs-software-businesses",
+          "score": 0.41992652
+        },
+        {
+          "slug": "digital-product-studios",
+          "score": 0.43162024
+        }
+      ]
+    },
+    "one-year-of-dependable-software": {
+      "related": [
+        {
+          "slug": "introducing-contraption-co",
+          "score": 0.27417642
+        },
+        {
+          "slug": "digital-product-studios",
+          "score": 0.32244194
+        },
+        {
+          "slug": "creator-vs-software-businesses",
+          "score": 0.39719528
+        }
+      ]
+    },
+    "2023-11": {
+      "related": [
+        {
+          "slug": "2025-05",
+          "score": 0.20965487
+        },
+        {
+          "slug": "2025-09",
+          "score": 0.2136454
+        },
+        {
+          "slug": "2024-04",
+          "score": 0.22080898
+        }
+      ]
+    },
+    "2023-10": {
+      "related": [
+        {
+          "slug": "2023-05",
+          "score": 0.19106668
+        },
+        {
+          "slug": "2023-08",
+          "score": 0.24192524
+        },
+        {
+          "slug": "2023-06",
+          "score": 0.25594246
+        }
+      ]
+    },
+    "launching-booklet": {
+      "related": [
+        {
+          "slug": "2023-10",
+          "score": 0.38233912
+        },
+        {
+          "slug": "rethink-chat",
+          "score": 0.3839624
+        },
+        {
+          "slug": "digital-quiet",
+          "score": 0.4063095
+        }
+      ]
+    },
+    "introducing-frctnl": {
+      "related": [
+        {
+          "slug": "is-fractional-work-the-future",
+          "score": 0.23013592
+        },
+        {
+          "slug": "tech-talent-agents",
+          "score": 0.4103194
+        },
+        {
+          "slug": "rethinking-work-beyond-the-factory",
+          "score": 0.44289702
+        }
+      ]
+    },
+    "2023-09": {
+      "related": [
+        {
+          "slug": "2025-10",
+          "score": 0.23257565
+        },
+        {
+          "slug": "2025-05",
+          "score": 0.23526752
+        },
+        {
+          "slug": "2023-11",
+          "score": 0.2378282
+        }
+      ]
+    },
+    "2023-08": {
+      "related": [
+        {
+          "slug": "2024-06",
+          "score": 0.22771943
+        },
+        {
+          "slug": "2023-10",
+          "score": 0.24192524
+        },
+        {
+          "slug": "2022-10",
+          "score": 0.24272466
+        }
+      ]
+    },
+    "2023-07": {
+      "related": [
+        {
+          "slug": "2025-12",
+          "score": 0.2979769
+        },
+        {
+          "slug": "2023-06",
+          "score": 0.30525815
+        },
+        {
+          "slug": "2026-01",
+          "score": 0.3247813
+        }
+      ]
+    },
+    "2023-06": {
+      "related": [
+        {
+          "slug": "2023-03",
+          "score": 0.21220642
+        },
+        {
+          "slug": "2023-05",
+          "score": 0.21604455
+        },
+        {
+          "slug": "2023-01",
+          "score": 0.24229968
+        }
+      ]
+    },
+    "2023-05": {
+      "related": [
+        {
+          "slug": "2023-10",
+          "score": 0.19106668
+        },
+        {
+          "slug": "2023-06",
+          "score": 0.21604455
+        },
+        {
+          "slug": "2023-08",
+          "score": 0.2481187
+        }
+      ]
+    },
+    "2023-04": {
+      "related": [
+        {
+          "slug": "2023-02",
+          "score": 0.21690077
+        },
+        {
+          "slug": "2022-12",
+          "score": 0.23059607
+        },
+        {
+          "slug": "2024-03",
+          "score": 0.2309838
+        }
+      ]
+    },
+    "slow-travel": {
+      "related": [
+        {
+          "slug": "2023-07",
+          "score": 0.47965264
+        },
+        {
+          "slug": "craft-in-the-digital-era",
+          "score": 0.4907604
+        },
+        {
+          "slug": "2025-12",
+          "score": 0.4912312
+        }
+      ]
+    },
+    "2023-03": {
+      "related": [
+        {
+          "slug": "2023-06",
+          "score": 0.21220642
+        },
+        {
+          "slug": "2022-12",
+          "score": 0.25786436
+        },
+        {
+          "slug": "2023-04",
+          "score": 0.25893712
+        }
+      ]
+    },
+    "2023-02": {
+      "related": [
+        {
+          "slug": "2023-04",
+          "score": 0.21690077
+        },
+        {
+          "slug": "2023-01",
+          "score": 0.24506515
+        },
+        {
+          "slug": "2023-06",
+          "score": 0.24927914
+        }
+      ]
+    },
+    "2023-01": {
+      "related": [
+        {
+          "slug": "2024-05",
+          "score": 0.23556113
+        },
+        {
+          "slug": "2023-06",
+          "score": 0.24229968
+        },
+        {
+          "slug": "2024-01",
+          "score": 0.24311483
+        }
+      ]
+    },
+    "how-to-replace-social-media-with-a-personal-newsletter": {
+      "related": [
+        {
+          "slug": "sharing-a-project-i-built-postcard",
+          "score": 0.23311281
+        },
+        {
+          "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
+          "score": 0.29366124
+        },
+        {
+          "slug": "snail-mail",
+          "score": 0.37700713
+        }
+      ]
+    },
+    "why-i-built-postcard-a-calmer-alternative-to-social-networks": {
+      "related": [
+        {
+          "slug": "how-to-replace-social-media-with-a-personal-newsletter",
+          "score": 0.29366124
+        },
+        {
+          "slug": "sharing-a-project-i-built-postcard",
+          "score": 0.309516
+        },
+        {
+          "slug": "snail-mail",
+          "score": 0.35487258
+        }
+      ]
+    },
+    "2022-12": {
+      "related": [
+        {
+          "slug": "2022-10",
+          "score": 0.20739067
+        },
+        {
+          "slug": "2023-04",
+          "score": 0.23059607
+        },
+        {
+          "slug": "2023-06",
+          "score": 0.24449241
+        }
+      ]
+    },
+    "launching-postcard": {
+      "related": [
+        {
+          "slug": "sharing-a-project-i-built-postcard",
+          "score": 0.35074973
+        },
+        {
+          "slug": "postcard-open-source",
+          "score": 0.37561226
+        },
+        {
+          "slug": "talking-shop-aaron-cohn-realnice",
+          "score": 0.42376953
+        }
+      ]
+    },
+    "introducing-contraption-co": {
+      "related": [
+        {
+          "slug": "one-year-of-dependable-software",
+          "score": 0.27417642
+        },
+        {
+          "slug": "digital-product-studios",
+          "score": 0.31042415
+        },
+        {
+          "slug": "the-next-iteration-of-contraption-company",
+          "score": 0.3464222
+        }
+      ]
+    },
+    "2022-11": {
+      "related": [
+        {
+          "slug": "2022-07",
+          "score": 0.19170338
+        },
+        {
+          "slug": "2022-10",
+          "score": 0.21916246
+        },
+        {
+          "slug": "2024-10",
+          "score": 0.26809442
+        }
+      ]
+    },
+    "2022-10": {
+      "related": [
+        {
+          "slug": "2022-12",
+          "score": 0.20739067
+        },
+        {
+          "slug": "2022-07",
+          "score": 0.2092886
+        },
+        {
+          "slug": "2022-11",
+          "score": 0.21916246
+        }
+      ]
+    },
+    "when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks": {
+      "related": [
+        {
+          "slug": "advice-for-marketplace-startups",
+          "score": 0.5500988
+        },
+        {
+          "slug": "indie-to-micro",
+          "score": 0.58233905
+        },
+        {
+          "slug": "introducing-contraption-co",
+          "score": 0.638413
+        }
+      ]
+    },
+    "2022-09": {
+      "related": [
+        {
+          "slug": "2025-12",
+          "score": 0.29425633
+        },
+        {
+          "slug": "2024-02",
+          "score": 0.2997749
+        },
+        {
+          "slug": "2022-12",
+          "score": 0.3058036
+        }
+      ]
+    },
+    "2022-08": {
+      "related": [
+        {
+          "slug": "2022-07",
+          "score": 0.18084872
+        },
+        {
+          "slug": "2022-10",
+          "score": 0.2265271
+        },
+        {
+          "slug": "2024-04",
+          "score": 0.23074567
+        }
+      ]
+    },
+    "2022-07": {
+      "related": [
+        {
+          "slug": "2022-08",
+          "score": 0.18084872
+        },
+        {
+          "slug": "2022-11",
+          "score": 0.19170338
+        },
+        {
+          "slug": "2022-10",
+          "score": 0.2092886
+        }
+      ]
+    },
+    "2022-06": {
+      "related": [
+        {
+          "slug": "2022-07",
+          "score": 0.25606394
+        },
+        {
+          "slug": "2022-08",
+          "score": 0.25723374
+        },
+        {
+          "slug": "2024-06",
+          "score": 0.26806736
+        }
+      ]
+    },
+    "sharing-a-project-i-built-postcard": {
+      "related": [
+        {
+          "slug": "how-to-replace-social-media-with-a-personal-newsletter",
+          "score": 0.23311281
+        },
+        {
+          "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
+          "score": 0.309516
+        },
+        {
+          "slug": "launching-postcard",
+          "score": 0.35074973
+        }
+      ]
+    },
+    "advice-for-marketplace-startups": {
+      "related": [
+        {
+          "slug": "buyers-define-marketplaces",
+          "score": 0.2754268
+        },
+        {
+          "slug": "when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks",
+          "score": 0.5500988
+        },
+        {
+          "slug": "distribution-vs-innovation",
+          "score": 0.55581766
+        }
+      ]
+    },
+    "moonlight-s-pitch-deck": {
+      "related": [
+        {
+          "slug": "introducing-frctnl",
+          "score": 0.4467622
+        },
+        {
+          "slug": "tech-talent-agents",
+          "score": 0.45559168
+        },
+        {
+          "slug": "finding-a-software-jojb",
+          "score": 0.48110777
+        }
+      ]
+    },
+    "buyers-define-marketplaces": {
+      "related": [
+        {
+          "slug": "advice-for-marketplace-startups",
+          "score": 0.2754268
+        },
+        {
+          "slug": "distribution-vs-innovation",
+          "score": 0.58132595
+        },
+        {
+          "slug": "tech-talent-agents",
+          "score": 0.5864346
+        }
+      ]
+    }
+  }
+}

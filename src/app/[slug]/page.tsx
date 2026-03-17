@@ -6,6 +6,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import { SetNewsletter } from '@/components/layout/newsletter-context'
+import { RelatedPosts } from '@/components/posts/related-posts'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
@@ -15,6 +16,7 @@ import {
   getPages,
   getPostBySlug,
 } from '@/lib/content/loader'
+import { getRelatedPosts } from '@/lib/content/related'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -59,6 +61,7 @@ export default async function SlugPage({ params }: Props) {
   if (!post && !page) notFound()
 
   const item = post ?? page!
+  const relatedPosts = post ? getRelatedPosts(post.slug) : []
   const bgMap: Record<string, { className: string; dataBg: string }> = {
     workshop: { className: 'bg-offwhite-warm', dataBg: 'offwhite-warm' },
     contraption: { className: 'bg-gray-050', dataBg: 'gray-050' },
@@ -139,6 +142,11 @@ export default async function SlugPage({ params }: Props) {
 
         {/* Subscribe CTA for posts */}
         {post && <SubscribeCta />}
+
+        {/* Related posts */}
+        {post && relatedPosts.length > 0 && (
+          <RelatedPosts posts={relatedPosts} />
+        )}
       </div>
     </article>
   )

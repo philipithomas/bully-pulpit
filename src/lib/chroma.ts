@@ -42,3 +42,15 @@ export function getPostsSchema() {
       'sparse_embedding'
     )
 }
+
+export function getPostSummariesSchema() {
+  return new Schema().createIndex(
+    new VectorIndexConfig({
+      embeddingFunction: new ChromaCloudQwenEmbeddingFunction({
+        model: ChromaCloudQwenEmbeddingModel.QWEN3_EMBEDDING_0p6B,
+        task: null,
+      }),
+      sourceKey: K.DOCUMENT,
+    })
+  )
+}
