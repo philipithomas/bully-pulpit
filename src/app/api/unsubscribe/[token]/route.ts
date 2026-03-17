@@ -14,6 +14,9 @@ export async function GET(
   })
 
   if (!res.ok) {
+    console.error(
+      `[unsubscribe] GET preferences failed for token=${token}: ${res.status}`
+    )
     return NextResponse.json(
       { error: 'Invalid or expired token' },
       { status: res.status }
@@ -30,6 +33,7 @@ export async function PATCH(
 ) {
   const { token } = await params
   const body = await request.json()
+  console.log(`[unsubscribe] PATCH preferences for token=${token}:`, body)
 
   const res = await fetch(`${ppUrl}/api/v1/unsubscribe/${token}/preferences`, {
     method: 'PATCH',
@@ -39,6 +43,9 @@ export async function PATCH(
   })
 
   if (!res.ok) {
+    console.error(
+      `[unsubscribe] PATCH failed for token=${token}: ${res.status}`
+    )
     return NextResponse.json(
       { error: 'Failed to update preferences' },
       { status: res.status }
@@ -46,6 +53,7 @@ export async function PATCH(
   }
 
   const data = await res.json()
+  console.log(`[unsubscribe] Preferences updated for token=${token}`)
   return NextResponse.json(data)
 }
 
@@ -54,6 +62,7 @@ export async function DELETE(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params
+  console.log(`[unsubscribe] DELETE account for token=${token}`)
 
   const res = await fetch(`${ppUrl}/api/v1/unsubscribe/${token}/account`, {
     method: 'DELETE',
@@ -61,6 +70,9 @@ export async function DELETE(
   })
 
   if (!res.ok) {
+    console.error(
+      `[unsubscribe] DELETE failed for token=${token}: ${res.status}`
+    )
     return NextResponse.json(
       { error: 'Failed to delete account' },
       { status: res.status }
@@ -68,5 +80,6 @@ export async function DELETE(
   }
 
   const data = await res.json()
+  console.log(`[unsubscribe] Account deleted for token=${token}`)
   return NextResponse.json(data)
 }

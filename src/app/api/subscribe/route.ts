@@ -5,6 +5,7 @@ import { siteConfig } from '@/lib/config'
 export async function POST(request: Request) {
   const { isBot } = await checkBotId()
   if (isBot) {
+    console.warn('[subscribe] Bot blocked')
     return NextResponse.json(
       { error: 'Request blocked. Please try again from the website.' },
       { status: 403 }
@@ -15,8 +16,11 @@ export async function POST(request: Request) {
   const { email, name, newsletters } = body
 
   if (!email) {
+    console.warn('[subscribe] Missing email')
     return NextResponse.json({ error: 'Email is required' }, { status: 400 })
   }
+
+  console.log(`[subscribe] Request for ${email}`)
 
   try {
     const res = await fetch(
@@ -37,6 +41,9 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       const data = await res.json()
+      console.error(
+        `[subscribe] Printing-press error for ${email}: ${res.status} ${data.error}`
+      )
       return NextResponse.json(
         { error: data.error ?? 'Subscription failed' },
         { status: res.status }
@@ -44,10 +51,14 @@ export async function POST(request: Request) {
     }
 
     const subscriber = await res.json()
+    const isNew = !subscriber.confirmed_at
+    console.log(
+      `[subscribe] ${isNew ? 'New' : 'Existing'} subscriber: ${email} (uuid=${subscriber.uuid})`
+    )
 
     // Update newsletter preferences if specified
     if (newsletters && subscriber.uuid) {
-      await fetch(
+      const prefRes = await fetch(
         `${siteConfig.printingPressUrl}/api/v1/subscribers/${subscriber.uuid}`,
         {
           method: 'PATCH',
@@ -63,10 +74,14 @@ export async function POST(request: Request) {
           cache: 'no-store',
         }
       )
+      console.log(
+        `[subscribe] Updated preferences for ${email}: ${newsletters.join(', ')} (status=${prefRes.status})`
+      )
     }
 
     return NextResponse.json({ subscriber })
-  } catch {
+  } catch (err) {
+    console.error(`[subscribe] Network error for ${email}:`, err)
     return NextResponse.json(
       { error: 'Unable to reach subscription service' },
       { status: 502 }

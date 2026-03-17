@@ -6,6 +6,7 @@ import { siteConfig } from '@/lib/config'
 export async function POST(request: Request) {
   const { isBot } = await checkBotId()
   if (isBot) {
+    console.warn('[verify] Bot blocked')
     return NextResponse.json(
       { error: 'Request blocked. Please try again from the website.' },
       { status: 403 }
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
   const { token } = await request.json()
 
   if (!token) {
+    console.warn('[verify] Missing token')
     return NextResponse.json({ error: 'Token is required' }, { status: 400 })
   }
 
@@ -34,6 +36,7 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       const data = await res.json()
+      console.error(`[verify] Failed: ${res.status} ${data.error}`)
       return NextResponse.json(
         { error: data.error ?? 'Verification failed' },
         { status: res.status }
@@ -41,6 +44,9 @@ export async function POST(request: Request) {
     }
 
     const subscriber = await res.json()
+    console.log(
+      `[verify] Verified: ${subscriber.email} (uuid=${subscriber.uuid})`
+    )
 
     // Mint JWT
     const secret = new TextEncoder().encode(siteConfig.jwtSecret)
@@ -64,7 +70,8 @@ export async function POST(request: Request) {
     })
 
     return response
-  } catch {
+  } catch (err) {
+    console.error('[verify] Network error:', err)
     return NextResponse.json(
       { error: 'Unable to reach subscription service' },
       { status: 502 }

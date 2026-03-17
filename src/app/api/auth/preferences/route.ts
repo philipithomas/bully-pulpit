@@ -33,6 +33,7 @@ export async function GET() {
     )
 
     if (!res.ok) {
+      console.error(`[auth/preferences] GET failed for ${uuid}: ${res.status}`)
       return NextResponse.json(
         { error: 'Failed to load preferences' },
         { status: res.status }
@@ -46,7 +47,8 @@ export async function GET() {
       subscribed_workshop: subscriber.subscribed_workshop,
       subscribed_postcard: subscriber.subscribed_postcard,
     })
-  } catch {
+  } catch (err) {
+    console.error('[auth/preferences] GET network error:', err)
     return NextResponse.json(
       { error: 'Unable to reach subscription service' },
       { status: 502 }
@@ -61,6 +63,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json()
+  console.log(`[auth/preferences] PATCH for ${uuid}:`, body)
 
   try {
     const res = await fetch(
@@ -78,6 +81,9 @@ export async function PATCH(request: Request) {
 
     if (!res.ok) {
       const data = await res.json()
+      console.error(
+        `[auth/preferences] PATCH failed for ${uuid}: ${res.status} ${data.error}`
+      )
       return NextResponse.json(
         { error: data.error ?? 'Update failed' },
         { status: res.status }
@@ -85,8 +91,10 @@ export async function PATCH(request: Request) {
     }
 
     const subscriber = await res.json()
+    console.log(`[auth/preferences] Updated: ${subscriber.email}`)
     return NextResponse.json({ subscriber })
-  } catch {
+  } catch (err) {
+    console.error('[auth/preferences] PATCH network error:', err)
     return NextResponse.json(
       { error: 'Unable to reach subscription service' },
       { status: 502 }
@@ -100,6 +108,8 @@ export async function DELETE() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  console.log(`[auth/preferences] DELETE for ${uuid}`)
+
   try {
     const res = await fetch(
       `${siteConfig.printingPressUrl}/api/v1/subscribers/${uuid}`,
@@ -111,17 +121,22 @@ export async function DELETE() {
     )
 
     if (!res.ok) {
+      console.error(
+        `[auth/preferences] DELETE failed for ${uuid}: ${res.status}`
+      )
       return NextResponse.json(
         { error: 'Failed to delete account' },
         { status: res.status }
       )
     }
 
+    console.log(`[auth/preferences] Account deleted: ${uuid}`)
     const response = NextResponse.json({ ok: true })
     response.cookies.delete('bp_token')
     response.cookies.delete('bp_has_session')
     return response
-  } catch {
+  } catch (err) {
+    console.error('[auth/preferences] DELETE network error:', err)
     return NextResponse.json(
       { error: 'Unable to reach subscription service' },
       { status: 502 }

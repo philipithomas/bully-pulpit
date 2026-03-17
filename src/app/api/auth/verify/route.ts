@@ -6,6 +6,7 @@ import { siteConfig } from '@/lib/config'
 export async function POST(request: Request) {
   const { isBot } = await checkBotId()
   if (isBot) {
+    console.warn('[auth/verify] Bot blocked')
     return NextResponse.json(
       { error: 'Request blocked. Please try again from the website.' },
       { status: 403 }
@@ -16,11 +17,14 @@ export async function POST(request: Request) {
   const { email, code } = body
 
   if (!email || !code) {
+    console.warn('[auth/verify] Missing email or code')
     return NextResponse.json(
       { error: 'Email and code are required' },
       { status: 400 }
     )
   }
+
+  console.log(`[auth/verify] Verifying code for ${email}`)
 
   try {
     const res = await fetch(
@@ -38,6 +42,9 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
       const data = await res.json()
+      console.error(
+        `[auth/verify] Failed for ${email}: ${res.status} ${data.error}`
+      )
       return NextResponse.json(
         { error: data.error ?? 'Verification failed' },
         { status: res.status }
@@ -45,6 +52,9 @@ export async function POST(request: Request) {
     }
 
     const subscriber = await res.json()
+    console.log(
+      `[auth/verify] Verified: ${subscriber.email} (uuid=${subscriber.uuid})`
+    )
 
     const secret = new TextEncoder().encode(siteConfig.jwtSecret)
     const jwt = await new SignJWT({
@@ -74,7 +84,8 @@ export async function POST(request: Request) {
     })
 
     return response
-  } catch {
+  } catch (err) {
+    console.error(`[auth/verify] Network error for ${email}:`, err)
     return NextResponse.json(
       { error: 'Unable to reach verification service' },
       { status: 502 }
