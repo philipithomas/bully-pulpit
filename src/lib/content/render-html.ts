@@ -18,19 +18,30 @@ export async function renderMarkdownToHtml(content: string): Promise<string> {
   return String(result)
 }
 
+const newsletterAccentColor: Record<string, string> = {
+  contraption: '#2B4A3E',
+  workshop: '#6B4D3A',
+  postcard: '#2C3E6B',
+}
+
 export function renderRelatedPostsHtml(posts: Post[], siteUrl: string): string {
   if (posts.length === 0) return ''
 
   const postRows = posts
     .map((post) => {
       const url = `${siteUrl}/${post.slug}`
+      const accentColor = newsletterAccentColor[post.newsletter] ?? '#7e7a73'
       const thumbnail = post.frontmatter.coverImage
         ? `<td style="padding-left: 16px; vertical-align: top; width: 100px;">
             <a href="${url}">
-              <img src="${siteUrl}${post.frontmatter.coverImage}" alt="${post.frontmatter.coverImageAlt ?? post.frontmatter.title}" width="100" style="display: block; border-radius: 2px; object-fit: cover;" />
+              <img src="${siteUrl}${post.frontmatter.coverImage}" alt="${post.frontmatter.coverImageAlt ?? post.frontmatter.title}" width="100" height="56" style="display: block; border-radius: 2px; object-fit: cover;" />
             </a>
           </td>`
-        : ''
+        : `<td style="padding-left: 16px; vertical-align: top; width: 100px;">
+            <a href="${url}">
+              <div style="width: 100px; height: 56px; background-color: ${accentColor}; border-radius: 2px;"></div>
+            </a>
+          </td>`
 
       return `<tr>
         <td style="padding: 16px 0;">
