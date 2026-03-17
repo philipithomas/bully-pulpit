@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
+import { PostcardLatestLink } from '@/components/postcard/latest-link'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 
@@ -104,21 +105,24 @@ export default function PostcardPage() {
                   {yearMonths.map((m) => {
                     const post = postsByMonth.get(m.key)
                     return post ? (
-                      <Link
-                        key={m.key}
-                        href={`/${post.slug}`}
-                        className="relative flex flex-col items-center justify-center p-3 bg-indigo text-white rounded-sm hover:bg-indigo/90 transition-colors text-center"
-                      >
-                        {m.key === latestKey && (
-                          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/70" />
-                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+                      m.key === latestKey ? (
+                        <PostcardLatestLink
+                          key={m.key}
+                          href={`/${post.slug}`}
+                          latestKey={latestKey}
+                          label={m.label}
+                        />
+                      ) : (
+                        <Link
+                          key={m.key}
+                          href={`/${post.slug}`}
+                          className="relative flex flex-col items-center justify-center p-3 bg-indigo text-white rounded-sm hover:bg-indigo/90 transition-colors text-center"
+                        >
+                          <span className="font-mono text-xs font-semibold">
+                            {m.label}
                           </span>
-                        )}
-                        <span className="font-mono text-xs font-semibold">
-                          {m.label}
-                        </span>
-                      </Link>
+                        </Link>
+                      )
                     ) : (
                       <div
                         key={m.key}
