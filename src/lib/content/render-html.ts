@@ -32,15 +32,17 @@ export function renderRelatedPostsHtml(posts: Post[], siteUrl: string): string {
       const url = `${siteUrl}/${post.slug}`
       const accentColor = newsletterAccentColor[post.newsletter] ?? '#7e7a73'
       const thumbnail = post.frontmatter.coverImage
-        ? `<td style="padding-left: 16px; vertical-align: top; width: 100px;">
+        ? `<td width="100" style="padding-left: 16px; vertical-align: top;">
             <a href="${url}">
-              <img src="${siteUrl}${post.frontmatter.coverImage}" alt="${post.frontmatter.coverImageAlt ?? post.frontmatter.title}" width="100" height="56" style="display: block; border-radius: 2px; object-fit: cover;" />
+              <img src="${siteUrl}${post.frontmatter.coverImage}" alt="${post.frontmatter.coverImageAlt ?? post.frontmatter.title}" width="100" height="56" style="display: block; width: 100px; height: 56px;" />
             </a>
           </td>`
-        : `<td style="padding-left: 16px; vertical-align: top; width: 100px;">
-            <a href="${url}">
-              <div style="width: 100px; height: 56px; background-color: ${accentColor}; border-radius: 2px;"></div>
-            </a>
+        : `<td width="100" style="padding-left: 16px; vertical-align: top;">
+            <table cellpadding="0" cellspacing="0" border="0"><tr>
+              <td width="100" height="56" bgcolor="${accentColor}" style="width: 100px; height: 56px; background-color: ${accentColor};">
+                <a href="${url}" style="display: block; width: 100px; height: 56px; text-decoration: none;">&nbsp;</a>
+              </td>
+            </tr></table>
           </td>`
 
       return `<tr>
@@ -58,7 +60,8 @@ export function renderRelatedPostsHtml(posts: Post[], siteUrl: string): string {
     .join('')
 
   return `
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 40px; border-top: 1px solid #e0ddd8; padding-top: 24px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 40px; border-top: 1px solid #e0ddd8;">
+      <tr><td style="font-size: 1px; line-height: 24px; height: 24px;">&nbsp;</td></tr>
       <tr>
         <td style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #7e7a73; padding-bottom: 12px;">
           Keep reading
