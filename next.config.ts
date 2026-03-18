@@ -14,11 +14,11 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://plausible.io",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://plausible.io https://telegraph.contraption.co",
       "style-src 'self' 'unsafe-inline' https://fonts.philipithomas.com",
       "font-src 'self' https://fonts.philipithomas.com",
       "img-src 'self' data: https:",
-      "connect-src 'self' https://plausible.io",
+      "connect-src 'self' https://plausible.io https://telegraph.contraption.co",
       "frame-ancestors 'none'",
     ].join('; '),
   },
