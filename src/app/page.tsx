@@ -133,12 +133,15 @@ export default async function HomePage() {
           </div>
 
           {/* Subscribe (hidden when logged in) */}
-          {subscriberCount > 0 && (
-            <p className="font-sans text-lg font-medium mb-3 text-gray-800">
-              Join {formatMemberCount(subscriberCount)} other subscribers:
-            </p>
-          )}
-          <InlineSignupForm hideWhenLoggedIn autoFocus />
+          <InlineSignupForm
+            hideWhenLoggedIn
+            autoFocus
+            headerText={
+              subscriberCount > 0
+                ? `Join ${formatMemberCount(subscriberCount)} other subscribers:`
+                : undefined
+            }
+          />
 
           {/* Newsletter directory */}
           <div className="mt-8">

@@ -16,6 +16,7 @@ interface Props {
   hideWhenLoggedIn?: boolean
   autoFocus?: boolean
   className?: string
+  headerText?: string
 }
 
 const newsletters = [
@@ -35,6 +36,7 @@ export function InlineSignupForm({
   hideWhenLoggedIn = false,
   autoFocus = false,
   className,
+  headerText,
 }: Props) {
   const { user, loading: authLoading } = useAuth()
   const [email, setEmail] = useState('')
@@ -167,6 +169,11 @@ export function InlineSignupForm({
       onSubmit={handleEmailSubmit}
       className={`flex flex-col items-start ${className ?? ''}`}
     >
+      {headerText && (
+        <p className="font-sans text-lg font-medium mb-3 text-gray-800">
+          {headerText}
+        </p>
+      )}
       {showNewsletterPicker && (
         <fieldset className="mb-5 space-y-3">
           {newsletters.map((nl) => (
