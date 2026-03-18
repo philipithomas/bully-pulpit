@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import type { Post } from '@/lib/content/types'
 
-export function PostCard({ post, minimal }: { post: Post; minimal?: boolean }) {
+export function PostCard({ post }: { post: Post }) {
   return (
     <article className="group">
       <Link href={`/${post.slug}`} className="block">
@@ -27,21 +27,19 @@ export function PostCard({ post, minimal }: { post: Post; minimal?: boolean }) {
             <ArrowIcon />
           </span>
         </div>
-        <h2
-          className={`text-lg text-gray-950 group-hover:text-forest transition-colors mt-2 ${minimal ? 'font-normal' : 'font-semibold'}`}
-        >
+        <h2 className="text-lg font-semibold text-gray-950 group-hover:text-forest transition-colors mt-2">
           {post.frontmatter.title}
         </h2>
-        {!minimal && post.frontmatter.subtitle && (
+        {post.frontmatter.subtitle && (
           <p className="font-serif text-sm text-gray-600 mt-1">
             {post.frontmatter.subtitle}
           </p>
         )}
-        {!minimal && (
+        {
           <p className="font-serif text-sm text-gray-600 line-clamp-3 mt-2">
             {post.excerpt}
           </p>
-        )}
+        }
       </Link>
     </article>
   )
