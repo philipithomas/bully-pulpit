@@ -44,11 +44,12 @@ function InputOTPSlot({
 }) {
   const inputOTPContext = React.useContext(OTPInputContext)
   const { char, hasFakeCaret, isActive } = inputOTPContext?.slots[index] ?? {}
+  const allFilled = inputOTPContext?.slots.every((s) => s.char) ?? false
 
   return (
     <div
       data-slot="input-otp-slot"
-      data-active={isActive}
+      data-active={isActive || allFilled}
       className={cn(
         'relative flex h-10 w-10 items-center justify-center border-y border-r border-gray-300 bg-white font-mono text-lg transition-all first:border-l data-[active=true]:border-gray-900',
         className
