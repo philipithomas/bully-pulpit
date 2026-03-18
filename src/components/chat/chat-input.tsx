@@ -1,19 +1,25 @@
 'use client'
 
 import { ArrowUp, Square } from 'lucide-react'
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 
 export function ChatInput({
   onSend,
   onStop,
   isStreaming,
+  focus,
 }: {
   onSend: (text: string) => void
   onStop: () => void
   isStreaming: boolean
+  focus?: boolean
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (focus) textareaRef.current?.focus()
+  }, [focus])
 
   const handleSubmit = useCallback(() => {
     const value = textareaRef.current?.value.trim()
@@ -49,7 +55,7 @@ export function ChatInput({
         ref={textareaRef}
         onKeyDown={handleKeyDown}
         onInput={handleInput}
-        placeholder="Ask about the blog..."
+        placeholder="Ask a question..."
         rows={1}
         disabled={isStreaming}
         className="flex-1 resize-none bg-transparent py-1 font-sans text-sm leading-tight text-gray-950 outline-none placeholder:text-gray-400 disabled:opacity-50"

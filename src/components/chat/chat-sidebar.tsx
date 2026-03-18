@@ -191,6 +191,7 @@ export function ChatSidebar() {
           onSend={handleSend}
           onStop={stop}
           isStreaming={isStreaming || isSubmitted}
+          focus={open}
         />
       </div>
     </>
