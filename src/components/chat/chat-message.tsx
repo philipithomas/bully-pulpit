@@ -193,7 +193,7 @@ function BellAvatar() {
       alt="Bell"
       width={24}
       height={24}
-      className="mt-0.5 shrink-0 rounded-full"
+      className="mt-2.5 shrink-0 rounded-full"
     />
   )
 }
