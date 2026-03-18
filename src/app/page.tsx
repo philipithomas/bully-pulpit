@@ -50,15 +50,14 @@ export default function HomePage() {
           </h1>
           <div className="font-serif text-lg text-gray-600 leading-relaxed mb-8 lg:mb-12 max-w-prose">
             <p className="mb-4">
-              I build at the intersection of math, business, and software. I
-              work on the engineering team at{' '}
+              I work at{' '}
               <a
                 href="https://www.trychroma.com"
                 className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 Chroma
               </a>
-              .
+              , building open-source search infrastructure for AI.
             </p>
             <p className="mb-4">
               I live in San Francisco. I&apos;m interested in coffee,
