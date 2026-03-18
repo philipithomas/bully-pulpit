@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { useAuthContext } from '@/components/auth/auth-provider'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import {
   InputOTP,
@@ -9,7 +10,6 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
-import { useAuth } from '@/hooks/use-auth'
 
 interface Props {
   showNewsletterPicker?: boolean
@@ -38,7 +38,7 @@ export function InlineSignupForm({
   className,
   headerText,
 }: Props) {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuthContext()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [selected, setSelected] = useState<Set<string>>(
