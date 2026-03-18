@@ -52,7 +52,7 @@ export function ChatInput({
         placeholder="Ask about the blog..."
         rows={1}
         disabled={isStreaming}
-        className="flex-1 resize-none bg-transparent font-sans text-sm text-gray-950 outline-none placeholder:text-gray-400 disabled:opacity-50"
+        className="flex-1 resize-none bg-transparent py-1 font-sans text-sm leading-tight text-gray-950 outline-none placeholder:text-gray-400 disabled:opacity-50"
       />
       <button
         type="button"
