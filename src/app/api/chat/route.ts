@@ -44,11 +44,25 @@ export async function POST(request: Request) {
     system: getSystemPrompt(),
     messages: await convertToModelMessages(messages),
     tools: { searchPosts, fetchPost },
-    stopWhen: stepCountIs(6),
+    stopWhen: stepCountIs(7),
     prepareStep: ({ steps }) => {
       const hasSearched = steps.some((step) =>
         step.toolCalls.some((tc) => tc.toolName === 'searchPosts')
       )
+
+      // On the last step, disable tools to force a prose response
+      if (steps.length >= 5) {
+        return {
+          activeTools: [],
+          providerOptions: {
+            openai: {
+              serviceTier: 'priority',
+              reasoningEffort: 'high',
+            },
+          },
+        }
+      }
+
       if (hasSearched) {
         return {
           providerOptions: {
