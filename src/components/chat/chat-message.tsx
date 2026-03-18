@@ -1,4 +1,5 @@
 import type { UIMessage } from 'ai'
+import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -20,15 +21,26 @@ function renderInlineMarkdown(text: string) {
 
     const key = `${match.index}`
     if (match[1] && match[2]) {
-      // Link
+      // Link — use Next Link for local URLs
+      const isLocal = match[2].startsWith('/')
       parts.push(
-        <a
-          key={key}
-          href={match[2]}
-          className="editorial-link hover:bg-[length:100%_1px]"
-        >
-          {match[1]}
-        </a>
+        isLocal ? (
+          <Link
+            key={key}
+            href={match[2]}
+            className="editorial-link hover:bg-[length:100%_1px]"
+          >
+            {match[1]}
+          </Link>
+        ) : (
+          <a
+            key={key}
+            href={match[2]}
+            className="editorial-link hover:bg-[length:100%_1px]"
+          >
+            {match[1]}
+          </a>
+        )
       )
     } else if (match[3]) {
       // Bold

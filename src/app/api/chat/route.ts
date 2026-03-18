@@ -4,6 +4,7 @@ import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { checkBotId } from 'botid/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { fetchPost } from '@/lib/chat/fetch-post-tool'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 import { SYSTEM_PROMPT } from '@/lib/chat/system-prompt'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     },
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
-    tools: { searchPosts },
+    tools: { searchPosts, fetchPost },
     stopWhen: stepCountIs(6),
     prepareStep: ({ steps }) => {
       const hasSearched = steps.some((step) =>
