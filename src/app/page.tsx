@@ -38,7 +38,7 @@ export default async function HomePage() {
           </h1>
           <div className="font-serif text-lg text-gray-600 leading-relaxed mb-8 lg:mb-12 max-w-prose">
             <p className="mb-4">
-              I work at{' '}
+              I work on{' '}
               <a
                 href="https://www.trychroma.com"
                 className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
