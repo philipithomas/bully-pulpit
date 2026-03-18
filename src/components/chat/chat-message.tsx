@@ -39,6 +39,8 @@ function renderInlineMarkdown(text: string) {
           <a
             key={key}
             href={href}
+            target="_blank"
+            rel="noopener noreferrer"
             className="underline decoration-gray-300 underline-offset-2 transition-colors hover:decoration-current"
           >
             {match[1]}
