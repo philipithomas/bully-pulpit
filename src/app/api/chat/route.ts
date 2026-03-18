@@ -6,7 +6,7 @@ import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
-import { SYSTEM_PROMPT } from '@/lib/chat/system-prompt'
+import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         reasoningEffort: 'low',
       },
     },
-    system: SYSTEM_PROMPT,
+    system: getSystemPrompt(),
     messages: await convertToModelMessages(messages),
     tools: { searchPosts, fetchPost },
     stopWhen: stepCountIs(6),
