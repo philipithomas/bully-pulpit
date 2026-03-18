@@ -1,4 +1,5 @@
 import type { UIMessage } from 'ai'
+import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
@@ -185,10 +186,23 @@ function ToolStatus({ label, done }: { label: string; done?: boolean }) {
   )
 }
 
+function BellAvatar() {
+  return (
+    <Image
+      src="/images/bell.jpg"
+      alt="Bell"
+      width={24}
+      height={24}
+      className="mt-0.5 shrink-0 rounded-full"
+    />
+  )
+}
+
 export function ThinkingIndicator() {
   return (
-    <div className="flex justify-start">
-      <div className="rounded-lg px-3.5 py-2.5">
+    <div className="flex items-start gap-2.5">
+      <BellAvatar />
+      <div className="rounded-lg px-1 py-2.5">
         <PulsingDots />
       </div>
     </div>
@@ -205,10 +219,11 @@ export function ChatMessage({
   const isUser = message.role === 'user'
 
   return (
-    <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
+    <div className={cn('flex', isUser ? 'justify-end' : 'items-start gap-2.5')}>
+      {!isUser && <BellAvatar />}
       <div
         className={cn(
-          'max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
+          'min-w-0 max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
           isUser
             ? 'bg-gray-050 font-sans text-gray-950'
             : 'font-serif text-gray-950'

@@ -1,7 +1,8 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
-import { RotateCcw, Sparkles, X } from 'lucide-react'
+import { RotateCcw, X } from 'lucide-react'
+import Image from 'next/image'
 import { useCallback, useEffect, useRef } from 'react'
 import { ChatInput } from '@/components/chat/chat-input'
 import { ChatMessage, ThinkingIndicator } from '@/components/chat/chat-message'
@@ -115,9 +116,15 @@ export function ChatSidebar() {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-gray-400" />
+            <Image
+              src="/images/bell.jpg"
+              alt="Bell"
+              width={20}
+              height={20}
+              className="rounded-full"
+            />
             <span className="font-sans text-sm font-semibold text-gray-950">
-              Ask AI
+              Bell
             </span>
           </div>
           <div className="flex items-center gap-1">

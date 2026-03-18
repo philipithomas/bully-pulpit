@@ -1,7 +1,7 @@
 'use client'
 
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { Search, Sparkles } from 'lucide-react'
+import { Search } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -345,9 +345,15 @@ export function SearchDialog({
                       : 'hover:bg-gray-050'
                   )}
                 >
-                  <Sparkles className="h-4 w-4 shrink-0 text-gray-400" />
+                  <Image
+                    src="/images/bell.jpg"
+                    alt="Bell"
+                    width={18}
+                    height={18}
+                    className="shrink-0 rounded-full"
+                  />
                   <span className="text-gray-950">
-                    Ask AI about &ldquo;{query}&rdquo;
+                    Ask Bell about &ldquo;{query}&rdquo;
                   </span>
                 </button>
               </div>
