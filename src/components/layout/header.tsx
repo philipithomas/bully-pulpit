@@ -1,6 +1,6 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { Bell, Search } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
@@ -9,6 +9,7 @@ import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { Logo } from '@/components/layout/logo'
 import { useNewsletter } from '@/components/layout/newsletter-context'
 import { SearchDialog } from '@/components/search/search-dialog'
+import { useChatSidebar } from '@/stores/chat-store'
 
 const newsletterLogos: Record<string, { src: string; className: string }> = {
   contraption: {
@@ -28,6 +29,7 @@ const newsletterLogos: Record<string, { src: string; className: string }> = {
 export function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const { newsletter } = useNewsletter()
+  const { openSidebar } = useChatSidebar()
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -74,6 +76,17 @@ export function Header() {
             className="p-2 -m-2"
           >
             <Search
+              className="h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600"
+              aria-hidden="true"
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => openSidebar()}
+            aria-label="Ask Bell"
+            className="p-2 -m-2"
+          >
+            <Bell
               className="h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600"
               aria-hidden="true"
             />
