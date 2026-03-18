@@ -1,7 +1,7 @@
 import { tool } from 'ai'
 import { K, Knn, Rrf, Search } from 'chromadb'
 import { z } from 'zod/v4'
-import { embedSparse, getClient, getPostsSchema } from '@/lib/chroma'
+import { getClient, getPostsSchema } from '@/lib/chroma'
 
 interface PostResult {
   title: string
@@ -23,23 +23,23 @@ export const searchPosts = tool({
       schema: getPostsSchema(),
     })
 
-    const sparseVector = await embedSparse(query)
-
     const search = new Search()
       .rank(
         Rrf({
           ranks: [
             Knn({
-              query: sparseVector,
-              key: 'sparse_embedding',
-              limit: 20,
+              query,
+              returnRank: true,
+              limit: 200,
             }),
             Knn({
-              query: query,
-              limit: 20,
+              query,
+              key: 'sparse_embedding',
+              returnRank: true,
+              limit: 200,
             }),
           ],
-          weights: [2, 1],
+          weights: [2.0, 1.0],
           k: 60,
         })
       )
