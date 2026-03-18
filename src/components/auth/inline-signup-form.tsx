@@ -10,6 +10,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
+import { getExternalReferrer } from '@/lib/referrer'
 
 interface Props {
   showNewsletterPicker?: boolean
@@ -69,6 +70,7 @@ export function InlineSignupForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
+          source: getExternalReferrer(),
           newsletters: showNewsletterPicker
             ? Array.from(selected)
             : ['contraption', 'workshop', 'postcard'],

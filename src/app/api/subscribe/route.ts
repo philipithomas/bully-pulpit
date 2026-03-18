@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { email, name, newsletters } = body
+  const { email, name, source, newsletters } = body
 
   if (!email) {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 })
@@ -42,6 +42,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           email,
           name,
+          source: source || undefined,
         }),
         cache: 'no-store',
       }

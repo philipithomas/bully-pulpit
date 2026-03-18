@@ -15,6 +15,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
+import { getExternalReferrer } from '@/lib/referrer'
 import { useAuthModal } from '@/stores/auth-store'
 
 type Step = 'email' | 'code'
@@ -49,7 +50,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
       const res = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, source: getExternalReferrer() }),
       })
 
       if (!res.ok) {
