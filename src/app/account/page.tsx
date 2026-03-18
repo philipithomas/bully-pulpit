@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuthContext } from '@/components/auth/auth-provider'
@@ -152,13 +153,18 @@ export default function AccountPage() {
                   key={nl.key}
                   className="flex items-center justify-between py-3 px-4 bg-white border border-gray-200"
                 >
-                  <div>
-                    <span className="text-sm font-semibold text-gray-950">
-                      {nl.name}
+                  <div className="flex items-center gap-3">
+                    <span className="w-[76px] shrink-0 flex items-center">
+                      <Image
+                        src={nl.logo.src}
+                        alt={nl.name}
+                        width={100}
+                        height={nl.logo.height}
+                        style={{ height: nl.logo.height }}
+                        className="w-auto shrink-0"
+                      />
                     </span>
-                    <span className="text-sm text-gray-500 ml-2">
-                      {nl.tagline}
-                    </span>
+                    <span className="text-sm text-gray-500">{nl.tagline}</span>
                   </div>
                   <input
                     type="checkbox"

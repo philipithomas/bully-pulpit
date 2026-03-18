@@ -7,21 +7,6 @@ import { siteConfig } from '@/lib/config'
 import { formatMemberCount } from '@/lib/format-member-count'
 import { getSubscriberCount } from '@/lib/subscriber-count'
 
-const newsletterLogos: Record<string, { src: string; className: string }> = {
-  contraption: {
-    src: '/images/contraption.svg',
-    className: 'h-[13px] w-auto shrink-0',
-  },
-  workshop: {
-    src: '/images/workshop-brand.svg',
-    className: 'h-4 w-auto shrink-0',
-  },
-  postcard: {
-    src: '/images/postcard.svg',
-    className: 'h-[14px] w-auto shrink-0',
-  },
-}
-
 export default async function HomePage() {
   const newsletters = Object.values(siteConfig.newsletters)
   const subscriberCount = await getSubscriberCount()
@@ -155,13 +140,16 @@ export default async function HomePage() {
                   href={`/${nl.slug}`}
                   className="flex items-center gap-3 group"
                 >
-                  <Image
-                    src={newsletterLogos[nl.slug].src}
-                    alt={nl.name}
-                    width={100}
-                    height={20}
-                    className={newsletterLogos[nl.slug].className}
-                  />
+                  <span className="w-[76px] shrink-0 flex items-center">
+                    <Image
+                      src={nl.logo.src}
+                      alt={nl.name}
+                      width={100}
+                      height={nl.logo.height}
+                      style={{ height: nl.logo.height }}
+                      className="w-auto shrink-0"
+                    />
+                  </span>
                   <span className="font-serif text-sm text-gray-500 group-hover:text-gray-700 transition-colors duration-300">
                     {nl.tagline}
                   </span>
