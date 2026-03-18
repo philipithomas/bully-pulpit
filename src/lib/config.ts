@@ -1,4 +1,14 @@
-export const siteConfig = {
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(
+      `Missing ${name}. Copy .env.example to .env.local or run \`vercel pull\`.`
+    )
+  }
+  return value
+}
+
+const staticConfig = {
   title: 'Philip I. Thomas',
   description:
     'I build at the intersection of math, business, and software. I work on the engineering team at Chroma.',
@@ -28,6 +38,14 @@ export const siteConfig = {
     },
   },
   printingPressUrl: process.env.PRINTING_PRESS_URL ?? 'http://localhost:8080',
-  m2mApiKey: process.env.M2M_API_KEY ?? 'dev-api-key',
-  jwtSecret: process.env.JWT_SECRET ?? 'dev-jwt-secret-change-in-production',
 } as const
+
+export const siteConfig = {
+  ...staticConfig,
+  get m2mApiKey() {
+    return requireEnv('M2M_API_KEY')
+  },
+  get jwtSecret() {
+    return requireEnv('JWT_SECRET')
+  },
+}
