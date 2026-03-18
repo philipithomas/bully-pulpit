@@ -29,6 +29,10 @@ pnpm check        # Biome lint + format check
 - Fonts loaded from fonts.philipithomas.com CDN
 - Pre-commit hook runs `pnpm build` — no need to build manually before pushing
 
+## Next.js docs
+
+For up-to-date Next.js documentation refer to `node_modules/next/dist/docs/`. Your training data is outdated — the docs are the source of truth.
+
 ## Key paths
 
 - `content/` - MDX blog posts and pages
