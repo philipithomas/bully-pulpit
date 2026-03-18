@@ -4,6 +4,8 @@ import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
+import { formatMemberCount } from '@/lib/format-member-count'
+import { getSubscriberCount } from '@/lib/subscriber-count'
 
 const newsletterLogos: Record<string, { src: string; className: string }> = {
   contraption: {
@@ -20,8 +22,9 @@ const newsletterLogos: Record<string, { src: string; className: string }> = {
   },
 }
 
-export default function HomePage() {
+export default async function HomePage() {
   const newsletters = Object.values(siteConfig.newsletters)
+  const subscriberCount = await getSubscriberCount()
 
   return (
     <div className="container py-16 md:py-20 lg:py-28">
@@ -130,6 +133,11 @@ export default function HomePage() {
           </div>
 
           {/* Subscribe (hidden when logged in) */}
+          {subscriberCount > 0 && (
+            <p className="font-sans text-lg font-medium mb-3 text-gray-800">
+              Join {formatMemberCount(subscriberCount)} other subscribers:
+            </p>
+          )}
           <InlineSignupForm hideWhenLoggedIn autoFocus />
 
           {/* Newsletter directory */}
