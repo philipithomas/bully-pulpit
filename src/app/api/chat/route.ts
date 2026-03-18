@@ -28,18 +28,37 @@ export async function POST(request: Request) {
   const { messages } = await request.json()
 
   const result = streamText({
-    model: gateway('openai/gpt-5.4'),
+    model: gateway('openai/gpt-5.4-mini'),
     providerOptions: {
       gateway: {
         byok: {
           openai: [{ apiKey: process.env.OPENAI_API_KEY }],
         },
       } satisfies GatewayLanguageModelOptions,
+      openai: {
+        serviceTier: 'priority',
+        reasoningEffort: 'low',
+      },
     },
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
     tools: { searchPosts },
     stopWhen: stepCountIs(6),
+    prepareStep: ({ steps }) => {
+      const hasSearched = steps.some((step) =>
+        step.toolCalls.some((tc) => tc.toolName === 'searchPosts')
+      )
+      if (hasSearched) {
+        return {
+          providerOptions: {
+            openai: {
+              serviceTier: 'priority',
+              reasoningEffort: 'high',
+            },
+          },
+        }
+      }
+    },
   })
 
   return result.toUIMessageStreamResponse()
