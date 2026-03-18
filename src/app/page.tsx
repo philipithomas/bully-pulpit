@@ -41,6 +41,8 @@ export default async function HomePage() {
               I work on{' '}
               <a
                 href="https://www.trychroma.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 Chroma
