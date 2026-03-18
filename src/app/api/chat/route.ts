@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
     tools: { searchPosts },
-    stopWhen: stepCountIs(3),
+    stopWhen: stepCountIs(6),
   })
 
   return result.toUIMessageStreamResponse()
