@@ -18,6 +18,35 @@ export async function renderMarkdownToHtml(content: string): Promise<string> {
   return String(result)
 }
 
+export function renderEmailHeaderHtml(
+  title: string,
+  siteUrl: string,
+  slug: string,
+  subtitle?: string | null,
+  coverImage?: string | null,
+  coverImageAlt?: string | null
+): string {
+  const postUrl = `${siteUrl}/${slug}`
+
+  let html = `<h1 style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; margin: 0 0 12px;"><a href="${postUrl}" style="text-decoration: none; color: #111110;">${title}</a></h1>`
+
+  if (subtitle) {
+    html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 17px; font-weight: 400; color: #7E7A73; line-height: 1.4; margin: 0 0 24px;">${subtitle}</p>`
+  }
+
+  if (coverImage) {
+    const imgUrl = coverImage.startsWith('http')
+      ? coverImage
+      : `${siteUrl}${coverImage}`
+    const alt = coverImageAlt ?? title
+    html += `<img src="${imgUrl}" alt="${alt}" style="width: 100%; max-width: 100%; height: auto; display: block; margin: 0 0 24px;">`
+  }
+
+  html += `<div style="font-size: 1px; line-height: 24px; height: 24px;">&nbsp;</div>`
+
+  return html
+}
+
 const newsletterAccentColor: Record<string, string> = {
   contraption: '#2B4A3E',
   workshop: '#6B4D3A',
