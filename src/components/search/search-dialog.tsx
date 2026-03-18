@@ -1,11 +1,12 @@
 'use client'
 
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { Search } from 'lucide-react'
+import { Search, Sparkles } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { useChatSidebar } from '@/stores/chat-store'
 
 interface SearchMatch {
   document: string
@@ -182,21 +183,33 @@ export function SearchDialog({
     [router, onOpenChange]
   )
 
+  const handleAskAI = useCallback(() => {
+    useChatSidebar.getState().openSidebar(query)
+    onOpenChange(false)
+  }, [query, onOpenChange])
+
+  const showAskAI = query.length >= 2
+  const maxIndex = showAskAI ? results.length : results.length - 1
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setActiveIndex((i) => Math.min(i + 1, results.length - 1))
+        setActiveIndex((i) => Math.min(i + 1, maxIndex))
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
         setActiveIndex((i) => Math.max(i - 1, 0))
-      } else if (e.key === 'Enter' && results[activeIndex]) {
+      } else if (e.key === 'Enter') {
         e.preventDefault()
-        const r = results[activeIndex]
-        navigate(r.slug, r.url)
+        if (showAskAI && activeIndex === results.length) {
+          handleAskAI()
+        } else if (results[activeIndex]) {
+          const r = results[activeIndex]
+          navigate(r.slug, r.url)
+        }
       }
     },
-    [results, activeIndex, navigate]
+    [results, activeIndex, navigate, maxIndex, showAskAI, handleAskAI]
   )
 
   return (
@@ -318,6 +331,27 @@ export function SearchDialog({
 
               return null
             })()}
+
+            {showAskAI && (
+              <div className="border-t border-gray-100 p-2">
+                <button
+                  type="button"
+                  onClick={handleAskAI}
+                  onMouseEnter={() => setActiveIndex(results.length)}
+                  className={cn(
+                    'flex w-full items-center gap-2 rounded px-3 py-2.5 text-left font-sans text-sm transition-colors',
+                    activeIndex === results.length
+                      ? 'bg-gray-050'
+                      : 'hover:bg-gray-050'
+                  )}
+                >
+                  <Sparkles className="h-4 w-4 shrink-0 text-gray-400" />
+                  <span className="text-gray-950">
+                    Ask AI about &ldquo;{query}&rdquo;
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

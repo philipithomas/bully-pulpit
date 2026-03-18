@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { MemberMenu } from '@/components/auth/member-menu'
+import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { Logo } from '@/components/layout/logo'
 import { useNewsletter } from '@/components/layout/newsletter-context'
 import { SearchDialog } from '@/components/search/search-dialog'
@@ -81,6 +82,7 @@ export function Header() {
         </nav>
       </div>
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <ChatSidebar />
     </header>
   )
 }

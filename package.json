@@ -20,7 +20,9 @@
     ]
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^3.0.66",
     "@ai-sdk/openai": "^3.0.41",
+    "@ai-sdk/react": "^3.0.118",
     "@base-ui-components/react": "1.0.0-rc.0",
     "@chroma-core/chroma-cloud-qwen": "^0.1.11",
     "@chroma-core/chroma-cloud-splade": "^0.1.11",
