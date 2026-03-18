@@ -1,16 +1,22 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
+import { gravatarUrl } from '@/lib/gravatar'
 import { useAuthModal } from '@/stores/auth-store'
 
 export function MemberMenu() {
   const { user, loading, logout } = useAuthContext()
   const { openModal } = useAuthModal()
   const [open, setOpen] = useState(false)
+  const [avatarFailed, setAvatarFailed] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const avatarSrc = useMemo(
+    () => (user ? gravatarUrl(user.email, 64) : null),
+    [user]
+  )
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -67,24 +73,35 @@ export function MemberMenu() {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-600 hover:opacity-80 transition-opacity duration-300"
+        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-600 hover:opacity-80 transition-opacity duration-300 overflow-hidden"
         aria-expanded={open}
         aria-haspopup="true"
         aria-label="Open member menu"
       >
-        <svg
-          className="w-5 h-5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+        {avatarSrc && !avatarFailed ? (
+          <img
+            src={avatarSrc}
+            alt=""
+            width={32}
+            height={32}
+            className="w-full h-full object-cover"
+            onError={() => setAvatarFailed(true)}
           />
-        </svg>
+        ) : (
+          <svg
+            className="w-5 h-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+            />
+          </svg>
+        )}
       </button>
       <div
         className={`absolute right-0 top-full pt-3 z-50 ${
