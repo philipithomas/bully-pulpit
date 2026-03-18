@@ -149,6 +149,41 @@ function renderMarkdownBlock(text: string) {
   return elements
 }
 
+function PulsingDots() {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      <span className="h-1 w-1 animate-pulse rounded-full bg-gray-300" />
+      <span
+        className="h-1 w-1 animate-pulse rounded-full bg-gray-300"
+        style={{ animationDelay: '200ms' }}
+      />
+      <span
+        className="h-1 w-1 animate-pulse rounded-full bg-gray-300"
+        style={{ animationDelay: '400ms' }}
+      />
+    </span>
+  )
+}
+
+function ToolStatus({ label }: { label: string }) {
+  return (
+    <div className="my-2 flex items-center gap-2 font-sans text-xs text-gray-400">
+      <PulsingDots />
+      {label}
+    </div>
+  )
+}
+
+export function ThinkingIndicator() {
+  return (
+    <div className="flex justify-start">
+      <div className="rounded-lg px-3.5 py-2.5">
+        <PulsingDots />
+      </div>
+    </div>
+  )
+}
+
 export function ChatMessage({
   message,
   isStreaming,
@@ -185,18 +220,49 @@ export function ChatMessage({
             )
           }
 
-          // Tool invocation - show searching indicator while pending
+          // Tool invocation — show status during all non-output states
           if ('state' in part && part.type.startsWith('tool-')) {
-            const { state } = part
-            if (state === 'input-available' || state === 'input-streaming') {
+            const state = (part as { state: string }).state
+
+            if (state === 'output-available') return null
+
+            if (state === 'output-error') {
+              const errorText =
+                'errorText' in part ? (part.errorText as string) : null
               return (
-                <p key={key} className="my-2 font-sans text-xs text-gray-400">
-                  Searching...
+                <p key={key} className="my-2 font-sans text-xs text-red-400">
+                  {errorText || 'Something went wrong with this step.'}
                 </p>
               )
             }
-            // Hide tool result once output is available
-            return null
+
+            // Get tool input for descriptive labels
+            const input =
+              'input' in part
+                ? (part.input as Record<string, string> | undefined)
+                : undefined
+
+            if (part.type === 'tool-fetchPost') {
+              return (
+                <ToolStatus
+                  key={key}
+                  label={
+                    input?.slug ? `Reading ${input.slug}` : 'Reading post...'
+                  }
+                />
+              )
+            }
+
+            // searchPosts (default)
+            const query = input?.query
+            const truncated =
+              query && query.length > 40 ? `${query.slice(0, 40)}...` : query
+            return (
+              <ToolStatus
+                key={key}
+                label={truncated ? `Searching "${truncated}"` : 'Searching...'}
+              />
+            )
           }
 
           return null

@@ -4,13 +4,21 @@ import { useChat } from '@ai-sdk/react'
 import { RotateCcw, Sparkles, X } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { ChatInput } from '@/components/chat/chat-input'
-import { ChatMessage } from '@/components/chat/chat-message'
+import { ChatMessage, ThinkingIndicator } from '@/components/chat/chat-message'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
 export function ChatSidebar() {
   const { open, initialQuery, closeSidebar } = useChatSidebar()
-  const { messages, sendMessage, setMessages, status, stop } = useChat()
+  const {
+    messages,
+    sendMessage,
+    setMessages,
+    status,
+    stop,
+    error,
+    regenerate,
+  } = useChat()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasSentInitialRef = useRef(false)
   const lastInitialQueryRef = useRef('')
@@ -33,13 +41,12 @@ export function ChatSidebar() {
     }
   }, [open, initialQuery, sendMessage, setMessages])
 
-  // Auto-scroll to bottom when messages change
-  const messageCount = messages.length
+  // Auto-scroll when messages update or status changes
   useEffect(() => {
-    if (messageCount > 0) {
+    if (messages.length > 0 || status === 'submitted') {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messageCount])
+  }, [messages, status])
 
   // Escape key closes sidebar
   useEffect(() => {
@@ -74,7 +81,13 @@ export function ChatSidebar() {
     [sendMessage]
   )
 
+  const handleRetry = useCallback(() => {
+    regenerate()
+  }, [regenerate])
+
   const isStreaming = status === 'streaming'
+  const isSubmitted = status === 'submitted'
+  const isError = status === 'error'
 
   return (
     <>
@@ -141,6 +154,27 @@ export function ChatSidebar() {
                 }
               />
             ))}
+
+            {/* Thinking indicator before streaming starts */}
+            {isSubmitted && <ThinkingIndicator />}
+
+            {/* Error message */}
+            {isError && error && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] rounded-lg px-3.5 py-2.5 font-sans text-sm text-red-500">
+                  <p className="mb-2">
+                    {error.message || 'Something went wrong. Please try again.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="text-xs text-red-400 underline underline-offset-2 transition-colors hover:text-red-600"
+                  >
+                    Try again
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <div ref={messagesEndRef} />
         </div>
@@ -149,7 +183,7 @@ export function ChatSidebar() {
         <ChatInput
           onSend={handleSend}
           onStop={stop}
-          isStreaming={isStreaming}
+          isStreaming={isStreaming || isSubmitted}
         />
       </div>
     </>
