@@ -7,11 +7,9 @@ import type { Post } from '@/lib/content/types'
 export function InfinitePostGrid({
   initialPosts,
   newsletter,
-  minimal,
 }: {
   initialPosts: Post[]
   newsletter: string
-  minimal?: boolean
 }) {
   const { posts, loading, lastPostRef } = useInfiniteScroll(
     newsletter,
@@ -27,7 +25,7 @@ export function InfinitePostGrid({
             className="reveal"
             ref={i === posts.length - 1 ? lastPostRef : undefined}
           >
-            <PostCard post={post} minimal={minimal} />
+            <PostCard post={post} />
           </div>
         ))}
       </div>
