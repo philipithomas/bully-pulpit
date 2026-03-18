@@ -21,13 +21,16 @@ function renderInlineMarkdown(text: string) {
 
     const key = `${match.index}`
     if (match[1] && match[2]) {
-      // Link — use Next Link for local URLs
-      const isLocal = match[2].startsWith('/')
+      // Normalize site URLs to relative paths for client-side navigation
+      const href = match[2]
+        .replace(/^https?:\/\/(www\.)?philipithomas\.com/, '')
+        .replace(/^$/, '/')
+      const isLocal = href.startsWith('/')
       parts.push(
         isLocal ? (
           <Link
             key={key}
-            href={match[2]}
+            href={href}
             className="editorial-link hover:bg-[length:100%_1px]"
           >
             {match[1]}
@@ -35,7 +38,7 @@ function renderInlineMarkdown(text: string) {
         ) : (
           <a
             key={key}
-            href={match[2]}
+            href={href}
             className="editorial-link hover:bg-[length:100%_1px]"
           >
             {match[1]}
@@ -165,10 +168,16 @@ function PulsingDots() {
   )
 }
 
-function ToolStatus({ label }: { label: string }) {
+function ToolStatus({ label, done }: { label: string; done?: boolean }) {
   return (
-    <div className="my-2 flex items-center gap-2 font-sans text-xs text-gray-400">
-      <PulsingDots />
+    <div className="my-1.5 flex items-center gap-2 font-sans text-xs text-gray-400">
+      {done ? (
+        <span className="inline-flex h-2.5 w-2.5 items-center justify-center text-[8px] text-gray-300">
+          ✓
+        </span>
+      ) : (
+        <PulsingDots />
+      )}
       {label}
     </div>
   )
@@ -220,17 +229,16 @@ export function ChatMessage({
             )
           }
 
-          // Tool invocation — show status during all non-output states
+          // Tool invocation — show status for every state
           if ('state' in part && part.type.startsWith('tool-')) {
             const state = (part as { state: string }).state
-
-            if (state === 'output-available') return null
+            const done = state === 'output-available'
 
             if (state === 'output-error') {
               const errorText =
                 'errorText' in part ? (part.errorText as string) : null
               return (
-                <p key={key} className="my-2 font-sans text-xs text-red-400">
+                <p key={key} className="my-1.5 font-sans text-xs text-red-400">
                   {errorText || 'Something went wrong with this step.'}
                 </p>
               )
@@ -246,8 +254,13 @@ export function ChatMessage({
               return (
                 <ToolStatus
                   key={key}
+                  done={done}
                   label={
-                    input?.slug ? `Reading ${input.slug}` : 'Reading post...'
+                    input?.slug
+                      ? `${done ? 'Read' : 'Reading'} ${input.slug}`
+                      : done
+                        ? 'Read post'
+                        : 'Reading post...'
                   }
                 />
               )
@@ -260,7 +273,14 @@ export function ChatMessage({
             return (
               <ToolStatus
                 key={key}
-                label={truncated ? `Searching "${truncated}"` : 'Searching...'}
+                done={done}
+                label={
+                  truncated
+                    ? `${done ? 'Searched' : 'Searching'} "${truncated}"`
+                    : done
+                      ? 'Searched posts'
+                      : 'Searching...'
+                }
               />
             )
           }
