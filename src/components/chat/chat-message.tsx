@@ -31,7 +31,7 @@ function renderInlineMarkdown(text: string) {
           <Link
             key={key}
             href={href}
-            className="editorial-link hover:bg-[length:100%_1px]"
+            className="underline decoration-gray-300 underline-offset-2 transition-colors hover:decoration-current"
           >
             {match[1]}
           </Link>
@@ -39,7 +39,7 @@ function renderInlineMarkdown(text: string) {
           <a
             key={key}
             href={href}
-            className="editorial-link hover:bg-[length:100%_1px]"
+            className="underline decoration-gray-300 underline-offset-2 transition-colors hover:decoration-current"
           >
             {match[1]}
           </a>
