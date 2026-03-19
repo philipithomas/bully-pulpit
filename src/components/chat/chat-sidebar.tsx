@@ -182,11 +182,10 @@ export function ChatSidebar() {
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <div className="flex items-center gap-2">
             <Image
-              src="/images/bell.jpg"
+              src="/images/bell-icon.svg"
               alt="Bell"
               width={20}
               height={20}
-              className="rounded-full"
             />
             <span className="font-sans text-sm font-semibold text-gray-950">
               Bell

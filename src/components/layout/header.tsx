@@ -9,6 +9,7 @@ import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { Logo } from '@/components/layout/logo'
 import { useNewsletter } from '@/components/layout/newsletter-context'
 import { SearchDialog } from '@/components/search/search-dialog'
+import { BellIcon } from '@/components/ui/bell-icon'
 import { useChatSidebar } from '@/stores/chat-store'
 
 const newsletterLogos: Record<string, { src: string; className: string }> = {
@@ -86,12 +87,8 @@ export function Header() {
             aria-label="Ask Bell"
             className="p-2 -m-2"
           >
-            <Image
-              src="/images/bell-icon.svg"
-              alt=""
-              width={18}
-              height={18}
-              className="h-[18px] w-[18px] opacity-60 transition-opacity hover:opacity-100"
+            <BellIcon
+              className="h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600"
               aria-hidden="true"
             />
           </button>
