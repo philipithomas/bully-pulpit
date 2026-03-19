@@ -17,11 +17,11 @@ function WelcomeScreen({ userName }: { userName?: string | null }) {
       <Image src="/images/bell-icon.svg" alt="Bell" width={48} height={48} />
       <div>
         <p className="font-sans text-sm font-semibold text-gray-950">
-          {userName ? `Hey ${userName}.` : 'Hey there.'}
+          {userName ? `Hey ${userName}, I'm Bell.` : "Hey, I'm Bell."}
         </p>
         <p className="mt-1 font-serif text-sm text-gray-500">
-          I&apos;m Bell, the AI agent for this site. I can search Philip&apos;s
-          writing and answer questions about his essays and projects.
+          I can search Philip&apos;s writing and answer questions about his
+          essays and projects.
         </p>
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
