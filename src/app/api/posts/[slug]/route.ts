@@ -22,11 +22,13 @@ export async function GET(
   const relatedPosts = getRelatedPosts(slug)
   const markdownHtml = await renderMarkdownToHtml(post.content)
   const relatedPostsHtml = renderRelatedPostsHtml(relatedPosts, siteConfig.url)
+  const subtitle =
+    post.frontmatter.subtitle || post.frontmatter.description || null
   const emailHeader = renderEmailHeaderHtml(
     post.frontmatter.title,
     siteConfig.url,
     slug,
-    post.frontmatter.subtitle,
+    subtitle,
     post.frontmatter.coverImage,
     post.frontmatter.coverImageAlt,
     post.newsletter === 'postcard' ? null : post.frontmatter.publishedAt
@@ -37,7 +39,7 @@ export async function GET(
     title: post.frontmatter.title,
     newsletter: post.newsletter,
     published_at: post.frontmatter.publishedAt,
-    subtitle: post.frontmatter.subtitle || null,
+    subtitle: subtitle,
     cover_image: post.frontmatter.coverImage || null,
     cover_image_alt: post.frontmatter.coverImageAlt || null,
     email_html: emailHtml,
