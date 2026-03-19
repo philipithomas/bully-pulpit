@@ -26,9 +26,9 @@ function WelcomeScreen({ userName }: { userName?: string | null }) {
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         {[
-          'Summarize the current page',
+          'What is this page about?',
           'Favorite coffee shops',
-          'All craft-focused books mentioned',
+          'All mentions of craft-focused books',
         ].map((q) => (
           <button
             key={q}
