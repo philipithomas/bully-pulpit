@@ -40,11 +40,11 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
         >
           {post.frontmatter.title}
         </h2>
-        {post.frontmatter.subtitle && (
+        {(post.frontmatter.subtitle || post.frontmatter.description) && (
           <p
             className={`font-serif text-gray-600 mt-1 ${large ? 'text-base' : 'text-sm'}`}
           >
-            {post.frontmatter.subtitle}
+            {post.frontmatter.subtitle || post.frontmatter.description}
           </p>
         )}
       </div>
