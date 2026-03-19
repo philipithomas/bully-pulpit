@@ -20,14 +20,14 @@ function WelcomeScreen({ userName }: { userName?: string | null }) {
           {userName ? `Hey ${userName}.` : 'Hey there.'}
         </p>
         <p className="mt-1 font-serif text-sm text-gray-500">
-          I can search Philip's writing and answer questions about his essays,
-          projects, and ideas.
+          I&apos;m Bell, the AI agent for this site. I can search Philip&apos;s
+          writing and answer questions about his essays and projects.
         </p>
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         {[
-          'What has Philip written about?',
-          'Latest posts',
+          'Favorite coffee shops',
+          'Summarize the Rails articles',
           'Tell me about this page',
         ].map((q) => (
           <button
