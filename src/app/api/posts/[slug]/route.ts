@@ -3,6 +3,7 @@ import { siteConfig } from '@/lib/config'
 import { getPostBySlug } from '@/lib/content/loader'
 import { getRelatedPosts } from '@/lib/content/related'
 import {
+  markdownToPlaintext,
   renderEmailHeaderHtml,
   renderMarkdownToHtml,
   renderRelatedPostsHtml,
@@ -35,11 +36,17 @@ export async function GET(
   )
   const emailHtml = emailHeader + markdownHtml + relatedPostsHtml
 
+  const bodyPlaintext = markdownToPlaintext(post.content)
+  const previewText = subtitle
+    ? `${subtitle} – ${bodyPlaintext}`
+    : bodyPlaintext
+
   return NextResponse.json({
     title: post.frontmatter.title,
     newsletter: post.newsletter,
     published_at: post.frontmatter.publishedAt,
     subtitle: subtitle,
+    preview_text: previewText,
     cover_image: post.frontmatter.coverImage || null,
     cover_image_alt: post.frontmatter.coverImageAlt || null,
     email_html: emailHtml,

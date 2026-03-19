@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { renderEmailHeaderHtml } from '@/lib/content/render-html'
+import {
+  markdownToPlaintext,
+  renderEmailHeaderHtml,
+} from '@/lib/content/render-html'
 
 describe('renderEmailHeaderHtml', () => {
   const siteUrl = 'https://www.philipithomas.com'
@@ -145,5 +148,43 @@ describe('renderEmailHeaderHtml', () => {
       'src="https://www.philipithomas.com/images/hero.jpg"'
     )
     expect(html).toContain('alt="Hero image"')
+  })
+})
+
+describe('markdownToPlaintext', () => {
+  it('strips markdown links', () => {
+    expect(markdownToPlaintext('[click here](https://example.com)')).toBe(
+      'click here'
+    )
+  })
+
+  it('strips images', () => {
+    expect(markdownToPlaintext('![alt text](image.jpg) hello')).toBe('hello')
+  })
+
+  it('strips headings', () => {
+    expect(markdownToPlaintext('## My Heading\nSome text')).toBe(
+      'My Heading Some text'
+    )
+  })
+
+  it('strips bold and italic', () => {
+    expect(markdownToPlaintext('**bold** and *italic*')).toBe('bold and italic')
+  })
+
+  it('collapses whitespace', () => {
+    expect(markdownToPlaintext('First paragraph.\n\nSecond paragraph.')).toBe(
+      'First paragraph. Second paragraph.'
+    )
+  })
+
+  it('truncates to maxLength', () => {
+    const long = 'a'.repeat(200)
+    expect(markdownToPlaintext(long, 100)).toHaveLength(100)
+  })
+
+  it('defaults to 150 chars', () => {
+    const long = 'a'.repeat(200)
+    expect(markdownToPlaintext(long)).toHaveLength(150)
   })
 })

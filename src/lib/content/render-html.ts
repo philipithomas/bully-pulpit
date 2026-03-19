@@ -56,6 +56,23 @@ export function renderEmailHeaderHtml(
   return html
 }
 
+export function markdownToPlaintext(markdown: string, maxLength = 150): string {
+  return markdown
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '') // images
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // links → text
+    .replace(/^#{1,6}\s+/gm, '') // headings
+    .replace(/(\*{1,3}|_{1,3})(.*?)\1/g, '$2') // bold/italic
+    .replace(/`{1,3}[^`]*`{1,3}/g, '') // inline code
+    .replace(/^(?:[-*+]|\d+\.)\s+/gm, '') // list markers
+    .replace(/^>\s+/gm, '') // blockquotes
+    .replace(/^---+$/gm, '') // hr
+    .replace(/\n{2,}/g, ' ') // collapse paragraph breaks
+    .replace(/\n/g, ' ') // collapse remaining newlines
+    .replace(/\s+/g, ' ') // collapse whitespace
+    .trim()
+    .slice(0, maxLength)
+}
+
 const newsletterAccentColor: Record<string, string> = {
   contraption: '#2B4A3E',
   workshop: '#6B4D3A',
