@@ -26,9 +26,9 @@ function WelcomeScreen({ userName }: { userName?: string | null }) {
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         {[
+          'Summarize the current page',
           'Favorite coffee shops',
-          'Summarize the Rails articles',
-          'Tell me about this page',
+          'All craft-focused books mentioned',
         ].map((q) => (
           <button
             key={q}
