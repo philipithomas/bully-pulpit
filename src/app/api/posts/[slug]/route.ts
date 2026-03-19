@@ -28,7 +28,8 @@ export async function GET(
     slug,
     post.frontmatter.subtitle,
     post.frontmatter.coverImage,
-    post.frontmatter.coverImageAlt
+    post.frontmatter.coverImageAlt,
+    post.newsletter === 'postcard' ? null : post.frontmatter.publishedAt
   )
   const emailHtml = emailHeader + markdownHtml + relatedPostsHtml
 

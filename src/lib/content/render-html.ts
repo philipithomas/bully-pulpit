@@ -24,15 +24,24 @@ export function renderEmailHeaderHtml(
   slug: string,
   subtitle?: string | null,
   coverImage?: string | null,
-  coverImageAlt?: string | null
+  coverImageAlt?: string | null,
+  publishedAt?: string | null
 ): string {
   const postUrl = `${siteUrl}/${slug}`
 
-  let html = `<h1 style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; margin: 0 0 12px;"><a href="${postUrl}" style="text-decoration: none; color: #111110;">${title}</a></h1>`
+  let html = ''
+
+  if (publishedAt) {
+    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: #7E7A73; text-align: center; margin: 0 0 12px;">${publishedAt}</p>`
+  }
+
+  html += `<h1 style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; text-align: center; margin: 0 0 4px;"><a href="${postUrl}" style="text-decoration: none; color: #111110;">${title}</a></h1>`
 
   if (subtitle) {
-    html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 17px; font-weight: 400; color: #7E7A73; line-height: 1.4; margin: 0 0 24px;">${subtitle}</p>`
+    html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 17px; font-weight: 400; color: #7E7A73; line-height: 1.4; text-align: center; margin: 0 0 4px;">${subtitle}</p>`
   }
+
+  html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 400; color: #9E9A93; text-align: center; margin: 0 0 24px;">By Philip I. Thomas</p>`
 
   if (coverImage) {
     const imgUrl = coverImage.startsWith('http')

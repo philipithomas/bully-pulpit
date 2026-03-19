@@ -10,6 +10,7 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('href="https://www.philipithomas.com/my-post"')
     expect(html).toContain('My Post</a></h1>')
     expect(html).toContain('text-decoration: none')
+    expect(html).toContain('text-align: center')
   })
 
   it('renders subtitle when provided', () => {
@@ -25,7 +26,7 @@ describe('renderEmailHeaderHtml', () => {
 
   it('omits subtitle when null', () => {
     const html = renderEmailHeaderHtml('My Post', siteUrl, 'my-post', null)
-    expect(html).not.toContain('</p>')
+    expect(html).not.toContain('A subtitle')
   })
 
   it('renders cover image with absolute URL for relative path', () => {
@@ -83,6 +84,47 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('&nbsp;')
   })
 
+  it('always includes author byline', () => {
+    const html = renderEmailHeaderHtml('My Post', siteUrl, 'my-post')
+    expect(html).toContain('By Philip I. Thomas')
+    expect(html).toContain('color: #9E9A93')
+    expect(html).toContain('font-size: 13px')
+  })
+
+  it('renders date when publishedAt provided', () => {
+    const html = renderEmailHeaderHtml(
+      'My Post',
+      siteUrl,
+      'my-post',
+      null,
+      null,
+      null,
+      '2025-01-15'
+    )
+    expect(html).toContain('2025-01-15')
+    expect(html).toContain('Sohne Mono')
+    expect(html).toContain('text-transform: uppercase')
+    expect(html).toContain('letter-spacing: 0.12em')
+  })
+
+  it('omits date when publishedAt is null', () => {
+    const html = renderEmailHeaderHtml(
+      'My Post',
+      siteUrl,
+      'my-post',
+      null,
+      null,
+      null,
+      null
+    )
+    expect(html).not.toContain('Sohne Mono')
+  })
+
+  it('omits date when publishedAt is not provided', () => {
+    const html = renderEmailHeaderHtml('My Post', siteUrl, 'my-post')
+    expect(html).not.toContain('Sohne Mono')
+  })
+
   it('renders all elements together', () => {
     const html = renderEmailHeaderHtml(
       'Full Post',
@@ -90,10 +132,13 @@ describe('renderEmailHeaderHtml', () => {
       'full-post',
       'The subtitle',
       '/images/hero.jpg',
-      'Hero image'
+      'Hero image',
+      '2025-03-01'
     )
+    expect(html).toContain('2025-03-01')
     expect(html).toContain('Full Post</a></h1>')
     expect(html).toContain('The subtitle</p>')
+    expect(html).toContain('By Philip I. Thomas')
     expect(html).toContain(
       'src="https://www.philipithomas.com/images/hero.jpg"'
     )
