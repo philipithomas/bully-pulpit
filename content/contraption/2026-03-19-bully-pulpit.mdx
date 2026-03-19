@@ -1,0 +1,43 @@
+---
+title: "Bully pulpit"
+description: "Retiring the contraption company brand"
+publishedAt: "2026-03-19"
+coverImage: "/images/covers/bully-pulpit.jpg"
+---
+
+In January 2020 as Moonlight was acquired, I began setting up The Contraption Company LLC in New York State. The process was a bit involved - including requirements to publish announcements in two physical newspapers. My vision was to create a company in search of a product. The hardest part about selling Moonlight was losing my bully pupit - teh newsletter list I had built, which let me test new features and get quick feedback. Inspired by 37Signals, i thought that creating the company independnet of the products coudl let me experiment while still growing that mailing list. There was a bit of recognition of code as content here - that creators were coming to software and throwaway projects that gained followers, like that by Pieter Levels, was accepted.
+
+I ended up not working full-time on Contraption Company until 2022 when I left webflow, doing a mix of consulting and my own projects.
+
+As i joined Find AI as a founder, then went full-time on the engineering team at Chroma - I stpped working as much on Contraption as a product studio, and converted it to more of a hobby blog. And, it's honestly been really rewarding. But, at the same time - AI was enabling the vision I had come up with, of quickly building many interesting products. So, I had a lot of fun last year building projects like a mac mini home server, Trivet, and a print edition.
+
+Coming into 2026, I've enjoyed the pattern of writing about my work (especially becuase I don't use social media). but, two things have become clear: one is that I have my idnetity splintered across multiple sites - philipithomas.com for a personal "what I'm up to" newletter, and contraption.co for two newsletters - an eponomous (keep that word!) newsleter about projects and essays, and Workshop about work in porgress. And, the second thing is that Ghost is hard to edit.
+
+As i've been building recently, I've been building tools for myself. Toolbox for hosting apps on a mac mini. most recently Trivet for adding google-sign in to Ghost. I orignally built on Ghost becuase it mixed list management and wirting in a nice way. But ove rtime it's felt more clunky. i set up Three Ring Binder to mix AI into my writing - that got me reallye xcitd about local files.
+
+The straw that broke the camel's back is that I was really inspired by the [Mintlify case study](https://www.trychroma.com/customers/mintlify-case-study) we published at Chroma about using SPLADE on Chroma Cloud for typeahead search. We swichted Chroma's docs to Mintlnify, and I really like the Mintlify UX, including using an agent for deep research on docs that cane ven write code for you. After going from "really good typeahead search with an agent" to other sites, it feels old-school. So, I wanted to bring that better search experience to philipithomas.com. I set out doing it on Ghost, and struggled - and realied it wouldn't automatically be available on [Postcard](https://postcard.page)-powered philipithomas.com.
+
+so, I started a new project - [Bully pulpit](https://github.com/philipthomas/bully-pulpit), an attempt to merge my website into one, adn rely entirely on local files instead of a CMS. This was based on a couple things - as I built three-ring binder project, I realized how powerful search over local files could be. The second was that Ghost's split between theme, server, adn data made it hard to develop on real data because it was so spread out - it was hard for me, but laso hard for codign agents. whereas having eerying in one repo meant I could see my theme and my content all together - and I don't need to do things like givea gents access to databases to query data. I built it in Next.js, whcih also let me incorporate advanced UI like typeahead search really cleanly - while incorporating many practices to make the site [really fast](https://craigmod.com/essays/fast_software/).
+
+This overall fits into my recent thinking about the future of software - that it's moving from something peopel buy to something peopel build themselves. I think of this quote I put in my January newsletter often from [New Nordic Cuisine, Aesthetics, and Place: A Compendium]():
+
+> In many ways, the closing decades of the 21st century were all about having more of everything, a period marked by an aesthetics of abundance. In the private home, kitchens grew bigger and glistened with chrome and cool surfaces. Since then, things have changed. The glossy sheen of the mass-produced gave way to a desire for something warmer, for objects that radiate individuality, history and a sense of place.
+
+The software parallel here is - we just went through an era where everybody went from no software to software everywhere - adn they coudl buy CRMs, VMSs, editors, and more. And, now we're moving from the era of mass-produced software to customized software - where there will still be more software, but it will now be more in-house and customized, so instad of shopping for software to solve a workflwo problem, they're more likely to try building it themselves.
+
+My journey of building my personal website was driven by this - AI was so good that I could write requirements and build my own custom site. I also found myself rehinking many paradigms - in generic software you always think in terms of a database and mnultiple users. But, the local filesystem approach was much more germane to single-person software - it simplifies life, and also enables me to use GitHub actions for flows like syncing posts to Chroma - which wuld historically require much more advanced controllers. No [complex backup systems](backups article link). So, by thinkign "just me" you can make software simpler and cleaner.
+
+Finally, in the path to updating the UI - I needed to build a way to manage subscribers and emails! So I built an additional project called [Printing press](https://github.com/philipithomas/printing-press) which runs on my Mac Mini and can manage subscriers adn emails. I liked that I could continue to lean my custom quirkiness into here - such as native support for multiple newsletters and custom fonts. Also inspired by AI, I made no UI for printing press - and built a command line for it. (Even here, I had some interesting challenges - to prevent AI agents from triggering emails in production, I tried some different techniques - but settled on tying destructive actions to the 1password CLI, so I'd ahve to scan my fingerprint to get emails to send in production - making the CLI safer against agentic mess-ups). I built the entire thing in Rust because I am using it at Chroma now (link to sync post) and I find that ubilding things myself is how I learn.
+
+So, today i'm retiring the Contraption Company brand, and merging the domain contraption.co here into philipithomas.com. My emails in the future will come from mail@philipithomas.com instead of philip@contraption.co.
+
+I've kept 3 newsletters:
+- Postcard is my old philipithomas.com posts - monthly posts about what I'm up to
+- Contraption is a newsletter about projects and essays
+- Workshop i sa journal about work in progress
+
+So Contraption Company name is retired, but I'l call the newsletter Cotnraption for posterity. Also, philipithomas.com is no longer powered by the [Postcard](https://github.com/contraptionco/postcacrd) software, but I'm keeping that name for the monthly updates newsletter - more on that soon. **If you subscribed to one site, you're not automaticlaly subscribed to all 3 newsletters - Contraption subscribers are not getting the Postcard newletter by default. To manage that, you can [manage your account here](https://www.philipithomas.com/account).
+
+Finally, my favorite thing about the entire new setup is that I incorporated an AI agent into the site, powered by Chroma. I used the same [Bell name and icon from my OpenClaw](). But, now on any page on the site - you can ask questions like "What craft-focused books are mentioned" or "what programming languages does Philip use" and get answers that span multiple posts. I find myself the main user of this - to search my [years of "What I'm up to" posts](https://www.philipithomas.com/postcard) semantically - for simple things like "what coffee shops did I like in Stockholm" that traditional search just does not do a good job of.
+
+So, come try out the site. I'm proud of the search functionality adn agentic search - play around with that. And, it's all [open-source](https://github.com/philipithomas/bully-pulpit). Let me know what you think or if you find any bugs.
