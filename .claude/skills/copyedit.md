@@ -68,7 +68,15 @@ Scan the post body (not frontmatter) for mentions of other posts. Look for:
 
 When adding a link, use standard MDX/Markdown link syntax: `[visible text](/slug)`. Preserve the author's original phrasing as the visible text.
 
-### 5. Style review
+### 5. Preserve interesting diction
+
+Read the author's diction list at `content/pages/diction.mdx`. This is a collection of words the author values and considers part of his voice. When copyediting:
+
+- **Never simplify or replace** words that appear on the diction list (e.g., do not change "disparate" to "different", "sanguine" to "optimistic", "rigmarole" to "hassle")
+- **Never simplify or replace** other unusual, precise, or vivid word choices, even if they are not on the list. The author's style favors specific and interesting diction over plain language. Words like "enigmatic", "conceivably", "meticulously", "surmises" are intentional choices, not errors.
+- If in doubt about whether a word is intentionally chosen or a mistake, leave it alone.
+
+### 6. Style review
 
 Review the post for style guide violations. Make **light, surgical edits** only. You are a copyeditor, not a rewriter. Preserve the author's voice, structure, and meaning. Specifically:
 
@@ -91,11 +99,11 @@ Review the post for style guide violations. Make **light, surgical edits** only.
 - Modify frontmatter (title, description, etc.) unless it contains a style violation
 - Add comments, annotations, or suggestions — just make the edits
 
-### 6. Apply edits
+### 7. Apply edits
 
 Use the Edit tool to apply all changes to the file. Group related edits logically.
 
-### 7. Report
+### 8. Report
 
 After editing, give the user a brief summary:
 
