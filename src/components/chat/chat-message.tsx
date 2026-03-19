@@ -1,161 +1,10 @@
 import type { UIMessage } from 'ai'
 import Image from 'next/image'
 import Link from 'next/link'
-import { type ReactNode, useState } from 'react'
+import { type ComponentPropsWithoutRef, useState } from 'react'
+import Markdown from 'react-markdown'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
-
-function renderInlineMarkdown(text: string, onLocalLinkClick?: () => void) {
-  // Split into segments: links, bold, italic, inline code
-  const parts: ReactNode[] = []
-  // Match: [text](url), **bold**, *italic*, `code`
-  const regex = /\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`/g
-  let lastIndex = 0
-  let match: RegExpExecArray | null = null
-
-  while (true) {
-    match = regex.exec(text)
-    if (!match) break
-
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index))
-    }
-
-    const key = `${match.index}`
-    if (match[1] && match[2]) {
-      // Normalize site URLs to relative paths for client-side navigation
-      const href = match[2]
-        .replace(/^https?:\/\/(www\.)?philipithomas\.com/, '')
-        .replace(/^$/, '/')
-      const isLocal = href.startsWith('/')
-      parts.push(
-        isLocal ? (
-          <Link
-            key={key}
-            href={href}
-            className="underline decoration-gray-300 underline-offset-2 transition-colors hover:decoration-current"
-            onClick={onLocalLinkClick}
-          >
-            {match[1]}
-          </Link>
-        ) : (
-          <a
-            key={key}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline decoration-gray-300 underline-offset-2 transition-colors hover:decoration-current"
-          >
-            {match[1]}
-          </a>
-        )
-      )
-    } else if (match[3]) {
-      // Bold
-      parts.push(<strong key={key}>{match[3]}</strong>)
-    } else if (match[4]) {
-      // Italic
-      parts.push(<em key={key}>{match[4]}</em>)
-    } else if (match[5]) {
-      // Inline code
-      parts.push(
-        <code
-          key={key}
-          className="rounded bg-gray-050 px-1 py-0.5 font-mono text-[0.875em]"
-        >
-          {match[5]}
-        </code>
-      )
-    }
-
-    lastIndex = match.index + match[0].length
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex))
-  }
-
-  return parts
-}
-
-function renderMarkdownBlock(text: string, onLocalLinkClick?: () => void) {
-  const lines = text.split('\n')
-  const elements: ReactNode[] = []
-  let i = 0
-
-  while (i < lines.length) {
-    const line = lines[i]
-
-    // Skip empty lines
-    if (line.trim() === '') {
-      i++
-      continue
-    }
-
-    // Collect paragraph lines (non-empty, non-list, non-heading)
-    if (
-      !line.startsWith('- ') &&
-      !line.startsWith('* ') &&
-      !line.startsWith('#')
-    ) {
-      const paraLines: string[] = []
-      while (
-        i < lines.length &&
-        lines[i].trim() !== '' &&
-        !lines[i].startsWith('- ') &&
-        !lines[i].startsWith('* ') &&
-        !lines[i].startsWith('#')
-      ) {
-        paraLines.push(lines[i])
-        i++
-      }
-      elements.push(
-        <p key={i} className="mb-3 last:mb-0">
-          {renderInlineMarkdown(paraLines.join(' '), onLocalLinkClick)}
-        </p>
-      )
-      continue
-    }
-
-    // List items
-    if (line.startsWith('- ') || line.startsWith('* ')) {
-      const items: string[] = []
-      while (
-        i < lines.length &&
-        (lines[i].startsWith('- ') || lines[i].startsWith('* '))
-      ) {
-        items.push(lines[i].slice(2))
-        i++
-      }
-      elements.push(
-        <ul key={i} className="mb-3 list-disc pl-5 last:mb-0">
-          {items.map((item) => (
-            <li key={item} className="mb-1">
-              {renderInlineMarkdown(item, onLocalLinkClick)}
-            </li>
-          ))}
-        </ul>
-      )
-      continue
-    }
-
-    // Headings (just make them bold)
-    if (line.startsWith('#')) {
-      const heading = line.replace(/^#{1,6}\s+/, '')
-      elements.push(
-        <p key={i} className="mb-2 font-sans font-semibold">
-          {renderInlineMarkdown(heading, onLocalLinkClick)}
-        </p>
-      )
-      i++
-      continue
-    }
-
-    i++
-  }
-
-  return elements
-}
 
 function PulsingDots() {
   return (
@@ -222,6 +71,89 @@ function UserAvatar({ url }: { url: string }) {
   )
 }
 
+const linkClass =
+  'underline decoration-gray-300 underline-offset-2 transition-colors hover:decoration-current'
+
+function ChatMarkdown({
+  text,
+  onLocalLinkClick,
+}: {
+  text: string
+  onLocalLinkClick?: () => void
+}) {
+  return (
+    <Markdown
+      components={{
+        p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+        ul: ({ children }) => (
+          <ul className="mb-3 list-disc pl-5 last:mb-0">{children}</ul>
+        ),
+        ol: ({ children }) => (
+          <ol className="mb-3 list-decimal pl-5 last:mb-0">{children}</ol>
+        ),
+        li: ({ children }) => <li className="mb-1">{children}</li>,
+        h1: ({ children }) => (
+          <p className="mb-2 font-sans font-semibold">{children}</p>
+        ),
+        h2: ({ children }) => (
+          <p className="mb-2 font-sans font-semibold">{children}</p>
+        ),
+        h3: ({ children }) => (
+          <p className="mb-2 font-sans font-semibold">{children}</p>
+        ),
+        strong: ({ children }) => <strong>{children}</strong>,
+        em: ({ children }) => <em>{children}</em>,
+        code: (props: ComponentPropsWithoutRef<'code'>) => {
+          const { className, children } = props
+          const isBlock = className?.includes('language-')
+          if (isBlock) {
+            return (
+              <code className="block overflow-x-auto rounded bg-gray-050 p-3 font-mono text-[0.8125em]">
+                {children}
+              </code>
+            )
+          }
+          return (
+            <code className="rounded bg-gray-050 px-1 py-0.5 font-mono text-[0.875em]">
+              {children}
+            </code>
+          )
+        },
+        pre: ({ children }) => <div className="mb-3 last:mb-0">{children}</div>,
+        a: ({ href, children }) => {
+          const normalized = (href ?? '')
+            .replace(/^https?:\/\/(www\.)?philipithomas\.com/, '')
+            .replace(/^$/, '/')
+          const isLocal = normalized.startsWith('/')
+          if (isLocal) {
+            return (
+              <Link
+                href={normalized}
+                className={linkClass}
+                onClick={onLocalLinkClick}
+              >
+                {children}
+              </Link>
+            )
+          }
+          return (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={linkClass}
+            >
+              {children}
+            </a>
+          )
+        },
+      }}
+    >
+      {text}
+    </Markdown>
+  )
+}
+
 export function ThinkingIndicator() {
   return (
     <div className="flex items-start gap-2.5">
@@ -272,7 +204,10 @@ export function ChatMessage({
           if (part.type === 'text') {
             return (
               <div key={key}>
-                {renderMarkdownBlock(part.text, handleLocalLinkClick)}
+                <ChatMarkdown
+                  text={part.text}
+                  onLocalLinkClick={handleLocalLinkClick}
+                />
                 {isStreaming &&
                   !isUser &&
                   i === message.parts.length - 1 &&
