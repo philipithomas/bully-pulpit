@@ -38,10 +38,10 @@ export function renderEmailHeaderHtml(
   html += `<h1 style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; text-align: center; margin: 0 0 4px;"><a href="${postUrl}" style="text-decoration: none; color: #111110;">${title}</a></h1>`
 
   if (subtitle) {
-    html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 17px; font-weight: 400; color: #7E7A73; line-height: 1.4; text-align: center; margin: 0 0 4px;">${subtitle}</p>`
+    html += `<p style="font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 400; color: #625e58; line-height: 1.75; text-align: center; margin: 0 0 4px;">${subtitle}</p>`
   }
 
-  html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 400; color: #9E9A93; text-align: center; margin: 0 0 24px;">By Philip I. Thomas</p>`
+  html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: #625e58; text-align: center; margin: 0 0 24px;"><a href="${siteUrl}" style="color: #625e58; text-decoration: none;">Philip I. Thomas</a></p>`
 
   if (coverImage) {
     const imgUrl = coverImage.startsWith('http')

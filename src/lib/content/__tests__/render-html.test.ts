@@ -21,7 +21,8 @@ describe('renderEmailHeaderHtml', () => {
       'A subtitle'
     )
     expect(html).toContain('A subtitle</p>')
-    expect(html).toContain('color: #7E7A73')
+    expect(html).toContain('Tiempos Text')
+    expect(html).toContain('color: #625e58')
   })
 
   it('omits subtitle when null', () => {
@@ -84,11 +85,12 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('&nbsp;')
   })
 
-  it('always includes author byline', () => {
+  it('always includes author byline as link', () => {
     const html = renderEmailHeaderHtml('My Post', siteUrl, 'my-post')
-    expect(html).toContain('By Philip I. Thomas')
-    expect(html).toContain('color: #9E9A93')
-    expect(html).toContain('font-size: 13px')
+    expect(html).toContain('Philip I. Thomas</a>')
+    expect(html).toContain('href="https://www.philipithomas.com"')
+    expect(html).toContain('font-size: 14px')
+    expect(html).toContain('font-weight: 500')
   })
 
   it('renders date when publishedAt provided', () => {
@@ -138,7 +140,7 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('2025-03-01')
     expect(html).toContain('Full Post</a></h1>')
     expect(html).toContain('The subtitle</p>')
-    expect(html).toContain('By Philip I. Thomas')
+    expect(html).toContain('Philip I. Thomas</a>')
     expect(html).toContain(
       'src="https://www.philipithomas.com/images/hero.jpg"'
     )
