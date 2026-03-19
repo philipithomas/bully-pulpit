@@ -173,9 +173,9 @@ export function ChatSidebar() {
       {/* Sidebar panel */}
       <div
         className={cn(
-          'fixed top-0 right-0 z-50 flex h-full w-full flex-col bg-white transition-[transform,box-shadow] duration-300 sm:w-[420px]',
+          'fixed top-0 right-0 z-50 flex h-full w-full flex-col bg-offwhite-light transition-[transform,box-shadow] duration-300 sm:w-[420px]',
           open ? 'translate-x-0' : 'translate-x-full',
-          pinned ? 'shadow-md border-l border-gray-100' : 'shadow-xl'
+          pinned ? 'shadow-md' : 'shadow-xl'
         )}
       >
         {/* Header */}

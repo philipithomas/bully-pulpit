@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
@@ -86,8 +86,12 @@ export function Header() {
             aria-label="Ask Bell"
             className="p-2 -m-2"
           >
-            <Bell
-              className="h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600"
+            <Image
+              src="/images/bell-icon.svg"
+              alt=""
+              width={18}
+              height={18}
+              className="h-[18px] w-[18px] opacity-60 transition-opacity hover:opacity-100"
               aria-hidden="true"
             />
           </button>
