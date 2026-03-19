@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import '@/styles/globals.css'
 import { Plausible } from '@/components/analytics/plausible'
@@ -78,6 +79,7 @@ export default function RootLayout({
             <ScrollReveal />
             <ImageZoom />
             <Plausible />
+            <Analytics />
           </NewsletterProvider>
         </AuthProvider>
       </body>
