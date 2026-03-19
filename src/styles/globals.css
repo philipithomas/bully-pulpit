@@ -494,12 +494,14 @@ body.dark-viewport header .btn-primary .btn-arrow {
    Pinned chat sidebar layout
    ============================ */
 
+header,
 #content,
 footer {
   transition: margin-right 300ms ease;
 }
 
 @media (min-width: 1024px) {
+  body[data-chat-pinned] header,
   body[data-chat-pinned] #content,
   body[data-chat-pinned] footer {
     margin-right: 420px;
@@ -507,6 +509,7 @@ footer {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  header,
   #content,
   footer {
     transition: none;
