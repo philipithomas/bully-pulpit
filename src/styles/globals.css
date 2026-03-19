@@ -506,6 +506,10 @@ footer {
   body[data-chat-pinned] footer {
     margin-right: 420px;
   }
+
+  body[data-chat-pinned] .container {
+    max-width: 64rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
