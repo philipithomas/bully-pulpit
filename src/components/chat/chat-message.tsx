@@ -1,7 +1,7 @@
 import type { UIMessage } from 'ai'
+import Image from 'next/image'
 import Link from 'next/link'
-import type { ReactNode } from 'react'
-import { BellIcon } from '@/components/ui/bell-icon'
+import { type ReactNode, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -189,7 +189,31 @@ function ToolStatus({ label, done }: { label: string; done?: boolean }) {
 }
 
 function BellAvatar() {
-  return <BellIcon className="mt-2.5 h-5 w-5 shrink-0 text-gray-400" />
+  return (
+    <Image
+      src="/images/bell.svg"
+      alt="Bell"
+      width={24}
+      height={24}
+      className="mt-2.5 shrink-0"
+    />
+  )
+}
+
+function UserAvatar({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) return null
+  return (
+    // biome-ignore lint/performance/noImgElement: gravatar external URL, no next/image optimization needed
+    <img
+      src={url}
+      alt=""
+      width={20}
+      height={20}
+      className="mt-2.5 h-5 w-5 shrink-0 rounded-full"
+      onError={() => setFailed(true)}
+    />
+  )
 }
 
 export function ThinkingIndicator() {
@@ -206,9 +230,11 @@ export function ThinkingIndicator() {
 export function ChatMessage({
   message,
   isStreaming,
+  userAvatarUrl,
 }: {
   message: UIMessage
   isStreaming: boolean
+  userAvatarUrl?: string | null
 }) {
   const isUser = message.role === 'user'
 
@@ -219,7 +245,12 @@ export function ChatMessage({
   }
 
   return (
-    <div className={cn('flex', isUser ? 'justify-end' : 'items-start gap-2.5')}>
+    <div
+      className={cn(
+        'flex',
+        isUser ? 'items-start justify-end gap-2.5' : 'items-start gap-2.5'
+      )}
+    >
       {!isUser && <BellAvatar />}
       <div
         className={cn(
@@ -305,6 +336,7 @@ export function ChatMessage({
           return null
         })}
       </div>
+      {isUser && userAvatarUrl && <UserAvatar url={userAvatarUrl} />}
     </div>
   )
 }

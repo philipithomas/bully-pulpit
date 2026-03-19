@@ -7,15 +7,15 @@ import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { ChatInput } from '@/components/chat/chat-input'
 import { ChatMessage, ThinkingIndicator } from '@/components/chat/chat-message'
-import { BellIcon } from '@/components/ui/bell-icon'
 import { useAuth } from '@/hooks/use-auth'
+import { gravatarUrl } from '@/lib/gravatar'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
 function WelcomeScreen({ userName }: { userName?: string | null }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <Image src="/images/bell-icon.svg" alt="Bell" width={48} height={48} />
+      <Image src="/images/bell.svg" alt="Bell" width={48} height={48} />
       <div>
         <p className="font-sans text-sm font-semibold text-gray-950">
           {userName ? `Hey ${userName}, I'm Bell.` : "Hey, I'm Bell."}
@@ -60,6 +60,10 @@ export function ChatSidebar() {
   const { user } = useAuth()
   const userRef = useRef(user)
   userRef.current = user
+  const userAvatar = useMemo(
+    () => (user?.email ? gravatarUrl(user.email, 40) : null),
+    [user?.email]
+  )
 
   const transport = useMemo(
     () =>
@@ -248,7 +252,7 @@ export function ChatSidebar() {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <div className="flex items-center gap-2">
-            <BellIcon className="h-5 w-5 text-gray-400" />
+            <Image src="/images/bell.svg" alt="Bell" width={20} height={20} />
             <span className="font-sans text-sm font-semibold text-gray-950">
               Bell
             </span>
@@ -300,6 +304,7 @@ export function ChatSidebar() {
                 <ChatMessage
                   key={message.id}
                   message={message}
+                  userAvatarUrl={userAvatar}
                   isStreaming={
                     isStreaming &&
                     message === messages[messages.length - 1] &&

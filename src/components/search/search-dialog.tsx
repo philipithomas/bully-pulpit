@@ -346,7 +346,7 @@ export function SearchDialog({
                   )}
                 >
                   <Image
-                    src="/images/bell-icon.svg"
+                    src="/images/bell.svg"
                     alt="Bell"
                     width={18}
                     height={18}
