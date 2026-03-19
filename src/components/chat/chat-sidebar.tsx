@@ -1,7 +1,7 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
-import { RotateCcw, X } from 'lucide-react'
+import { PanelRight, PanelRightClose, RotateCcw, X } from 'lucide-react'
 import Image from 'next/image'
 import { useCallback, useEffect, useRef } from 'react'
 import { ChatInput } from '@/components/chat/chat-input'
@@ -10,7 +10,17 @@ import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
 export function ChatSidebar() {
-  const { open, initialQuery, closeSidebar } = useChatSidebar()
+  const {
+    open,
+    pinned,
+    initialQuery,
+    savedMessages,
+    chatId,
+    closeSidebar,
+    togglePin,
+    saveMessages,
+    clearMessages,
+  } = useChatSidebar()
   const {
     messages,
     sendMessage,
@@ -19,10 +29,38 @@ export function ChatSidebar() {
     stop,
     error,
     regenerate,
-  } = useChat()
+  } = useChat({
+    id: chatId,
+    experimental_throttle: 50,
+    onFinish: () => {
+      // Save after each complete response — read latest from useChat
+      saveMessagesFromRef()
+    },
+  })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasSentInitialRef = useRef(false)
   const lastInitialQueryRef = useRef('')
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
+
+  const saveMessagesFromRef = useCallback(() => {
+    if (messagesRef.current.length > 0) {
+      saveMessages(messagesRef.current)
+    }
+  }, [saveMessages])
+
+  // Hydrate useChat from sessionStorage on mount (once).
+  // Uses refs so the effect deps stay empty without lying to the linter.
+  const savedMessagesRef = useRef(savedMessages)
+  const setMessagesRef = useRef(setMessages)
+  const hasHydratedRef = useRef(false)
+  useEffect(() => {
+    if (hasHydratedRef.current) return
+    hasHydratedRef.current = true
+    if (savedMessagesRef.current.length > 0) {
+      setMessagesRef.current(savedMessagesRef.current)
+    }
+  }, [])
 
   // Send initial query when sidebar opens with a query
   useEffect(() => {
@@ -59,21 +97,47 @@ export function ChatSidebar() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, closeSidebar])
 
-  // Lock body scroll on mobile when open
+  // Lock body scroll on mobile when open (not pinned)
   useEffect(() => {
-    if (!open) return
+    if (!open || pinned) return
     const isMobile = window.innerWidth < 640
     if (!isMobile) return
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = ''
     }
-  }, [open])
+  }, [open, pinned])
+
+  // Set/remove data-chat-pinned on body
+  useEffect(() => {
+    if (open && pinned) {
+      document.body.dataset.chatPinned = ''
+    } else {
+      delete document.body.dataset.chatPinned
+    }
+    return () => {
+      delete document.body.dataset.chatPinned
+    }
+  }, [open, pinned])
+
+  // Auto-unpin when viewport shrinks below lg
+  useEffect(() => {
+    if (!pinned) return
+    const mql = window.matchMedia('(min-width: 1024px)')
+    const handler = (e: MediaQueryListEvent) => {
+      if (!e.matches) {
+        useChatSidebar.getState().setPinned(false)
+      }
+    }
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [pinned])
 
   const handleNewConversation = useCallback(() => {
+    clearMessages()
     setMessages([])
     lastInitialQueryRef.current = ''
-  }, [setMessages])
+  }, [clearMessages, setMessages])
 
   const handleSend = useCallback(
     (text: string) => {
@@ -92,8 +156,8 @@ export function ChatSidebar() {
 
   return (
     <>
-      {/* Mobile backdrop */}
-      {open && (
+      {/* Mobile backdrop — hidden when pinned */}
+      {open && !pinned && (
         <div
           className="fixed inset-0 z-50 bg-black/50 sm:hidden"
           onClick={closeSidebar}
@@ -109,8 +173,9 @@ export function ChatSidebar() {
       {/* Sidebar panel */}
       <div
         className={cn(
-          'fixed top-0 right-0 z-50 flex h-full w-full flex-col bg-white shadow-xl transition-transform duration-300 sm:w-[420px]',
-          open ? 'translate-x-0' : 'translate-x-full'
+          'fixed top-0 right-0 z-50 flex h-full w-full flex-col bg-white transition-[transform,box-shadow] duration-300 sm:w-[420px]',
+          open ? 'translate-x-0' : 'translate-x-full',
+          pinned ? 'shadow-md border-l border-gray-100' : 'shadow-xl'
         )}
       >
         {/* Header */}
@@ -135,6 +200,18 @@ export function ChatSidebar() {
               aria-label="New conversation"
             >
               <RotateCcw className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={togglePin}
+              className="hidden rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600 lg:block"
+              aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+            >
+              {pinned ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRight className="h-4 w-4" />
+              )}
             </button>
             <button
               type="button"

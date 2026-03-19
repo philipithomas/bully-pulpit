@@ -489,3 +489,26 @@ body.dark-viewport header .btn-primary .btn-arrow {
 .medium-zoom-image--opened {
   z-index: 60;
 }
+
+/* ============================
+   Pinned chat sidebar layout
+   ============================ */
+
+#content,
+footer {
+  transition: margin-right 300ms ease;
+}
+
+@media (min-width: 1024px) {
+  body[data-chat-pinned] #content,
+  body[data-chat-pinned] footer {
+    margin-right: 420px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #content,
+  footer {
+    transition: none;
+  }
+}

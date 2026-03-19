@@ -3,8 +3,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { useChatSidebar } from '@/stores/chat-store'
 
-function renderInlineMarkdown(text: string) {
+function renderInlineMarkdown(text: string, onLocalLinkClick?: () => void) {
   // Split into segments: links, bold, italic, inline code
   const parts: ReactNode[] = []
   // Match: [text](url), **bold**, *italic*, `code`
@@ -33,6 +34,7 @@ function renderInlineMarkdown(text: string) {
             key={key}
             href={href}
             className="underline decoration-gray-300 underline-offset-2 transition-colors hover:decoration-current"
+            onClick={onLocalLinkClick}
           >
             {match[1]}
           </Link>
@@ -76,7 +78,7 @@ function renderInlineMarkdown(text: string) {
   return parts
 }
 
-function renderMarkdownBlock(text: string) {
+function renderMarkdownBlock(text: string, onLocalLinkClick?: () => void) {
   const lines = text.split('\n')
   const elements: ReactNode[] = []
   let i = 0
@@ -109,7 +111,7 @@ function renderMarkdownBlock(text: string) {
       }
       elements.push(
         <p key={i} className="mb-3 last:mb-0">
-          {renderInlineMarkdown(paraLines.join(' '))}
+          {renderInlineMarkdown(paraLines.join(' '), onLocalLinkClick)}
         </p>
       )
       continue
@@ -129,7 +131,7 @@ function renderMarkdownBlock(text: string) {
         <ul key={i} className="mb-3 list-disc pl-5 last:mb-0">
           {items.map((item) => (
             <li key={item} className="mb-1">
-              {renderInlineMarkdown(item)}
+              {renderInlineMarkdown(item, onLocalLinkClick)}
             </li>
           ))}
         </ul>
@@ -142,7 +144,7 @@ function renderMarkdownBlock(text: string) {
       const heading = line.replace(/^#{1,6}\s+/, '')
       elements.push(
         <p key={i} className="mb-2 font-sans font-semibold">
-          {renderInlineMarkdown(heading)}
+          {renderInlineMarkdown(heading, onLocalLinkClick)}
         </p>
       )
       i++
@@ -218,6 +220,12 @@ export function ChatMessage({
 }) {
   const isUser = message.role === 'user'
 
+  const handleLocalLinkClick = () => {
+    if (window.innerWidth >= 1024) {
+      useChatSidebar.getState().setPinned(true)
+    }
+  }
+
   return (
     <div className={cn('flex', isUser ? 'justify-end' : 'items-start gap-2.5')}>
       {!isUser && <BellAvatar />}
@@ -235,7 +243,7 @@ export function ChatMessage({
           if (part.type === 'text') {
             return (
               <div key={key}>
-                {renderMarkdownBlock(part.text)}
+                {renderMarkdownBlock(part.text, handleLocalLinkClick)}
                 {isStreaming &&
                   !isUser &&
                   i === message.parts.length - 1 &&
