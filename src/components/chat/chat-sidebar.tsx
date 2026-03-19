@@ -1,13 +1,48 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport } from 'ai'
 import { PanelRight, PanelRightClose, RotateCcw, X } from 'lucide-react'
 import Image from 'next/image'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { ChatInput } from '@/components/chat/chat-input'
 import { ChatMessage, ThinkingIndicator } from '@/components/chat/chat-message'
+import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
+
+function WelcomeScreen({ userName }: { userName?: string | null }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+      <Image src="/images/bell-icon.svg" alt="Bell" width={48} height={48} />
+      <div>
+        <p className="font-sans text-sm font-semibold text-gray-950">
+          {userName ? `Hey ${userName}.` : 'Hey there.'}
+        </p>
+        <p className="mt-1 font-serif text-sm text-gray-500">
+          I can search Philip's writing and answer questions about his essays,
+          projects, and ideas.
+        </p>
+      </div>
+      <div className="mt-2 flex flex-wrap justify-center gap-2">
+        {[
+          'What has Philip written about?',
+          'Latest posts',
+          'Tell me about this page',
+        ].map((q) => (
+          <button
+            key={q}
+            type="button"
+            data-suggestion={q}
+            className="rounded-full border border-gray-100 px-3 py-1.5 font-sans text-xs text-gray-600 transition-colors hover:border-gray-200 hover:text-gray-950"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export function ChatSidebar() {
   const {
@@ -21,6 +56,25 @@ export function ChatSidebar() {
     saveMessages,
     clearMessages,
   } = useChatSidebar()
+  const { user } = useAuth()
+  const userRef = useRef(user)
+  userRef.current = user
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: '/api/chat',
+        body: () => ({
+          pageContext: {
+            path: window.location.pathname,
+            title: document.title,
+          },
+          userName: userRef.current?.name || userRef.current?.email || null,
+        }),
+      }),
+    []
+  )
+
   const {
     messages,
     sendMessage,
@@ -31,9 +85,9 @@ export function ChatSidebar() {
     regenerate,
   } = useChat({
     id: chatId,
+    transport,
     experimental_throttle: 50,
     onFinish: () => {
-      // Save after each complete response — read latest from useChat
       saveMessagesFromRef()
     },
   })
@@ -153,6 +207,18 @@ export function ChatSidebar() {
   const isStreaming = status === 'streaming'
   const isSubmitted = status === 'submitted'
   const isError = status === 'error'
+  const showWelcome = messages.length === 0 && !isSubmitted
+
+  // Handle suggestion chip clicks via event delegation
+  const handleMessagesClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('[data-suggestion]')
+      if (target) {
+        sendMessage({ text: target.getAttribute('data-suggestion') ?? '' })
+      }
+    },
+    [sendMessage]
+  )
 
   return (
     <>
@@ -224,41 +290,51 @@ export function ChatSidebar() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <div className="flex flex-col gap-4">
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                message={message}
-                isStreaming={
-                  isStreaming &&
-                  message === messages[messages.length - 1] &&
-                  message.role === 'assistant'
-                }
-              />
-            ))}
+        <div
+          className="flex flex-1 flex-col overflow-y-auto px-4 py-4"
+          onClick={handleMessagesClick}
+          onKeyDown={() => {}}
+          role="presentation"
+        >
+          {showWelcome ? (
+            <WelcomeScreen userName={user?.name} />
+          ) : (
+            <div className="flex flex-col gap-4">
+              {messages.map((message) => (
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  isStreaming={
+                    isStreaming &&
+                    message === messages[messages.length - 1] &&
+                    message.role === 'assistant'
+                  }
+                />
+              ))}
 
-            {/* Thinking indicator before streaming starts */}
-            {isSubmitted && <ThinkingIndicator />}
+              {/* Thinking indicator before streaming starts */}
+              {isSubmitted && <ThinkingIndicator />}
 
-            {/* Error message */}
-            {isError && error && (
-              <div className="flex justify-start">
-                <div className="max-w-[85%] rounded-lg px-3.5 py-2.5 font-sans text-sm text-red-500">
-                  <p className="mb-2">
-                    {error.message || 'Something went wrong. Please try again.'}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleRetry}
-                    className="text-xs text-red-400 underline underline-offset-2 transition-colors hover:text-red-600"
-                  >
-                    Try again
-                  </button>
+              {/* Error message */}
+              {isError && error && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] rounded-lg px-3.5 py-2.5 font-sans text-sm text-red-500">
+                    <p className="mb-2">
+                      {error.message ||
+                        'Something went wrong. Please try again.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleRetry}
+                      className="text-xs text-red-400 underline underline-offset-2 transition-colors hover:text-red-600"
+                    >
+                      Try again
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 

@@ -1,4 +1,9 @@
-export function getSystemPrompt() {
+interface SystemPromptOptions {
+  pageContext?: { path?: string; title?: string }
+  userName?: string | null
+}
+
+export function getSystemPrompt(options?: SystemPromptOptions) {
   const now = new Date()
   const dateTime = now.toLocaleString('en-US', {
     timeZone: 'America/Los_Angeles',
@@ -11,7 +16,8 @@ export function getSystemPrompt() {
     timeZoneName: 'short',
   })
 
-  return `You are Bell, the deep research agent on philipithomas.com, the website of Philip I. Thomas. You are not made by OpenAI. You are Bell. You can search and read the full archive of posts and essays to give thorough, well-sourced answers.
+  const parts = [
+    `You are Bell, the deep research agent on philipithomas.com, the website of Philip I. Thomas. You are not made by OpenAI. You are Bell. You can search and read the full archive of posts and essays to give thorough, well-sourced answers.
 
 Current date and time: ${dateTime}
 
@@ -53,5 +59,21 @@ Be matter of fact. Write plainly and directly.
 - No filler phrases ("It is worth noting", "Interestingly", "In conclusion")
 - No flattery or editorializing about the content
 
-If the search returns no relevant results, say so honestly rather than speculating about content that may not exist on the blog.`
+If the search returns no relevant results, say so honestly rather than speculating about content that may not exist on the blog.`,
+  ]
+
+  if (options?.userName) {
+    parts.push(
+      `\n## User\n\nThe current user is ${options.userName}. You may address them by name if appropriate.`
+    )
+  }
+
+  if (options?.pageContext?.path && options.pageContext.path !== '/') {
+    const page = options.pageContext
+    parts.push(
+      `\n## Current page\n\nThe user is currently viewing: ${page.path}${page.title ? ` ("${page.title}")` : ''}. If they ask about "this page" or "this post", they mean the page they are on. Use fetchPost with the slug from the path if you need to read it.`
+    )
+  }
+
+  return parts.join('\n')
 }

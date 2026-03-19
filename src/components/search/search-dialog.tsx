@@ -346,15 +346,13 @@ export function SearchDialog({
                   )}
                 >
                   <Image
-                    src="/images/bell.jpg"
+                    src="/images/bell-icon.svg"
                     alt="Bell"
                     width={18}
                     height={18}
-                    className="shrink-0 rounded-full"
+                    className="shrink-0"
                   />
-                  <span className="text-gray-950">
-                    Ask Bell about &ldquo;{query}&rdquo;
-                  </span>
+                  <span className="text-gray-950">Ask Bell: {query}</span>
                 </button>
               </div>
             )}

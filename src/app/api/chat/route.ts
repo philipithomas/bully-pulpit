@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { messages } = await request.json()
+  const { messages, pageContext, userName } = await request.json()
 
   const result = streamText({
     model: gateway('openai/gpt-5.4-mini'),
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         reasoningEffort: 'low',
       },
     },
-    system: getSystemPrompt(),
+    system: getSystemPrompt({ pageContext, userName }),
     messages: await convertToModelMessages(messages),
     tools: { searchPosts, fetchPost },
     stopWhen: stepCountIs(7),

@@ -191,11 +191,11 @@ function ToolStatus({ label, done }: { label: string; done?: boolean }) {
 function BellAvatar() {
   return (
     <Image
-      src="/images/bell.jpg"
+      src="/images/bell-icon.svg"
       alt="Bell"
       width={24}
       height={24}
-      className="mt-2.5 shrink-0 rounded-full"
+      className="mt-2.5 shrink-0"
     />
   )
 }
