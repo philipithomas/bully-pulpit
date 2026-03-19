@@ -121,7 +121,6 @@ export default async function HomePage() {
           {/* Subscribe (hidden when logged in) */}
           <InlineSignupForm
             hideWhenLoggedIn
-            autoFocus
             headerText={
               subscriberCount > 0
                 ? `Join ${formatMemberCount(subscriberCount)} other subscribers:`
