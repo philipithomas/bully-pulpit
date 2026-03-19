@@ -72,8 +72,9 @@ If the search returns no relevant results, say so honestly rather than speculati
 
   if (options?.pageContext?.path && options.pageContext.path !== '/') {
     const page = options.pageContext
+    const slug = page.path!.replace(/^\//, '').replace(/\/$/, '')
     parts.push(
-      `\n## Current page\n\nThe user is currently viewing: ${page.path}${page.title ? ` ("${page.title}")` : ''}. If they ask about "this page" or "this post", they mean the page they are on. Use fetchPost with the slug from the path if you need to read it.`
+      `\n## Current page\n\nThe user is currently viewing: ${page.path}${page.title ? ` ("${page.title}")` : ''}. If they ask about "this page", "the current page", or "this post", use fetchPost with slug "${slug}" to read it, then answer based on the content.`
     )
   }
 
