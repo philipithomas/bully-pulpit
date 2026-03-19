@@ -70,12 +70,18 @@ If the search returns no relevant results, say so honestly rather than speculati
     )
   }
 
-  if (options?.pageContext?.path && options.pageContext.path !== '/') {
+  if (options?.pageContext?.path) {
     const page = options.pageContext
-    const slug = page.path!.replace(/^\//, '').replace(/\/$/, '')
-    parts.push(
-      `\n## Current page\n\nThe user is currently viewing: ${page.path}${page.title ? ` ("${page.title}")` : ''}. If they ask about "this page", "the current page", or "this post", use fetchPost with slug "${slug}" to read it, then answer based on the content.`
-    )
+    if (page.path === '/') {
+      parts.push(
+        `\n## Current page\n\nThe user is on the homepage. If they ask about "this page" or "the current page", describe the site: it is philipithomas.com, the personal website and blog of Philip I. Thomas. It features three newsletters (Contraption, Workshop, Postcard) and an archive of essays. Search broadly to give them an overview.`
+      )
+    } else {
+      const slug = page.path!.replace(/^\//, '').replace(/\/$/, '')
+      parts.push(
+        `\n## Current page\n\nThe user is currently viewing: ${page.path}${page.title ? ` ("${page.title}")` : ''}. If they ask about "this page", "the current page", or "this post", use fetchPost with slug "${slug}" to read it, then answer based on the content.`
+      )
+    }
   }
 
   return parts.join('\n')
