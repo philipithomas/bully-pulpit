@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { ChatInput } from '@/components/chat/chat-input'
 import { ChatMessage, ThinkingIndicator } from '@/components/chat/chat-message'
+import { BellIcon } from '@/components/ui/bell-icon'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
@@ -247,12 +248,7 @@ export function ChatSidebar() {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Image
-              src="/images/bell-icon.svg"
-              alt="Bell"
-              width={20}
-              height={20}
-            />
+            <BellIcon className="h-5 w-5 text-gray-400" />
             <span className="font-sans text-sm font-semibold text-gray-950">
               Bell
             </span>
