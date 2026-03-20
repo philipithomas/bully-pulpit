@@ -27,7 +27,7 @@ export function Plausible() {
   return (
     <>
       <Script
-        src="https://telegraph.contraption.co/js/pa-W07YPeF8qKtG6CodeoMRX.js"
+        src="https://telegraph.contraption.co/js/pa-pZO9UzG1UDlOANf7xV1th.js"
         strategy="afterInteractive"
       />
       {/* biome-ignore lint/correctness/useUniqueElementIds: single instance in root layout */}

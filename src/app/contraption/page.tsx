@@ -40,6 +40,13 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
         >
           {post.frontmatter.title}
         </h2>
+        {(post.frontmatter.subtitle || post.frontmatter.description) && (
+          <p
+            className={`font-serif text-gray-600 mt-1 ${large ? 'text-base' : 'text-sm'}`}
+          >
+            {post.frontmatter.subtitle || post.frontmatter.description}
+          </p>
+        )}
       </div>
       <span className="absolute bottom-4 right-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         <ArrowIcon className="w-5 h-5" />
