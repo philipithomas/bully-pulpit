@@ -6,10 +6,10 @@ import type { Post } from '@/lib/content/types'
 
 export function PostCard({ post }: { post: Post }) {
   return (
-    <article className="group">
-      <Link href={`/${post.slug}`} className="block">
+    <article className="group bg-offwhite-light border border-gray-100 rounded-sm overflow-hidden h-full">
+      <Link href={`/${post.slug}`} className="block h-full">
         {post.frontmatter.coverImage && (
-          <div className="relative overflow-hidden rounded-sm bg-offwhite-dark mb-4 aspect-[3/2]">
+          <div className="relative overflow-hidden aspect-[3/2]">
             <Image
               src={post.frontmatter.coverImage}
               alt={post.frontmatter.coverImageAlt ?? post.frontmatter.title}
@@ -19,27 +19,19 @@ export function PostCard({ post }: { post: Post }) {
             />
           </div>
         )}
-        <div className="flex items-center justify-between">
+        <div className="p-4 md:p-5">
           <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
             {format(new Date(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
           </time>
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity text-forest">
-            <ArrowIcon />
-          </span>
+          <h2 className="text-lg font-semibold text-gray-950 group-hover:text-forest transition-colors mt-1">
+            {post.frontmatter.title}
+          </h2>
+          {(post.frontmatter.subtitle || post.frontmatter.description) && (
+            <p className="font-serif text-sm text-gray-600 mt-1">
+              {post.frontmatter.subtitle || post.frontmatter.description}
+            </p>
+          )}
         </div>
-        <h2 className="text-lg font-semibold text-gray-950 group-hover:text-forest transition-colors mt-2">
-          {post.frontmatter.title}
-        </h2>
-        {post.frontmatter.subtitle && (
-          <p className="font-serif text-sm text-gray-600 mt-1">
-            {post.frontmatter.subtitle}
-          </p>
-        )}
-        {
-          <p className="font-serif text-sm text-gray-600 line-clamp-3 mt-2">
-            {post.excerpt}
-          </p>
-        }
       </Link>
     </article>
   )
