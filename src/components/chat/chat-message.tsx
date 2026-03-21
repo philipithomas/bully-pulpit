@@ -1,7 +1,6 @@
 import type { UIMessage } from 'ai'
-import Image from 'next/image'
 import Link from 'next/link'
-import { type ComponentPropsWithoutRef, useState } from 'react'
+import type { ComponentPropsWithoutRef } from 'react'
 import Markdown from 'react-markdown'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
@@ -40,34 +39,6 @@ function ToolStatus({ label, done }: { label: string; done?: boolean }) {
       )}
       {label}
     </div>
-  )
-}
-
-function BellAvatar() {
-  return (
-    <Image
-      src="/images/bell.svg"
-      alt="Bell"
-      width={24}
-      height={24}
-      className="mt-2.5 shrink-0"
-    />
-  )
-}
-
-function UserAvatar({ url }: { url: string }) {
-  const [failed, setFailed] = useState(false)
-  if (failed) return null
-  return (
-    // biome-ignore lint/performance/noImgElement: gravatar external URL, no next/image optimization needed
-    <img
-      src={url}
-      alt=""
-      width={20}
-      height={20}
-      className="mt-2.5 h-5 w-5 shrink-0 rounded-full"
-      onError={() => setFailed(true)}
-    />
   )
 }
 
@@ -156,8 +127,7 @@ function ChatMarkdown({
 
 export function ThinkingIndicator() {
   return (
-    <div className="flex items-start gap-2.5">
-      <BellAvatar />
+    <div className="flex items-start">
       <div className="rounded-lg px-1 py-2.5">
         <PulsingDots />
       </div>
@@ -168,11 +138,9 @@ export function ThinkingIndicator() {
 export function ChatMessage({
   message,
   isStreaming,
-  userAvatarUrl,
 }: {
   message: UIMessage
   isStreaming: boolean
-  userAvatarUrl?: string | null
 }) {
   const isUser = message.role === 'user'
 
@@ -183,13 +151,7 @@ export function ChatMessage({
   }
 
   return (
-    <div
-      className={cn(
-        'flex',
-        isUser ? 'items-start justify-end gap-2.5' : 'items-start gap-2.5'
-      )}
-    >
-      {!isUser && <BellAvatar />}
+    <div className={cn('flex', isUser ? 'justify-end' : '')}>
       <div
         className={cn(
           'min-w-0 max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
@@ -277,7 +239,6 @@ export function ChatMessage({
           return null
         })}
       </div>
-      {isUser && userAvatarUrl && <UserAvatar url={userAvatarUrl} />}
     </div>
   )
 }

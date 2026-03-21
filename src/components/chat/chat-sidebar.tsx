@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { ChatInput } from '@/components/chat/chat-input'
 import { ChatMessage, ThinkingIndicator } from '@/components/chat/chat-message'
 import { useAuth } from '@/hooks/use-auth'
-import { gravatarUrl } from '@/lib/gravatar'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -60,11 +59,6 @@ export function ChatSidebar() {
   const { user } = useAuth()
   const userRef = useRef(user)
   userRef.current = user
-  const userAvatar = useMemo(
-    () => (user?.email ? gravatarUrl(user.email, 40) : null),
-    [user?.email]
-  )
-
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -304,7 +298,6 @@ export function ChatSidebar() {
                 <ChatMessage
                   key={message.id}
                   message={message}
-                  userAvatarUrl={userAvatar}
                   isStreaming={
                     isStreaming &&
                     message === messages[messages.length - 1] &&
