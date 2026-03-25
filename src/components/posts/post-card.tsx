@@ -1,7 +1,6 @@
 import { format } from 'date-fns'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowIcon } from '@/components/ui/arrow-icon'
 import type { Post } from '@/lib/content/types'
 
 export function PostCard({ post }: { post: Post }) {

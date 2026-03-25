@@ -1,5 +1,4 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 
 const STRIPE_CHECKOUT_USA = 'https://buy.stripe.com/00w4gB7P21zn0qVae19oc00'
