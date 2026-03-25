@@ -32,10 +32,6 @@ export function ImageZoom() {
         zoomed.src = fullSrc
         zoomed.removeAttribute('srcset')
         zoomed.removeAttribute('sizes')
-        zoomed.removeAttribute('width')
-        zoomed.removeAttribute('height')
-        zoomed.style.width = 'auto'
-        zoomed.style.height = 'auto'
       }
       hd.src = fullSrc
     })
