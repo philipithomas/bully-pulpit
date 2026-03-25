@@ -1,7 +1,6 @@
-import { waitUntil } from '@vercel/functions'
 import { K, Knn, Search } from 'chromadb'
 import type { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import { embedSparse, getClient, getPostsSchema } from '@/lib/chroma'
 
 interface SearchMatch {
@@ -115,7 +114,7 @@ export async function GET(request: NextRequest) {
     const topMatch = results[0] ?? null
 
     // Log after response — waitUntil keeps the function alive on Vercel
-    waitUntil(
+    after(() =>
       logSearch({
         searchId,
         sessionId,

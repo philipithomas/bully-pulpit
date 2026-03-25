@@ -1,4 +1,3 @@
-import { withBotId } from 'botid/next/config'
 import type { NextConfig } from 'next'
 import { getRedirects } from '@/lib/redirects'
 
@@ -25,6 +24,7 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   images: {
     formats: ['image/avif', 'image/webp'],
   },
@@ -49,4 +49,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withBotId(nextConfig)
+export default nextConfig

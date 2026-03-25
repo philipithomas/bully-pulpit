@@ -1,7 +1,6 @@
 import type { GatewayLanguageModelOptions } from '@ai-sdk/gateway'
 import { gateway } from '@ai-sdk/gateway'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
-import { checkBotId } from 'botid/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
@@ -10,11 +9,6 @@ import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
-  const { isBot } = await checkBotId()
-  if (isBot) {
-    return NextResponse.json({ error: 'Request blocked.' }, { status: 403 })
-  }
-
   const headersList = await headers()
   const ip =
     headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'

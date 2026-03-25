@@ -2,7 +2,7 @@ function requireEnv(name: string): string {
   const value = process.env[name]
   if (!value) {
     throw new Error(
-      `Missing ${name}. Copy .env.example to .env.local or run \`vercel pull\`.`
+      `Missing ${name}. Copy .env.example to .env.local and fill in values.`
     )
   }
   return value
