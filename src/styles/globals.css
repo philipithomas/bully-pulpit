@@ -482,12 +482,33 @@ body.dark-viewport header .btn-primary .btn-arrow {
 }
 
 /* ============================
-   Medium-zoom overlay
+   Image zoom overlay
    ============================ */
 
-.medium-zoom-overlay,
-.medium-zoom-image--opened {
-  z-index: 60;
+.image-zoom-opening {
+  animation: image-zoom-fade-in 200ms ease-out;
+}
+
+.image-zoom-closing {
+  animation: image-zoom-fade-out 150ms ease-in forwards;
+}
+
+@keyframes image-zoom-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes image-zoom-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* ============================
