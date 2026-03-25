@@ -1,6 +1,6 @@
 # bully-pulpit
 
-Personal website and blog for philipithomas.com. Next.js with MDX content.
+Personal website and blog for philipithomas.com. Next.js with MDX content. Self-hosted (not on Vercel) — do not rely on any Vercel-specific features (e.g. Vercel Analytics, Edge Middleware, Image Optimization API, `@vercel/*` packages, `vercel.json` config).
 
 ## Development
 
