@@ -142,7 +142,7 @@ export default async function SlugPage({ params }: Props) {
               height={post?.coverDimensions?.height ?? 640}
               data-zoomable=""
               {...(post?.fullCoverImage
-                ? { 'data-zoom-src': post.fullCoverImage }
+                ? { 'data-full-src': post.fullCoverImage }
                 : {})}
               className="w-full cursor-zoom-in"
               priority

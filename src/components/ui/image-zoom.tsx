@@ -14,19 +14,30 @@ export function ImageZoom() {
       margin: 24,
     })
 
-    // When zooming with data-zoom-src, the HD image may have different
-    // dimensions than the thumbnail. Remove explicit width/height so the
-    // zoomed image renders at its natural aspect ratio.
-    zoom.on('open', () => {
-      const zoomed = document.querySelector(
-        '.medium-zoom-image--opened'
-      ) as HTMLImageElement | null
-      if (zoomed?.dataset.zoomSrc) {
+    // After zoom animation completes, swap in the full-res image
+    // without blocking the initial zoom. We use data-full-src instead
+    // of data-zoom-src so medium-zoom doesn't block the animation
+    // waiting for a multi-MB download.
+    zoom.on('opened', () => {
+      const original = zoom.getZoomedImage() as HTMLImageElement | null
+      const fullSrc = original?.dataset.fullSrc
+      if (!fullSrc) return
+
+      const hd = new Image()
+      hd.onload = () => {
+        const zoomed = document.querySelector(
+          '.medium-zoom-image--opened'
+        ) as HTMLImageElement | null
+        if (!zoomed) return
+        zoomed.src = fullSrc
+        zoomed.removeAttribute('srcset')
+        zoomed.removeAttribute('sizes')
         zoomed.removeAttribute('width')
         zoomed.removeAttribute('height')
         zoomed.style.width = 'auto'
         zoomed.style.height = 'auto'
       }
+      hd.src = fullSrc
     })
 
     return () => {

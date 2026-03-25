@@ -25,7 +25,7 @@ export default async function HomePage() {
             sizes="448px"
             className="w-full max-w-md cursor-zoom-in"
             data-zoomable=""
-            data-zoom-src="/images/full/portrait.jpg"
+            data-full-src="/images/full/portrait.jpg"
             priority
           />
         </div>
@@ -116,7 +116,7 @@ export default async function HomePage() {
               sizes="100vw"
               className="w-full cursor-zoom-in"
               data-zoomable=""
-              data-zoom-src="/images/full/philip-horizontal.jpg"
+              data-full-src="/images/full/philip-horizontal.jpg"
               priority
             />
           </div>

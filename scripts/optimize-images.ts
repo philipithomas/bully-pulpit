@@ -12,6 +12,7 @@ const MAX_WEB_WIDTH = 2560
 const EMAIL_COVER_WIDTH = 600
 const EMAIL_THUMB_WIDTH = 200
 const JPEG_QUALITY = 85
+const FULL_QUALITY = 85
 const EMAIL_QUALITY = 80
 
 interface ImageEntry {
@@ -63,8 +64,12 @@ async function optimizeImage(entry: ImageEntry) {
     ensureDir(path.dirname(fullDest))
 
     if (!fs.existsSync(fullDest)) {
-      fs.copyFileSync(entry.src, fullDest)
-      console.log(`  Preserved original -> images/full/${entry.rel}`)
+      // Recompress at full resolution (keeps dimensions, reduces raw camera JPEG bloat)
+      await sharp(entry.src).jpeg({ quality: FULL_QUALITY }).toFile(fullDest)
+      const fullSize = fs.statSync(fullDest).size
+      console.log(
+        `  Preserved full-res -> images/full/${entry.rel} (${fmt(fullSize)})`
+      )
     }
 
     await sharp(entry.src)
