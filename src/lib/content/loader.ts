@@ -14,6 +14,20 @@ const PUBLIC_DIR = path.join(process.cwd(), 'public')
 
 const dimensionsCache = new Map<string, ImageDimensions>()
 
+function getFullCoverImage(coverImage: string | undefined): string | undefined {
+  if (!coverImage) return undefined
+  const fullPath = path.join(
+    PUBLIC_DIR,
+    'images',
+    'full',
+    coverImage.replace(/^\/images\//, '')
+  )
+  if (fs.existsSync(fullPath)) {
+    return `/images/full/${coverImage.replace(/^\/images\//, '')}`
+  }
+  return undefined
+}
+
 function getCoverDimensions(
   coverImage: string | undefined
 ): ImageDimensions | undefined {
@@ -112,6 +126,7 @@ export function getPostsByNewsletter(newsletter: Newsletter): Post[] {
         content,
         excerpt: parsed.data.description ?? extractExcerpt(content),
         coverDimensions: getCoverDimensions(parsed.data.coverImage),
+        fullCoverImage: getFullCoverImage(parsed.data.coverImage),
       } as Post
     })
     .filter((p): p is Post => p !== null)

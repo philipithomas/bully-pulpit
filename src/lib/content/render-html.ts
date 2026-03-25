@@ -1,3 +1,4 @@
+import path from 'node:path'
 import rehypeSanitize from 'rehype-sanitize'
 import rehypeStringify from 'rehype-stringify'
 import remarkGfm from 'remark-gfm'
@@ -5,6 +6,16 @@ import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import type { Post } from '@/lib/content/types'
+
+function toEmailImagePath(imagePath: string): string {
+  const basename = path.basename(imagePath)
+  return `/images/email/covers/${basename}`
+}
+
+function toEmailThumbPath(imagePath: string): string {
+  const basename = path.basename(imagePath)
+  return `/images/email/thumbnails/${basename}`
+}
 
 export async function renderMarkdownToHtml(content: string): Promise<string> {
   const result = await unified()
@@ -44,11 +55,11 @@ export function renderEmailHeaderHtml(
   html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: #625e58; text-align: center; margin: 0 0 24px;"><a href="${siteUrl}" style="color: #625e58; text-decoration: none;">Philip I. Thomas</a></p>`
 
   if (coverImage) {
-    const imgUrl = coverImage.startsWith('http')
+    const emailPath = coverImage.startsWith('http')
       ? coverImage
-      : `${siteUrl}${coverImage}`
+      : `${siteUrl}${toEmailImagePath(coverImage)}`
     const alt = coverImageAlt ?? title
-    html += `<img src="${imgUrl}" alt="${alt}" style="width: 100%; max-width: 100%; height: auto; display: block; margin: 0 0 24px;">`
+    html += `<img src="${emailPath}" alt="${alt}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; margin: 0 0 24px;">`
   }
 
   html += `<div style="font-size: 1px; line-height: 24px; height: 24px;">&nbsp;</div>`
@@ -89,7 +100,7 @@ export function renderRelatedPostsHtml(posts: Post[], siteUrl: string): string {
       const thumbnail = post.frontmatter.coverImage
         ? `<td width="100" style="padding-left: 16px; vertical-align: top;">
             <a href="${url}">
-              <img src="${siteUrl}${post.frontmatter.coverImage}" alt="${post.frontmatter.coverImageAlt ?? post.frontmatter.title}" width="100" height="56" style="display: block; width: 100px; height: 56px;" />
+              <img src="${siteUrl}${toEmailThumbPath(post.frontmatter.coverImage)}" alt="${post.frontmatter.coverImageAlt ?? post.frontmatter.title}" width="100" height="56" style="display: block; width: 100px; height: 56px;" />
             </a>
           </td>`
         : `<td width="100" style="padding-left: 16px; vertical-align: top;">

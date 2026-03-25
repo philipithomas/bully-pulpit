@@ -12,6 +12,7 @@
     "chroma:sync": "tsx --env-file-if-exists=.env scripts/sync-chroma.ts",
     "chroma:related": "tsx --env-file-if-exists=.env scripts/compute-related.ts",
     "summaries:generate": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/generate-summaries.ts",
+    "images:optimize": "tsx scripts/optimize-images.ts",
     "prepare": "husky"
   },
   "lint-staged": {

@@ -33,6 +33,7 @@ export interface Post {
   content: string
   excerpt: string
   coverDimensions?: ImageDimensions
+  fullCoverImage?: string
 }
 
 export interface Page {

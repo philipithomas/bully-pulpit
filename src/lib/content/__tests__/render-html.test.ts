@@ -33,20 +33,21 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).not.toContain('A subtitle')
   })
 
-  it('renders cover image with absolute URL for relative path', () => {
+  it('renders cover image with email-optimized URL for relative path', () => {
     const html = renderEmailHeaderHtml(
       'My Post',
       siteUrl,
       'my-post',
       null,
-      '/images/cover.jpg',
+      '/images/covers/cover.jpg',
       'Cover alt'
     )
     expect(html).toContain(
-      'src="https://www.philipithomas.com/images/cover.jpg"'
+      'src="https://www.philipithomas.com/images/email/covers/cover.jpg"'
     )
     expect(html).toContain('alt="Cover alt"')
-    expect(html).toContain('max-width: 100%')
+    expect(html).toContain('width="600"')
+    expect(html).toContain('max-width: 600px')
   })
 
   it('renders cover image with absolute URL as-is', () => {
@@ -66,7 +67,7 @@ describe('renderEmailHeaderHtml', () => {
       siteUrl,
       'my-post',
       null,
-      '/images/cover.jpg'
+      '/images/covers/cover.jpg'
     )
     expect(html).toContain('alt="My Post"')
   })
@@ -136,7 +137,7 @@ describe('renderEmailHeaderHtml', () => {
       siteUrl,
       'full-post',
       'The subtitle',
-      '/images/hero.jpg',
+      '/images/covers/hero.jpg',
       'Hero image',
       '2025-03-01'
     )
@@ -145,7 +146,7 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('The subtitle</p>')
     expect(html).toContain('Philip I. Thomas</a>')
     expect(html).toContain(
-      'src="https://www.philipithomas.com/images/hero.jpg"'
+      'src="https://www.philipithomas.com/images/email/covers/hero.jpg"'
     )
     expect(html).toContain('alt="Hero image"')
   })
