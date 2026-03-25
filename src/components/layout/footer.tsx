@@ -33,7 +33,13 @@ export function Footer() {
               Postcard
             </Link>
             <Link href="/terms" className="hover:text-white transition-colors">
-              Policies
+              Terms
+            </Link>
+            <Link
+              href="/privacy"
+              className="hover:text-white transition-colors"
+            >
+              Privacy
             </Link>
             <Link
               href="/colophon"
