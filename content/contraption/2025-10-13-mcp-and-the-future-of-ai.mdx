@@ -3,6 +3,7 @@ title: "MCP and the future of AI"
 description: "Toolmaking for LLMs"
 publishedAt: "2025-10-13"
 coverImage: "/images/covers/mcp-and-the-future-of-ai-cover.jpg"
+coverImageAlt: "Franklin Avenue Shuttle in NYC"
 ---
 
 Riding the train home from work, I watched the person in front of me open ChatGPT and type “90 degrees but make it a symbol,” then copy “90°” into their TikTok post. For many people, AI is a better search - and it excels at that. But as a software engineer, I’ve seen what AI is truly capable of. That day, I opened [Codex](https://openai.com/codex/)[\[1\]](#fn1) and asked it to fix an error in our software. It connected to [Honeycomb MCP](https://docs.honeycomb.io/integrations/mcp/) to retrieve the error trace, identified the library causing the problem, researched how the library worked using [Package Search MCP](https://trychroma.com/package-search), wrote a failing test, edited the code to fix the issue, committed the change, and opened a pull request with [GitHub MCP](https://github.com/github/github-mcp-server) - all with minimal intervention. AI becomes autonomous when it has access to [tools](/archetypes-of-llm-apps), such as editing files or searching the internet. But getting work done requires AI to connect to the apps we use for work. Fortunately, a distributed ecosystem of “apps for AI” is emerging in the form of Model Context Protocol (MCP) servers that let AI interact with the services we use day to day.

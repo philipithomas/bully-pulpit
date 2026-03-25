@@ -97,8 +97,9 @@ export function getPostsByNewsletter(newsletter: Newsletter): Post[] {
       const parsed = frontmatterSchema.safeParse(data)
 
       if (!parsed.success) {
-        console.warn(`Invalid frontmatter in ${filename}:`, parsed.error)
-        return null
+        throw new Error(
+          `Invalid frontmatter in ${filename}: ${parsed.error.message}`
+        )
       }
 
       if (parsed.data.draft) return null
@@ -151,7 +152,11 @@ export function getPages(): Page[] {
       const { data, content } = matter(raw)
       const parsed = frontmatterSchema.safeParse(data)
 
-      if (!parsed.success) return null
+      if (!parsed.success) {
+        throw new Error(
+          `Invalid frontmatter in ${filename}: ${parsed.error.message}`
+        )
+      }
       if (parsed.data.draft) return null
 
       return {
