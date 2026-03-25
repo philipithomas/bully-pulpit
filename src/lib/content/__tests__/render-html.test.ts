@@ -1,7 +1,11 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { getAllPosts } from '@/lib/content/loader'
 import {
   markdownToPlaintext,
   renderEmailHeaderHtml,
+  renderRelatedPostsHtml,
 } from '@/lib/content/render-html'
 
 describe('renderEmailHeaderHtml', () => {
@@ -149,6 +153,81 @@ describe('renderEmailHeaderHtml', () => {
       'src="https://www.philipithomas.com/images/email/covers/hero.jpg"'
     )
     expect(html).toContain('alt="Hero image"')
+  })
+})
+
+const EMAIL_COVERS_DIR = path.join(process.cwd(), 'public/images/email/covers')
+const EMAIL_THUMBS_DIR = path.join(
+  process.cwd(),
+  'public/images/email/thumbnails'
+)
+const MAX_EMAIL_COVER_SIZE = 110 * 1024 // 110KB
+const MAX_EMAIL_THUMB_SIZE = 15 * 1024 // 15KB
+
+describe('email image variants', () => {
+  const posts = getAllPosts()
+  const postsWithCovers = posts.filter((p) => p.frontmatter.coverImage)
+
+  it('every cover image has an email cover variant', () => {
+    for (const post of postsWithCovers) {
+      const basename = path.basename(post.frontmatter.coverImage!)
+      const emailPath = path.join(EMAIL_COVERS_DIR, basename)
+      expect(
+        fs.existsSync(emailPath),
+        `Missing email cover for ${post.slug}: ${emailPath}`
+      ).toBe(true)
+    }
+  })
+
+  it('every cover image has an email thumbnail variant', () => {
+    for (const post of postsWithCovers) {
+      const basename = path.basename(post.frontmatter.coverImage!)
+      const thumbPath = path.join(EMAIL_THUMBS_DIR, basename)
+      expect(
+        fs.existsSync(thumbPath),
+        `Missing email thumbnail for ${post.slug}: ${thumbPath}`
+      ).toBe(true)
+    }
+  })
+
+  it(`email cover variants are under ${MAX_EMAIL_COVER_SIZE / 1024}KB`, () => {
+    for (const post of postsWithCovers) {
+      const basename = path.basename(post.frontmatter.coverImage!)
+      const emailPath = path.join(EMAIL_COVERS_DIR, basename)
+      if (!fs.existsSync(emailPath)) continue
+      const size = fs.statSync(emailPath).size
+      expect(
+        size,
+        `Email cover too large for ${post.slug}: ${(size / 1024).toFixed(0)}KB > ${MAX_EMAIL_COVER_SIZE / 1024}KB`
+      ).toBeLessThanOrEqual(MAX_EMAIL_COVER_SIZE)
+    }
+  })
+
+  it(`email thumbnail variants are under ${MAX_EMAIL_THUMB_SIZE / 1024}KB`, () => {
+    for (const post of postsWithCovers) {
+      const basename = path.basename(post.frontmatter.coverImage!)
+      const thumbPath = path.join(EMAIL_THUMBS_DIR, basename)
+      if (!fs.existsSync(thumbPath)) continue
+      const size = fs.statSync(thumbPath).size
+      expect(
+        size,
+        `Email thumbnail too large for ${post.slug}: ${(size / 1024).toFixed(0)}KB > ${MAX_EMAIL_THUMB_SIZE / 1024}KB`
+      ).toBeLessThanOrEqual(MAX_EMAIL_THUMB_SIZE)
+    }
+  })
+})
+
+describe('renderRelatedPostsHtml', () => {
+  const siteUrl = 'https://www.philipithomas.com'
+
+  it('uses email thumbnail paths for cover images', () => {
+    const posts = getAllPosts().filter((p) => p.frontmatter.coverImage)
+    if (posts.length === 0) return
+    const html = renderRelatedPostsHtml(posts.slice(0, 3), siteUrl)
+    expect(html).toContain('/images/email/thumbnails/')
+    expect(html).not.toMatch(
+      /src="https:\/\/www\.philipithomas\.com\/images\/covers\//
+    )
   })
 })
 
