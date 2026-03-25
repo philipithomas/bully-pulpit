@@ -9,7 +9,7 @@ Personal website and blog for [philipithomas.com](https://philipithomas.com).
 - Static generation with Next.js App Router
 - RSS and JSON feeds (combined + per-newsletter)
 - LLM-friendly `.md` endpoints for all content
-- Google One Tap sign-in
+- Google sign-in (OAuth2 authorization code flow)
 - Email subscription via [printing-press](https://github.com/philipithomas/printing-press) backend
 
 ## Quick Start
