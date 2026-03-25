@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
+import { GoogleSignInLink } from '@/components/auth/google-sign-in'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import {
   InputOTP,
@@ -161,6 +162,7 @@ export function InlineSignupForm({
           >
             Use a different email
           </button>
+          <GoogleSignInLink className="mt-2" />
         </div>
       </div>
     )

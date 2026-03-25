@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { GoogleSignInButton } from '@/components/auth/google-sign-in'
 import {
   Dialog,
   DialogContent,
@@ -110,27 +111,40 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                 Enter your email to sign in or create an account.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleEmailSubmit} className="mt-6 space-y-4">
-              <input
-                type="email"
-                name="email"
-                autoComplete="email"
-                aria-label="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                autoFocus
-                className="w-full border border-gray-300 bg-white px-4 py-3 text-sm font-sans text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-0"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gray-950 text-white py-3 text-sm font-semibold tracking-wide uppercase hover:bg-gray-800 transition-colors disabled:opacity-70"
-              >
-                {loading ? <Spinner className="h-4 w-4 mx-auto" /> : 'Continue'}
-              </button>
-            </form>
+            <div className="mt-6 space-y-4">
+              <GoogleSignInButton onSuccess={onSuccess} />
+              <div className="flex items-center gap-4">
+                <div className="h-px flex-1 bg-gray-200" />
+                <span className="text-xs text-gray-400 font-sans uppercase tracking-wide">
+                  or
+                </span>
+                <div className="h-px flex-1 bg-gray-200" />
+              </div>
+              <form onSubmit={handleEmailSubmit} className="space-y-4">
+                <input
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  aria-label="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  required
+                  className="w-full border border-gray-300 bg-white px-4 py-3 text-sm font-sans text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-0"
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-gray-950 text-white py-3 text-sm font-semibold tracking-wide uppercase hover:bg-gray-800 transition-colors disabled:opacity-70"
+                >
+                  {loading ? (
+                    <Spinner className="h-4 w-4 mx-auto" />
+                  ) : (
+                    'Continue with email'
+                  )}
+                </button>
+              </form>
+            </div>
           </>
         ) : (
           <>
