@@ -145,6 +145,9 @@ export function SearchDialog({
         const data = await res.json()
         setResults(data.results ?? [])
         searchIdRef.current = data.searchId ?? null
+        window.plausible?.('Search', {
+          props: { query: q, results: (data.results ?? []).length },
+        })
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return

@@ -125,6 +125,9 @@ export function ChatSidebar() {
         // Delay to ensure clean state
         setTimeout(() => {
           sendMessage({ text: initialQuery })
+          window.plausible?.('Chat Message', {
+            props: { path: window.location.pathname },
+          })
         }, 50)
       }
     }
@@ -195,6 +198,9 @@ export function ChatSidebar() {
   const handleSend = useCallback(
     (text: string) => {
       sendMessage({ text })
+      window.plausible?.('Chat Message', {
+        props: { path: window.location.pathname },
+      })
     },
     [sendMessage]
   )
