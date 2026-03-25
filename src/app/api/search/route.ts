@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     const searchId = crypto.randomUUID()
     const topMatch = results[0] ?? null
 
-    // Log after response — waitUntil keeps the function alive on Vercel
+    // Log after response is sent
     after(() =>
       logSearch({
         searchId,
