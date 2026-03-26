@@ -449,6 +449,11 @@ body.dark-viewport header .btn-primary .btn-arrow {
   font-size: 0.875em;
 }
 
+.prose :where(code):not(:where(pre *))::before,
+.prose :where(code):not(:where(pre *))::after {
+  content: none;
+}
+
 .prose pre {
   background-color: var(--color-gray-900);
   color: var(--color-gray-100);
