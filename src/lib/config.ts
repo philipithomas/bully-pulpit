@@ -18,6 +18,13 @@ const staticConfig = {
   image: '/og-image.png',
   favicon: '/favicon.ico',
   newsletters: {
+    postcard: {
+      name: 'Postcard',
+      tagline: "What I'm up to.",
+      slug: 'postcard',
+      color: 'indigo',
+      logo: { src: '/images/postcard.svg', height: 14 },
+    },
     contraption: {
       name: 'Contraption',
       tagline: 'Projects and essays.',
@@ -31,13 +38,6 @@ const staticConfig = {
       slug: 'workshop',
       color: 'walnut',
       logo: { src: '/images/workshop-brand.svg', height: 16 },
-    },
-    postcard: {
-      name: 'Postcard',
-      tagline: "What I'm up to.",
-      slug: 'postcard',
-      color: 'indigo',
-      logo: { src: '/images/postcard.svg', height: 14 },
     },
   },
   printingPressUrl: process.env.PRINTING_PRESS_URL ?? 'http://localhost:8080',
