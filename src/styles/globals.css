@@ -447,6 +447,7 @@ body.dark-viewport header .btn-primary .btn-arrow {
   border-radius: 0.25rem;
   font-family: var(--font-mono);
   font-size: 0.875em;
+  font-weight: normal;
 }
 
 .prose :where(code):not(:where(pre *))::before,
@@ -475,6 +476,7 @@ body.dark-viewport header .btn-primary .btn-arrow {
   text-decoration-color: var(--prose-accent, var(--color-gray-400));
   text-underline-offset: 2px;
   transition: color 0.3s ease;
+  font-weight: normal;
 }
 
 .prose a:hover {

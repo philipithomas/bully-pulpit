@@ -1,0 +1,24 @@
+---
+title: "Agent experience"
+publishedAt: "2026-03-26"
+coverImage: "/images/covers/agent-experience-cover.jpg"
+coverImageAlt: "A street in Nakameguro"
+---
+
+As [coding becomes solved by AI](/software-in-the-ai-era), developer tools need to be designed for agent users as much as human ones. "Agent experience" is a problem I have been focusing on at [Chroma](/chroma).
+
+The first step is legible docs. Any developer product benefits from models being *aware* of it, but must fight the stale training data of agents. To address this at Chroma, our team moved the docs to [Mintlify](https://www.trychroma.com/customers/mintlify-case-study), which improved agent accessibility, such as with an `llms.txt` file. Mintlify also supports [MCP](/mcp-and-the-future-of-ai), giving agents persistent tool access with search. Next.js has taken this a step further in a way I think is prescient, bundling their docs in the package and [setting agent directions](https://nextjs.org/docs/app/guides/ai-agents) to read local documentation before writing any code.
+
+But docs tell an agent what is *possible*, not what is *recommended*. With Chroma Cloud, the recommended path means using our SDKs, using [both dense and sparse vectors with hybrid search](https://docs.trychroma.com/cloud/search-api/hybrid-search), and probably using [Chroma's hosted embedding functions](https://docs.trychroma.com/integrations/embedding-models/chroma-cloud-qwen#chroma-cloud-qwen) for ease of integration. There are also nuanced directions for existing applications, such as how to model multi-tenant workloads and how to migrate existing data. To bridge that gap, I added a dedicated "Prompt quickstart" to Chroma Cloud, a block of text users can copy into their coding agent's context. Beyond sharing the docs as a resource, it gives opinionated directions for how to set up the product. Credential management is a concern here. You do not want to put API keys into the model context, so the quickstart includes a separate `.env` file download with credentials.
+
+As I showed prompt quickstart to some early users, one said, "that's cool, but why do I as a human need to sign up? Can't the agent do that?"
+
+That idea stayed in the back of my mind, until Stripe presented a potential solution.
+
+Today, [Stripe Projects](https://projects.dev/) is launching as a toolchain for agent-first commerce: agents can sign up for services, connect billing, provision resources, and manage secrets without a human in the loop. I have been collaborating with the Stripe team on the early protocol, and built Chroma as a launch integration. Try it out: `stripe projects add chroma/database`.
+
+Agent-first commerce is fundamentally a trust problem. When a human signs up for a service, they provide an email, enter a credit card, and agree to terms. An agent has none of those things. Stripe Projects solves this by extending Stripe's existing trust infrastructure. Stripe already verifies customer identities, stores billing data through tokenization, and provides verified email addresses. A new "payment token" protocol lets agents use that same trust layer to provision paid services on behalf of their human operators.
+
+I think Stripe is uniquely positioned to build the commerce stack for agents because bootstrapping this ecosystem relies on trust. Applications need to trust that the agent's claims about identity and payment are true, and customers need to trust that their billing data is handled securely. Stripe is already a trusted third party on both sides of that relationship. As an application developer, integrating with Stripe Projects felt like setting up a "Google Sign-in" flow, relying on Stripe as an identity provider backed by their existing KYC guarantees.
+
+Stripe Projects is early, but it points to a reality where developer tools maintain two experiences: one for humans, and one for agents.
