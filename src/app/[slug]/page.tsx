@@ -13,6 +13,7 @@ import { SpotifyEmbed } from '@/components/ui/spotify-embed'
 import { YouTubeEmbed } from '@/components/ui/youtube-embed'
 import { siteConfig } from '@/lib/config'
 import {
+  extractExcerpt,
   getAllPosts,
   getPageBySlug,
   getPages,
@@ -41,16 +42,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!item) return {}
 
+  const description =
+    item.frontmatter.description ?? extractExcerpt(item.content, 160)
+
   return {
     title: item.frontmatter.title,
-    description: item.frontmatter.description ?? siteConfig.description,
+    description,
     openGraph: {
       title: item.frontmatter.title,
-      description: item.frontmatter.description ?? siteConfig.description,
+      description,
       type: 'article',
       ...(post?.frontmatter.coverImage && {
         images: [{ url: post.frontmatter.coverImage }],
       }),
+    },
+    twitter: {
+      title: item.frontmatter.title,
+      description,
     },
   }
 }

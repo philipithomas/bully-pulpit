@@ -85,7 +85,7 @@ function extractSlug(filename: string): string {
   return filename.replace(/^\d{4}-\d{2}-\d{2}-/, '').replace(/\.mdx?$/, '')
 }
 
-function extractExcerpt(content: string, maxLength = 200): string {
+export function extractExcerpt(content: string, maxLength = 200): string {
   const text = content
     .replace(/^---[\s\S]*?---/, '')
     .replace(/<[^>]+>/g, '')
