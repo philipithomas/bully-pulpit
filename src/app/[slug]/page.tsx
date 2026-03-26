@@ -10,6 +10,7 @@ import { RelatedPosts } from '@/components/posts/related-posts'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { JsonLd } from '@/components/seo/json-ld'
 import { SpotifyEmbed } from '@/components/ui/spotify-embed'
+import { YouTubeEmbed } from '@/components/ui/youtube-embed'
 import { siteConfig } from '@/lib/config'
 import {
   getAllPosts,
@@ -162,7 +163,7 @@ export default async function SlugPage({ params }: Props) {
                 rehypePlugins: [[rehypeSanitize, sanitizeSchema]],
               },
             }}
-            components={{ SpotifyEmbed }}
+            components={{ SpotifyEmbed, YouTubeEmbed }}
           />
         </div>
 
