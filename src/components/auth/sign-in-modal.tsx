@@ -85,9 +85,8 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
         }
 
         closeModal()
-        toast.success('Signed in successfully')
         onSuccess?.()
-        window.location.reload()
+        window.location.assign(`${window.location.pathname}?signed-in=1`)
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Something went wrong')
         setCode('')

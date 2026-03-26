@@ -106,8 +106,7 @@ export function InlineSignupForm({
           setCode('')
           return
         }
-        toast.success('Signed in successfully')
-        window.location.reload()
+        window.location.assign(`${window.location.pathname}?signed-in=1`)
       } catch {
         toast.error('Unable to verify code')
         setCode('')
