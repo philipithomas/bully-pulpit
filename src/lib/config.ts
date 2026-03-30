@@ -51,4 +51,10 @@ export const siteConfig = {
   get jwtSecret() {
     return requireEnv('JWT_SECRET')
   },
+  get googleClientId() {
+    return process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''
+  },
+  get googleClientSecret() {
+    return process.env.GOOGLE_CLIENT_SECRET ?? ''
+  },
 }
