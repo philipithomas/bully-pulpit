@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     }
 
     // Create or find subscriber in printing-press.
-    // email_confirmed: true tells printing-press to skip the verification
+    // google_verified: true tells printing-press to skip the OTP
     // email and mark the subscriber as confirmed immediately.
     const res = await fetch(
       `${siteConfig.printingPressUrl}/api/v1/subscribers`,
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           email,
           name: name || undefined,
-          email_confirmed: true,
+          google_verified: true,
         }),
         cache: 'no-store',
       }
