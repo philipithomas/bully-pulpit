@@ -6,7 +6,7 @@ export function SubscribeCta() {
       <p className="font-serif text-gray-600 text-lg mb-5">
         Get new essays by email.
       </p>
-      <InlineSignupForm />
+      <InlineSignupForm hideWhenLoggedIn />
     </div>
   )
 }
