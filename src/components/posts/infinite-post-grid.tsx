@@ -25,7 +25,6 @@ export function InfinitePostGrid({
         {posts.map((post, i) => (
           <div
             key={post.slug}
-            className="reveal"
             ref={i === posts.length - 1 ? lastPostRef : undefined}
           >
             <PostCard post={post} />
