@@ -60,21 +60,24 @@ export function useInfiniteScroll(
         if (data.posts.length === 0) {
           setHasMore(false)
         } else {
-          setPosts((prev) => [
-            ...prev,
-            ...data.posts.map((p: PostApiResponse) => ({
-              slug: p.slug,
-              newsletter: p.newsletter,
-              frontmatter: {
-                title: p.title,
-                description: p.description,
-                publishedAt: p.publishedAt,
-                coverImage: p.coverImage,
-              },
-              content: '',
-              excerpt: p.excerpt,
-            })),
-          ])
+          setPosts((prev) => {
+            const seen = new Set(prev.map((p) => p.slug))
+            const newPosts = data.posts
+              .filter((p: PostApiResponse) => !seen.has(p.slug))
+              .map((p: PostApiResponse) => ({
+                slug: p.slug,
+                newsletter: p.newsletter,
+                frontmatter: {
+                  title: p.title,
+                  description: p.description,
+                  publishedAt: p.publishedAt,
+                  coverImage: p.coverImage,
+                },
+                content: '',
+                excerpt: p.excerpt,
+              }))
+            return [...prev, ...newPosts]
+          })
           if (data.meta.page >= data.meta.totalPages) {
             setHasMore(false)
           }
