@@ -7,13 +7,16 @@ import type { Post } from '@/lib/content/types'
 export function InfinitePostGrid({
   initialPosts,
   newsletter,
+  skip = 0,
 }: {
   initialPosts: Post[]
   newsletter: string
+  skip?: number
 }) {
   const { posts, loading, lastPostRef } = useInfiniteScroll(
     newsletter,
-    initialPosts
+    initialPosts,
+    skip
   )
 
   return (

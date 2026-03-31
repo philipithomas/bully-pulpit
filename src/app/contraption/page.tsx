@@ -58,7 +58,7 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
 export default function ContraptionPage() {
   const posts = getPostsByNewsletter('contraption')
   const featured = posts.slice(0, 3)
-  const rest = posts.slice(3)
+  const rest = posts.slice(3, 3 + 24)
 
   return (
     <div className="bg-gray-050" data-bg="gray-050">
@@ -98,7 +98,11 @@ export default function ContraptionPage() {
 
         {/* Remaining posts */}
         {rest.length > 0 && (
-          <InfinitePostGrid initialPosts={rest} newsletter="contraption" />
+          <InfinitePostGrid
+            initialPosts={rest}
+            newsletter="contraption"
+            skip={3}
+          />
         )}
       </div>
     </div>

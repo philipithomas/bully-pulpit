@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 }
 
 export default function WorkshopPage() {
-  const posts = getPostsByNewsletter('workshop')
+  const posts = getPostsByNewsletter('workshop').slice(0, 24)
 
   return (
     <div className="bg-offwhite-warm" data-bg="offwhite-warm">

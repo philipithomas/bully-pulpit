@@ -8,14 +8,15 @@ export async function GET(request: NextRequest) {
   const newsletter = searchParams.get('newsletter')
   const page = Number.parseInt(searchParams.get('page') ?? '1', 10)
   const limit = Number.parseInt(searchParams.get('limit') ?? '24', 10)
+  const skip = Number.parseInt(searchParams.get('skip') ?? '0', 10)
 
   let posts =
     newsletter && newsletterSchema.safeParse(newsletter).success
       ? getPostsByNewsletter(newsletterSchema.parse(newsletter))
       : getAllPosts()
 
-  const total = posts.length
-  const offset = (page - 1) * limit
+  const total = posts.length - skip
+  const offset = skip + (page - 1) * limit
   posts = posts.slice(offset, offset + limit)
 
   return NextResponse.json({

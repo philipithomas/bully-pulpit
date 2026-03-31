@@ -15,7 +15,8 @@ interface PostApiResponse {
 
 export function useInfiniteScroll(
   newsletter?: string,
-  initialPosts: Post[] = []
+  initialPosts: Post[] = [],
+  skip = 0
 ) {
   const [posts, setPosts] = useState(initialPosts)
   const [page, setPage] = useState(1)
@@ -51,6 +52,7 @@ export function useInfiniteScroll(
       limit: '24',
     })
     if (newsletter) params.set('newsletter', newsletter)
+    if (skip) params.set('skip', String(skip))
 
     fetch(`/api/posts?${params}`)
       .then((res) => res.json())
@@ -79,7 +81,7 @@ export function useInfiniteScroll(
         }
       })
       .finally(() => setLoading(false))
-  }, [page, newsletter])
+  }, [page, newsletter, skip])
 
   return { posts, loading, hasMore, lastPostRef }
 }
