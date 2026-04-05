@@ -11,6 +11,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm images:optimize
+ARG CHROMA_API_KEY
+ARG CHROMA_DATABASE
+ARG CHROMA_HOST
+ARG CHROMA_TENANT
 RUN pnpm chroma:related
 RUN pnpm build
 
