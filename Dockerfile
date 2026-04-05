@@ -15,6 +15,8 @@ ARG CHROMA_API_KEY
 ARG CHROMA_DATABASE
 ARG CHROMA_HOST
 ARG CHROMA_TENANT
+ARG OPENAI_API_KEY
+RUN pnpm summaries:generate
 RUN pnpm chroma:related
 RUN pnpm build
 
