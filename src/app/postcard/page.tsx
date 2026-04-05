@@ -48,8 +48,14 @@ export default function PostcardPage() {
     const startMonth = Number.parseInt(earliestKey.slice(5, 7), 10) - 1
 
     const now = new Date()
-    const endYear = now.getFullYear()
-    const endMonth = now.getMonth()
+    const latestPostKey = posts[0].frontmatter.publishedAt.slice(0, 7)
+    const latestPostYear = Number.parseInt(latestPostKey.slice(0, 4), 10)
+    const latestPostMonth = Number.parseInt(latestPostKey.slice(5, 7), 10) - 1
+    const nowVal = now.getFullYear() * 12 + now.getMonth()
+    const latestVal = latestPostYear * 12 + latestPostMonth
+    const endVal = Math.max(nowVal, latestVal)
+    const endYear = Math.floor(endVal / 12)
+    const endMonth = endVal % 12
 
     let y = startYear
     let m = startMonth
