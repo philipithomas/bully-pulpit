@@ -29,6 +29,7 @@ function UnsubscribeContent() {
   const [saving, setSaving] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleted, setDeleted] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -72,6 +73,7 @@ function UnsubscribeContent() {
   const handleDelete = useCallback(async () => {
     if (!token) return
     setDeleting(true)
+    setDeleteError(null)
     try {
       const res = await fetch(`/api/unsubscribe/${token}`, {
         method: 'DELETE',
@@ -79,7 +81,12 @@ function UnsubscribeContent() {
       if (res.ok) {
         setDeleted(true)
         setShowDeleteModal(false)
+        return
       }
+      const data = await res.json().catch(() => null)
+      setDeleteError(
+        data?.error ?? 'Could not delete your subscription. Please try again.'
+      )
     } finally {
       setDeleting(false)
     }
@@ -196,7 +203,10 @@ function UnsubscribeContent() {
         <div className="border-t border-gray-200 pt-8">
           <button
             type="button"
-            onClick={() => setShowDeleteModal(true)}
+            onClick={() => {
+              setDeleteError(null)
+              setShowDeleteModal(true)
+            }}
             className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
           >
             Unsubscribe from all and delete my data
@@ -221,6 +231,9 @@ function UnsubscribeContent() {
               This will permanently delete your subscription and all associated
               data including email history. This cannot be undone.
             </p>
+            {deleteError && (
+              <p className="text-sm text-red-600 mb-6">{deleteError}</p>
+            )}
             <div className="flex gap-3 justify-end">
               <button
                 type="button"

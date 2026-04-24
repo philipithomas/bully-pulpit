@@ -55,4 +55,27 @@ export async function PATCH(
   return NextResponse.json(data)
 }
 
-// Account deletion requires authentication — use DELETE /api/auth/preferences instead
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
+) {
+  const { token } = await params
+
+  const res = await fetch(`${ppUrl}/api/v1/unsubscribe/${token}/account`, {
+    method: 'DELETE',
+    cache: 'no-store',
+  })
+
+  if (!res.ok) {
+    console.error(
+      `[unsubscribe] DELETE account failed for token=${token}: ${res.status}`
+    )
+    return NextResponse.json(
+      { error: 'Failed to delete subscription' },
+      { status: res.status }
+    )
+  }
+
+  const data = await res.json()
+  return NextResponse.json(data)
+}
