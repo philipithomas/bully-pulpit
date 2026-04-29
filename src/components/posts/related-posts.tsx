@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import type { Newsletter, Post } from '@/lib/content/types'
@@ -58,7 +58,7 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
               {/* Content area */}
               <div className="flex flex-col flex-grow p-5 border-t border-gray-100 relative">
                 <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-2">
-                  {format(new Date(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
+                  {format(parseISO(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
                 </time>
                 <h4
                   className={`font-sans text-lg font-semibold text-gray-950 ${accent.hoverText} transition-colors duration-500 mb-2`}

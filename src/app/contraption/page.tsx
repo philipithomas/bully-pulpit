@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -33,7 +33,7 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
       )}
       <div className="p-4 md:p-5">
         <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
-          {format(new Date(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
+          {format(parseISO(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
         </time>
         <h2
           className={`font-semibold tracking-tight text-gray-950 group-hover:text-forest transition-colors duration-300 mt-1 ${large ? 'text-2xl sm:text-3xl' : 'text-lg'}`}

@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { Post } from '@/lib/content/types'
@@ -20,7 +20,7 @@ export function PostCard({ post }: { post: Post }) {
         )}
         <div className="p-4 md:p-5">
           <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
-            {format(new Date(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
+            {format(parseISO(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
           </time>
           <h2 className="text-lg font-semibold text-gray-950 group-hover:text-forest transition-colors mt-1">
             {post.frontmatter.title}

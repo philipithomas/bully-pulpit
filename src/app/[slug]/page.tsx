@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
@@ -93,7 +93,7 @@ export default async function SlugPage({ params }: Props) {
             post.newsletter !== 'postcard' &&
             post.frontmatter.publishedAt && (
               <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
-                {format(new Date(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
+                {format(parseISO(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
               </time>
             )}
           <h1 className="font-sans font-semibold text-3xl leading-tight tracking-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl text-pretty mt-3">
