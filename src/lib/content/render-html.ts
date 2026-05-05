@@ -7,6 +7,72 @@ import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import type { Post } from '@/lib/content/types'
 
+const SANS_STACK = `'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`
+const SERIF_STACK = `'Tiempos Text', Georgia, 'Times New Roman', serif`
+const MONO_STACK = `'Sohne Mono', 'SF Mono', 'Fira Code', monospace`
+
+const tagStyles: Record<string, string> = {
+  h1: `font-family: ${SANS_STACK}; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; margin: 32px 0 12px;`,
+  h2: `font-family: ${SANS_STACK}; font-size: 24px; font-weight: 700; color: #111110; line-height: 1.3; margin: 32px 0 12px;`,
+  h3: `font-family: ${SANS_STACK}; font-size: 20px; font-weight: 600; color: #111110; line-height: 1.3; margin: 24px 0 8px;`,
+  h4: `font-family: ${SANS_STACK}; font-size: 18px; font-weight: 600; color: #111110; line-height: 1.3; margin: 20px 0 8px;`,
+  h5: `font-family: ${SANS_STACK}; font-size: 16px; font-weight: 600; color: #111110; line-height: 1.3; margin: 20px 0 8px;`,
+  h6: `font-family: ${SANS_STACK}; font-size: 14px; font-weight: 600; color: #111110; line-height: 1.3; margin: 20px 0 8px;`,
+  p: `font-family: ${SERIF_STACK}; font-size: 17px; font-weight: 400; color: #3b3834; line-height: 1.7; margin: 0 0 16px;`,
+  ul: `font-family: ${SERIF_STACK}; font-size: 17px; color: #3b3834; line-height: 1.7; margin: 0 0 16px; padding-left: 24px;`,
+  ol: `font-family: ${SERIF_STACK}; font-size: 17px; color: #3b3834; line-height: 1.7; margin: 0 0 16px; padding-left: 24px;`,
+  li: `font-family: ${SERIF_STACK}; font-size: 17px; color: #3b3834; line-height: 1.7; margin: 0 0 4px;`,
+  blockquote: `font-family: ${SERIF_STACK}; font-style: italic; font-size: 17px; color: #514d48; line-height: 1.7; border-left: 3px solid #cfcbc4; padding-left: 16px; margin: 16px 0;`,
+  a: `color: inherit; text-decoration: underline; text-decoration-color: #b1ada6;`,
+  strong: `font-weight: 700; color: #222120;`,
+  em: `font-style: italic;`,
+  hr: `border: 0; border-top: 1px solid #e0ddd8; margin: 32px 0;`,
+  pre: `font-family: ${MONO_STACK}; font-size: 14px; background: #222120; color: #e0ddd8; padding: 16px; border-radius: 6px; overflow-x: auto; margin: 16px 0; line-height: 1.5;`,
+  code: `font-family: ${MONO_STACK}; font-size: 0.9em; background: #eceae6; color: #222120; padding: 2px 4px; border-radius: 3px;`,
+  table: `font-family: ${SERIF_STACK}; font-size: 16px; color: #3b3834; border-collapse: collapse; margin: 16px 0; width: 100%;`,
+  th: `font-family: ${SANS_STACK}; font-weight: 600; text-align: left; padding: 8px 12px; border-bottom: 2px solid #cfcbc4;`,
+  td: `padding: 8px 12px; border-bottom: 1px solid #e0ddd8;`,
+}
+
+type HastNode = {
+  type: string
+  tagName?: string
+  properties?: Record<string, unknown>
+  children?: HastNode[]
+}
+
+function applyInlineStyles() {
+  return (tree: HastNode) => {
+    const visit = (node: HastNode, parent: HastNode | null) => {
+      if (node.type === 'element' && node.tagName) {
+        const isInlineCode =
+          node.tagName === 'code' && parent?.tagName !== 'pre'
+        const isBlockCode = node.tagName === 'code' && parent?.tagName === 'pre'
+        let style: string | undefined
+        if (isBlockCode) {
+          style = `font-family: ${MONO_STACK}; font-size: inherit; background: transparent; color: inherit; padding: 0;`
+        } else if (isInlineCode) {
+          style = tagStyles.code
+        } else {
+          style = tagStyles[node.tagName]
+        }
+        if (style) {
+          node.properties = node.properties ?? {}
+          const existing = node.properties.style
+          node.properties.style =
+            typeof existing === 'string' && existing.length > 0
+              ? `${style} ${existing}`
+              : style
+        }
+      }
+      if (node.children) {
+        for (const child of node.children) visit(child, node)
+      }
+    }
+    visit(tree, null)
+  }
+}
+
 function toEmailImagePath(imagePath: string): string {
   const basename = path.basename(imagePath)
   return `/images/email/covers/${basename}`
@@ -23,6 +89,7 @@ export async function renderMarkdownToHtml(content: string): Promise<string> {
     .use(remarkGfm)
     .use(remarkRehype)
     .use(rehypeSanitize)
+    .use(applyInlineStyles)
     .use(rehypeStringify)
     .process(content)
 

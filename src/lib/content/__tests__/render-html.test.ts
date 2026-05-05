@@ -5,6 +5,7 @@ import { getAllPosts } from '@/lib/content/loader'
 import {
   markdownToPlaintext,
   renderEmailHeaderHtml,
+  renderMarkdownToHtml,
   renderRelatedPostsHtml,
 } from '@/lib/content/render-html'
 
@@ -228,6 +229,40 @@ describe('renderRelatedPostsHtml', () => {
     expect(html).not.toMatch(
       /src="https:\/\/www\.philipithomas\.com\/images\/covers\//
     )
+  })
+})
+
+describe('renderMarkdownToHtml', () => {
+  it('inlines sans-serif font on headings', async () => {
+    const html = await renderMarkdownToHtml('## Plans for May')
+    expect(html).toMatch(/<h2[^>]*style="[^"]*Sohne/)
+    expect(html).not.toMatch(/<h2[^>]*style="[^"]*Tiempos/)
+  })
+
+  it('inlines serif font on paragraphs and list items', async () => {
+    const html = await renderMarkdownToHtml('A paragraph.\n\n- one\n- two')
+    expect(html).toMatch(/<p[^>]*style="[^"]*Tiempos Text/)
+    expect(html).toMatch(/<li[^>]*style="[^"]*Tiempos Text/)
+  })
+
+  it('inlines mono font on inline code but not on code inside pre', async () => {
+    const html = await renderMarkdownToHtml(
+      'Use `npm` here.\n\n```\nblock code\n```'
+    )
+    expect(html).toMatch(
+      /<code[^>]*style="[^"]*Sohne Mono[^"]*background: #eceae6/
+    )
+    expect(html).toMatch(/<pre[^>]*style="[^"]*Sohne Mono/)
+    expect(html).toMatch(
+      /<code[^>]*style="[^"]*background: transparent[^"]*">block code/
+    )
+  })
+
+  it('inlines style on links', async () => {
+    const html = await renderMarkdownToHtml(
+      'See [Chroma](https://trychroma.com).'
+    )
+    expect(html).toMatch(/<a[^>]*style="[^"]*text-decoration: underline/)
   })
 })
 
