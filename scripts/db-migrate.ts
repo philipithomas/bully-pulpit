@@ -3,7 +3,9 @@ import { drizzle } from 'drizzle-orm/neon-http'
 import { migrate } from 'drizzle-orm/neon-http/migrator'
 
 async function main() {
-  const url = process.env.DATABASE_URL
+  // Prefer Neon's direct (unpooled) connection for DDL; fall back to the pooled
+  // URL. The Neon Vercel integration sets DATABASE_URL_UNPOOLED.
+  const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL
   if (!url) {
     throw new Error('DATABASE_URL is required to run migrations')
   }

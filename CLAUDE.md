@@ -22,7 +22,7 @@ pnpm db:studio    # Open Drizzle Studio against the DB
 - **Content**: MDX files in `content/{contraption,workshop,postcard,pages}/`
 - **Rendering**: All pages statically generated via `generateStaticParams`
 - **Auth**: Client-side overlay; subscribers/OTP/magic-link in Neon Postgres; session is a JWT (jose, HS256) in the httpOnly `bp_token` cookie (`bp_has_session` mirrors login state for the client)
-- **Database**: Neon Postgres via Drizzle ORM (`src/lib/db/`). DB clients are lazy so `next build` never needs `DATABASE_URL` — keep all DB access in route handlers / server actions / workflows, never at module scope or in static generation
+- **Database**: Neon Postgres via Drizzle ORM (`src/lib/db/`). DB clients are lazy so `next build` never needs `DATABASE_URL` — keep all DB access in route handlers / server actions / workflows, never at module scope or in static generation. Migrations apply on deploy via `db:migrate:deploy` in the `vercel.json` build command, **guarded to `VERCEL_ENV=production`** (preview/local builds skip it). `db:migrate` uses `DATABASE_URL_UNPOOLED` when present. Use additive (expand/contract) migrations so a mid-deploy schema/code gap stays backward-compatible
 - **Email**: AWS SES (`@aws-sdk/client-sesv2`). Transactional sends (OTP, admin notification) are synchronous; the newsletter blast runs through a durable Vercel Workflow (`src/workflows/send-newsletter.ts`)
 - **Admin**: `/admin` is gated by the `ADMIN_EMAILS` allowlist (`src/lib/auth/admin.ts`) on top of a normal signed-in session — page layout guard + per-route `guardAdmin()`
 - **Styling**: Tailwind v4 CSS-first config in `src/styles/globals.css`
