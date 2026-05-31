@@ -1,35 +1,27 @@
-const attempts = new Map<string, { count: number; resetAt: number }>()
-
-// Clean up expired entries periodically
-setInterval(
-  () => {
-    const now = Date.now()
-    for (const [key, value] of attempts) {
-      if (now > value.resetAt) {
-        attempts.delete(key)
-      }
-    }
-  },
-  60 * 1000 // every minute
-)
+import { checkRateLimit as vercelCheckRateLimit } from '@vercel/firewall'
 
 /**
- * Simple in-memory rate limiter.
- * Returns true if the request should be allowed, false if rate-limited.
+ * Rate limiting backed by the Vercel Firewall.
+ *
+ * `rule` maps to a Vercel Firewall rate-limit rule of the same ID (where the limit and
+ * window are configured in the dashboard). `key` is the per-caller bucket — e.g.
+ * `ip:1.2.3.4` or `email:foo@bar.com` — which lets us limit by request-body fields
+ * (like email) that the WAF cannot see on its own.
+ *
+ * Returns true if the request should be allowed, false if rate-limited. Outside Vercel
+ * (local `next dev`, CI, tests) this is a no-op that allows the request, since the
+ * firewall is only enforced on deployed environments.
  */
-export function checkRateLimit(
+export async function checkRateLimit(
+  rule: string,
   key: string,
-  maxAttempts: number,
-  windowMs: number
-): boolean {
-  const now = Date.now()
-  const entry = attempts.get(key)
+  request: Request
+): Promise<boolean> {
+  if (!process.env.VERCEL) return true
 
-  if (!entry || now > entry.resetAt) {
-    attempts.set(key, { count: 1, resetAt: now + windowMs })
-    return true
-  }
-
-  entry.count++
-  return entry.count <= maxAttempts
+  const { rateLimited } = await vercelCheckRateLimit(rule, {
+    request,
+    rateLimitKey: key,
+  })
+  return !rateLimited
 }

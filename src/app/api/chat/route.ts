@@ -1,6 +1,7 @@
 import type { GatewayLanguageModelOptions } from '@ai-sdk/gateway'
 import { gateway } from '@ai-sdk/gateway'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import { checkBotId } from 'botid/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
@@ -13,17 +14,26 @@ export async function POST(request: Request) {
   const ip =
     headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
 
-  if (!checkRateLimit(`chat:${ip}`, 30, 15 * 60 * 1000)) {
+  // Rate-limit by IP first (cheap) so floods do not incur Bot ID Deep Analysis cost.
+  if (!(await checkRateLimit('chat', `ip:${ip}`, request))) {
     return NextResponse.json(
       { error: 'Too many messages. Please try again later.' },
       { status: 429 }
     )
   }
 
+  const { isBot } = await checkBotId({
+    advancedOptions: { checkLevel: 'deepAnalysis' },
+  })
+  if (isBot) {
+    return NextResponse.json({ error: 'Access denied.' }, { status: 403 })
+  }
+
   const { messages, pageContext, userName } = await request.json()
 
   const result = streamText({
     model: gateway('openai/gpt-5.4-mini'),
+    experimental_telemetry: { isEnabled: true, functionId: 'bell-chat' },
     providerOptions: {
       gateway: {
         byok: {

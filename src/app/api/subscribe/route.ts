@@ -1,8 +1,16 @@
+import { checkBotId } from 'botid/server'
 import { NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
+  const { isBot } = await checkBotId({
+    advancedOptions: { checkLevel: 'deepAnalysis' },
+  })
+  if (isBot) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+  }
+
   const body = await request.json()
   const { email, name, source, newsletters } = body
 
@@ -11,8 +19,8 @@ export async function POST(request: Request) {
   }
 
   // Rate limit: 3 subscribe requests per email per 15 minutes
-  const emailKey = `subscribe:${email.toLowerCase()}`
-  if (!checkRateLimit(emailKey, 3, 15 * 60 * 1000)) {
+  const emailKey = `email:${email.toLowerCase()}`
+  if (!(await checkRateLimit('subscribe', emailKey, request))) {
     console.warn(`[subscribe] Rate limited: ${emailKey}`)
     return NextResponse.json(
       { error: 'Too many attempts. Please try again later.' },

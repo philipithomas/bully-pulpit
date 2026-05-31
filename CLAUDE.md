@@ -10,7 +10,6 @@ pnpm install
 pnpm dev          # Start dev server with Turbopack
 pnpm build        # Production build
 pnpm test         # Run Vitest unit tests
-pnpm test:e2e     # Run Playwright e2e tests
 pnpm check        # Biome lint + format check
 pnpm images:optimize  # Resize oversized images, generate email variants
 ```
