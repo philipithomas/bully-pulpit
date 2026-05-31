@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   const ip =
     headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
 
-  // Rate-limit by IP first (cheap) so floods do not incur Bot ID Deep Analysis cost.
+  // Rate-limit by IP first (cheap), then run the bot check.
   if (!(await checkRateLimit('chat', `ip:${ip}`, request))) {
     return NextResponse.json(
       { error: 'Too many messages. Please try again later.' },
@@ -22,9 +22,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { isBot } = await checkBotId({
-    advancedOptions: { checkLevel: 'deepAnalysis' },
-  })
+  const { isBot } = await checkBotId()
   if (isBot) {
     return NextResponse.json({ error: 'Access denied.' }, { status: 403 })
   }

@@ -5,9 +5,7 @@ import { siteConfig } from '@/lib/config'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
-  const { isBot } = await checkBotId({
-    advancedOptions: { checkLevel: 'deepAnalysis' },
-  })
+  const { isBot } = await checkBotId()
   if (isBot) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
