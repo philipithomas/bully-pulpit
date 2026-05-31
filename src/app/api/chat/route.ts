@@ -1,4 +1,3 @@
-import type { GatewayLanguageModelOptions } from '@ai-sdk/gateway'
 import { gateway } from '@ai-sdk/gateway'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { checkBotId } from 'botid/server'
@@ -30,16 +29,15 @@ export async function POST(request: Request) {
   const { messages, pageContext, userName } = await request.json()
 
   const result = streamText({
-    model: gateway('openai/gpt-5.4-mini'),
+    model: gateway('openai/gpt-oss-120b'),
     experimental_telemetry: { isEnabled: true, functionId: 'bell-chat' },
     providerOptions: {
+      // Experiment: pin gpt-oss-120b to Cerebras (fastest provider). Runs on
+      // AI Gateway credits — no BYOK, no OPENAI_API_KEY.
       gateway: {
-        byok: {
-          openai: [{ apiKey: process.env.OPENAI_API_KEY }],
-        },
-      } satisfies GatewayLanguageModelOptions,
+        only: ['cerebras'],
+      },
       openai: {
-        serviceTier: 'priority',
         reasoningEffort: 'low',
       },
     },
@@ -58,7 +56,6 @@ export async function POST(request: Request) {
           activeTools: [],
           providerOptions: {
             openai: {
-              serviceTier: 'priority',
               reasoningEffort: 'high',
             },
           },
@@ -69,7 +66,6 @@ export async function POST(request: Request) {
         return {
           providerOptions: {
             openai: {
-              serviceTier: 'priority',
               reasoningEffort: 'high',
             },
           },
