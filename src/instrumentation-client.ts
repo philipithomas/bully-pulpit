@@ -11,11 +11,6 @@ initBotId({
       advancedOptions: { checkLevel: 'deepAnalysis' },
     },
     {
-      path: '/api/auth/google',
-      method: 'POST',
-      advancedOptions: { checkLevel: 'deepAnalysis' },
-    },
-    {
       path: '/api/auth/verify',
       method: 'POST',
       advancedOptions: { checkLevel: 'deepAnalysis' },

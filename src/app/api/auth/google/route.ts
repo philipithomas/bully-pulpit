@@ -1,4 +1,3 @@
-import { checkBotId } from 'botid/server'
 import { createRemoteJWKSet, jwtVerify, SignJWT } from 'jose'
 import { NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
@@ -9,13 +8,9 @@ const GOOGLE_JWKS = createRemoteJWKSet(
 )
 
 export async function POST(request: Request) {
-  const { isBot } = await checkBotId({
-    advancedOptions: { checkLevel: 'deepAnalysis' },
-  })
-  if (isBot) {
-    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-  }
-
+  // No BotID here: Google's OAuth code exchange (verified against Google's JWKS
+  // below) is the real gate, and BotID's client challenge does not reliably attach
+  // proof through the Google sign-in popup, causing false-positive 403s.
   const { code } = await request.json()
 
   if (!code) {
