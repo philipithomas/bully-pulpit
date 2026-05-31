@@ -4,12 +4,9 @@ import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
-import { formatMemberCount } from '@/lib/format-member-count'
-import { getSubscriberCount } from '@/lib/subscriber-count'
 
-export default async function HomePage() {
+export default function HomePage() {
   const newsletters = Object.values(siteConfig.newsletters)
-  const subscriberCount = await getSubscriberCount()
 
   return (
     <div className="container py-16 md:py-20 lg:py-28">
@@ -122,14 +119,7 @@ export default async function HomePage() {
           </div>
 
           {/* Subscribe (hidden when logged in) */}
-          <InlineSignupForm
-            hideWhenLoggedIn
-            headerText={
-              subscriberCount > 0
-                ? `Join ${formatMemberCount(subscriberCount)} other subscribers:`
-                : undefined
-            }
-          />
+          <InlineSignupForm hideWhenLoggedIn showSubscriberCount />
 
           {/* Newsletter directory */}
           <div className="mt-8">

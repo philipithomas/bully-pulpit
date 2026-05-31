@@ -1,6 +1,6 @@
-import { SignJWT } from 'jose'
 import { type NextRequest, NextResponse } from 'next/server'
-import { siteConfig } from '@/lib/config'
+import { setSessionCookies, signSession } from '@/lib/auth/jwt'
+import { verifyToken } from '@/lib/auth/login-service'
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token')
@@ -10,57 +10,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(
-      `${siteConfig.printingPressUrl}/api/v1/subscribers/verify`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': siteConfig.m2mApiKey,
-        },
-        body: JSON.stringify({ token }),
-      }
-    )
-
-    if (!res.ok) {
-      return NextResponse.redirect(
-        new URL('/?error=invalid-token', request.url)
-      )
-    }
-
-    const subscriber = await res.json()
-
-    const secret = new TextEncoder().encode(siteConfig.jwtSecret)
-    const jwt = await new SignJWT({
-      email: subscriber.email,
-      name: subscriber.name,
-    })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setSubject(subscriber.uuid)
-      .setIssuedAt()
-      .setExpirationTime('30d')
-      .sign(secret)
-
+    const subscriber = await verifyToken(token)
+    const jwt = await signSession(subscriber)
     const response = NextResponse.redirect(
       new URL('/?signed-in=1', request.url)
     )
-    response.cookies.set('bp_token', jwt, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
-      path: '/',
-    })
-    response.cookies.set('bp_has_session', '1', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
-      path: '/',
-    })
-
+    setSessionCookies(response, jwt)
     return response
   } catch {
-    return NextResponse.redirect(new URL('/?error=verify-failed', request.url))
+    return NextResponse.redirect(new URL('/?error=invalid-token', request.url))
   }
 }

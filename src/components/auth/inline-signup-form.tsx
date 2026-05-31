@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { GoogleSignInLink } from '@/components/auth/google-sign-in'
@@ -11,6 +11,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
+import { formatMemberCount } from '@/lib/format-member-count'
 import { getExternalReferrer } from '@/lib/referrer'
 
 interface Props {
@@ -19,6 +20,11 @@ interface Props {
   autoFocus?: boolean
   className?: string
   headerText?: string
+  /**
+   * When true, fetches the live subscriber count client-side and uses it as the
+   * header text ("Join N other subscribers:"). Lets the host page stay static.
+   */
+  showSubscriberCount?: boolean
 }
 
 const newsletters = [
@@ -39,6 +45,7 @@ export function InlineSignupForm({
   autoFocus = false,
   className,
   headerText,
+  showSubscriberCount = false,
 }: Props) {
   const { user, loading: authLoading } = useAuthContext()
   const [email, setEmail] = useState('')
@@ -48,7 +55,22 @@ export function InlineSignupForm({
   )
   const [step, setStep] = useState<Step>('email')
   const [loading, setLoading] = useState(false)
+  const [subscriberCount, setSubscriberCount] = useState<number | null>(null)
   const submittingRef = useRef(false)
+
+  useEffect(() => {
+    if (!showSubscriberCount) return
+    fetch('/api/stats/subscribers/count')
+      .then((res) => res.json())
+      .then((data) => setSubscriberCount(data.count ?? null))
+      .catch(() => {})
+  }, [showSubscriberCount])
+
+  const resolvedHeaderText =
+    headerText ??
+    (subscriberCount && subscriberCount > 0
+      ? `Join ${formatMemberCount(subscriberCount)} other subscribers:`
+      : undefined)
 
   function toggleNewsletter(id: string) {
     setSelected((prev) => {
@@ -172,9 +194,9 @@ export function InlineSignupForm({
       onSubmit={handleEmailSubmit}
       className={`flex flex-col items-start ${className ?? ''}`}
     >
-      {headerText && (
+      {resolvedHeaderText && (
         <p className="font-sans text-lg font-medium mb-3 text-gray-800">
-          {headerText}
+          {resolvedHeaderText}
         </p>
       )}
       {showNewsletterPicker && (

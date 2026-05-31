@@ -40,14 +40,10 @@ const staticConfig = {
       logo: { src: '/images/workshop-brand.svg', height: 16 },
     },
   },
-  printingPressUrl: process.env.PRINTING_PRESS_URL ?? 'http://localhost:8080',
 } as const
 
 export const siteConfig = {
   ...staticConfig,
-  get m2mApiKey() {
-    return requireEnv('M2M_API_KEY')
-  },
   get jwtSecret() {
     return requireEnv('JWT_SECRET')
   },
@@ -56,5 +52,19 @@ export const siteConfig = {
   },
   get googleClientSecret() {
     return process.env.GOOGLE_CLIENT_SECRET ?? ''
+  },
+  get sesFromEmail() {
+    return (
+      process.env.SES_FROM_EMAIL ?? 'Philip I. Thomas <mail@philipithomas.com>'
+    )
+  },
+  get awsRegion() {
+    return process.env.AWS_REGION ?? 'us-east-1'
+  },
+  get adminEmails(): string[] {
+    return (process.env.ADMIN_EMAILS ?? 'mail@philipithomas.com')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
   },
 }

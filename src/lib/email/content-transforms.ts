@@ -1,0 +1,62 @@
+import { siteConfig } from '@/lib/config'
+import type { NewsletterSlug } from '@/lib/db/queries/subscribers'
+
+// Ported from printing-press's templates/mod.rs. These run over the rendered
+// email body just before it is wrapped in the newsletter shell.
+
+const accentColors: Record<NewsletterSlug, string> = {
+  contraption: '#2b4a3e',
+  workshop: '#6b4d3a',
+  postcard: '#2c3e6b',
+}
+const DEFAULT_ACCENT = '#3B3834'
+
+/**
+ * Rewrites root-relative `href`/`src` URLs to absolute ones so links and images
+ * resolve in email clients (which have no base URL). Leaves protocol-relative
+ * (`//`), absolute, `mailto:`, and `#` URLs untouched. Uses siteConfig.url (no
+ * `www`) to match the absolute URLs the body renderer already emits.
+ */
+export function resolveRelativeUrls(
+  html: string,
+  baseUrl: string = siteConfig.url
+): string {
+  return html.replace(
+    /(href|src)(=["'])\/([^/])/g,
+    (_match, attr, eq, next) => `${attr}${eq}${baseUrl}/${next}`
+  )
+}
+
+/**
+ * Adds an inline style to `<a>` tags lacking one: dark text with a
+ * newsletter-accent-colored underline, matching the website's link treatment.
+ */
+export function styleContentLinks(
+  html: string,
+  newsletter?: NewsletterSlug
+): string {
+  const accent = newsletter ? accentColors[newsletter] : DEFAULT_ACCENT
+  const style = `color: #3B3834; text-decoration: underline; text-decoration-color: ${accent}; text-underline-offset: 2px;`
+  return html.replace(/<a ([^>]*?)>/g, (match, attrs) =>
+    attrs.includes('style=') ? match : `<a style="${style}" ${attrs}>`
+  )
+}
+
+/** Constrains `<img>` tags lacking a style so they don't overflow narrow panes. */
+export function styleContentImages(html: string): string {
+  return html.replace(/<img ([^>]*?)>/g, (match, attrs) =>
+    attrs.includes('style=')
+      ? match
+      : `<img style="max-width: 100%; height: auto; display: block;" ${attrs}>`
+  )
+}
+
+/** Applies all three body transforms in the order printing-press used. */
+export function transformEmailBody(
+  html: string,
+  newsletter?: NewsletterSlug
+): string {
+  return styleContentImages(
+    styleContentLinks(resolveRelativeUrls(html), newsletter)
+  )
+}

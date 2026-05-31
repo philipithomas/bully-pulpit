@@ -1,7 +1,8 @@
 import { checkBotId } from 'botid/server'
-import { SignJWT } from 'jose'
 import { NextResponse } from 'next/server'
-import { siteConfig } from '@/lib/config'
+import { setSessionCookies, signSession } from '@/lib/auth/jwt'
+import { InvalidTokenError, verifyToken } from '@/lib/auth/login-service'
+import { serializeSubscriber } from '@/lib/db/queries/subscribers'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
@@ -31,68 +32,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    const res = await fetch(
-      `${siteConfig.printingPressUrl}/api/v1/subscribers/verify`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': siteConfig.m2mApiKey,
-        },
-        body: JSON.stringify({ token: code, email }),
-        cache: 'no-store',
-      }
-    )
-
-    if (!res.ok) {
-      const data = await res.json()
-      console.error(`[auth/verify] Failed: ${res.status} ${data.error}`)
-      // Only pass through expected client-facing messages
-      const safeErrors: Record<number, string> = {
-        400: 'Invalid or expired code',
-        404: 'Account not found',
-      }
-      return NextResponse.json(
-        { error: safeErrors[res.status] ?? 'Verification failed' },
-        { status: res.status }
-      )
-    }
-
-    const subscriber = await res.json()
-
-    const secret = new TextEncoder().encode(siteConfig.jwtSecret)
-    const jwt = await new SignJWT({
-      email: subscriber.email,
-      name: subscriber.name,
+    const subscriber = await verifyToken(code, email)
+    const jwt = await signSession(subscriber)
+    const response = NextResponse.json({
+      user: serializeSubscriber(subscriber),
     })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setSubject(subscriber.uuid)
-      .setIssuedAt()
-      .setExpirationTime('30d')
-      .sign(secret)
-
-    const response = NextResponse.json({ user: subscriber })
-    response.cookies.set('bp_token', jwt, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
-      path: '/',
-    })
-    response.cookies.set('bp_has_session', '1', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
-      path: '/',
-    })
-
+    setSessionCookies(response, jwt)
     return response
   } catch (err) {
-    console.error('[auth/verify] Network error:', err)
-    return NextResponse.json(
-      { error: 'Unable to reach verification service' },
-      { status: 502 }
-    )
+    if (err instanceof InvalidTokenError) {
+      return NextResponse.json(
+        { error: 'Invalid or expired code' },
+        { status: 400 }
+      )
+    }
+    console.error('[auth/verify] error:', err)
+    return NextResponse.json({ error: 'Verification failed' }, { status: 500 })
   }
 }

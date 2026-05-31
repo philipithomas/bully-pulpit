@@ -1,5 +1,6 @@
 import { withBotId } from 'botid/next/config'
 import type { NextConfig } from 'next'
+import { withWorkflow } from 'workflow/next'
 import { getRedirects } from '@/lib/redirects'
 
 const securityHeaders = [
@@ -137,4 +138,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withBotId(nextConfig)
+export default withWorkflow(withBotId(nextConfig))
