@@ -53,6 +53,47 @@ describe('redirects', () => {
     })
   })
 
+  describe('philipithomas.com legacy post redirects', () => {
+    it.each([
+      ['/posts/buyers-define-marketplaces', '/buyers-define-marketplaces'],
+      ['/posts/moonlight-s-pitch-deck', '/moonlight-s-pitch-deck'],
+      [
+        '/posts/advice-for-marketplace-startups',
+        '/advice-for-marketplace-startups',
+      ],
+      [
+        '/posts/sharing-a-project-i-built-postcard',
+        '/sharing-a-project-i-built-postcard',
+      ],
+      [
+        '/posts/when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks',
+        '/when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks',
+      ],
+      [
+        '/posts/why-i-built-postcard-a-calmer-alternative-to-social-networks',
+        '/why-i-built-postcard-a-calmer-alternative-to-social-networks',
+      ],
+      [
+        '/posts/how-to-replace-social-media-with-a-personal-newsletter',
+        '/how-to-replace-social-media-with-a-personal-newsletter',
+      ],
+      [
+        '/posts/slow-travel-in-paris-discovering-substance-cafe',
+        '/slow-travel',
+      ],
+      [
+        '/posts/hacking-dopamine-for-entrepreneurial-success-lessons-from-neuroscience',
+        '/contraption',
+      ],
+      [
+        '/posts/openai-the-path-for-openai-powered-startups-and-the-ai-hype-cycle',
+        '/contraption',
+      ],
+    ])('%s -> %s', (source, destination) => {
+      expect(findRedirect(source)?.destination).toBe(destination)
+    })
+  })
+
   describe('postcard month redirects', () => {
     it('/posts/what-i-m-up-to-january-2024 -> /2024-01', () => {
       expect(
@@ -147,6 +188,10 @@ describe('redirects', () => {
 
     it('/rss -> /feed/rss.xml', () => {
       expect(findRedirect('/rss')?.destination).toBe('/feed/rss.xml')
+    })
+
+    it('/posts.rss -> /feed/rss.xml', () => {
+      expect(findRedirect('/posts.rss')?.destination).toBe('/feed/rss.xml')
     })
 
     it('/press -> /print', () => {
