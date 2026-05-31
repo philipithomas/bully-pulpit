@@ -1,6 +1,7 @@
 'use client'
 
 import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { track } from '@vercel/analytics'
 import { Search } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -148,6 +149,7 @@ export function SearchDialog({
         window.plausible?.('Search', {
           props: { query: q, results: (data.results ?? []).length },
         })
+        track('Search', { query: q, results: (data.results ?? []).length })
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return

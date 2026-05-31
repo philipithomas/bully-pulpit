@@ -1,6 +1,7 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
+import { track } from '@vercel/analytics'
 import { DefaultChatTransport } from 'ai'
 import { PanelRight, PanelRightClose, RotateCcw, X } from 'lucide-react'
 import Image from 'next/image'
@@ -132,6 +133,7 @@ export function ChatSidebar() {
               path: window.location.pathname,
             },
           })
+          track('Chat Message', { depth: 1, path: window.location.pathname })
         }, 50)
       }
     }
@@ -207,6 +209,7 @@ export function ChatSidebar() {
       window.plausible?.('Chat Message', {
         props: { message: text, depth, path: window.location.pathname },
       })
+      track('Chat Message', { depth, path: window.location.pathname })
     },
     [sendMessage]
   )

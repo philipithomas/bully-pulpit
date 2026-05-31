@@ -1,3 +1,4 @@
+import { checkBotId } from 'botid/server'
 import { createRemoteJWKSet, jwtVerify, SignJWT } from 'jose'
 import { NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
@@ -8,6 +9,13 @@ const GOOGLE_JWKS = createRemoteJWKSet(
 )
 
 export async function POST(request: Request) {
+  const { isBot } = await checkBotId({
+    advancedOptions: { checkLevel: 'deepAnalysis' },
+  })
+  if (isBot) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+  }
+
   const { code } = await request.json()
 
   if (!code) {
@@ -18,7 +26,7 @@ export async function POST(request: Request) {
   }
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
-  if (!checkRateLimit(`google-auth:${ip}`, 10, 15 * 60 * 1000)) {
+  if (!(await checkRateLimit('auth-google', `ip:${ip}`, request))) {
     return NextResponse.json(
       { error: 'Too many attempts. Please try again later.' },
       { status: 429 }
