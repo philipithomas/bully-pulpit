@@ -25,7 +25,6 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 2678400,

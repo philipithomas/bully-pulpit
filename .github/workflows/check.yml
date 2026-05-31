@@ -40,6 +40,3 @@ jobs:
 
       - name: E2E tests
         run: pnpm test:e2e
-
-      - name: Build Docker image
-        run: docker build -t bully-pulpit .
