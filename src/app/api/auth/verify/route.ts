@@ -1,17 +1,9 @@
-import { checkBotId } from 'botid/server'
 import { SignJWT } from 'jose'
 import { NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
-  const { isBot } = await checkBotId({
-    advancedOptions: { checkLevel: 'deepAnalysis' },
-  })
-  if (isBot) {
-    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-  }
-
   const body = await request.json()
   const { email, code } = body
 

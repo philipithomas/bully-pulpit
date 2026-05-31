@@ -1,20 +1,12 @@
 import { initBotId } from 'botid/client/core'
 
-// Routes BotID protects. The client attaches proof to fetches hitting these paths;
-// the matching server handlers verify it with checkBotId(). Deep Analysis (Pro) runs
-// the stronger ML check against scraping, credential stuffing, and spam.
+// BotID protects only the chat endpoint. It was removed from the auth and subscribe
+// flows because its client challenge was not reliably ready for those early and
+// popup-based requests, so checkBotId() failed closed and returned false-positive
+// 403s for real users. Those routes are gated by Google OAuth / OTP and Firewall
+// rate limiting instead.
 initBotId({
   protect: [
-    {
-      path: '/api/subscribe',
-      method: 'POST',
-      advancedOptions: { checkLevel: 'deepAnalysis' },
-    },
-    {
-      path: '/api/auth/verify',
-      method: 'POST',
-      advancedOptions: { checkLevel: 'deepAnalysis' },
-    },
     {
       path: '/api/chat',
       method: 'POST',
