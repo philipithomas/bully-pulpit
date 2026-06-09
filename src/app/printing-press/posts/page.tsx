@@ -5,10 +5,16 @@ import { requireAdmin } from '@/lib/auth/admin'
 import { getAllPosts } from '@/lib/content/loader'
 import { allSendStats } from '@/lib/db/queries/email-sends'
 
+// Posts older than this with no send history are archival: no "Not sent"
+// badge (it reads as a problem when it isn't) and no link into the send flow.
+// The send page itself stays reachable by URL as an escape hatch.
+const SENDABLE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+
 export default async function PostsPage() {
   await requireAdmin()
   const posts = getAllPosts().filter((p) => !p.frontmatter.draft)
   const stats = await allSendStats()
+  const cutoff = Date.now() - SENDABLE_WINDOW_MS
 
   return (
     <div>
@@ -20,12 +26,12 @@ export default async function PostsPage() {
       <div className="divide-y divide-gray-100 border border-gray-200 bg-white">
         {posts.map((post) => {
           const s = stats[post.slug]
-          return (
-            <Link
-              key={`${post.newsletter}/${post.slug}`}
-              href={`/printing-press/send/${post.slug}`}
-              className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-050"
-            >
+          const recent =
+            new Date(post.frontmatter.publishedAt).getTime() >= cutoff
+          const sendable = Boolean(s) || recent
+
+          const body = (
+            <>
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-gray-900">
                   {post.frontmatter.title}
@@ -38,7 +44,7 @@ export default async function PostsPage() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                {s ? (
+                {s && (
                   <>
                     {s.sent > 0 && (
                       <Badge variant="success">{s.sent} sent</Badge>
@@ -50,10 +56,30 @@ export default async function PostsPage() {
                       <Badge variant="destructive">{s.failed} failed</Badge>
                     )}
                   </>
-                ) : (
-                  <Badge variant="outline">Not sent</Badge>
                 )}
+                {!s && recent && <Badge variant="outline">Not sent</Badge>}
               </div>
+            </>
+          )
+
+          if (!sendable) {
+            return (
+              <div
+                key={`${post.newsletter}/${post.slug}`}
+                className="flex items-center justify-between gap-4 px-4 py-3"
+              >
+                {body}
+              </div>
+            )
+          }
+
+          return (
+            <Link
+              key={`${post.newsletter}/${post.slug}`}
+              href={`/printing-press/send/${post.slug}`}
+              className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-050"
+            >
+              {body}
             </Link>
           )
         })}

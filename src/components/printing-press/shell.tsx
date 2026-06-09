@@ -1,6 +1,6 @@
 'use client'
 
-import { Menu, Printer } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -20,16 +20,10 @@ function SidebarBody({
         <Link
           href="/printing-press"
           onClick={onNavigate}
-          className="flex items-center gap-2"
+          className="font-serif text-lg leading-none text-gray-950"
         >
-          <Printer className="h-5 w-5 text-gray-700" />
-          <span className="font-serif text-lg leading-none text-gray-950">
-            Printing Press
-          </span>
+          Printing Press
         </Link>
-        <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-gray-400">
-          philipithomas.com
-        </p>
       </div>
 
       <div className="mt-7">
@@ -81,8 +75,7 @@ export function PrintingPressShell({
             >
               <Menu className="h-5 w-5" />
             </button>
-            <span className="flex items-center gap-2 font-serif text-base text-gray-950">
-              <Printer className="h-4 w-4 text-gray-700" />
+            <span className="font-serif text-base text-gray-950">
               Printing Press
             </span>
           </div>
