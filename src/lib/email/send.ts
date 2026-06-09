@@ -4,7 +4,10 @@ import { isNewsletter, type NewsletterSlug } from '@/lib/db/queries/subscribers'
 import { transformEmailBody } from '@/lib/email/content-transforms'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { sendNewsletterEmail, sendSimpleEmail } from '@/lib/email/ses'
-import { renderConfirmationEmail } from '@/lib/email/templates/confirmation'
+import {
+  renderConfirmationEmail,
+  renderConfirmationText,
+} from '@/lib/email/templates/confirmation'
 import { renderNewSubscriberEmail } from '@/lib/email/templates/new-subscriber'
 import { renderNewsletterShell } from '@/lib/email/templates/newsletter-shell'
 
@@ -16,10 +19,12 @@ export async function sendConfirmation(
   magicLink: string
 ): Promise<void> {
   const html = renderConfirmationEmail({ code, magicLink })
+  const text = renderConfirmationText({ code, magicLink })
   await sendSimpleEmail({
     to: email,
     subject: 'Your sign-in code for philipithomas.com',
     html,
+    text,
   })
 }
 

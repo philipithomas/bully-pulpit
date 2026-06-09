@@ -51,26 +51,6 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      // Hashed _next/static assets — immutable, cache forever
-      {
-        source: '/_next/static/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      // Optimized images from _next/image — cache 30 days
-      {
-        source: '/_next/image(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=2678400, stale-while-revalidate=86400',
-          },
-        ],
-      },
       // RSS/JSON feeds — CDN caches 1 hour
       {
         source: '/feed/(.*)',

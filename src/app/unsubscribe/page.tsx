@@ -2,6 +2,12 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useState } from 'react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { siteConfig } from '@/lib/config'
 
@@ -32,6 +38,7 @@ function UnsubscribeContent() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleted, setDeleted] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!token) {
@@ -62,7 +69,12 @@ function UnsubscribeContent() {
         if (res.ok) {
           setPrefs((prev) => (prev ? { ...prev, [key]: enabled } : prev))
           setSaved(true)
+          setSaveError(null)
+        } else {
+          setSaveError("Couldn't save — try again")
         }
+      } catch {
+        setSaveError("Couldn't save — try again")
       } finally {
         setSaving(null)
       }
@@ -85,6 +97,8 @@ function UnsubscribeContent() {
       }
       const data = await res.json().catch(() => null)
       setDeleteError(data?.error ?? 'Could not unsubscribe. Please try again.')
+    } catch {
+      setDeleteError('Could not unsubscribe. Please try again.')
     } finally {
       setDeleting(false)
     }
@@ -197,6 +211,9 @@ function UnsubscribeContent() {
           {saved && (
             <p className="text-sm text-gray-500 mt-3">Preferences saved.</p>
           )}
+          {saveError && (
+            <p className="text-sm text-red-600 mt-3">{saveError}</p>
+          )}
         </section>
 
         <div className="border-t border-gray-200 pt-8">
@@ -213,54 +230,44 @@ function UnsubscribeContent() {
         </div>
       </div>
 
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowDeleteModal(false)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setShowDeleteModal(false)
-            }}
-          />
-          <div className="relative bg-white max-w-md w-full mx-4 p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-950 mb-3">
-              Unsubscribe from everything?
-            </h3>
-            <p className="text-sm text-gray-600 mb-6">
-              You'll stop receiving all newsletters. You can re-subscribe
-              anytime. To permanently delete your data instead, sign in to your
-              account.
-            </p>
-            {deleteError && (
-              <p className="text-sm text-red-600 mb-6">{deleteError}</p>
-            )}
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
-              >
-                {deleting ? (
-                  <span className="flex items-center gap-2">
-                    <Spinner className="h-3.5 w-3.5" />
-                    Unsubscribing
-                  </span>
-                ) : (
-                  'Unsubscribe from all'
-                )}
-              </button>
-            </div>
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent>
+          <DialogTitle className="mb-3">
+            Unsubscribe from everything?
+          </DialogTitle>
+          <DialogDescription className="mb-6">
+            You'll stop receiving all newsletters. You can re-subscribe anytime.
+            To permanently delete your data instead, sign in to your account.
+          </DialogDescription>
+          {deleteError && (
+            <p className="text-sm text-red-600 mb-6">{deleteError}</p>
+          )}
+          <div className="flex gap-3 justify-end">
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
+            >
+              {deleting ? (
+                <span className="flex items-center gap-2">
+                  <Spinner className="h-3.5 w-3.5" />
+                  Unsubscribing
+                </span>
+              ) : (
+                'Unsubscribe from all'
+              )}
+            </button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

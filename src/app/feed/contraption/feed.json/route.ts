@@ -3,6 +3,8 @@ import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import { generateJsonFeed } from '@/lib/feeds/json-feed'
 
+export const dynamic = 'force-static'
+
 export async function GET() {
   const posts = getPostsByNewsletter('contraption')
   return NextResponse.json(

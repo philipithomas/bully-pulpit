@@ -5,10 +5,10 @@ import { track } from '@vercel/analytics'
 import { DefaultChatTransport } from 'ai'
 import { PanelRight, PanelRightClose, RotateCcw, X } from 'lucide-react'
 import Image from 'next/image'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useAuthContext } from '@/components/auth/auth-provider'
 import { ChatInput } from '@/components/chat/chat-input'
 import { ChatMessage, ThinkingIndicator } from '@/components/chat/chat-message'
-import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -57,9 +57,14 @@ export function ChatSidebar() {
     saveMessages,
     clearMessages,
   } = useChatSidebar()
-  const { user } = useAuth()
+  const { user } = useAuthContext()
   const userRef = useRef(user)
   userRef.current = user
+  const [entered, setEntered] = useState(false)
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(raf)
+  }, [])
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -250,11 +255,15 @@ export function ChatSidebar() {
         />
       )}
 
-      {/* Sidebar panel */}
+      {/* Sidebar panel — inert removes the off-screen panel from the tab
+          order and accessibility tree when closed */}
       <div
+        inert={!open}
         className={cn(
           'fixed top-0 right-0 z-50 flex h-full w-full flex-col bg-offwhite-light transition-[transform,box-shadow] duration-300 sm:w-[420px]',
-          open ? 'translate-x-0' : 'translate-x-full',
+          // entered paints the first frame closed: the component lazy-mounts
+          // already open, and a transition needs a state change to animate.
+          open && entered ? 'translate-x-0' : 'translate-x-full',
           pinned ? 'shadow-md' : 'shadow-xl'
         )}
       >

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import {
   createOrRetrieve,
   InvalidEmailError,
+  SuppressedEmailError,
 } from '@/lib/auth/subscriber-service'
 import {
   serializeSubscriber,
@@ -58,6 +59,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Invalid email address' },
         { status: 400 }
+      )
+    }
+    if (err instanceof SuppressedEmailError) {
+      return NextResponse.json(
+        {
+          error:
+            "We can't deliver email to this address — contact mail@philipithomas.com.",
+        },
+        { status: 422 }
       )
     }
     console.error('[subscribe] error:', err)

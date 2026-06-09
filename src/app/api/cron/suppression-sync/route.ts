@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
-import { upsertSuppression } from '@/lib/db/queries/suppressions'
+import {
+  deleteBySourceNotIn,
+  upsertSuppression,
+} from '@/lib/db/queries/suppressions'
 import { listSuppressedDestinations } from '@/lib/email/ses'
 import { requireEnv } from '@/lib/env'
 
@@ -16,7 +19,14 @@ export async function GET(request: Request) {
     for (const { email, reason } of destinations) {
       await upsertSuppression(email, reason, 'ses_suppression_list')
     }
-    return NextResponse.json({ synced: destinations.length })
+    // Authoritative for this source: drop rows SES no longer suppresses. Safe
+    // on an empty list because listSuppressedDestinations throws on API errors
+    // (a failed fetch lands in the catch and never reaches this delete).
+    const removed = await deleteBySourceNotIn(
+      'ses_suppression_list',
+      destinations.map((d) => d.email)
+    )
+    return NextResponse.json({ synced: destinations.length, removed })
   } catch (err) {
     console.error('[cron/suppression-sync] error:', err)
     return NextResponse.json({ error: 'Sync failed' }, { status: 500 })

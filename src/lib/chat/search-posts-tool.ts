@@ -1,7 +1,7 @@
 import { tool } from 'ai'
 import { GroupBy, K, Knn, MinK, Rrf, Search } from 'chromadb'
 import { z } from 'zod/v4'
-import { getClient, getPostsSchema } from '@/lib/chroma'
+import { getPostsCollection } from '@/lib/chroma'
 
 interface PostResult {
   title: string
@@ -30,11 +30,7 @@ export const searchPosts = tool({
     query: z.string().describe('The search query'),
   }),
   execute: async ({ query }) => {
-    const client = getClient()
-    const collection = await client.getOrCreateCollection({
-      name: 'posts',
-      schema: getPostsSchema(),
-    })
+    const collection = await getPostsCollection()
 
     const search = new Search()
       .rank(

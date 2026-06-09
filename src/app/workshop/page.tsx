@@ -10,7 +10,16 @@ export const metadata: Metadata = {
 }
 
 export default function WorkshopPage() {
-  const posts = getPostsByNewsletter('workshop').slice(0, 24)
+  // Slim DTO for the client component — keeps the raw MDX `content` out of
+  // the serialized RSC payload
+  const posts = getPostsByNewsletter('workshop')
+    .slice(0, 24)
+    .map(({ slug, newsletter, frontmatter, excerpt }) => ({
+      slug,
+      newsletter,
+      frontmatter,
+      excerpt,
+    }))
 
   return (
     <div className="bg-offwhite-warm" data-bg="offwhite-warm">

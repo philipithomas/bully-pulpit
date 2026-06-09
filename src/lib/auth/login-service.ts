@@ -12,7 +12,7 @@ import {
   findByEmail,
   findById,
 } from '@/lib/db/queries/subscribers'
-import type { Subscriber } from '@/lib/db/schema'
+import type { Login, Subscriber } from '@/lib/db/schema'
 import {
   sendConfirmation,
   sendNewSubscriberNotification,
@@ -35,6 +35,44 @@ function generateCode(): string {
 }
 
 /**
+ * Detects a Postgres unique violation (SQLSTATE 23505). The Neon driver puts
+ * the SQLSTATE on `code`; drizzle may wrap the driver error as `cause`.
+ */
+function isUniqueViolation(err: unknown): boolean {
+  let current: unknown = err
+  while (typeof current === 'object' && current !== null) {
+    if ((current as { code?: unknown }).code === '23505') return true
+    current = (current as { cause?: unknown }).cause
+  }
+  return false
+}
+
+/**
+ * Inserts a code-type login, retrying on collision: code lookups are scoped
+ * per-subscriber but UNIQUE(token) is table-global, so a fresh 6-digit code
+ * can collide with any historical row.
+ */
+async function createCodeLogin(
+  subscriberId: number,
+  expiredAt: Date
+): Promise<{ code: string; login: Login }> {
+  for (let attempt = 1; ; attempt++) {
+    const code = generateCode()
+    try {
+      const login = await createLogin({
+        subscriberId,
+        token: code,
+        tokenType: 'code',
+        expiredAt,
+      })
+      return { code, login }
+    } catch (err) {
+      if (attempt >= 3 || !isUniqueViolation(err)) throw err
+    }
+  }
+}
+
+/**
  * Creates a 6-digit code login AND a magic-link login (both 15-min expiry) and
  * emails them. Ported from printing-press's create_and_send_login.
  */
@@ -43,13 +81,10 @@ export async function createAndSendLogin(
 ): Promise<void> {
   const expiredAt = new Date(Date.now() + FIFTEEN_MINUTES_MS)
 
-  const code = generateCode()
-  const codeLogin = await createLogin({
-    subscriberId: subscriber.id,
-    token: code,
-    tokenType: 'code',
-    expiredAt,
-  })
+  const { code, login: codeLogin } = await createCodeLogin(
+    subscriber.id,
+    expiredAt
+  )
 
   const magicToken = crypto.randomUUID()
   const magicLogin = await createLogin({

@@ -47,7 +47,7 @@ export function InlineSignupForm({
   headerText,
   showSubscriberCount = false,
 }: Props) {
-  const { user, loading: authLoading } = useAuthContext()
+  const { user } = useAuthContext()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [selected, setSelected] = useState<Set<string>>(
@@ -129,7 +129,9 @@ export function InlineSignupForm({
           setCode('')
           return
         }
-        window.location.assign(`${window.location.pathname}?signed-in=1`)
+        const url = new URL(window.location.href)
+        url.searchParams.set('signed-in', '1')
+        window.location.assign(url.toString())
       } catch {
         toast.error('Unable to verify code')
         setCode('')
@@ -141,7 +143,9 @@ export function InlineSignupForm({
     [email]
   )
 
-  if (hideWhenLoggedIn && (authLoading || user)) return null
+  // No authLoading gate: the form must be in the static HTML for logged-out
+  // visitors; signed-in members get a brief flash before it collapses.
+  if (hideWhenLoggedIn && user) return null
 
   if (step === 'code') {
     return (

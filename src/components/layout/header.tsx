@@ -1,16 +1,29 @@
 'use client'
 
 import { Search } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { MemberMenu } from '@/components/auth/member-menu'
-import { ChatSidebar } from '@/components/chat/chat-sidebar'
 import { Logo } from '@/components/layout/logo'
 import { useNewsletter } from '@/components/layout/newsletter-context'
-import { SearchDialog } from '@/components/search/search-dialog'
 import { BellIcon } from '@/components/ui/bell-icon'
 import { useChatSidebar } from '@/stores/chat-store'
+
+// dynamic() splits chat (ai SDK + react-markdown) and search out of the
+// first-load bundle — a conditional render of a static import would not.
+const ChatSidebar = dynamic(
+  () => import('@/components/chat/chat-sidebar').then((m) => m.ChatSidebar),
+  { ssr: false }
+)
+const SearchDialog = dynamic(
+  () => import('@/components/search/search-dialog').then((m) => m.SearchDialog),
+  { ssr: false }
+)
+
+const prefetchChat = () => void import('@/components/chat/chat-sidebar')
+const prefetchSearch = () => void import('@/components/search/search-dialog')
 
 const newsletterLogos: Record<string, { src: string; className: string }> = {
   contraption: {
@@ -29,12 +42,15 @@ const newsletterLogos: Record<string, { src: string; className: string }> = {
 
 export function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
+  // Stays true after first open so the dialog keeps its mounted state
+  const [searchHasOpened, setSearchHasOpened] = useState(false)
   const { newsletter } = useNewsletter()
-  const { openSidebar } = useChatSidebar()
+  const { openSidebar, hasOpened } = useChatSidebar()
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault()
+      setSearchHasOpened(true)
       setSearchOpen((prev) => !prev)
     }
   }, [])
@@ -72,7 +88,12 @@ export function Header() {
         <nav className="flex items-center gap-3 md:gap-5">
           <button
             type="button"
-            onClick={() => setSearchOpen(true)}
+            onClick={() => {
+              setSearchHasOpened(true)
+              setSearchOpen(true)
+            }}
+            onMouseEnter={prefetchSearch}
+            onFocus={prefetchSearch}
             aria-label="Search"
             className="p-2 -m-2"
           >
@@ -84,6 +105,8 @@ export function Header() {
           <button
             type="button"
             onClick={() => openSidebar()}
+            onMouseEnter={prefetchChat}
+            onFocus={prefetchChat}
             aria-label="Ask Bell"
             className="p-2 -m-2"
           >
@@ -95,8 +118,10 @@ export function Header() {
           <MemberMenu />
         </nav>
       </div>
-      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
-      <ChatSidebar />
+      {searchHasOpened && (
+        <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      )}
+      {hasOpened && <ChatSidebar />}
     </header>
   )
 }

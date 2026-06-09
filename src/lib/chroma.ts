@@ -3,7 +3,7 @@ import {
   ChromaCloudQwenEmbeddingModel,
 } from '@chroma-core/chroma-cloud-qwen'
 import { ChromaCloudSpladeEmbeddingFunction } from '@chroma-core/chroma-cloud-splade'
-import type { SparseVector } from 'chromadb'
+import type { Collection, SparseVector } from 'chromadb'
 import {
   CloudClient,
   K,
@@ -42,6 +42,39 @@ export function getPostsSchema() {
       }),
       'sparse_embedding'
     )
+}
+
+// Cached collection handles. The promises are created lazily inside the
+// getters (never at module init — `next build` must not need Chroma env) and
+// cleared on rejection so a transient failure doesn't poison warm instances.
+// A resolved handle binds the collection UUID for the life of the warm
+// instance: if a collection is ever deleted and recreated out-of-band,
+// redeploy (or wait for instance recycling) to refresh the handles.
+let postsCollection: Promise<Collection> | null = null
+let searchLogsCollection: Promise<Collection> | null = null
+
+export function getPostsCollection(): Promise<Collection> {
+  if (!postsCollection) {
+    postsCollection = getClient()
+      .getOrCreateCollection({ name: 'posts', schema: getPostsSchema() })
+      .catch((err) => {
+        postsCollection = null
+        throw err
+      })
+  }
+  return postsCollection
+}
+
+export function getSearchLogsCollection(): Promise<Collection> {
+  if (!searchLogsCollection) {
+    searchLogsCollection = getClient()
+      .getOrCreateCollection({ name: 'search_logs', schema: getPostsSchema() })
+      .catch((err) => {
+        searchLogsCollection = null
+        throw err
+      })
+  }
+  return searchLogsCollection
 }
 
 const EMBED_URL =

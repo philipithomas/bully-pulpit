@@ -67,3 +67,32 @@ export function renderConfirmationEmail(input: {
 </body>
 </html>`
 }
+
+/**
+ * Plaintext alternative for the sign-in email. Built from the RAW code and
+ * link (escapeHtml belongs only to the HTML part) and mirrors the HTML's full
+ * content — spam filters compare the two parts for consistency.
+ */
+export function renderConfirmationText(input: {
+  code: string
+  magicLink: string
+}): string {
+  const year = new Date().getFullYear()
+  return [
+    'Hey,',
+    '',
+    'Your sign-in code for philipithomas.com is:',
+    '',
+    input.code,
+    '',
+    'Or use this link to sign in directly:',
+    '',
+    input.magicLink,
+    '',
+    "This code expires in 15 minutes. If you didn't request this, you can safely ignore this email.",
+    '',
+    '—',
+    `© ${year} The Contraption Company LLC`,
+    '169 Madison Ave. Suite 2174, New York, NY 10016 USA',
+  ].join('\n')
+}

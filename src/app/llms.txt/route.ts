@@ -1,6 +1,8 @@
 import { siteConfig } from '@/lib/config'
 import { getAllPosts } from '@/lib/content/loader'
 
+export const dynamic = 'force-static'
+
 export async function GET() {
   const posts = getAllPosts()
 

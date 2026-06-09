@@ -4,8 +4,15 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuthContext } from '@/components/auth/auth-provider'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { siteConfig } from '@/lib/config'
+import { useAuthModal } from '@/stores/auth-store'
 
 const newsletterInfo = [
   { key: 'subscribed_contraption', ...siteConfig.newsletters.contraption },
@@ -22,12 +29,16 @@ interface Preferences {
 
 export default function AccountPage() {
   const { user, loading, logout } = useAuthContext()
+  const { openModal } = useAuthModal()
   const router = useRouter()
   const [prefs, setPrefs] = useState<Preferences | null>(null)
+  const [prefsError, setPrefsError] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleted, setDeleted] = useState(false)
 
   useEffect(() => {
@@ -39,7 +50,7 @@ export default function AccountPage() {
         return res.json()
       })
       .then(setPrefs)
-      .catch(() => {})
+      .catch((e) => setPrefsError(e.message))
   }, [user])
 
   const handleToggle = useCallback(
@@ -56,7 +67,12 @@ export default function AccountPage() {
         if (res.ok) {
           setPrefs((prev) => (prev ? { ...prev, [key]: enabled } : prev))
           setSaved(true)
+          setSaveError(null)
+        } else {
+          setSaveError("Couldn't save — try again")
         }
+      } catch {
+        setSaveError("Couldn't save — try again")
       } finally {
         setSaving(null)
       }
@@ -66,6 +82,7 @@ export default function AccountPage() {
 
   const handleDelete = useCallback(async () => {
     setDeleting(true)
+    setDeleteError(null)
     try {
       const res = await fetch('/api/auth/preferences', {
         method: 'DELETE',
@@ -74,7 +91,14 @@ export default function AccountPage() {
         await logout()
         setDeleted(true)
         setShowDeleteModal(false)
+        return
       }
+      const data = await res.json().catch(() => null)
+      setDeleteError(
+        data?.error ?? 'Could not delete your data. Please try again.'
+      )
+    } catch {
+      setDeleteError('Could not delete your data. Please try again.')
     } finally {
       setDeleting(false)
     }
@@ -97,9 +121,12 @@ export default function AccountPage() {
           <h1 className="text-3xl font-semibold tracking-tight text-gray-950 mb-4">
             Account
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 mb-6">
             Please sign in to manage your account.
           </p>
+          <button type="button" onClick={openModal} className="btn btn-primary">
+            Sign in
+          </button>
         </div>
       </div>
     )
@@ -179,10 +206,17 @@ export default function AccountPage() {
             {saved && (
               <p className="text-sm text-gray-500 mt-3">Preferences saved.</p>
             )}
+            {saveError && (
+              <p className="text-sm text-red-600 mt-3">{saveError}</p>
+            )}
           </section>
         )}
 
-        {!prefs && (
+        {!prefs && prefsError && (
+          <p className="mb-10 text-sm text-red-600">{prefsError}</p>
+        )}
+
+        {!prefs && !prefsError && (
           <div className="mb-10 flex items-center gap-2 text-sm text-gray-500">
             <Spinner className="h-3.5 w-3.5" />
             <span>Loading preferences</span>
@@ -202,7 +236,10 @@ export default function AccountPage() {
           </button>
           <button
             type="button"
-            onClick={() => setShowDeleteModal(true)}
+            onClick={() => {
+              setDeleteError(null)
+              setShowDeleteModal(true)
+            }}
             className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
           >
             Delete my data
@@ -210,50 +247,42 @@ export default function AccountPage() {
         </div>
       </div>
 
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowDeleteModal(false)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setShowDeleteModal(false)
-            }}
-          />
-          <div className="relative bg-white max-w-md w-full mx-4 p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-950 mb-3">
-              Delete all data?
-            </h3>
-            <p className="text-sm text-gray-600 mb-6">
-              This will permanently delete your subscription and all associated
-              data including email history. This cannot be undone.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
-              >
-                {deleting ? (
-                  <span className="flex items-center gap-2">
-                    <Spinner className="h-3.5 w-3.5" />
-                    Deleting
-                  </span>
-                ) : (
-                  'Delete my data'
-                )}
-              </button>
-            </div>
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent>
+          <DialogTitle className="mb-3">Delete all data?</DialogTitle>
+          <DialogDescription className="mb-6">
+            This will permanently delete your subscription and all associated
+            data including email history. This cannot be undone.
+          </DialogDescription>
+          {deleteError && (
+            <p className="text-sm text-red-600 mb-6">{deleteError}</p>
+          )}
+          <div className="flex gap-3 justify-end">
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
+            >
+              {deleting ? (
+                <span className="flex items-center gap-2">
+                  <Spinner className="h-3.5 w-3.5" />
+                  Deleting
+                </span>
+              ) : (
+                'Delete my data'
+              )}
+            </button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

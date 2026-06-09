@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
+import { preload } from 'react-dom'
 import '@/styles/globals.css'
 import { Plausible } from '@/components/analytics/plausible'
 import { AuthProvider } from '@/components/auth/auth-provider'
@@ -13,6 +14,23 @@ import { ImageZoom } from '@/components/ui/image-zoom'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { Toaster } from '@/components/ui/sonner'
 import { siteConfig } from '@/lib/config'
+
+// The above-the-fold faces (Sohne 400/600, Tiempos Text 400) — otherwise the
+// browser discovers them only after downloading and parsing the CSS. Emitted
+// via ReactDOM.preload so React hoists each resource exactly once (literal
+// <link> tags get duplicated into both the head and the RSC Float hints).
+const PRELOADED_FONTS = [
+  'https://fonts.philipithomas.com/klim/soehne-buch.woff2',
+  'https://fonts.philipithomas.com/klim/soehne-halbfett.woff2',
+  'https://fonts.philipithomas.com/klim/tiempos-text-regular.woff2',
+]
+
+function FontPreloads() {
+  for (const href of PRELOADED_FONTS) {
+    preload(href, { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' })
+  }
+  return null
+}
 
 export const metadata: Metadata = {
   title: {
@@ -58,6 +76,7 @@ export default function RootLayout({
           href="https://fonts.philipithomas.com"
           crossOrigin="anonymous"
         />
+        <FontPreloads />
       </head>
       <body className="font-sans font-normal antialiased text-gray-900 bg-offwhite flex flex-col min-h-screen">
         <AuthProvider>

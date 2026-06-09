@@ -1,6 +1,8 @@
 import { getAllPosts } from '@/lib/content/loader'
 import { generateRss } from '@/lib/feeds/rss'
 
+export const dynamic = 'force-static'
+
 export async function GET() {
   const posts = getAllPosts()
   const xml = generateRss(posts)

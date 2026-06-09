@@ -4,9 +4,11 @@ import { useAuthContext } from '@/components/auth/auth-provider'
 import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 
 export function SubscribeCta() {
-  const { user, loading } = useAuthContext()
+  const { user } = useAuthContext()
 
-  if (loading || user) return null
+  // No loading gate: the CTA must be in the static HTML for logged-out
+  // visitors; signed-in members get a brief flash before it collapses.
+  if (user) return null
 
   return (
     <div className="mx-auto max-w-2xl border-t border-gray-200 mt-12 pt-8">

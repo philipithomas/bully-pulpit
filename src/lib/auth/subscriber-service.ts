@@ -4,6 +4,7 @@ import {
   createSubscriber,
   findByEmail,
 } from '@/lib/db/queries/subscribers'
+import { isSuppressed } from '@/lib/db/queries/suppressions'
 import type { Subscriber } from '@/lib/db/schema'
 import { sendNewSubscriberNotification } from '@/lib/email/send'
 
@@ -12,6 +13,14 @@ export class InvalidEmailError extends Error {
   constructor() {
     super('Invalid email address')
     this.name = 'InvalidEmailError'
+  }
+}
+
+/** Thrown when the address is on the email suppression list (maps to HTTP 422). */
+export class SuppressedEmailError extends Error {
+  constructor() {
+    super('Email address is suppressed')
+    this.name = 'SuppressedEmailError'
   }
 }
 
@@ -53,6 +62,21 @@ async function sendLoginBestEffort(subscriber: Subscriber): Promise<void> {
 }
 
 /**
+ * SES silently drops sends to suppressed addresses, so fail loudly before the
+ * send. The check must live here, not in createAndSendLogin — anything thrown
+ * inside sendLoginBestEffort's try is swallowed.
+ */
+async function sendLoginOrRejectSuppressed(
+  subscriber: Subscriber
+): Promise<void> {
+  if (await isSuppressed(subscriber.email)) {
+    console.warn(`[subscriber] suppressed address blocked: ${subscriber.email}`)
+    throw new SuppressedEmailError()
+  }
+  await sendLoginBestEffort(subscriber)
+}
+
+/**
  * Creates or retrieves a subscriber, branching exactly like printing-press's
  * create_or_retrieve: Google sign-in confirms immediately; otherwise an OTP /
  * magic-link email is sent (resend for unconfirmed, sign-in code for confirmed).
@@ -78,9 +102,9 @@ export async function createOrRetrieve(input: {
     }
 
     if (existing.confirmedAt == null) {
-      await sendLoginBestEffort(existing)
+      await sendLoginOrRejectSuppressed(existing)
     } else if (!googleVerified) {
-      await sendLoginBestEffort(existing)
+      await sendLoginOrRejectSuppressed(existing)
     }
 
     return { subscriber: existing, isNew: false }
@@ -98,6 +122,6 @@ export async function createOrRetrieve(input: {
     return { subscriber: confirmed, isNew: true }
   }
 
-  await sendLoginBestEffort(subscriber)
+  await sendLoginOrRejectSuppressed(subscriber)
   return { subscriber, isNew: true }
 }

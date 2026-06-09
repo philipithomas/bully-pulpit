@@ -24,6 +24,7 @@ export async function sendSimpleEmail(input: {
   to: string
   subject: string
   html: string
+  text?: string
 }): Promise<void> {
   await getSesClient().send(
     new SendEmailCommand({
@@ -32,7 +33,12 @@ export async function sendSimpleEmail(input: {
       Content: {
         Simple: {
           Subject: { Data: input.subject, Charset: 'UTF-8' },
-          Body: { Html: { Data: input.html, Charset: 'UTF-8' } },
+          Body: {
+            Html: { Data: input.html, Charset: 'UTF-8' },
+            ...(input.text
+              ? { Text: { Data: input.text, Charset: 'UTF-8' } }
+              : {}),
+          },
         },
       },
     })
