@@ -9,7 +9,7 @@ nvm use 24
 pnpm install
 pnpm dev          # Start dev server with Turbopack
 pnpm build        # Production build
-pnpm test         # Run Vitest unit tests
+pnpm test         # Run Vitest tests (unit + PGlite integration)
 pnpm check        # Biome lint + format check
 pnpm images:optimize  # Resize oversized images, generate email variants
 pnpm content:check    # Validate generated artifacts are in sync (images, summaries/related)
@@ -35,6 +35,7 @@ pnpm db:studio    # Open Drizzle Studio against the DB
 - Path aliases: `@/*` maps to `./src/*` (relative imports banned by biome)
 - Biome for linting/formatting (not ESLint/Prettier)
 - Single quotes, no semicolons (biome config)
+- Integration tests are `*.integration.test.ts`, colocated, and run real SQL against an in-memory PGlite Postgres (no Docker/network) in the same `pnpm test` run. Harness at `src/test/integration/`: swap the Neon client with `vi.mock('@/lib/db/client', () => import('@/test/integration/db'))` (applies the real migrations, fresh DB per file, `resetDb()` per test), `session.ts` replaces `next/headers` for real-JWT sessions, `mocks.ts` has SES/BotID factories. Mock only external I/O — never `@/lib/db/queries/*`
 - Fonts loaded from fonts.philipithomas.com CDN
 - Pre-commit hook runs lint-staged, `pnpm content:check`, and `pnpm build` — no need to build manually before pushing
 

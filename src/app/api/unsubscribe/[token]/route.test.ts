@@ -47,7 +47,7 @@ function makeEmailSend(overrides: Partial<EmailSend> = {}): EmailSend {
     id: 10,
     subscriberId: 1,
     postSlug: 'my-post',
-    unsubscribeToken: 'tok',
+    unsubscribeToken: TOKEN,
     sendError: null,
     triggeredUnsubscribeAt: null,
     createdAt: new Date(),
@@ -63,6 +63,11 @@ function makeEmailSend(overrides: Partial<EmailSend> = {}): EmailSend {
   }
 }
 
+// Tokens must be UUID-shaped: the route rejects malformed tokens before the
+// (mocked) query layer is ever consulted.
+const TOKEN = '5b0e3f6a-9c1d-4e2b-8a7f-0123456789ab'
+const GHOST = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+
 const params = (token: string) => ({ params: Promise.resolve({ token }) })
 
 beforeEach(() => {
@@ -76,7 +81,7 @@ describe('GET /api/unsubscribe/[token]', () => {
       makeSubscriber({ subscribedWorkshop: false })
     )
 
-    const res = await GET({} as NextRequest, params('tok'))
+    const res = await GET({} as NextRequest, params(TOKEN))
 
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
@@ -90,7 +95,7 @@ describe('GET /api/unsubscribe/[token]', () => {
 
   it('returns 404 for an unknown token', async () => {
     mockedSends.findByUnsubscribeToken.mockResolvedValue(null)
-    const res = await GET({} as NextRequest, params('nope'))
+    const res = await GET({} as NextRequest, params(GHOST))
     expect(res.status).toBe(404)
     await expect(res.json()).resolves.toEqual({
       error: 'Invalid or expired token',
@@ -107,7 +112,7 @@ describe('PATCH /api/unsubscribe/[token]', () => {
     const req = {
       json: async () => ({ subscribed_postcard: false }),
     } as unknown as NextRequest
-    const res = await PATCH(req, params('tok'))
+    const res = await PATCH(req, params(TOKEN))
 
     expect(mockedSubs.updateSubscriber).toHaveBeenCalledWith('uuid-1', {
       subscribedPostcard: false,
@@ -122,7 +127,7 @@ describe('DELETE /api/unsubscribe/[token]', () => {
     mockedSubs.findById.mockResolvedValue(makeSubscriber({ id: 7 }))
     mockedSubs.updateSubscriber.mockResolvedValue(makeSubscriber())
 
-    const res = await DELETE({} as NextRequest, params('tok'))
+    const res = await DELETE({} as NextRequest, params(TOKEN))
 
     // A leaked unsubscribe token must NOT be able to hard-delete an account.
     expect(mockedSubs.updateSubscriber).toHaveBeenCalledWith('uuid-1', {
@@ -137,7 +142,7 @@ describe('DELETE /api/unsubscribe/[token]', () => {
 
   it('returns 404 for an unknown token', async () => {
     mockedSends.findByUnsubscribeToken.mockResolvedValue(null)
-    const res = await DELETE({} as NextRequest, params('nope'))
+    const res = await DELETE({} as NextRequest, params(GHOST))
     expect(res.status).toBe(404)
   })
 })
@@ -150,7 +155,7 @@ describe('POST /api/unsubscribe/[token] (one-click)', () => {
     mockedSubs.findById.mockResolvedValue(makeSubscriber())
     mockedSubs.updateSubscriber.mockResolvedValue(makeSubscriber())
 
-    const res = await POST({} as NextRequest, params('tok'))
+    const res = await POST({} as NextRequest, params(TOKEN))
 
     expect(mockedSubs.updateSubscriber).toHaveBeenCalledWith('uuid-1', {
       subscribedWorkshop: false,
@@ -166,7 +171,7 @@ describe('POST /api/unsubscribe/[token] (one-click)', () => {
     mockedSubs.findById.mockResolvedValue(makeSubscriber())
     mockedSubs.updateSubscriber.mockResolvedValue(makeSubscriber())
 
-    await POST({} as NextRequest, params('tok'))
+    await POST({} as NextRequest, params(TOKEN))
 
     expect(mockedSubs.updateSubscriber).toHaveBeenCalledWith('uuid-1', {
       subscribedPostcard: false,

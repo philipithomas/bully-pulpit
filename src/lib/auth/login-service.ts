@@ -37,8 +37,10 @@ function generateCode(): string {
 /**
  * Detects a Postgres unique violation (SQLSTATE 23505). The Neon driver puts
  * the SQLSTATE on `code`; drizzle may wrap the driver error as `cause`.
+ * Exported so the integration suite can assert other drivers (PGlite) surface
+ * the same shape — the code-collision retry depends on it.
  */
-function isUniqueViolation(err: unknown): boolean {
+export function isUniqueViolation(err: unknown): boolean {
   let current: unknown = err
   while (typeof current === 'object' && current !== null) {
     if ((current as { code?: unknown }).code === '23505') return true

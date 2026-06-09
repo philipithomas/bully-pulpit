@@ -75,6 +75,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.8",
+    "@electric-sql/pglite": "^0.5.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^25.5.0",

@@ -11,12 +11,22 @@ import {
   updateSubscriber,
 } from '@/lib/db/queries/subscribers'
 
-const NOT_FOUND = NextResponse.json(
-  { error: 'Invalid or expired token' },
-  { status: 404 }
-)
+// A Response body is single-read, so this must mint a fresh instance per
+// request — a shared module-scope response would arrive empty the second time.
+function notFound() {
+  return NextResponse.json(
+    { error: 'Invalid or expired token' },
+    { status: 404 }
+  )
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 async function resolveSubscriber(token: string) {
+  // unsubscribe_token is a uuid column; a malformed token would throw a
+  // Postgres cast error (22P02) instead of missing, turning 404s into 500s.
+  if (!UUID_RE.test(token)) return null
   const emailSend = await findByUnsubscribeToken(token)
   if (!emailSend) return null
   const subscriber = await findById(emailSend.subscriberId)
@@ -30,7 +40,7 @@ export async function GET(
 ) {
   const { token } = await params
   const resolved = await resolveSubscriber(token)
-  if (!resolved) return NOT_FOUND
+  if (!resolved) return notFound()
 
   return NextResponse.json({
     email: maskEmail(resolved.subscriber.email),
@@ -47,7 +57,7 @@ export async function PATCH(
 ) {
   const { token } = await params
   const resolved = await resolveSubscriber(token)
-  if (!resolved) return NOT_FOUND
+  if (!resolved) return notFound()
 
   const body = await request.json()
   await updateSubscriber(resolved.subscriber.uuid, prefsFromBody(body))
@@ -67,7 +77,7 @@ export async function DELETE(
 ) {
   const { token } = await params
   const resolved = await resolveSubscriber(token)
-  if (!resolved) return NOT_FOUND
+  if (!resolved) return notFound()
 
   await updateSubscriber(resolved.subscriber.uuid, {
     subscribedPostcard: false,
@@ -103,7 +113,7 @@ export async function POST(
 ) {
   const { token } = await params
   const resolved = await resolveSubscriber(token)
-  if (!resolved) return NOT_FOUND
+  if (!resolved) return notFound()
 
   await updateSubscriber(
     resolved.subscriber.uuid,
