@@ -422,6 +422,75 @@ export async function importSubscribers(
   return { created, updated }
 }
 
+/** A full subscriber record from the legacy printing-press export API. */
+export type LegacySyncRow = {
+  uuid: string
+  email: string
+  name: string | null
+  confirmedAt: Date | null
+  subscribedPostcard: boolean
+  subscribedContraption: boolean
+  subscribedWorkshop: boolean
+  source: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * Idempotent upsert from the legacy printing-press export, keyed by email.
+ * Inserts preserve the legacy uuid/created_at; an existing row is only
+ * overwritten when the legacy record is strictly newer (its updated_at is
+ * carried over, so a re-run sees it as unchanged). Newest-wins means
+ * re-syncing converges, and an edit made in THIS system after a sync — which
+ * bumps local updated_at to now() — is not clobbered by syncing again.
+ * Callers must dedupe by email first.
+ */
+export async function syncFromLegacy(
+  rows: LegacySyncRow[]
+): Promise<{ created: number; updated: number; unchanged: number }> {
+  let created = 0
+  let updated = 0
+  for (let i = 0; i < rows.length; i += IMPORT_CHUNK) {
+    const chunk = rows.slice(i, i + IMPORT_CHUNK)
+    const result = await getDb()
+      .insert(subscribers)
+      .values(
+        chunk.map((r) => ({
+          uuid: r.uuid,
+          email: r.email.toLowerCase(),
+          name: r.name,
+          confirmedAt: r.confirmedAt,
+          subscribedPostcard: r.subscribedPostcard,
+          subscribedContraption: r.subscribedContraption,
+          subscribedWorkshop: r.subscribedWorkshop,
+          source: r.source,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        }))
+      )
+      .onConflictDoUpdate({
+        target: subscribers.email,
+        set: {
+          name: sql`excluded.name`,
+          confirmedAt: sql`excluded.confirmed_at`,
+          subscribedPostcard: sql`excluded.subscribed_postcard`,
+          subscribedContraption: sql`excluded.subscribed_contraption`,
+          subscribedWorkshop: sql`excluded.subscribed_workshop`,
+          source: sql`excluded.source`,
+          updatedAt: sql`excluded.updated_at`,
+        },
+        setWhere: sql`${subscribers.updatedAt} < excluded.updated_at`,
+      })
+      // Rows skipped by setWhere are not returned, so they count as unchanged.
+      .returning({ inserted: sql<number>`(xmax = 0)::int` })
+    for (const row of result) {
+      if (row.inserted === 1) created += 1
+      else updated += 1
+    }
+  }
+  return { created, updated, unchanged: rows.length - created - updated }
+}
+
 /** Masks a local part for display, identical to printing-press's mask_email. */
 export function maskEmail(email: string): string {
   const at = email.indexOf('@')
