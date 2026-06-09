@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { GoogleSignInLink } from '@/components/auth/google-sign-in'
@@ -11,6 +11,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
+import { formatMemberCount } from '@/lib/format-member-count'
 import { getExternalReferrer } from '@/lib/referrer'
 
 interface Props {
@@ -19,6 +20,11 @@ interface Props {
   autoFocus?: boolean
   className?: string
   headerText?: string
+  /**
+   * When true, fetches the live subscriber count client-side and uses it as the
+   * header text ("Join N other subscribers:"). Lets the host page stay static.
+   */
+  showSubscriberCount?: boolean
 }
 
 const newsletters = [
@@ -39,8 +45,9 @@ export function InlineSignupForm({
   autoFocus = false,
   className,
   headerText,
+  showSubscriberCount = false,
 }: Props) {
-  const { user, loading: authLoading } = useAuthContext()
+  const { user } = useAuthContext()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [selected, setSelected] = useState<Set<string>>(
@@ -48,7 +55,22 @@ export function InlineSignupForm({
   )
   const [step, setStep] = useState<Step>('email')
   const [loading, setLoading] = useState(false)
+  const [subscriberCount, setSubscriberCount] = useState<number | null>(null)
   const submittingRef = useRef(false)
+
+  useEffect(() => {
+    if (!showSubscriberCount) return
+    fetch('/api/stats/subscribers/count')
+      .then((res) => res.json())
+      .then((data) => setSubscriberCount(data.count ?? null))
+      .catch(() => {})
+  }, [showSubscriberCount])
+
+  const resolvedHeaderText =
+    headerText ??
+    (subscriberCount && subscriberCount > 0
+      ? `Join ${formatMemberCount(subscriberCount)} other subscribers:`
+      : undefined)
 
   function toggleNewsletter(id: string) {
     setSelected((prev) => {
@@ -107,7 +129,9 @@ export function InlineSignupForm({
           setCode('')
           return
         }
-        window.location.assign(`${window.location.pathname}?signed-in=1`)
+        const url = new URL(window.location.href)
+        url.searchParams.set('signed-in', '1')
+        window.location.assign(url.toString())
       } catch {
         toast.error('Unable to verify code')
         setCode('')
@@ -119,7 +143,9 @@ export function InlineSignupForm({
     [email]
   )
 
-  if (hideWhenLoggedIn && (authLoading || user)) return null
+  // No authLoading gate: the form must be in the static HTML for logged-out
+  // visitors; signed-in members get a brief flash before it collapses.
+  if (hideWhenLoggedIn && user) return null
 
   if (step === 'code') {
     return (
@@ -172,9 +198,9 @@ export function InlineSignupForm({
       onSubmit={handleEmailSubmit}
       className={`flex flex-col items-start ${className ?? ''}`}
     >
-      {headerText && (
+      {resolvedHeaderText && (
         <p className="font-sans text-lg font-medium mb-3 text-gray-800">
-          {headerText}
+          {resolvedHeaderText}
         </p>
       )}
       {showNewsletterPicker && (

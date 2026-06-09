@@ -4,6 +4,9 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 
 interface ChatSidebarState {
   open: boolean
+  // True once the sidebar has ever been opened — gates the lazy chat bundle
+  // in the Header. Never reset so the mounted sidebar survives close.
+  hasOpened: boolean
   pinned: boolean
   initialQuery: string
   savedMessages: UIMessage[]
@@ -24,12 +27,13 @@ export const useChatSidebar = create<ChatSidebarState>()(
   persist(
     (set) => ({
       open: false,
+      hasOpened: false,
       pinned: false,
       initialQuery: '',
       savedMessages: [],
       chatId: generateChatId(),
       openSidebar: (query?: string) =>
-        set({ open: true, initialQuery: query ?? '' }),
+        set({ open: true, hasOpened: true, initialQuery: query ?? '' }),
       closeSidebar: () => set({ open: false, pinned: false }),
       togglePin: () => set((state) => ({ pinned: !state.pinned })),
       setPinned: (pinned: boolean) => set({ pinned }),

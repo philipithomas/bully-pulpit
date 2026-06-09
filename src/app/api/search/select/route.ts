@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { getClient, getPostsSchema } from '@/lib/chroma'
+import { getSearchLogsCollection } from '@/lib/chroma'
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -21,11 +21,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const client = getClient()
-    const logs = await client.getOrCreateCollection({
-      name: 'search_logs',
-      schema: getPostsSchema(),
-    })
+    const logs = await getSearchLogsCollection()
 
     const existing = await logs.get({ ids: [searchId] })
     if (existing.ids.length === 0) {

@@ -19,9 +19,17 @@ export async function checkRateLimit(
 ): Promise<boolean> {
   if (!process.env.VERCEL) return true
 
-  const { rateLimited } = await vercelCheckRateLimit(rule, {
-    request,
-    rateLimitKey: key,
-  })
-  return !rateLimited
+  try {
+    const { rateLimited } = await vercelCheckRateLimit(rule, {
+      request,
+      rateLimitKey: key,
+    })
+    return !rateLimited
+  } catch (err) {
+    // Fail open: @vercel/firewall throws on unexpected statuses from its
+    // self-fetch (e.g. preview deployment protection, transient 5xx) — that
+    // must not 500 the route the limit is protecting.
+    console.error(`[rate-limit] check failed for rule "${rule}":`, err)
+    return true
+  }
 }

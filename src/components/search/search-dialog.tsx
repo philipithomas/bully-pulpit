@@ -82,6 +82,7 @@ export function SearchDialog({
   const [results, setResults] = useState<SearchResult[]>([])
   const [recentPosts, setRecentPosts] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const searchIdRef = useRef<string | null>(null)
 
@@ -90,6 +91,7 @@ export function SearchDialog({
     if (open) {
       setQuery('')
       setResults([])
+      setSearchError(null)
       setActiveIndex(0)
       searchIdRef.current = null
       setTimeout(() => inputRef.current?.focus(), 50)
@@ -118,24 +120,28 @@ export function SearchDialog({
           })
           .catch(() => {})
       }
+    } else {
+      // The dialog stays mounted after first open (lazy chunk), so cancel
+      // pending work on close — a debounced fetch for a dismissed query
+      // would log analytics and clobber state behind the closed dialog.
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      abortRef.current?.abort()
+      setLoading(false)
     }
   }, [open, recentPosts.length])
 
   const abortRef = useRef<AbortController>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   const fetchResults = useCallback(async (q: string) => {
-    abortRef.current?.abort()
-
-    if (q.length < 2) {
-      setResults([])
-      setLoading(false)
-      searchIdRef.current = null
-      return
-    }
-
     const controller = new AbortController()
     abortRef.current = controller
-    setLoading(true)
     try {
       const sid = getSessionId()
       const res = await fetch(
@@ -150,9 +156,18 @@ export function SearchDialog({
           props: { query: q, results: (data.results ?? []).length },
         })
         track('Search', { query: q, results: (data.results ?? []).length })
+      } else {
+        // Surface definitive rejections (e.g. the 429 rate limit) instead of
+        // leaving the previous query's results on screen with no feedback.
+        const data = await res.json().catch(() => null)
+        setResults([])
+        searchIdRef.current = null
+        setSearchError(data?.error ?? 'Search failed — try again.')
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
+      setResults([])
+      setSearchError('Search failed — try again.')
     } finally {
       if (!controller.signal.aborted) setLoading(false)
     }
@@ -162,7 +177,20 @@ export function SearchDialog({
     (value: string) => {
       setQuery(value)
       setActiveIndex(0)
-      fetchResults(value)
+      setSearchError(null)
+      // Abort + reflect state synchronously: a stale in-flight response must
+      // never paint over a newer query, and showing the spinner through the
+      // debounce keeps the "No results found" state from flashing.
+      abortRef.current?.abort()
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      if (value.length < 2) {
+        setResults([])
+        setLoading(false)
+        searchIdRef.current = null
+        return
+      }
+      setLoading(true)
+      debounceRef.current = setTimeout(() => fetchResults(value), 200)
     },
     [fetchResults]
   )
@@ -194,7 +222,8 @@ export function SearchDialog({
   }, [query, onOpenChange])
 
   const showAskAI = query.length >= 2
-  const maxIndex = showAskAI ? results.length : results.length - 1
+  const displayResults = query.length < 2 ? recentPosts : results
+  const maxIndex = showAskAI ? displayResults.length : displayResults.length - 1
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -206,15 +235,15 @@ export function SearchDialog({
         setActiveIndex((i) => Math.max(i - 1, 0))
       } else if (e.key === 'Enter') {
         e.preventDefault()
-        if (showAskAI && activeIndex === results.length) {
+        if (showAskAI && activeIndex === displayResults.length) {
           handleAskAI()
-        } else if (results[activeIndex]) {
-          const r = results[activeIndex]
+        } else if (displayResults[activeIndex]) {
+          const r = displayResults[activeIndex]
           navigate(r.slug, r.url)
         }
       }
     },
-    [results, activeIndex, navigate, maxIndex, showAskAI, handleAskAI]
+    [displayResults, activeIndex, navigate, maxIndex, showAskAI, handleAskAI]
   )
 
   return (
@@ -247,7 +276,6 @@ export function SearchDialog({
             </div>
 
             {(() => {
-              const displayResults = query.length < 2 ? recentPosts : results
               const isRecent = query.length < 2
 
               if (displayResults.length > 0) {
@@ -329,7 +357,7 @@ export function SearchDialog({
               if (query.length >= 2 && !loading) {
                 return (
                   <div className="px-4 py-8 text-center font-sans text-sm text-gray-400">
-                    No results found
+                    {searchError ?? 'No results found'}
                   </div>
                 )
               }
@@ -342,10 +370,10 @@ export function SearchDialog({
                 <button
                   type="button"
                   onClick={handleAskAI}
-                  onMouseEnter={() => setActiveIndex(results.length)}
+                  onMouseEnter={() => setActiveIndex(displayResults.length)}
                   className={cn(
                     'flex w-full items-center gap-2 rounded px-3 py-2.5 text-left font-sans text-sm transition-colors',
-                    activeIndex === results.length
+                    activeIndex === displayResults.length
                       ? 'bg-gray-050'
                       : 'hover:bg-gray-050'
                   )}

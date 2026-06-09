@@ -24,9 +24,11 @@ export async function GET(request: NextRequest) {
       slug: p.slug,
       newsletter: p.newsletter,
       title: p.frontmatter.title,
+      subtitle: p.frontmatter.subtitle,
       description: p.frontmatter.description,
       publishedAt: p.frontmatter.publishedAt,
       coverImage: p.frontmatter.coverImage,
+      coverImageAlt: p.frontmatter.coverImageAlt,
       excerpt: p.excerpt,
     })),
     meta: {

@@ -2,7 +2,10 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { GoogleSignInButton } from '@/components/auth/google-sign-in'
+import {
+  GoogleSignInButton,
+  useGoogleSignInAvailable,
+} from '@/components/auth/google-sign-in'
 import {
   Dialog,
   DialogContent,
@@ -87,7 +90,9 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
 
         closeModal()
         onSuccess?.()
-        window.location.assign(`${window.location.pathname}?signed-in=1`)
+        const url = new URL(window.location.href)
+        url.searchParams.set('signed-in', '1')
+        window.location.assign(url.toString())
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Something went wrong')
         setCode('')
@@ -111,14 +116,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
               </DialogDescription>
             </DialogHeader>
             <div className="mt-6 space-y-4">
-              <GoogleSignInButton onSuccess={onSuccess} />
-              <div className="flex items-center gap-4">
-                <div className="h-px flex-1 bg-gray-200" />
-                <span className="text-xs text-gray-400 font-sans uppercase tracking-wide">
-                  or
-                </span>
-                <div className="h-px flex-1 bg-gray-200" />
-              </div>
+              <GoogleSignInSection onSuccess={onSuccess} />
               <form onSubmit={handleEmailSubmit} className="space-y-4">
                 <input
                   type="email"
@@ -193,5 +191,26 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+// Button + "or" divider hide together when the GSI script is blocked,
+// leaving the email form as the only option.
+function GoogleSignInSection({ onSuccess }: { onSuccess?: () => void }) {
+  const available = useGoogleSignInAvailable()
+
+  if (!available) return null
+
+  return (
+    <>
+      <GoogleSignInButton onSuccess={onSuccess} />
+      <div className="flex items-center gap-4">
+        <div className="h-px flex-1 bg-gray-200" />
+        <span className="text-xs text-gray-400 font-sans uppercase tracking-wide">
+          or
+        </span>
+        <div className="h-px flex-1 bg-gray-200" />
+      </div>
+    </>
   )
 }

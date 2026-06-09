@@ -35,8 +35,17 @@ declare global {
   }
 }
 
+let googleScriptPromise: Promise<void> | null = null
+// Module-scope so a known failure renders hidden from the first paint on
+// remounts (the modal content remounts on every open) instead of flashing.
+let googleScriptFailed = false
+
+// Memoized so every caller shares one settled outcome — a component mounting
+// after the script tag already errored (e.g. content blocker) must reject too,
+// not attach listeners that never fire.
 function loadGoogleScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
+  if (googleScriptPromise) return googleScriptPromise
+  googleScriptPromise = new Promise((resolve, reject) => {
     if (window.google?.accounts?.oauth2) {
       resolve()
       return
@@ -49,6 +58,9 @@ function loadGoogleScript(): Promise<void> {
         resolve()
       } else {
         existing.addEventListener('load', () => resolve())
+        existing.addEventListener('error', () =>
+          reject(new Error('Failed to load Google Sign-In'))
+        )
       }
       return
     }
@@ -60,9 +72,33 @@ function loadGoogleScript(): Promise<void> {
     script.onerror = () => reject(new Error('Failed to load Google Sign-In'))
     document.head.appendChild(script)
   })
+  return googleScriptPromise
+}
+
+/**
+ * True when Google sign-in can work: a client ID is configured and the GSI
+ * script hasn't failed to load (commonly blocked by content blockers).
+ */
+export function useGoogleSignInAvailable() {
+  const [failed, setFailed] = useState(() => googleScriptFailed)
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return
+    let cancelled = false
+    loadGoogleScript().catch(() => {
+      googleScriptFailed = true
+      if (!cancelled) setFailed(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return Boolean(GOOGLE_CLIENT_ID) && !failed
 }
 
 function useGoogleAuth(onSuccess?: () => void) {
+  const available = useGoogleSignInAvailable()
   const [loading, setLoading] = useState(false)
   const clientRef = useRef<{ requestCode: () => void } | null>(null)
   const onSuccessRef = useRef(onSuccess)
@@ -73,7 +109,7 @@ function useGoogleAuth(onSuccess?: () => void) {
 
     let cancelled = false
 
-    loadGoogleScript().then(() => {
+    const initClient = () => {
       if (cancelled) return
 
       clientRef.current = window.google!.accounts.oauth2.initCodeClient({
@@ -113,7 +149,10 @@ function useGoogleAuth(onSuccess?: () => void) {
           setLoading(false)
         },
       })
-    })
+    }
+
+    // Load failure is surfaced by useGoogleSignInAvailable (components hide)
+    loadGoogleScript().then(initClient, () => {})
 
     return () => {
       cancelled = true
@@ -127,13 +166,13 @@ function useGoogleAuth(onSuccess?: () => void) {
     clientRef.current.requestCode()
   }, [loading])
 
-  return { requestSignIn, loading }
+  return { requestSignIn, loading, available }
 }
 
 export function GoogleSignInButton({ onSuccess }: { onSuccess?: () => void }) {
-  const { requestSignIn, loading } = useGoogleAuth(onSuccess)
+  const { requestSignIn, loading, available } = useGoogleAuth(onSuccess)
 
-  if (!GOOGLE_CLIENT_ID) return null
+  if (!available) return null
 
   return (
     <button
@@ -155,9 +194,9 @@ export function GoogleSignInButton({ onSuccess }: { onSuccess?: () => void }) {
 }
 
 export function GoogleSignInLink({ className }: { className?: string }) {
-  const { requestSignIn, loading } = useGoogleAuth()
+  const { requestSignIn, loading, available } = useGoogleAuth()
 
-  if (!GOOGLE_CLIENT_ID) return null
+  if (!available) return null
 
   return (
     <button

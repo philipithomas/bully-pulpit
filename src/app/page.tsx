@@ -1,15 +1,34 @@
-import Image from 'next/image'
+import Image, { getImageProps } from 'next/image'
 import Link from 'next/link'
 import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
-import { formatMemberCount } from '@/lib/format-member-count'
-import { getSubscriberCount } from '@/lib/subscriber-count'
 
-export default async function HomePage() {
+export default function HomePage() {
   const newsletters = Object.values(siteConfig.newsletters)
-  const subscriberCount = await getSubscriberCount()
+
+  // Art-directed portraits: each layout slot renders a <picture> carrying
+  // both srcSets, so the hidden slot resolves to the same URL as the visible
+  // one (a single fetch per device) instead of two priority preloads.
+  const { props: desktopPortrait } = getImageProps({
+    alt: 'Philip I. Thomas',
+    src: '/images/portrait.jpg',
+    width: 600,
+    height: 750,
+    sizes: '448px',
+    priority: true,
+    fetchPriority: 'high',
+  })
+  const { props: mobilePortrait } = getImageProps({
+    alt: 'Philip I. Thomas',
+    src: '/images/philip-horizontal.jpg',
+    width: 1024,
+    height: 656,
+    sizes: '100vw',
+    priority: true,
+    fetchPriority: 'high',
+  })
 
   return (
     <div className="container py-16 md:py-20 lg:py-28">
@@ -17,17 +36,21 @@ export default async function HomePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
         {/* Left: Portrait (desktop only) */}
         <div className="hidden lg:block">
-          <Image
-            src="/images/portrait.jpg"
-            alt="Philip I. Thomas"
-            width={600}
-            height={750}
-            sizes="448px"
-            className="w-full max-w-md cursor-zoom-in"
-            data-zoomable=""
-            data-full-src="/images/full/portrait.jpg"
-            priority
-          />
+          <picture>
+            {/* 1023.98px closes the fractional-zoom gap below the 1024px lg
+                breakpoint — if neither source matched, both portraits load. */}
+            <source
+              media="(max-width: 1023.98px)"
+              srcSet={mobilePortrait.srcSet}
+              sizes={mobilePortrait.sizes}
+            />
+            <img
+              {...desktopPortrait}
+              className="w-full max-w-md h-auto cursor-zoom-in"
+              data-zoomable=""
+              data-full-src="/images/full/portrait.jpg"
+            />
+          </picture>
         </div>
 
         {/* Right: Bio + Newsletter signup */}
@@ -108,28 +131,23 @@ export default async function HomePage() {
 
           {/* Horizontal portrait (mobile only) */}
           <div className="lg:hidden mb-8">
-            <Image
-              src="/images/philip-horizontal.jpg"
-              alt="Philip I. Thomas"
-              width={1024}
-              height={656}
-              sizes="100vw"
-              className="w-full cursor-zoom-in"
-              data-zoomable=""
-              data-full-src="/images/full/philip-horizontal.jpg"
-              priority
-            />
+            <picture>
+              <source
+                media="(min-width: 1024px)"
+                srcSet={desktopPortrait.srcSet}
+                sizes={desktopPortrait.sizes}
+              />
+              <img
+                {...mobilePortrait}
+                className="w-full h-auto cursor-zoom-in"
+                data-zoomable=""
+                data-full-src="/images/full/philip-horizontal.jpg"
+              />
+            </picture>
           </div>
 
           {/* Subscribe (hidden when logged in) */}
-          <InlineSignupForm
-            hideWhenLoggedIn
-            headerText={
-              subscriberCount > 0
-                ? `Join ${formatMemberCount(subscriberCount)} other subscribers:`
-                : undefined
-            }
-          />
+          <InlineSignupForm hideWhenLoggedIn showSubscriberCount />
 
           {/* Newsletter directory */}
           <div className="mt-8">

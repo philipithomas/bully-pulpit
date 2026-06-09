@@ -1,21 +1,23 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Post } from '@/lib/content/types'
+import type { PostSummary } from '@/components/posts/post-card'
 
 interface PostApiResponse {
   slug: string
   newsletter: string
   title: string
+  subtitle?: string
   description?: string
   publishedAt: string
   coverImage?: string
+  coverImageAlt?: string
   excerpt: string
 }
 
 export function useInfiniteScroll(
   newsletter?: string,
-  initialPosts: Post[] = [],
+  initialPosts: PostSummary[] = [],
   skip = 0
 ) {
   const [posts, setPosts] = useState(initialPosts)
@@ -69,11 +71,12 @@ export function useInfiniteScroll(
                 newsletter: p.newsletter,
                 frontmatter: {
                   title: p.title,
+                  subtitle: p.subtitle,
                   description: p.description,
                   publishedAt: p.publishedAt,
                   coverImage: p.coverImage,
+                  coverImageAlt: p.coverImageAlt,
                 },
-                content: '',
                 excerpt: p.excerpt,
               }))
             return [...prev, ...newPosts]

@@ -3,7 +3,15 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { Post } from '@/lib/content/types'
 
-export function PostCard({ post }: { post: Post }) {
+// Minimal shape PostCard consumes. Listing pages map full Post objects to
+// this before crossing the server→client boundary so the raw MDX body
+// (`content`) never lands in the RSC payload.
+export type PostSummary = Pick<
+  Post,
+  'slug' | 'newsletter' | 'frontmatter' | 'excerpt'
+>
+
+export function PostCard({ post }: { post: PostSummary }) {
   return (
     <article className="group bg-offwhite-light border border-gray-100 rounded-sm overflow-hidden h-full">
       <Link href={`/${post.slug}`} className="block h-full">

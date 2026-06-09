@@ -58,7 +58,16 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
 export default function ContraptionPage() {
   const posts = getPostsByNewsletter('contraption')
   const featured = posts.slice(0, 3)
-  const rest = posts.slice(3, 3 + 24)
+  // Slim DTO for the client component — keeps the raw MDX `content` out of
+  // the serialized RSC payload
+  const rest = posts
+    .slice(3, 3 + 24)
+    .map(({ slug, newsletter, frontmatter, excerpt }) => ({
+      slug,
+      newsletter,
+      frontmatter,
+      excerpt,
+    }))
 
   return (
     <div className="bg-gray-050" data-bg="gray-050">

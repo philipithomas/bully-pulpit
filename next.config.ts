@@ -1,5 +1,6 @@
 import { withBotId } from 'botid/next/config'
 import type { NextConfig } from 'next'
+import { withWorkflow } from 'workflow/next'
 import { getRedirects } from '@/lib/redirects'
 
 const securityHeaders = [
@@ -47,26 +48,6 @@ const nextConfig: NextConfig = {
             key: 'Cache-Control',
             value:
               'public, max-age=600, s-maxage=3600, stale-while-revalidate=86400',
-          },
-        ],
-      },
-      // Hashed _next/static assets — immutable, cache forever
-      {
-        source: '/_next/static/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      // Optimized images from _next/image — cache 30 days
-      {
-        source: '/_next/image(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=2678400, stale-while-revalidate=86400',
           },
         ],
       },
@@ -137,4 +118,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withBotId(nextConfig)
+export default withWorkflow(withBotId(nextConfig))

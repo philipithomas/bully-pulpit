@@ -4,6 +4,7 @@ import { checkBotId } from 'botid/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
+import { prepareChatStep } from '@/lib/chat/prepare-step'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -26,10 +27,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Access denied.' }, { status: 403 })
   }
 
-  const { messages, pageContext, userName } = await request.json()
+  const body = await request.json().catch(() => null)
+  if (!body || !Array.isArray(body.messages) || body.messages.length === 0) {
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
+  }
+  // Cap the conversation the model sees — the client accumulates history in
+  // sessionStorage, and an unbounded array is an easy token-burn vector.
+  const { pageContext, userName } = body
+  const messages = body.messages.slice(-40)
+  const system = getSystemPrompt({ pageContext, userName })
 
   const result = streamText({
     model: gateway('openai/gpt-oss-120b'),
+    maxOutputTokens: 2048,
     experimental_telemetry: { isEnabled: true, functionId: 'bell-chat' },
     providerOptions: {
       // Experiment: pin gpt-oss-120b to Cerebras (fastest provider). Runs on
@@ -41,37 +51,11 @@ export async function POST(request: Request) {
         reasoningEffort: 'low',
       },
     },
-    system: getSystemPrompt({ pageContext, userName }),
+    system,
     messages: await convertToModelMessages(messages),
     tools: { searchPosts, fetchPost },
     stopWhen: stepCountIs(7),
-    prepareStep: ({ steps }) => {
-      const hasSearched = steps.some((step) =>
-        step.toolCalls.some((tc) => tc.toolName === 'searchPosts')
-      )
-
-      // On the last step, disable tools to force a prose response
-      if (steps.length >= 5) {
-        return {
-          activeTools: [],
-          providerOptions: {
-            openai: {
-              reasoningEffort: 'high',
-            },
-          },
-        }
-      }
-
-      if (hasSearched) {
-        return {
-          providerOptions: {
-            openai: {
-              reasoningEffort: 'high',
-            },
-          },
-        }
-      }
-    },
+    prepareStep: ({ steps }) => prepareChatStep(steps, system),
   })
 
   return result.toUIMessageStreamResponse()

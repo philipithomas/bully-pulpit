@@ -1,7 +1,10 @@
 import { checkBotId } from 'botid/server'
-import { createRemoteJWKSet, jwtVerify, SignJWT } from 'jose'
+import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { NextResponse } from 'next/server'
+import { setSessionCookies, signSession } from '@/lib/auth/jwt'
+import { createOrRetrieve } from '@/lib/auth/subscriber-service'
 import { siteConfig } from '@/lib/config'
+import { serializeSubscriber } from '@/lib/db/queries/subscribers'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 const GOOGLE_JWKS = createRemoteJWKSet(
@@ -74,63 +77,18 @@ export async function POST(request: Request) {
       )
     }
 
-    // Create or find subscriber in printing-press.
-    // google_verified: true tells printing-press to skip the OTP
-    // email and mark the subscriber as confirmed immediately.
-    const res = await fetch(
-      `${siteConfig.printingPressUrl}/api/v1/subscribers`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': siteConfig.m2mApiKey,
-        },
-        body: JSON.stringify({
-          email,
-          name: name || undefined,
-          google_verified: true,
-        }),
-        cache: 'no-store',
-      }
-    )
-
-    if (!res.ok) {
-      const data = await res.json()
-      console.error(`[auth/google] Backend error: ${res.status}`, data)
-      return NextResponse.json(
-        { error: 'Failed to create account' },
-        { status: 500 }
-      )
-    }
-
-    const subscriber = await res.json()
-
-    const secret = new TextEncoder().encode(siteConfig.jwtSecret)
-    const jwt = await new SignJWT({
-      email: subscriber.email,
-      name: subscriber.name,
+    // Google-verified emails skip the OTP and are confirmed immediately.
+    const { subscriber } = await createOrRetrieve({
+      email,
+      name: name || undefined,
+      googleVerified: true,
     })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setSubject(subscriber.uuid)
-      .setIssuedAt()
-      .setExpirationTime('30d')
-      .sign(secret)
 
-    const response = NextResponse.json({ user: subscriber })
-    response.cookies.set('bp_token', jwt, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
-      path: '/',
+    const jwt = await signSession(subscriber)
+    const response = NextResponse.json({
+      user: serializeSubscriber(subscriber),
     })
-    response.cookies.set('bp_has_session', '1', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
-      path: '/',
-    })
+    setSessionCookies(response, jwt)
 
     return response
   } catch (err) {

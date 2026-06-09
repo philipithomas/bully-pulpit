@@ -1,13 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { siteConfig } from '@/lib/config'
 import { getPostBySlug } from '@/lib/content/loader'
 import { getRelatedPosts } from '@/lib/content/related'
-import {
-  markdownToPlaintext,
-  renderEmailHeaderHtml,
-  renderMarkdownToHtml,
-  renderRelatedPostsHtml,
-} from '@/lib/content/render-html'
+import { buildEmailBodyHtml } from '@/lib/email/render-body'
 
 export async function GET(
   _request: NextRequest,
@@ -21,35 +15,18 @@ export async function GET(
   }
 
   const relatedPosts = getRelatedPosts(slug)
-  const markdownHtml = await renderMarkdownToHtml(post.content)
-  const relatedPostsHtml = renderRelatedPostsHtml(relatedPosts, siteConfig.url)
-  const subtitle =
-    post.frontmatter.subtitle || post.frontmatter.description || null
-  const emailHeader = renderEmailHeaderHtml(
-    post.frontmatter.title,
-    siteConfig.url,
-    slug,
-    subtitle,
-    post.frontmatter.coverImage,
-    post.frontmatter.coverImageAlt,
-    post.newsletter === 'postcard' ? null : post.frontmatter.publishedAt
-  )
-  const emailHtml = emailHeader + markdownHtml + relatedPostsHtml
-
-  const bodyPlaintext = markdownToPlaintext(post.content)
-  const previewText = subtitle
-    ? `${subtitle} – ${bodyPlaintext}`
-    : bodyPlaintext
+  const { subject, subtitle, html, previewText } =
+    await buildEmailBodyHtml(post)
 
   return NextResponse.json({
-    title: post.frontmatter.title,
+    title: subject,
     newsletter: post.newsletter,
     published_at: post.frontmatter.publishedAt,
-    subtitle: subtitle,
+    subtitle,
     preview_text: previewText,
     cover_image: post.frontmatter.coverImage || null,
     cover_image_alt: post.frontmatter.coverImageAlt || null,
-    email_html: emailHtml,
+    email_html: html,
     related_posts: relatedPosts.map((p) => ({
       slug: p.slug,
       title: p.frontmatter.title,

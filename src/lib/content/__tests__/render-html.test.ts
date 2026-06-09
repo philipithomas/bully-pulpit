@@ -302,4 +302,35 @@ describe('markdownToPlaintext', () => {
     const long = 'a'.repeat(200)
     expect(markdownToPlaintext(long)).toHaveLength(150)
   })
+
+  it('strips MDX component and raw HTML tags', () => {
+    expect(
+      markdownToPlaintext(
+        'Watch this:\n\n<YouTubeEmbed video="abc123" title="A talk" />\n\nGreat, right?'
+      )
+    ).toBe('Watch this: Great, right?')
+    expect(markdownToPlaintext('<em>hi</em> there')).toBe('hi there')
+  })
+
+  it('keeps link URLs in the full text/plain body (preserveParagraphs)', () => {
+    expect(
+      markdownToPlaintext('See [the tool](https://example.com/tool).', 1000, {
+        preserveParagraphs: true,
+      })
+    ).toBe('See the tool (https://example.com/tool).')
+  })
+
+  it('still drops link URLs in preview snippets', () => {
+    expect(
+      markdownToPlaintext('See [the tool](https://example.com/tool).')
+    ).toBe('See the tool.')
+  })
+
+  it('keeps paragraph breaks in preserveParagraphs mode', () => {
+    expect(
+      markdownToPlaintext('First   paragraph.\n\nSecond\nparagraph.', 1000, {
+        preserveParagraphs: true,
+      })
+    ).toBe('First paragraph.\n\nSecond paragraph.')
+  })
 })

@@ -125,6 +125,15 @@ export function MemberMenu() {
           >
             Account
           </Link>
+          {user.isAdmin && (
+            <Link
+              href="/printing-press"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-075 border-t border-gray-100 transition-colors duration-200"
+              onClick={() => setOpen(false)}
+            >
+              Printing press
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => {

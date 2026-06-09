@@ -6,6 +6,7 @@ interface User {
   uuid: string
   email: string
   name: string | null
+  isAdmin: boolean
 }
 
 function hasSessionCookie(): boolean {

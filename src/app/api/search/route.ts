@@ -1,7 +1,12 @@
 import { K, Knn, Search } from 'chromadb'
 import type { NextRequest } from 'next/server'
 import { after, NextResponse } from 'next/server'
-import { embedSparse, getClient, getPostsSchema } from '@/lib/chroma'
+import {
+  embedSparse,
+  getPostsCollection,
+  getSearchLogsCollection,
+} from '@/lib/chroma'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 interface SearchMatch {
   document: string
@@ -26,16 +31,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ results: [] })
   }
 
+  // Enforced by a server-side Vercel Firewall rate-limit rule with ID
+  // 'search', provisioned separately — silent no-op until that rule exists.
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  if (!(await checkRateLimit('search', `ip:${ip}`, request))) {
+    return NextResponse.json(
+      { error: 'Too many searches. Please try again later.' },
+      { status: 429 }
+    )
+  }
+
   const start = performance.now()
 
   try {
-    const client = getClient()
-    const collection = await client.getOrCreateCollection({
-      name: 'posts',
-      schema: getPostsSchema(),
-    })
-
-    const sparseQuery = await embedSparse(q)
+    const [collection, sparseQuery] = await Promise.all([
+      getPostsCollection(),
+      embedSparse(q),
+    ])
 
     const search = new Search()
       .rank(
@@ -142,11 +155,7 @@ async function logSearch(entry: {
   topMatchSlug: string
   topMatchUrl: string
 }) {
-  const client = getClient()
-  const logs = await client.getOrCreateCollection({
-    name: 'search_logs',
-    schema: getPostsSchema(),
-  })
+  const logs = await getSearchLogsCollection()
 
   const now = new Date()
 

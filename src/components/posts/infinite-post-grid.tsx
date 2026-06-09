@@ -1,15 +1,14 @@
 'use client'
 
-import { PostCard } from '@/components/posts/post-card'
+import { PostCard, type PostSummary } from '@/components/posts/post-card'
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
-import type { Post } from '@/lib/content/types'
 
 export function InfinitePostGrid({
   initialPosts,
   newsletter,
   skip = 0,
 }: {
-  initialPosts: Post[]
+  initialPosts: PostSummary[]
   newsletter: string
   skip?: number
 }) {
