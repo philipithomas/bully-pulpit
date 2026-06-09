@@ -197,7 +197,7 @@ export function SubscribersClient({
           toast.error(data?.error ?? `Import failed (${res.status})`)
         }
       } catch {
-        toast.error('Import failed — check your connection')
+        toast.error('Import failed. Check your connection.')
       } finally {
         setImporting(false)
       }
@@ -241,13 +241,13 @@ export function SubscribersClient({
           return
         }
         if (poll.status === 'failed' || poll.status === 'cancelled') {
-          toast.error(`Sync ${poll.status} — check workflow logs`)
+          toast.error(`Sync ${poll.status}. Check the workflow logs.`)
           return
         }
       }
       toast.error('Sync is still running; check back shortly')
     } catch {
-      toast.error('Sync failed — check your connection')
+      toast.error('Sync failed. Check your connection.')
     } finally {
       setSyncing(false)
     }
@@ -283,7 +283,7 @@ export function SubscribersClient({
             ) : (
               <RefreshCw className="h-4 w-4 text-gray-400" />
             )}
-            {syncing ? 'Syncing…' : 'Sync from Printing Press'}
+            {syncing ? 'Syncing…' : 'Sync from printing press'}
           </button>
           <a
             href="/api/printing-press/subscribers/export"

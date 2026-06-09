@@ -4,31 +4,51 @@ import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth/admin'
 import { getAllPosts } from '@/lib/content/loader'
 import { allSendStats } from '@/lib/db/queries/email-sends'
-import { isRecent } from '@/lib/printing-press'
+import { isRecent, NOT_SENT_BADGE_WINDOW_MS } from '@/lib/printing-press'
+
+/** "today", "yesterday", or "N days ago" — cadence awareness, not a metric. */
+function sincePosted(publishedAt: string): string {
+  const days = Math.floor(
+    (Date.now() - new Date(publishedAt).getTime()) / (24 * 60 * 60 * 1000)
+  )
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  return `${days} days ago`
+}
 
 export default async function PostsPage() {
   await requireAdmin()
   const posts = getAllPosts().filter((p) => !p.frontmatter.draft)
   const stats = await allSendStats()
+  const latest = posts[0]
 
   return (
     <div>
       <PageHeader
         title="Posts"
-        description="Pick a post to preview, test, and send to confirmed subscribers."
+        description={
+          latest
+            ? `Pick a post to preview, test, and send. The last post went up ${sincePosted(latest.frontmatter.publishedAt)}.`
+            : 'Pick a post to preview, test, and send.'
+        }
       />
 
       <div className="divide-y divide-gray-100 border border-gray-200 bg-white">
         {posts.map((post) => {
           const s = stats[post.slug]
-          // Old posts with no send history are archival: no "Not sent" badge
-          // (it reads as a problem when it isn't) and no link into the send
-          // flow. The send page stays reachable by URL as an escape hatch.
-          const recent = isRecent(post.frontmatter.publishedAt)
-          const sendable = Boolean(s) || recent
+          // Every post links into the send flow. The "Not sent" badge only
+          // appears on recent posts: on older ones it reads as a problem when
+          // the post simply predates the email system.
+          const showNotSent =
+            !s &&
+            isRecent(post.frontmatter.publishedAt, NOT_SENT_BADGE_WINDOW_MS)
 
-          const body = (
-            <>
+          return (
+            <Link
+              key={`${post.newsletter}/${post.slug}`}
+              href={`/printing-press/send/${post.slug}`}
+              className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-050"
+            >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-gray-900">
                   {post.frontmatter.title}
@@ -54,29 +74,8 @@ export default async function PostsPage() {
                     )}
                   </>
                 )}
-                {!s && recent && <Badge variant="outline">Not sent</Badge>}
+                {showNotSent && <Badge variant="outline">Not sent</Badge>}
               </div>
-            </>
-          )
-
-          if (!sendable) {
-            return (
-              <div
-                key={`${post.newsletter}/${post.slug}`}
-                className="flex items-center justify-between gap-4 px-4 py-3"
-              >
-                {body}
-              </div>
-            )
-          }
-
-          return (
-            <Link
-              key={`${post.newsletter}/${post.slug}`}
-              href={`/printing-press/send/${post.slug}`}
-              className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-050"
-            >
-              {body}
             </Link>
           )
         })}

@@ -15,14 +15,17 @@ function SidebarBody({
   onNavigate?: () => void
 }) {
   return (
-    <div className="flex h-full flex-col px-3 py-6">
+    // Top padding and the wordmark's line height mirror the content column's
+    // padding and the PageHeader h1 (text-3xl, 36px line box), so the sidebar
+    // wordmark and each page title share a baseline on desktop.
+    <div className="flex h-full flex-col px-3 py-8 md:pt-12">
       <div className="px-3">
         <Link
           href="/printing-press"
           onClick={onNavigate}
-          className="font-serif text-lg leading-none text-gray-950"
+          className="block font-serif text-lg leading-9 text-gray-950"
         >
-          Printing Press
+          Printing press
         </Link>
       </div>
 
@@ -76,7 +79,7 @@ export function PrintingPressShell({
               <Menu className="h-5 w-5" />
             </button>
             <span className="font-serif text-base text-gray-950">
-              Printing Press
+              Printing press
             </span>
           </div>
 

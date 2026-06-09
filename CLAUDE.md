@@ -61,7 +61,7 @@ For up-to-date Next.js documentation refer to `node_modules/next/dist/docs/`. Yo
 
 ## Prose style guide
 
-When writing or editing prose content (blog posts, page copy, descriptions), follow the style guide in `content/pages/colophon.mdx`.
+ALL user-visible text follows the style guide in `content/pages/colophon.mdx` — blog posts and page copy, but also UI strings, toasts, empty states, email templates, and product naming. The rules that bite most in UI code: sentence case for titles and names ("Printing press", not "Printing Press"), no contractions, no em dashes (use periods or colons), ISO-8601 dates, active voice. The admin panel is deliberately not metrics-driven — prose summaries over stat cards; never add open/click tracking.
 
 ## Newsletters
 

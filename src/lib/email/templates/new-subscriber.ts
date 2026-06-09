@@ -5,6 +5,7 @@ export function renderNewSubscriberEmail(input: {
   email: string
   name?: string | null
   source?: string | null
+  signedUpAt?: Date | null
 }): string {
   const email = escapeHtml(input.email)
   const year = new Date().getFullYear()
@@ -16,8 +17,14 @@ export function renderNewSubscriberEmail(input: {
 
   const sourceBlock = input.source
     ? `<p style="margin: 0 0 4px; font-size: 13px; color: #7E7A73;">Source:</p>
-                  <p style="margin: 0; font-size: 17px; font-weight: 600; color: #111110;">${escapeHtml(input.source)}</p>`
-    : `<p style="margin: 0; font-size: 13px; color: #7E7A73;">Source: Direct</p>`
+                  <p style="margin: 0 0 16px; font-size: 17px; font-weight: 600; color: #111110;">${escapeHtml(input.source)}</p>`
+    : `<p style="margin: 0 0 16px; font-size: 13px; color: #7E7A73;">Source: Direct</p>`
+
+  // Signup can precede confirmation, so the date carries real information.
+  const signedUpBlock = input.signedUpAt
+    ? `<p style="margin: 0 0 4px; font-size: 13px; color: #7E7A73;">Signed up:</p>
+                  <p style="margin: 0; font-size: 17px; font-weight: 600; color: #111110;">${input.signedUpAt.toISOString().slice(0, 10)}</p>`
+    : ''
 
   return `<!DOCTYPE html>
 <html>
@@ -46,6 +53,7 @@ export function renderNewSubscriberEmail(input: {
                   <p style="margin: 0 0 4px; font-size: 13px; color: #7E7A73;">Email:</p>
                   <p style="margin: 0 0 16px; font-size: 17px; font-weight: 600; color: #111110;">${email}</p>
                   ${sourceBlock}
+                  ${signedUpBlock}
                 </td>
               </tr>
             </table>

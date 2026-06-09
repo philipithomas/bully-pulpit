@@ -15,7 +15,7 @@ function SignInToastInner() {
     } else if (error === 'invalid-token') {
       toast.error('Invalid or expired sign-in link')
     } else if (error === 'verify-failed') {
-      toast.error('Sign-in failed — please try again')
+      toast.error('Sign-in failed. Please try again.')
     } else {
       return
     }

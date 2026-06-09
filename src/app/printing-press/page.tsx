@@ -4,7 +4,7 @@ import { requireAdmin } from '@/lib/auth/admin'
 import { getAllPosts, getPostBySlug } from '@/lib/content/loader'
 import { allSendStats, lastCompletedSend } from '@/lib/db/queries/email-sends'
 import { subscriberStats } from '@/lib/db/queries/subscribers'
-import { isRecent } from '@/lib/printing-press'
+import { isRecent, SEND_NUDGE_WINDOW_MS } from '@/lib/printing-press'
 
 function n(value: number): string {
   return value.toLocaleString('en-US')
@@ -23,7 +23,6 @@ export default async function OverviewPage() {
   ])
 
   const pending = Object.values(sends).reduce((a, s) => a + s.pending, 0)
-  const unconfirmed = stats.total - stats.confirmed
   const lastPost = last ? getPostBySlug(last.postSlug) : null
 
   // Recent posts with no send history at all — the ones worth a nudge.
@@ -31,7 +30,7 @@ export default async function OverviewPage() {
     (p) =>
       !p.frontmatter.draft &&
       !sends[p.slug] &&
-      isRecent(p.frontmatter.publishedAt)
+      isRecent(p.frontmatter.publishedAt, SEND_NUDGE_WINDOW_MS)
   )
 
   return (
@@ -70,14 +69,6 @@ export default async function OverviewPage() {
             <>You have not sent anything from here yet.</>
           )}
         </p>
-
-        {unconfirmed > 0 && (
-          <p className="leading-relaxed text-gray-600">
-            Another {n(unconfirmed)}{' '}
-            {unconfirmed === 1 ? 'person has' : 'people have'} signed up but not
-            confirmed yet.
-          </p>
-        )}
 
         {pending > 0 && (
           <p className="leading-relaxed">

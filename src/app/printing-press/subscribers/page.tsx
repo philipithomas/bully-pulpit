@@ -14,7 +14,9 @@ export default async function SubscribersPage() {
     <div>
       <PageHeader
         title="Subscribers"
-        description={`${stats.confirmed} confirmed · ${stats.total} total`}
+        description={`${stats.confirmed.toLocaleString('en-US')} ${
+          stats.confirmed === 1 ? 'person' : 'people'
+        }`}
       />
       <SubscribersClient initialRows={rows} initialTotal={total} />
     </div>

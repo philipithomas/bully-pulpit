@@ -131,7 +131,7 @@ export function MemberMenu() {
               className="block px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-075 border-t border-gray-100 transition-colors duration-200"
               onClick={() => setOpen(false)}
             >
-              Printing Press
+              Printing press
             </Link>
           )}
           <button
