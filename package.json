@@ -10,6 +10,7 @@
     "check": "biome check .",
     "test": "vitest run",
     "chroma:sync": "tsx --env-file-if-exists=.env scripts/sync-chroma.ts",
+    "chroma:sync:deploy": "if [ \"$VERCEL_ENV\" = production ]; then pnpm chroma:sync; else echo 'Skipping Chroma sync (VERCEL_ENV is not production)'; fi",
     "chroma:related": "tsx --env-file-if-exists=.env scripts/compute-related.ts",
     "summaries:generate": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/generate-summaries.ts",
     "images:optimize": "tsx scripts/optimize-images.ts",

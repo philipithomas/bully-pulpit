@@ -24,6 +24,12 @@ export function Plausible() {
     window.plausible?.('pageview')
   }, [pathname])
 
+  // Only track production traffic — preview/dev pageviews would pollute the
+  // real stats. NEXT_PUBLIC_VERCEL_ENV is inlined at build time by Vercel.
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV !== 'production') {
+    return null
+  }
+
   return (
     <>
       <Script
