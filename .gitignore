@@ -9,3 +9,4 @@ next-env.d.ts
 .vercel
 .env*.local
 .DS_Store
+.env*

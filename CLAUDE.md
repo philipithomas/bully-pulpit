@@ -12,6 +12,9 @@ pnpm build        # Production build
 pnpm test         # Run Vitest unit tests
 pnpm check        # Biome lint + format check
 pnpm images:optimize  # Resize oversized images, generate email variants
+pnpm content:check    # Validate generated artifacts are in sync (images, summaries/related)
+pnpm summaries:generate  # AI summaries for new posts → Chroma post_summaries
+pnpm chroma:related   # Recompute src/generated/related-posts.json from summaries
 pnpm db:generate  # Generate a Drizzle SQL migration from schema changes
 pnpm db:migrate   # Apply migrations to DATABASE_URL (Neon)
 pnpm db:studio    # Open Drizzle Studio against the DB
@@ -19,10 +22,10 @@ pnpm db:studio    # Open Drizzle Studio against the DB
 
 ## Architecture
 
-- **Content**: MDX files in `content/{contraption,workshop,postcard,pages}/`
+- **Content**: MDX files in `content/{contraption,workshop,postcard,pages}/`. New-post pipeline: add MDX (+ cover under `public/images/covers/`) → `pnpm images:optimize` → `pnpm summaries:generate && pnpm chroma:related` → commit the generated artifacts. `pnpm content:check` (offline, fast) validates all of it — email image variants exist/within budget, sources not oversized, every post has a related-posts entry — and runs in **pre-commit, CI, and the Vercel build command**, so a forgotten step fails the deploy instead of silently shipping degraded emails/pages
 - **Rendering**: All pages statically generated via `generateStaticParams`
 - **Auth**: Client-side overlay; subscribers/OTP/magic-link in Neon Postgres; session is a JWT (jose, HS256) in the httpOnly `bp_token` cookie (`bp_has_session` mirrors login state for the client)
-- **Database**: Neon Postgres via Drizzle ORM (`src/lib/db/`). DB clients are lazy so `next build` never needs `DATABASE_URL` — keep all DB access in route handlers / server actions / workflows, never at module scope or in static generation. The `vercel.json` build command is `db:migrate:deploy && next build && (chroma:sync || …)`: migrations run first (**guarded to `VERCEL_ENV=production`**, so preview/local skip them), then build, then a **non-fatal** Chroma sync (a Chroma outage can't abort a code deploy). `db:migrate` uses `DATABASE_URL_UNPOOLED` when present. Use additive (expand/contract) migrations so a mid-deploy schema/code gap stays backward-compatible
+- **Database**: Neon Postgres via Drizzle ORM (`src/lib/db/`). DB clients are lazy so `next build` never needs `DATABASE_URL` — keep all DB access in route handlers / server actions / workflows, never at module scope or in static generation. The `vercel.json` build command is `content:check && db:migrate:deploy && next build && (chroma:sync || …)`: the offline content check runs first (fails fast before any state change), then migrations (**guarded to `VERCEL_ENV=production`**, so preview/local skip them), then build, then a **non-fatal** Chroma sync (a Chroma outage can't abort a code deploy). `db:migrate` uses `DATABASE_URL_UNPOOLED` when present. Use additive (expand/contract) migrations so a mid-deploy schema/code gap stays backward-compatible
 - **Email**: AWS SES (`@aws-sdk/client-sesv2`). Transactional sends (OTP, admin notification) are synchronous; the newsletter blast runs through a durable Vercel Workflow (`src/workflows/send-newsletter.ts`). Delivery is at-least-once (no SES idempotency key). Per-recipient rows snapshot the rendered HTML + plaintext (`text_content`) so the text/plain part carries the real body
 - **Admin (Printing Press)**: the admin panel lives at `/printing-press` (`/admin` 307-redirects there), gated by the `ADMIN_EMAILS` allowlist (`src/lib/auth/admin.ts`) on top of a normal signed-in session — page layout guard (`requireAdmin()`) + per-route `guardAdmin()` on every `app/api/printing-press/*` handler. It has a responsive sidenav shell (`src/components/printing-press/`): Overview, Posts (send UI), Subscribers (search by email, gravatar avatars, copy, hard-delete, CSV export/import — columns `email,name,postcard,contraption,workshop,confirmed`, upsert by email; flag columns absent from the CSV only set defaults on new rows, so a bare email list can't re-subscribe opt-outs; export neutralizes spreadsheet formula injection in `email`/`name`). Gravatar avatars knowingly send md5(subscriber email) to Automattic — accepted tradeoff for an admin-only list. The dropdown's "Printing Press" link shows only when `/api/auth/me` reports `isAdmin`
 - **Styling**: Tailwind v4 CSS-first config in `src/styles/globals.css`
@@ -33,7 +36,7 @@ pnpm db:studio    # Open Drizzle Studio against the DB
 - Biome for linting/formatting (not ESLint/Prettier)
 - Single quotes, no semicolons (biome config)
 - Fonts loaded from fonts.philipithomas.com CDN
-- Pre-commit hook runs `pnpm build` — no need to build manually before pushing
+- Pre-commit hook runs lint-staged, `pnpm content:check`, and `pnpm build` — no need to build manually before pushing
 
 ## Next.js docs
 

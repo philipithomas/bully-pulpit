@@ -2,6 +2,7 @@ import type { UIMessage } from 'ai'
 import Link from 'next/link'
 import type { ComponentPropsWithoutRef } from 'react'
 import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -54,15 +55,22 @@ function ChatMarkdown({
 }) {
   return (
     <Markdown
+      remarkPlugins={[remarkGfm]}
       components={{
         p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
         ul: ({ children }) => (
-          <ul className="mb-3 list-disc pl-5 last:mb-0">{children}</ul>
+          <ul className="mb-3 list-disc pl-5 last:mb-0 [&_ol]:mt-1 [&_ol]:mb-0 [&_ul]:mt-1 [&_ul]:mb-0">
+            {children}
+          </ul>
         ),
         ol: ({ children }) => (
-          <ol className="mb-3 list-decimal pl-5 last:mb-0">{children}</ol>
+          <ol className="mb-3 list-decimal pl-5 last:mb-0 [&_ol]:mt-1 [&_ol]:mb-0 [&_ul]:mt-1 [&_ul]:mb-0">
+            {children}
+          </ol>
         ),
-        li: ({ children }) => <li className="mb-1">{children}</li>,
+        li: ({ children }) => (
+          <li className="mb-1 [&>p]:mb-1 [&>p:last-child]:mb-0">{children}</li>
+        ),
         h1: ({ children }) => (
           <p className="mb-2 font-sans font-semibold">{children}</p>
         ),
@@ -74,23 +82,51 @@ function ChatMarkdown({
         ),
         strong: ({ children }) => <strong>{children}</strong>,
         em: ({ children }) => <em>{children}</em>,
-        code: (props: ComponentPropsWithoutRef<'code'>) => {
-          const { className, children } = props
-          const isBlock = className?.includes('language-')
-          if (isBlock) {
-            return (
-              <code className="block overflow-x-auto rounded bg-gray-050 p-3 font-mono text-[0.8125em]">
-                {children}
-              </code>
-            )
-          }
-          return (
-            <code className="rounded bg-gray-050 px-1 py-0.5 font-mono text-[0.875em]">
+        // Inline code only — code inside a fence is unstyled here and the
+        // styled <pre> wrapper below takes over (className-based detection
+        // misses fences without a language tag).
+        code: (props: ComponentPropsWithoutRef<'code'>) => (
+          <code className="rounded bg-gray-050 px-1 py-0.5 font-mono text-[0.875em]">
+            {props.children}
+          </code>
+        ),
+        pre: ({ children }) => (
+          <pre className="mb-3 overflow-x-auto rounded bg-gray-050 p-3 font-mono text-[0.8125em] last:mb-0 [&_code]:block [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-[1em]">
+            {children}
+          </pre>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="mb-3 border-gray-200 border-l-2 pl-3 text-gray-600 italic last:mb-0">
+            {children}
+          </blockquote>
+        ),
+        hr: () => <hr className="my-3 border-gray-200" />,
+        table: ({ children }) => (
+          <div className="mb-3 overflow-x-auto last:mb-0">
+            <table className="w-full border-collapse font-sans text-xs">
               {children}
-            </code>
-          )
-        },
-        pre: ({ children }) => <div className="mb-3 last:mb-0">{children}</div>,
+            </table>
+          </div>
+        ),
+        th: ({ children }) => (
+          <th className="border-gray-200 border-b px-2 py-1.5 text-left font-semibold">
+            {children}
+          </th>
+        ),
+        td: ({ children }) => (
+          <td className="border-gray-100 border-b px-2 py-1.5 align-top">
+            {children}
+          </td>
+        ),
+        input: (props: ComponentPropsWithoutRef<'input'>) =>
+          props.type === 'checkbox' ? (
+            <input
+              type="checkbox"
+              checked={props.checked}
+              readOnly
+              className="mr-1.5 align-middle accent-gray-700"
+            />
+          ) : null,
         a: ({ href, children }) => {
           const normalized = (href ?? '')
             .replace(/^https?:\/\/(www\.)?philipithomas\.com/, '')
