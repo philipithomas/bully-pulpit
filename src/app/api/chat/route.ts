@@ -4,6 +4,7 @@ import { checkBotId } from 'botid/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
+import { prepareChatStep } from '@/lib/chat/prepare-step'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
   // sessionStorage, and an unbounded array is an easy token-burn vector.
   const { pageContext, userName } = body
   const messages = body.messages.slice(-40)
+  const system = getSystemPrompt({ pageContext, userName })
 
   const result = streamText({
     model: gateway('openai/gpt-oss-120b'),
@@ -49,37 +51,11 @@ export async function POST(request: Request) {
         reasoningEffort: 'low',
       },
     },
-    system: getSystemPrompt({ pageContext, userName }),
+    system,
     messages: await convertToModelMessages(messages),
     tools: { searchPosts, fetchPost },
     stopWhen: stepCountIs(7),
-    prepareStep: ({ steps }) => {
-      const hasSearched = steps.some((step) =>
-        step.toolCalls.some((tc) => tc.toolName === 'searchPosts')
-      )
-
-      // On the last step, disable tools to force a prose response
-      if (steps.length >= 5) {
-        return {
-          activeTools: [],
-          providerOptions: {
-            openai: {
-              reasoningEffort: 'high',
-            },
-          },
-        }
-      }
-
-      if (hasSearched) {
-        return {
-          providerOptions: {
-            openai: {
-              reasoningEffort: 'high',
-            },
-          },
-        }
-      }
-    },
+    prepareStep: ({ steps }) => prepareChatStep(steps, system),
   })
 
   return result.toUIMessageStreamResponse()
