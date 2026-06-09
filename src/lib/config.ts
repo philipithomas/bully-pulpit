@@ -12,7 +12,6 @@ const staticConfig = {
   title: 'Philip I. Thomas',
   description:
     'I work on Chroma, building open-source search infrastructure for AI.',
-  url: 'https://philipithomas.com',
   author: 'Philip I. Thomas',
   email: 'mail@philipithomas.com',
   image: '/og-image.png',
@@ -44,6 +43,30 @@ const staticConfig = {
 
 export const siteConfig = {
   ...staticConfig,
+  /**
+   * Environment-aware base URL: preview deployments link back to themselves
+   * (magic links, unsubscribe URLs, canonicals), `next dev` links to
+   * localhost, and everything else — production, local builds, tests — gets
+   * the real domain. VERCEL_BRANCH_URL is used over VERCEL_URL because it is
+   * stable across redeploys of the branch, so emailed links outlive the
+   * specific deployment that sent them.
+   */
+  get url(): string {
+    if (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_BRANCH_URL) {
+      return `https://${process.env.VERCEL_BRANCH_URL}`
+    }
+    if (process.env.NODE_ENV === 'development') {
+      return 'http://localhost:3000'
+    }
+    return 'https://philipithomas.com'
+  },
+  /** '[PREVIEW] ' / '[DEVELOPMENT] ' outside production, '' in production. */
+  get emailSubjectPrefix(): string {
+    const env =
+      process.env.VERCEL_ENV ??
+      (process.env.NODE_ENV === 'development' ? 'development' : 'production')
+    return env === 'production' ? '' : `[${env.toUpperCase()}] `
+  },
   get jwtSecret() {
     const secret = requireEnv('JWT_SECRET')
     // Sessions are HS256 JWTs that also gate the admin panel, so a weak secret in
@@ -61,9 +84,13 @@ export const siteConfig = {
     return process.env.GOOGLE_CLIENT_SECRET ?? ''
   },
   get sesFromEmail() {
-    return (
-      process.env.SES_FROM_EMAIL ?? 'Philip I. Thomas <mail@philipithomas.com>'
-    )
+    // A bare address in SES_FROM_EMAIL loses the sender name in inboxes, so
+    // wrap it like the legacy service did; an already-formatted value with a
+    // display name passes through.
+    const configured = process.env.SES_FROM_EMAIL ?? 'mail@philipithomas.com'
+    return configured.includes('<')
+      ? configured
+      : `${staticConfig.author} <${configured}>`
   },
   get awsRegion() {
     return process.env.AWS_REGION ?? 'us-east-1'

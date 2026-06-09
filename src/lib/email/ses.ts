@@ -32,7 +32,10 @@ export async function sendSimpleEmail(input: {
       Destination: { ToAddresses: [input.to] },
       Content: {
         Simple: {
-          Subject: { Data: input.subject, Charset: 'UTF-8' },
+          Subject: {
+            Data: `${siteConfig.emailSubjectPrefix}${input.subject}`,
+            Charset: 'UTF-8',
+          },
           Body: {
             Html: { Data: input.html, Charset: 'UTF-8' },
             ...(input.text
@@ -115,7 +118,10 @@ export async function sendNewsletterEmail(input: {
       Destination: { ToAddresses: [input.to] },
       Content: {
         Simple: {
-          Subject: { Data: input.subject, Charset: 'UTF-8' },
+          Subject: {
+            Data: `${siteConfig.emailSubjectPrefix}${input.subject}`,
+            Charset: 'UTF-8',
+          },
           Body: {
             Html: { Data: input.html, Charset: 'UTF-8' },
             Text: { Data: text, Charset: 'UTF-8' },
