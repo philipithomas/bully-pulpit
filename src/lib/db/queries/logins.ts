@@ -24,9 +24,15 @@ export async function createLogin(input: {
   return rows[0]
 }
 
+/**
+ * Code-type lookups must pass `subscriberId` so a 6-digit code only matches
+ * the account it was minted for — a global match would sign a session for
+ * whatever account a guessed code happens to belong to.
+ */
 export async function findValidByToken(
   token: string,
-  tokenType: TokenType
+  tokenType: TokenType,
+  subscriberId?: number
 ): Promise<Login | null> {
   const rows = await getDb()
     .select()
@@ -35,6 +41,9 @@ export async function findValidByToken(
       and(
         eq(logins.token, token),
         eq(logins.tokenType, tokenType),
+        ...(subscriberId !== undefined
+          ? [eq(logins.subscriberId, subscriberId)]
+          : []),
         isNull(logins.verifiedAt),
         isNull(logins.lockedAt),
         sql`${logins.expiredAt} > NOW()`

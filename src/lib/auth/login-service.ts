@@ -76,24 +76,29 @@ export async function verifyToken(
 ): Promise<Subscriber> {
   const tokenType: TokenType = /^\d{6}$/.test(token) ? 'code' : 'magic_link'
 
-  // Hardening: a 6-digit code is matched GLOBALLY across all subscribers, and the
-  // per-subscriber attempt lockout below only fires when an email is supplied. So a
-  // code must only ever be verified through the email-scoped path (/api/auth/verify),
-  // which is rate-limited + bot-checked + lockout-enforced. Reject code-type tokens
-  // that arrive without an email (e.g. the magic-link GET) so they can't be brute-forced
-  // anonymously. Magic links are 122-bit UUIDs and remain valid without an email.
-  if (tokenType === 'code' && !email) {
-    throw new InvalidTokenError()
+  // A 6-digit code is only meaningful for the account it was minted for, so it
+  // must arrive with an email and is looked up scoped to that subscriber — a
+  // global match would let a guessed code sign a session for whichever account
+  // it happened to belong to, and rotating garbage emails would dodge the
+  // per-subscriber lockout entirely. Magic links are 122-bit UUIDs and remain
+  // valid without an email.
+  let codeSubscriberId: number | undefined
+  if (tokenType === 'code') {
+    if (!email) {
+      throw new InvalidTokenError()
+    }
+    const subscriber = await findByEmail(email)
+    if (!subscriber) {
+      throw new InvalidTokenError()
+    }
+    codeSubscriberId = subscriber.id
   }
 
-  const login = await findValidByToken(token, tokenType)
+  const login = await findValidByToken(token, tokenType, codeSubscriberId)
 
   if (!login) {
-    if (tokenType === 'code' && email) {
-      const subscriber = await findByEmail(email)
-      if (subscriber) {
-        await incrementAttemptsForSubscriber(subscriber.id)
-      }
+    if (codeSubscriberId !== undefined) {
+      await incrementAttemptsForSubscriber(codeSubscriberId)
     }
     throw new InvalidTokenError()
   }
