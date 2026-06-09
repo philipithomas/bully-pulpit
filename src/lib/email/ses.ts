@@ -72,13 +72,37 @@ export async function sendNewsletterEmail(input: {
   to: string
   subject: string
   html: string
+  text?: string | null
   previewText?: string | null
   unsubscribeUrl: string
-  unsubscribePostUrl: string
+  unsubscribePostUrl?: string | null
 }): Promise<void> {
-  const text = input.previewText
-    ? `${input.previewText}\n\n${input.subject}`
-    : input.subject
+  // Prefer a real plaintext rendering of the body so plaintext-only clients (and
+  // spam filters comparing text vs html) get the actual content; fall back to the
+  // preview text + subject when no body text is supplied.
+  const body =
+    input.text?.trim() ||
+    (input.previewText
+      ? `${input.previewText}\n\n${input.subject}`
+      : input.subject)
+  // The HTML shell carries an unsubscribe footer; mirror it here so the
+  // text/plain part has a visible opt-out (CAN-SPAM, and spam filters compare
+  // the two parts). Appended at send time because the URL is per-recipient.
+  const text = `${body}\n\n—\nUnsubscribe: ${input.unsubscribeUrl}`
+
+  // RFC 2369 List-Unsubscribe. The RFC 8058 one-click POST target is only added
+  // when a POST URL is supplied (real per-recipient sends). Test sends omit it —
+  // they have no per-recipient token, so a one-click POST would 405.
+  const headers = input.unsubscribePostUrl
+    ? [
+        {
+          Name: 'List-Unsubscribe',
+          Value: `<${input.unsubscribePostUrl}>, <${input.unsubscribeUrl}>`,
+        },
+        { Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' },
+      ]
+    : [{ Name: 'List-Unsubscribe', Value: `<${input.unsubscribeUrl}>` }]
+
   await getSesClient().send(
     new SendEmailCommand({
       FromEmailAddress: siteConfig.sesFromEmail,
@@ -90,16 +114,7 @@ export async function sendNewsletterEmail(input: {
             Html: { Data: input.html, Charset: 'UTF-8' },
             Text: { Data: text, Charset: 'UTF-8' },
           },
-          Headers: [
-            {
-              Name: 'List-Unsubscribe',
-              Value: `<${input.unsubscribePostUrl}>, <${input.unsubscribeUrl}>`,
-            },
-            {
-              Name: 'List-Unsubscribe-Post',
-              Value: 'List-Unsubscribe=One-Click',
-            },
-          ],
+          Headers: headers,
         },
       },
     })

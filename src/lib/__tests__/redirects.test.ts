@@ -8,10 +8,19 @@ function findRedirect(source: string) {
 }
 
 describe('redirects', () => {
-  it('all redirects are permanent', () => {
+  it('all redirects are permanent except the temporary /admin rename', () => {
     for (const r of redirects) {
+      // The /admin → /printing-press redirects are intentionally temporary
+      // (private path, no SEO, avoids hard-caching if the path moves again).
+      if (r.source.startsWith('/admin')) continue
       expect(r.permanent, `${r.source} should be permanent`).toBe(true)
     }
+  })
+
+  it('the /admin → /printing-press rename is a temporary redirect', () => {
+    expect(findRedirect('/admin')?.destination).toBe('/printing-press')
+    expect(findRedirect('/admin')?.permanent).toBe(false)
+    expect(findRedirect('/admin/:path*')?.permanent).toBe(false)
   })
 
   it('no duplicate sources', () => {

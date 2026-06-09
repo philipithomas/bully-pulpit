@@ -99,9 +99,10 @@ export async function sendNewsletterToOne(input: {
     to: input.email,
     subject: body.subject,
     html,
+    text: body.bodyText,
     previewText: body.previewText,
     unsubscribeUrl,
-    unsubscribePostUrl: unsubscribeUrl,
+    // Test sends have no per-recipient token, so omit the one-click POST target.
   })
 }
 
@@ -110,6 +111,7 @@ export async function sendQueuedEmail(row: {
   email: string
   subject: string | null
   htmlContent: string | null
+  textContent: string | null
   newsletter: string | null
   previewText: string | null
   unsubscribeToken: string
@@ -128,6 +130,7 @@ export async function sendQueuedEmail(row: {
     to: row.email,
     subject: row.subject ?? '',
     html,
+    text: row.textContent,
     previewText: row.previewText,
     unsubscribeUrl,
     unsubscribePostUrl,

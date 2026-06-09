@@ -22,9 +22,9 @@ pnpm db:studio    # Open Drizzle Studio against the DB
 - **Content**: MDX files in `content/{contraption,workshop,postcard,pages}/`
 - **Rendering**: All pages statically generated via `generateStaticParams`
 - **Auth**: Client-side overlay; subscribers/OTP/magic-link in Neon Postgres; session is a JWT (jose, HS256) in the httpOnly `bp_token` cookie (`bp_has_session` mirrors login state for the client)
-- **Database**: Neon Postgres via Drizzle ORM (`src/lib/db/`). DB clients are lazy so `next build` never needs `DATABASE_URL` — keep all DB access in route handlers / server actions / workflows, never at module scope or in static generation. Migrations apply on deploy via `db:migrate:deploy` in the `vercel.json` build command, **guarded to `VERCEL_ENV=production`** (preview/local builds skip it). `db:migrate` uses `DATABASE_URL_UNPOOLED` when present. Use additive (expand/contract) migrations so a mid-deploy schema/code gap stays backward-compatible
-- **Email**: AWS SES (`@aws-sdk/client-sesv2`). Transactional sends (OTP, admin notification) are synchronous; the newsletter blast runs through a durable Vercel Workflow (`src/workflows/send-newsletter.ts`)
-- **Admin**: `/admin` is gated by the `ADMIN_EMAILS` allowlist (`src/lib/auth/admin.ts`) on top of a normal signed-in session — page layout guard + per-route `guardAdmin()`
+- **Database**: Neon Postgres via Drizzle ORM (`src/lib/db/`). DB clients are lazy so `next build` never needs `DATABASE_URL` — keep all DB access in route handlers / server actions / workflows, never at module scope or in static generation. The `vercel.json` build command is `db:migrate:deploy && next build && (chroma:sync || …)`: migrations run first (**guarded to `VERCEL_ENV=production`**, so preview/local skip them), then build, then a **non-fatal** Chroma sync (a Chroma outage can't abort a code deploy). `db:migrate` uses `DATABASE_URL_UNPOOLED` when present. Use additive (expand/contract) migrations so a mid-deploy schema/code gap stays backward-compatible
+- **Email**: AWS SES (`@aws-sdk/client-sesv2`). Transactional sends (OTP, admin notification) are synchronous; the newsletter blast runs through a durable Vercel Workflow (`src/workflows/send-newsletter.ts`). Delivery is at-least-once (no SES idempotency key). Per-recipient rows snapshot the rendered HTML + plaintext (`text_content`) so the text/plain part carries the real body
+- **Admin (Printing Press)**: the admin panel lives at `/printing-press` (`/admin` 307-redirects there), gated by the `ADMIN_EMAILS` allowlist (`src/lib/auth/admin.ts`) on top of a normal signed-in session — page layout guard (`requireAdmin()`) + per-route `guardAdmin()` on every `app/api/printing-press/*` handler. It has a responsive sidenav shell (`src/components/printing-press/`): Overview, Posts (send UI), Subscribers (search by email, gravatar avatars, copy, hard-delete, CSV export/import — columns `email,name,postcard,contraption,workshop,confirmed`, upsert by email; flag columns absent from the CSV only set defaults on new rows, so a bare email list can't re-subscribe opt-outs; export neutralizes spreadsheet formula injection in `email`/`name`). Gravatar avatars knowingly send md5(subscriber email) to Automattic — accepted tradeoff for an admin-only list. The dropdown's "Printing Press" link shows only when `/api/auth/me` reports `isAdmin`
 - **Styling**: Tailwind v4 CSS-first config in `src/styles/globals.css`
 
 ## Conventions
@@ -42,7 +42,8 @@ For up-to-date Next.js documentation refer to `node_modules/next/dist/docs/`. Yo
 ## Key paths
 
 - `content/` - MDX blog posts and pages
-- `src/app/` - Next.js App Router pages and API routes (incl. `app/admin/` send UI, `app/api/admin/*`, `app/api/cron/*`)
+- `src/app/` - Next.js App Router pages and API routes (incl. `app/printing-press/` admin UI, `app/api/printing-press/*`, `app/api/cron/*`)
+- `src/components/printing-press/` - Printing Press shell (sidenav, mobile Sheet drawer), page header
 - `src/components/` - React components (layout, posts, auth, ui)
 - `src/lib/` - Content loader, feed generators, config
 - `src/lib/db/` - Drizzle schema, lazy client, and query helpers (`queries/`); migrations in `src/lib/db/migrations/`
@@ -64,7 +65,7 @@ When writing or editing prose content (blog posts, page copy, descriptions), fol
 - **Workshop** (`/workshop/`): Work in progress notes. Walnut (#6B4D3A) accent.
 - **Postcard** (`/postcard/`): Monthly updates. Indigo (#2C3E6B) accent.
 
-Sending: an admin opens `/admin`, picks a post, previews it, sends a test to themselves, then sends to all confirmed subscribers of that newsletter. The send is a durable Vercel Workflow that enqueues per-recipient `email_sends` rows and delivers them in paced, retryable batches via SES. Eligibility excludes anyone already sent or pending (failed rows self-heal on retry). Adding shadcn UI components requires `pnpm dlx shadcn add … ` to install deps with `-w` (this repo is a pnpm workspace root).
+Sending: an admin opens `/printing-press` → Posts, picks a post, previews it, sends a test to themselves, then sends to all confirmed subscribers of that newsletter. The send is a durable Vercel Workflow that enqueues per-recipient `email_sends` rows and delivers them in paced, retryable batches via SES (transient errors back off via `RetryableError`). Eligibility excludes anyone already sent or pending; the Send path heals previously-errored rows in place (`resetFailedBySlug`) so a re-send reuses them instead of duplicating. UI primitives are hand-built to the site's warm palette (no shadcn CLI — the default tokens aren't defined); they compose `@radix-ui/react-dialog` (Dialog, Sheet) + cva. If you ever do add a shadcn component, install deps with `-w` (this repo is a pnpm workspace root).
 
 ## Maintaining this file
 

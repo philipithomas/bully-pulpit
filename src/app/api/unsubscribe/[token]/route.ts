@@ -4,7 +4,6 @@ import {
   markUnsubscribed,
 } from '@/lib/db/queries/email-sends'
 import {
-  deleteWithData,
   findById,
   maskEmail,
   prefsFromBody,
@@ -55,6 +54,13 @@ export async function PATCH(
   return NextResponse.json({ success: true })
 }
 
+/**
+ * Unsubscribes from ALL newsletters. The unsubscribe token lives in the
+ * recipient's email (and List-Unsubscribe headers), so it can opt someone out of
+ * everything — but it deliberately does NOT delete account data. Irreversible
+ * deletion is gated behind an authenticated session (/account → DELETE
+ * /api/auth/preferences) so a leaked token can't nuke an account.
+ */
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -63,7 +69,12 @@ export async function DELETE(
   const resolved = await resolveSubscriber(token)
   if (!resolved) return NOT_FOUND
 
-  await deleteWithData(resolved.subscriber.id)
+  await updateSubscriber(resolved.subscriber.uuid, {
+    subscribedPostcard: false,
+    subscribedContraption: false,
+    subscribedWorkshop: false,
+  })
+  await markUnsubscribed(resolved.emailSend.id)
   return NextResponse.json({ success: true })
 }
 

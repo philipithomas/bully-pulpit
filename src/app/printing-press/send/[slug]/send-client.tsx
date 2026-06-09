@@ -59,7 +59,7 @@ export function SendClient({
     const id = setInterval(async () => {
       polls += 1
       try {
-        const res = await fetch(`/api/admin/send-status/${slug}`)
+        const res = await fetch(`/api/printing-press/send-status/${slug}`)
         if (!res.ok) return
         const data = await res.json()
         setStats({
@@ -83,7 +83,7 @@ export function SendClient({
   const sendTest = useCallback(async () => {
     setTesting(true)
     try {
-      const res = await fetch('/api/admin/send-test', {
+      const res = await fetch('/api/printing-press/send-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug }),
@@ -102,7 +102,7 @@ export function SendClient({
     setConfirmOpen(false)
     setStarting(true)
     try {
-      const res = await fetch('/api/admin/send', {
+      const res = await fetch('/api/printing-press/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug }),
@@ -124,7 +124,7 @@ export function SendClient({
   const retry = useCallback(async () => {
     setStarting(true)
     try {
-      const res = await fetch('/api/admin/retry', {
+      const res = await fetch('/api/printing-press/retry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug }),

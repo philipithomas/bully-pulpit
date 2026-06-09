@@ -1,5 +1,6 @@
 'use client'
 
+import { Printer as PrinterIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuthContext } from '@/components/auth/auth-provider'
@@ -125,6 +126,16 @@ export function MemberMenu() {
           >
             Account
           </Link>
+          {user.isAdmin && (
+            <Link
+              href="/printing-press"
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-075 border-t border-gray-100 transition-colors duration-200"
+              onClick={() => setOpen(false)}
+            >
+              <PrinterIcon className="h-4 w-4 text-gray-400" />
+              Printing Press
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => {

@@ -63,6 +63,7 @@ export const emailSends = pgTable(
       .defaultNow(),
     subject: text('subject'),
     htmlContent: text('html_content'),
+    textContent: text('text_content'),
     newsletter: text('newsletter'),
     sentAt: timestamp('sent_at', { withTimezone: true }),
     attempts: integer('attempts').notNull().default(0),

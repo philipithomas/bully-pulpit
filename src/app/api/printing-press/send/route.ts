@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server'
 import { start } from 'workflow/api'
 import { guardAdmin } from '@/lib/auth/admin'
 import { getPostBySlug } from '@/lib/content/loader'
-import { countPendingBySlug } from '@/lib/db/queries/email-sends'
+import {
+  countPendingBySlug,
+  resetFailedBySlug,
+} from '@/lib/db/queries/email-sends'
 import { isNewsletter } from '@/lib/db/queries/subscribers'
 import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
 
@@ -32,6 +35,11 @@ export async function POST(request: Request) {
       { status: 409 }
     )
   }
+
+  // Heal previously-errored rows in place (clears send_error → pending) so the
+  // workflow resends those existing rows rather than inserting duplicate
+  // email_sends rows for the same subscriber+post. Mirrors the Retry path.
+  await resetFailedBySlug(slug)
 
   const run = await start(sendNewsletterWorkflow, [slug])
   return NextResponse.json({ ok: true, runId: run.runId })

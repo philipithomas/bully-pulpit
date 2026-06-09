@@ -1,4 +1,4 @@
-import { FatalError } from 'workflow'
+import { FatalError, getStepMetadata, RetryableError } from 'workflow'
 import { getPostBySlug } from '@/lib/content/loader'
 import {
   bulkCreateQueued,
@@ -51,6 +51,7 @@ async function enqueueRecipients(slug: string): Promise<number[][]> {
       newsletter: post.newsletter,
       subject: body.subject,
       htmlContent: body.html,
+      textContent: body.bodyText,
       previewText: body.previewText,
     })
   }
@@ -59,10 +60,16 @@ async function enqueueRecipients(slug: string): Promise<number[][]> {
 }
 
 /**
- * Sends one batch of rows. Idempotent: re-reads which rows are still pending, so
- * a retry after a mid-batch transient failure never re-sends. Per-recipient
- * permanent failures are recorded and skipped; a transient SES error is rethrown
- * so the Workflow runtime retries the whole (now-smaller) batch.
+ * Sends one batch of rows. Idempotent at the DB level: re-reads which rows are
+ * still pending, so a retry after a mid-batch transient failure never re-sends a
+ * row already marked sent. Per-recipient permanent failures are recorded and
+ * skipped; a transient SES error triggers a backed-off retry of the (now-smaller)
+ * batch via RetryableError.
+ *
+ * Delivery is at-least-once, not exactly-once: if SES accepts a message but its
+ * HTTP response is lost, the row stays sendable and the recipient can receive a
+ * duplicate on retry (SESv2 SendEmail exposes no idempotency key). Acceptable for
+ * a newsletter.
  */
 async function sendBatch(rowIds: number[]): Promise<{
   sent: number
@@ -85,6 +92,7 @@ async function sendBatch(rowIds: number[]): Promise<{
         email,
         subject: send.subject,
         htmlContent: send.htmlContent,
+        textContent: send.textContent,
         newsletter: send.newsletter,
         previewText: send.previewText,
         unsubscribeToken: send.unsubscribeToken,
@@ -99,7 +107,15 @@ async function sendBatch(rowIds: number[]): Promise<{
         )
         failed++
       } else {
-        throw err
+        // Transient SES error (most likely throttling near the send-rate ceiling).
+        // Back off and let the runtime retry the batch — re-reading sendable rows
+        // means already-sent recipients are skipped — so a sustained throttle clears
+        // instead of failing the run and stranding the remaining batches.
+        const { attempt } = getStepMetadata()
+        throw new RetryableError(
+          err instanceof Error ? err.message : String(err),
+          { retryAfter: Math.min(60_000, 2 ** attempt * 1000) }
+        )
       }
     }
 
@@ -108,6 +124,10 @@ async function sendBatch(rowIds: number[]): Promise<{
 
   return { sent, failed }
 }
+
+// Give a sustained SES throttle room to clear (7 attempts, exponential backoff)
+// before the run fails; the batch is idempotent so extra attempts can't double-send.
+sendBatch.maxRetries = 6
 
 /**
  * Durable newsletter send. Enqueues eligible recipients and sends them in paced,

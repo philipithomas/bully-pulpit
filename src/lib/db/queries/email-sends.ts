@@ -32,6 +32,7 @@ export async function bulkCreateQueued(input: {
   newsletter: string
   subject: string
   htmlContent: string
+  textContent?: string | null
   previewText?: string | null
 }): Promise<number[]> {
   const ids: number[] = []
@@ -46,6 +47,7 @@ export async function bulkCreateQueued(input: {
           newsletter: input.newsletter,
           subject: input.subject,
           htmlContent: input.htmlContent,
+          textContent: input.textContent ?? null,
           previewText: input.previewText ?? null,
           nextAttemptAt: sql`NOW()`,
         }))

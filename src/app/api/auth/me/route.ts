@@ -1,30 +1,28 @@
-import { jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { siteConfig } from '@/lib/config'
+import { isAdmin } from '@/lib/auth/admin'
+import { clearSessionCookies, getSession } from '@/lib/auth/jwt'
 
 export async function GET() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('bp_token')?.value
+  const session = await getSession()
 
-  if (!token) {
-    return NextResponse.json({ user: null })
-  }
-
-  try {
-    const secret = new TextEncoder().encode(siteConfig.jwtSecret)
-    const { payload } = await jwtVerify(token, secret)
+  if (session) {
     return NextResponse.json({
       user: {
-        uuid: payload.sub,
-        email: payload.email,
-        name: payload.name,
+        uuid: session.uuid,
+        email: session.email,
+        name: session.name,
+        isAdmin: isAdmin(session.email),
       },
     })
-  } catch {
-    const response = NextResponse.json({ user: null })
-    response.cookies.delete('bp_token')
-    response.cookies.delete('bp_has_session')
-    return response
   }
+
+  // No valid session. If a stale/invalid bp_token cookie is present, clear it so
+  // the client stops re-fetching /api/auth/me on every load (self-healing).
+  const response = NextResponse.json({ user: null })
+  const store = await cookies()
+  if (store.get('bp_token')) {
+    clearSessionCookies(response)
+  }
+  return response
 }

@@ -134,16 +134,40 @@ export function renderEmailHeaderHtml(
   return html
 }
 
-export function markdownToPlaintext(markdown: string, maxLength = 150): string {
-  return markdown
+export function markdownToPlaintext(
+  markdown: string,
+  maxLength = 150,
+  options: { preserveParagraphs?: boolean } = {}
+): string {
+  const stripped = markdown
+    .replace(/<\/?[A-Za-z][^>]*\/?>/g, '') // MDX components / raw HTML tags
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '') // images
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // links → text
+    .replace(
+      /\[([^\]]*)\]\(([^)]*)\)/g,
+      // Preview snippets keep only the text; the full text/plain body keeps
+      // the URL too, since links are often the point of a newsletter.
+      options.preserveParagraphs ? '$1 ($2)' : '$1'
+    )
     .replace(/^#{1,6}\s+/gm, '') // headings
     .replace(/(\*{1,3}|_{1,3})(.*?)\1/g, '$2') // bold/italic
     .replace(/`{1,3}[^`]*`{1,3}/g, '') // inline code
     .replace(/^(?:[-*+]|\d+\.)\s+/gm, '') // list markers
     .replace(/^>\s+/gm, '') // blockquotes
     .replace(/^---+$/gm, '') // hr
+
+  // For a long-form text/plain body, keep blank-line paragraph breaks but
+  // collapse whitespace within each paragraph (readable, not one giant line).
+  if (options.preserveParagraphs) {
+    return stripped
+      .split(/\n{2,}/)
+      .map((p) => p.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .join('\n\n')
+      .slice(0, maxLength)
+  }
+
+  // Default (preview snippet): collapse everything to a single line.
+  return stripped
     .replace(/\n{2,}/g, ' ') // collapse paragraph breaks
     .replace(/\n/g, ' ') // collapse remaining newlines
     .replace(/\s+/g, ' ') // collapse whitespace

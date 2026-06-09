@@ -53,6 +53,7 @@ function makeEmailSend(overrides: Partial<EmailSend> = {}): EmailSend {
     createdAt: new Date(),
     subject: 'Subject',
     htmlContent: '<p>x</p>',
+    textContent: 'x',
     newsletter: 'contraption',
     sentAt: new Date(),
     attempts: 0,
@@ -116,13 +117,21 @@ describe('PATCH /api/unsubscribe/[token]', () => {
 })
 
 describe('DELETE /api/unsubscribe/[token]', () => {
-  it('deletes the subscriber and all data', async () => {
+  it('unsubscribes from all newsletters without deleting account data', async () => {
     mockedSends.findByUnsubscribeToken.mockResolvedValue(makeEmailSend())
     mockedSubs.findById.mockResolvedValue(makeSubscriber({ id: 7 }))
+    mockedSubs.updateSubscriber.mockResolvedValue(makeSubscriber())
 
     const res = await DELETE({} as NextRequest, params('tok'))
 
-    expect(mockedSubs.deleteWithData).toHaveBeenCalledWith(7)
+    // A leaked unsubscribe token must NOT be able to hard-delete an account.
+    expect(mockedSubs.updateSubscriber).toHaveBeenCalledWith('uuid-1', {
+      subscribedPostcard: false,
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+    })
+    expect(mockedSends.markUnsubscribed).toHaveBeenCalledWith(10)
+    expect(mockedSubs.deleteWithData).not.toHaveBeenCalled()
     await expect(res.json()).resolves.toEqual({ success: true })
   })
 

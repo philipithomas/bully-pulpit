@@ -42,6 +42,14 @@ type Redirect = {
 
 export function getRedirects(): Redirect[] {
   return [
+    // Admin panel renamed to the Printing Press (temporary: private path, no SEO,
+    // and avoids browsers hard-caching the redirect if it ever moves again).
+    { source: '/admin', destination: '/printing-press', permanent: false },
+    {
+      source: '/admin/:path*',
+      destination: '/printing-press/:path*',
+      permanent: false,
+    },
     // Ghost legacy: /posts index -> /contraption
     {
       source: '/posts',

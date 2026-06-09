@@ -13,6 +13,8 @@ export type EmailBody = {
   subtitle: string | null
   html: string
   previewText: string
+  /** Full plaintext rendering of the body, for the email's text/plain part. */
+  bodyText: string
 }
 
 /**
@@ -36,9 +38,17 @@ export async function buildEmailBodyHtml(post: Post): Promise<EmailBody> {
     post.newsletter === 'postcard' ? null : post.frontmatter.publishedAt
   )
   const html = emailHeader + markdownHtml + relatedPostsHtml
-  const bodyPlaintext = markdownToPlaintext(post.content)
-  const previewText = subtitle
-    ? `${subtitle} – ${bodyPlaintext}`
-    : bodyPlaintext
-  return { subject: post.frontmatter.title, subtitle, html, previewText }
+  // Short snippet for the preheader/preview; full text for the text/plain part.
+  const bodyPreview = markdownToPlaintext(post.content)
+  const bodyText = markdownToPlaintext(post.content, 100_000, {
+    preserveParagraphs: true,
+  })
+  const previewText = subtitle ? `${subtitle} – ${bodyPreview}` : bodyPreview
+  return {
+    subject: post.frontmatter.title,
+    subtitle,
+    html,
+    previewText,
+    bodyText,
+  }
 }

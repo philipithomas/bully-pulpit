@@ -75,6 +75,17 @@ export async function verifyToken(
   email?: string
 ): Promise<Subscriber> {
   const tokenType: TokenType = /^\d{6}$/.test(token) ? 'code' : 'magic_link'
+
+  // Hardening: a 6-digit code is matched GLOBALLY across all subscribers, and the
+  // per-subscriber attempt lockout below only fires when an email is supplied. So a
+  // code must only ever be verified through the email-scoped path (/api/auth/verify),
+  // which is rate-limited + bot-checked + lockout-enforced. Reject code-type tokens
+  // that arrive without an email (e.g. the magic-link GET) so they can't be brute-forced
+  // anonymously. Magic links are 122-bit UUIDs and remain valid without an email.
+  if (tokenType === 'code' && !email) {
+    throw new InvalidTokenError()
+  }
+
   const login = await findValidByToken(token, tokenType)
 
   if (!login) {

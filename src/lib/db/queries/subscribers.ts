@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, or, sql } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import {
   emailSends,
@@ -221,6 +221,205 @@ export function prefsFromBody(body: Record<string, unknown>): SubscriberPrefs {
   if (typeof body.subscribed_workshop === 'boolean')
     prefs.subscribedWorkshop = body.subscribed_workshop
   return prefs
+}
+
+export type SubscriberStats = {
+  total: number
+  confirmed: number
+  postcard: number
+  contraption: number
+  workshop: number
+}
+
+/** Aggregate counts for the Printing Press overview (one query). */
+export async function subscriberStats(): Promise<SubscriberStats> {
+  const confirmed = sql`${subscribers.confirmedAt} IS NOT NULL`
+  const rows = await getDb()
+    .select({
+      total: sql<number>`count(*)::int`,
+      confirmed: sql<number>`(count(*) FILTER (WHERE ${confirmed}))::int`,
+      postcard: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedPostcard}))::int`,
+      contraption: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedContraption}))::int`,
+      workshop: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedWorkshop}))::int`,
+    })
+    .from(subscribers)
+  return (
+    rows[0] ?? {
+      total: 0,
+      confirmed: 0,
+      postcard: 0,
+      contraption: 0,
+      workshop: 0,
+    }
+  )
+}
+
+export type SubscriberListItem = {
+  uuid: string
+  email: string
+  name: string | null
+  confirmedAt: string | null
+  subscribedPostcard: boolean
+  subscribedContraption: boolean
+  subscribedWorkshop: boolean
+  createdAt: string
+}
+
+/**
+ * Paginated subscriber list for the admin UI, optionally filtered by an email
+ * substring. The search value is bound as a parameter (no SQL injection); `%`/`_`
+ * in it act as LIKE wildcards, which is harmless for an admin search box.
+ */
+export async function listSubscribers(opts: {
+  search?: string
+  limit?: number
+  offset?: number
+}): Promise<{ rows: SubscriberListItem[]; total: number }> {
+  const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100)
+  const offset = Math.max(opts.offset ?? 0, 0)
+  const search = opts.search?.trim().toLowerCase()
+  const where = search
+    ? sql`lower(${subscribers.email}) LIKE ${`%${search}%`}`
+    : undefined
+
+  const countRows = await getDb()
+    .select({ n: sql<number>`count(*)::int` })
+    .from(subscribers)
+    .where(where)
+  const total = countRows[0]?.n ?? 0
+
+  // id breaks created_at ties (CSV imports share one NOW()) so offset paging
+  // is stable — without it, pages can skip or duplicate rows.
+  const rows = await getDb()
+    .select()
+    .from(subscribers)
+    .where(where)
+    .orderBy(desc(subscribers.createdAt), desc(subscribers.id))
+    .limit(limit)
+    .offset(offset)
+
+  return {
+    rows: rows.map((s) => ({
+      uuid: s.uuid,
+      email: s.email,
+      name: s.name,
+      confirmedAt: s.confirmedAt ? s.confirmedAt.toISOString() : null,
+      subscribedPostcard: s.subscribedPostcard,
+      subscribedContraption: s.subscribedContraption,
+      subscribedWorkshop: s.subscribedWorkshop,
+      createdAt: s.createdAt.toISOString(),
+    })),
+    total,
+  }
+}
+
+export type ExportRow = {
+  email: string
+  name: string | null
+  postcard: boolean
+  contraption: boolean
+  workshop: boolean
+  confirmed: boolean
+  createdAt: string
+}
+
+/** Every subscriber, newest first, for CSV export. */
+export async function allSubscribersForExport(): Promise<ExportRow[]> {
+  const rows = await getDb()
+    .select()
+    .from(subscribers)
+    .orderBy(desc(subscribers.createdAt), desc(subscribers.id))
+  return rows.map((s) => ({
+    email: s.email,
+    name: s.name,
+    postcard: s.subscribedPostcard,
+    contraption: s.subscribedContraption,
+    workshop: s.subscribedWorkshop,
+    confirmed: s.confirmedAt != null,
+    createdAt: s.createdAt.toISOString(),
+  }))
+}
+
+export type ImportRow = {
+  email: string
+  name: string | null
+  postcard: boolean
+  contraption: boolean
+  workshop: boolean
+  confirmed: boolean
+}
+
+const IMPORT_CHUNK = 500
+
+/** Which optional columns the CSV actually contained (see importSubscribers). */
+export type ImportColumnsPresent = {
+  postcard: boolean
+  contraption: boolean
+  workshop: boolean
+  confirmed: boolean
+}
+
+/**
+ * Upserts subscribers from a CSV import, keyed by email. A flag column the CSV
+ * actually contains overwrites existing rows; a column absent from the CSV only
+ * sets defaults on NEW rows and leaves existing rows untouched — so importing a
+ * bare email list can't re-subscribe someone who opted out. A name is only
+ * overwritten when the import provides one; confirmation is monotonic — an
+ * import can confirm a subscriber but never un-confirm one. Returns how many
+ * rows were created vs updated. Callers must dedupe by email first (a single
+ * INSERT … ON CONFLICT can't touch the same row twice).
+ */
+export async function importSubscribers(
+  rows: ImportRow[],
+  present: ImportColumnsPresent
+): Promise<{ created: number; updated: number }> {
+  let created = 0
+  let updated = 0
+  for (let i = 0; i < rows.length; i += IMPORT_CHUNK) {
+    const chunk = rows.slice(i, i + IMPORT_CHUNK)
+    const result = await getDb()
+      .insert(subscribers)
+      .values(
+        chunk.map((r) => ({
+          email: r.email.toLowerCase(),
+          name: r.name,
+          subscribedPostcard: r.postcard,
+          subscribedContraption: r.contraption,
+          subscribedWorkshop: r.workshop,
+          confirmedAt: r.confirmed ? new Date() : null,
+          source: 'csv_import',
+        }))
+      )
+      .onConflictDoUpdate({
+        target: subscribers.email,
+        set: {
+          name: sql`COALESCE(excluded.name, ${subscribers.name})`,
+          // A key omitted from ON CONFLICT SET leaves the existing value alone.
+          ...(present.postcard
+            ? { subscribedPostcard: sql`excluded.subscribed_postcard` }
+            : {}),
+          ...(present.contraption
+            ? { subscribedContraption: sql`excluded.subscribed_contraption` }
+            : {}),
+          ...(present.workshop
+            ? { subscribedWorkshop: sql`excluded.subscribed_workshop` }
+            : {}),
+          ...(present.confirmed
+            ? {
+                confirmedAt: sql`COALESCE(${subscribers.confirmedAt}, excluded.confirmed_at)`,
+              }
+            : {}),
+          updatedAt: sql`NOW()`,
+        },
+      })
+      // xmax = 0 ⇒ the row was inserted; nonzero ⇒ it was an update.
+      .returning({ inserted: sql<number>`(xmax = 0)::int` })
+    for (const row of result) {
+      if (row.inserted === 1) created += 1
+      else updated += 1
+    }
+  }
+  return { created, updated }
 }
 
 /** Masks a local part for display, identical to printing-press's mask_email. */

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { SendClient } from '@/app/admin/send/[slug]/send-client'
+import { SendClient } from '@/app/printing-press/send/[slug]/send-client'
 import { requireAdmin } from '@/lib/auth/admin'
 import { getPostBySlug } from '@/lib/content/loader'
 import { sendStatsBySlug } from '@/lib/db/queries/email-sends'

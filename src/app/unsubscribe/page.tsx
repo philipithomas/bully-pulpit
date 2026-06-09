@@ -84,9 +84,7 @@ function UnsubscribeContent() {
         return
       }
       const data = await res.json().catch(() => null)
-      setDeleteError(
-        data?.error ?? 'Could not delete your subscription. Please try again.'
-      )
+      setDeleteError(data?.error ?? 'Could not unsubscribe. Please try again.')
     } finally {
       setDeleting(false)
     }
@@ -110,11 +108,12 @@ function UnsubscribeContent() {
       <div className="bg-offwhite min-h-[60vh]">
         <div className="container max-w-lg py-12 md:py-16">
           <h1 className="text-3xl font-semibold tracking-tight text-gray-950 mb-4">
-            Account Deleted
+            Unsubscribed
           </h1>
           <p className="text-gray-600 mb-6">
-            Your subscription and all associated data have been permanently
-            deleted.
+            You've been unsubscribed from all newsletters. You can re-subscribe
+            anytime — or sign in to your account to permanently delete your
+            data.
           </p>
           <button
             type="button"
@@ -209,7 +208,7 @@ function UnsubscribeContent() {
             }}
             className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
           >
-            Unsubscribe from all and delete my data
+            Unsubscribe from all emails
           </button>
         </div>
       </div>
@@ -225,11 +224,12 @@ function UnsubscribeContent() {
           />
           <div className="relative bg-white max-w-md w-full mx-4 p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-gray-950 mb-3">
-              Delete all data?
+              Unsubscribe from everything?
             </h3>
             <p className="text-sm text-gray-600 mb-6">
-              This will permanently delete your subscription and all associated
-              data including email history. This cannot be undone.
+              You'll stop receiving all newsletters. You can re-subscribe
+              anytime. To permanently delete your data instead, sign in to your
+              account.
             </p>
             {deleteError && (
               <p className="text-sm text-red-600 mb-6">{deleteError}</p>
@@ -251,10 +251,10 @@ function UnsubscribeContent() {
                 {deleting ? (
                   <span className="flex items-center gap-2">
                     <Spinner className="h-3.5 w-3.5" />
-                    Deleting
+                    Unsubscribing
                   </span>
                 ) : (
-                  'Delete my data'
+                  'Unsubscribe from all'
                 )}
               </button>
             </div>

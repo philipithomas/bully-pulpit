@@ -45,7 +45,14 @@ const staticConfig = {
 export const siteConfig = {
   ...staticConfig,
   get jwtSecret() {
-    return requireEnv('JWT_SECRET')
+    const secret = requireEnv('JWT_SECRET')
+    // Sessions are HS256 JWTs that also gate the admin panel, so a weak secret in
+    // production would let an attacker forge an admin session. Enforce real entropy
+    // there; allow the short dev default locally so `next dev` still runs.
+    if (secret.length < 32 && process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET must be at least 32 characters in production')
+    }
+    return secret
   },
   get googleClientId() {
     return process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''
