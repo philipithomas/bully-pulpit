@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { PageHeader } from '@/components/printing-press/page-header'
 import { requireAdmin } from '@/lib/auth/admin'
-import { getPostBySlug } from '@/lib/content/loader'
+import { getAllPosts, getPostBySlug } from '@/lib/content/loader'
 import { allSendStats, lastCompletedSend } from '@/lib/db/queries/email-sends'
 import { subscriberStats } from '@/lib/db/queries/subscribers'
+import { isRecent } from '@/lib/printing-press'
 
 function n(value: number): string {
   return value.toLocaleString('en-US')
@@ -24,6 +25,14 @@ export default async function OverviewPage() {
   const pending = Object.values(sends).reduce((a, s) => a + s.pending, 0)
   const unconfirmed = stats.total - stats.confirmed
   const lastPost = last ? getPostBySlug(last.postSlug) : null
+
+  // Recent posts with no send history at all — the ones worth a nudge.
+  const readyToSend = getAllPosts().filter(
+    (p) =>
+      !p.frontmatter.draft &&
+      !sends[p.slug] &&
+      isRecent(p.frontmatter.publishedAt)
+  )
 
   return (
     <div>
@@ -81,6 +90,24 @@ export default async function OverviewPage() {
             </Link>
           </p>
         )}
+
+        {readyToSend.map((post) => (
+          <p key={post.slug} className="leading-relaxed text-gray-600">
+            <em>
+              <Link
+                href={`/printing-press/send/${post.slug}`}
+                className="text-gray-950 underline decoration-gray-300 underline-offset-4 transition-colors hover:decoration-current"
+              >
+                {post.frontmatter.title}
+              </Link>
+            </em>{' '}
+            went up on{' '}
+            <span className="font-mono text-[0.8125em]">
+              {post.frontmatter.publishedAt}
+            </span>{' '}
+            and has not gone out yet.
+          </p>
+        ))}
       </div>
 
       <div className="mt-12 flex flex-wrap gap-4">

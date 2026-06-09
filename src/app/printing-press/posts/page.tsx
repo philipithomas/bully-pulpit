@@ -4,17 +4,12 @@ import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth/admin'
 import { getAllPosts } from '@/lib/content/loader'
 import { allSendStats } from '@/lib/db/queries/email-sends'
-
-// Posts older than this with no send history are archival: no "Not sent"
-// badge (it reads as a problem when it isn't) and no link into the send flow.
-// The send page itself stays reachable by URL as an escape hatch.
-const SENDABLE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+import { isRecent } from '@/lib/printing-press'
 
 export default async function PostsPage() {
   await requireAdmin()
   const posts = getAllPosts().filter((p) => !p.frontmatter.draft)
   const stats = await allSendStats()
-  const cutoff = Date.now() - SENDABLE_WINDOW_MS
 
   return (
     <div>
@@ -26,8 +21,10 @@ export default async function PostsPage() {
       <div className="divide-y divide-gray-100 border border-gray-200 bg-white">
         {posts.map((post) => {
           const s = stats[post.slug]
-          const recent =
-            new Date(post.frontmatter.publishedAt).getTime() >= cutoff
+          // Old posts with no send history are archival: no "Not sent" badge
+          // (it reads as a problem when it isn't) and no link into the send
+          // flow. The send page stays reachable by URL as an escape hatch.
+          const recent = isRecent(post.frontmatter.publishedAt)
           const sendable = Boolean(s) || recent
 
           const body = (
