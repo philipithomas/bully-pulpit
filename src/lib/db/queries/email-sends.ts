@@ -174,6 +174,34 @@ export async function allSendStats(): Promise<Record<string, SendStats>> {
   return map
 }
 
+/**
+ * The most recent post that finished going out: which one, how many people
+ * received it, and when the last copy left. Powers the Overview's
+ * "last letter out" line.
+ */
+export async function lastCompletedSend(): Promise<{
+  postSlug: string
+  newsletter: string | null
+  sent: number
+  lastSentAt: Date
+} | null> {
+  const rows = await getDb()
+    .select({
+      postSlug: emailSends.postSlug,
+      newsletter: emailSends.newsletter,
+      sent: sql<number>`(count(*) FILTER (WHERE ${emailSends.sentAt} IS NOT NULL))::int`,
+      lastSentAt: sql<string | Date>`max(${emailSends.sentAt})`,
+    })
+    .from(emailSends)
+    .where(isNotNull(emailSends.sentAt))
+    .groupBy(emailSends.postSlug, emailSends.newsletter)
+    .orderBy(sql`max(${emailSends.sentAt}) DESC`)
+    .limit(1)
+  const row = rows[0]
+  if (!row) return null
+  return { ...row, lastSentAt: new Date(row.lastSentAt) }
+}
+
 export async function countPendingBySlug(slug: string): Promise<number> {
   const rows = await getDb()
     .select({ count: sql<number>`count(*)::int` })

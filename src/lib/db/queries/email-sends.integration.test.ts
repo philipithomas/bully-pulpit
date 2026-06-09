@@ -4,6 +4,7 @@ import {
   allSendStats,
   bulkCreateQueued,
   findSendableByIds,
+  lastCompletedSend,
   markPermanentFailure,
   markSent,
   pendingRowIdsBySlug,
@@ -330,5 +331,35 @@ describe('allSendStats', () => {
 
   it('returns an empty map when there are no sends', async () => {
     await expect(allSendStats()).resolves.toEqual({})
+  })
+})
+
+describe('lastCompletedSend', () => {
+  it('returns null when nothing has been sent', async () => {
+    const [id] = await seedSubscribers(['a@example.com'])
+    await seedSend(id, 'queued-only')
+    await expect(lastCompletedSend()).resolves.toBeNull()
+  })
+
+  it('returns the most recently finished post with its recipient count', async () => {
+    const [a, b] = await seedSubscribers(['a@example.com', 'b@example.com'])
+    const older = new Date('2026-01-01T00:00:00Z')
+    const newer = new Date('2026-02-01T00:00:00Z')
+    await seedSend(a, 'old-post', {
+      newsletter: 'postcard',
+      sentAt: older,
+    })
+    await seedSend(a, 'new-post', { newsletter: 'workshop', sentAt: older })
+    await seedSend(b, 'new-post', { newsletter: 'workshop', sentAt: newer })
+    // A pending row for the newest post must not inflate its sent count.
+    const [c] = await seedSubscribers(['c@example.com'])
+    await seedSend(c, 'new-post', { newsletter: 'workshop' })
+
+    const last = await lastCompletedSend()
+    expect(last).not.toBeNull()
+    expect(last?.postSlug).toBe('new-post')
+    expect(last?.newsletter).toBe('workshop')
+    expect(last?.sent).toBe(2)
+    expect(last?.lastSentAt).toEqual(newer)
   })
 })

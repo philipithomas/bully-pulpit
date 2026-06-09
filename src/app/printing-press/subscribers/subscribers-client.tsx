@@ -270,7 +270,7 @@ export function SubscribersClient({
             <Spinner className="-translate-y-1/2 absolute top-1/2 right-3 h-4 w-4 text-gray-400" />
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={onSync}
