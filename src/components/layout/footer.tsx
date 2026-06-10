@@ -32,6 +32,12 @@ export function Footer() {
             >
               Postcard
             </Link>
+            <Link
+              href="/photography"
+              className="hover:text-white transition-colors"
+            >
+              Photography
+            </Link>
             <Link href="/terms" className="hover:text-white transition-colors">
               Terms
             </Link>

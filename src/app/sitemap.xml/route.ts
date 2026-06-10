@@ -5,7 +5,14 @@ export async function GET() {
   const posts = getAllPosts()
   const pages = getPages()
 
-  const staticPages = ['', '/contraption', '/workshop', '/postcard', '/print']
+  const staticPages = [
+    '',
+    '/contraption',
+    '/workshop',
+    '/postcard',
+    '/print',
+    '/photography',
+  ]
 
   const urls = [
     ...staticPages.map((p) => `  <url><loc>${siteConfig.url}${p}</loc></url>`),
