@@ -17,23 +17,36 @@ const darkAccentColors: Record<NewsletterSlug, string> = {
 }
 const DEFAULT_DARK_ACCENT = '#A8A49D'
 
+// Each newsletter wordmark is a solid-ink PNG on transparency. The light-mode
+// asset is the dark accent ink (forest/walnut/indigo); the *-email-dark.png is
+// the same wordmark recolored to cream so it reads on the dark surface without
+// a background pill. We ship both and let the dark media query swap which is
+// shown via display (the email-standard light/dark image swap) — clients that
+// ignore prefers-color-scheme just keep the light wordmark.
+const wordmarks: Record<
+  NewsletterSlug,
+  { name: string; file: string; width: number; height: number }
+> = {
+  contraption: {
+    name: 'Contraption',
+    file: 'contraption',
+    width: 95,
+    height: 17,
+  },
+  workshop: { name: 'Workshop', file: 'workshop-brand', width: 87, height: 24 },
+  postcard: { name: 'Postcard', file: 'postcard', width: 79, height: 18 },
+}
+
 function brandHeader(newsletter: NewsletterSlug | '', siteUrl: string): string {
-  switch (newsletter) {
-    case 'contraption':
-      return `<a href="${siteUrl}/contraption" style="text-decoration: none;">
-              <img class="email-brand" src="${siteUrl}/images/contraption-email.png" alt="Contraption" width="95" height="17" style="height: 17px; width: 95px;">
-            </a>`
-    case 'workshop':
-      return `<a href="${siteUrl}/workshop" style="text-decoration: none;">
-              <img class="email-brand" src="${siteUrl}/images/workshop-brand-email.png" alt="Workshop" width="87" height="24" style="height: 24px; width: 87px;">
-            </a>`
-    case 'postcard':
-      return `<a href="${siteUrl}/postcard" style="text-decoration: none;">
-              <img class="email-brand" src="${siteUrl}/images/postcard-email.png" alt="Postcard" width="79" height="18" style="height: 18px; width: 79px;">
-            </a>`
-    default:
-      return `<a class="email-brand-text" href="${siteUrl}" style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #111110; text-decoration: none;">philipithomas.com</a>`
+  if (newsletter === '') {
+    return `<a class="email-brand-text" href="${siteUrl}" style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #111110; text-decoration: none;">philipithomas.com</a>`
   }
+  const mark = wordmarks[newsletter]
+  const dims = `height: ${mark.height}px; width: ${mark.width}px;`
+  return `<a href="${siteUrl}/${newsletter}" style="text-decoration: none;">
+              <img class="email-brand-light" src="${siteUrl}/images/${mark.file}-email.png" alt="${mark.name}" width="${mark.width}" height="${mark.height}" style="${dims}">
+              <img class="email-brand-dark" src="${siteUrl}/images/${mark.file}-email-dark.png" alt="${mark.name}" width="${mark.width}" height="${mark.height}" style="${dims} display: none;">
+            </a>`
 }
 
 /**
@@ -102,7 +115,8 @@ export function renderNewsletterShell(input: {
     .content-cell hr { border-top-color: #3A362F !important; }
     .content-cell img { opacity: 0.92; }
     .email-footer p, .email-footer a { color: #A8A49D !important; }
-    img.email-brand { background-color: #F5F3F0 !important; padding: 4px 8px !important; }
+    img.email-brand-light { display: none !important; }
+    img.email-brand-dark { display: inline-block !important; }
     a.email-brand-text { color: #ECE9E4 !important; }
   }
 </style>
