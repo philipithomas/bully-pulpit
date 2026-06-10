@@ -13,10 +13,13 @@ import {
 } from '@/lib/email/deliverability'
 
 const mx = vi.mocked(resolveMx)
-const a = vi.mocked(resolve4) as ReturnType<
+// node:dns/promises resolve4/resolve6 are overloaded; narrow the mock to the
+// single-argument overload the code under test uses. The overload set no
+// longer overlaps structurally, so the cast goes through unknown.
+const a = vi.mocked(resolve4) as unknown as ReturnType<
   typeof vi.fn<(hostname: string) => Promise<string[]>>
 >
-const aaaa = vi.mocked(resolve6) as ReturnType<
+const aaaa = vi.mocked(resolve6) as unknown as ReturnType<
   typeof vi.fn<(hostname: string) => Promise<string[]>>
 >
 
