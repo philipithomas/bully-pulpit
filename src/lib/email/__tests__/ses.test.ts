@@ -18,8 +18,12 @@ vi.mock('@aws-sdk/client-sesv2', async (importOriginal) => {
 import {
   type DeleteSuppressedDestinationCommand,
   NotFoundException,
+  type SendEmailCommand,
 } from '@aws-sdk/client-sesv2'
-import { deleteSuppressedDestination } from '@/lib/email/ses'
+import {
+  deleteSuppressedDestination,
+  sendNewsletterEmail,
+} from '@/lib/email/ses'
 
 beforeEach(() => {
   sesSend.mockClear()
@@ -55,5 +59,32 @@ describe('deleteSuppressedDestination', () => {
     await expect(
       deleteSuppressedDestination('gone@example.com')
     ).rejects.toThrow('TooManyRequestsException')
+  })
+})
+
+describe('sendNewsletterEmail', () => {
+  it('appends the unsubscribe link and postal address to the text part', async () => {
+    await sendNewsletterEmail({
+      to: 'reader@example.com',
+      subject: 'Hello',
+      html: '<p>Hello</p>',
+      text: 'Hello',
+      unsubscribeUrl: 'https://www.philipithomas.com/unsubscribe?token=abc',
+    })
+
+    expect(sesSend).toHaveBeenCalledTimes(1)
+    const command = sesSend.mock.calls[0][0] as SendEmailCommand
+    const text = command.input.Content?.Simple?.Body?.Text?.Data ?? ''
+    expect(text).toContain('Hello\n\n--\n')
+    expect(text).toContain(
+      'Unsubscribe: https://www.philipithomas.com/unsubscribe?token=abc'
+    )
+    // CAN-SPAM postal address, matching the HTML footer in
+    // templates/newsletter-shell.ts.
+    const year = new Date().getFullYear()
+    expect(text).toContain(`© ${year} The Contraption Company LLC`)
+    expect(text).toContain(
+      '169 Madison Ave. Suite 2174, New York, NY 10016 USA'
+    )
   })
 })

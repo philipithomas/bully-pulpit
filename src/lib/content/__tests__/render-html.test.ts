@@ -333,4 +333,56 @@ describe('markdownToPlaintext', () => {
       })
     ).toBe('First paragraph.\n\nSecond paragraph.')
   })
+
+  it('keeps inline code content midsentence', () => {
+    expect(markdownToPlaintext('Run `brew install asdf` now.')).toBe(
+      'Run brew install asdf now.'
+    )
+    expect(
+      markdownToPlaintext('Run `brew install asdf` now.', 1000, {
+        preserveParagraphs: true,
+      })
+    ).toBe('Run brew install asdf now.')
+  })
+
+  it('keeps fenced code blocks as indented blocks in the full text/plain body', () => {
+    const markdown = [
+      'Install it:',
+      '```bash\nbrew install asdf\nasdf plugin add nodejs\n```',
+      'Then restart your shell.',
+    ].join('\n\n')
+    expect(
+      markdownToPlaintext(markdown, 1000, { preserveParagraphs: true })
+    ).toBe(
+      [
+        'Install it:',
+        '    brew install asdf\n    asdf plugin add nodejs',
+        'Then restart your shell.',
+      ].join('\n\n')
+    )
+  })
+
+  it('drops fenced code blocks from preview snippets without eating surrounding prose', () => {
+    expect(
+      markdownToPlaintext('Before.\n\n```js\nconst x = 1\n```\n\nAfter.')
+    ).toBe('Before. After.')
+  })
+
+  it('makes root-relative link targets absolute in the full text/plain body', () => {
+    expect(
+      markdownToPlaintext('Read [the post](/chroma) next.', 1000, {
+        preserveParagraphs: true,
+      })
+    ).toBe('Read the post (https://www.philipithomas.com/chroma) next.')
+  })
+
+  it('leaves absolute and protocol-relative link targets untouched', () => {
+    expect(
+      markdownToPlaintext(
+        '[a](https://example.com) and [b](//cdn.example.com/x)',
+        1000,
+        { preserveParagraphs: true }
+      )
+    ).toBe('a (https://example.com) and b (//cdn.example.com/x)')
+  })
 })

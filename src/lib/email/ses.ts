@@ -144,10 +144,13 @@ export async function sendNewsletterEmail(input: {
     (input.previewText
       ? `${input.previewText}\n\n${input.subject}`
       : input.subject)
-  // The HTML shell carries an unsubscribe footer; mirror it here so the
-  // text/plain part has a visible opt-out (CAN-SPAM, and spam filters compare
+  // The HTML shell carries an unsubscribe footer and a postal address; mirror
+  // both here so the text/plain part stands alone (CAN-SPAM requires the
+  // opt-out and the postal address in the message, and spam filters compare
   // the two parts). Appended at send time because the URL is per-recipient.
-  const text = `${body}\n\n--\nUnsubscribe: ${input.unsubscribeUrl}`
+  // The address lines must match the footer in templates/newsletter-shell.ts.
+  const year = new Date().getFullYear()
+  const text = `${body}\n\n--\nUnsubscribe: ${input.unsubscribeUrl}\n© ${year} The Contraption Company LLC\n169 Madison Ave. Suite 2174, New York, NY 10016 USA`
 
   // RFC 2369 List-Unsubscribe. The RFC 8058 one-click POST target is only added
   // when a POST URL is supplied (real per-recipient sends). Test sends omit it —

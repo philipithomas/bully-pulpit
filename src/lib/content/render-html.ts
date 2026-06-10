@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
+import { siteConfig } from '@/lib/config'
 import type { Post } from '@/lib/content/types'
 
 const SANS_STACK = `'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`
@@ -139,30 +140,62 @@ export function markdownToPlaintext(
   maxLength = 150,
   options: { preserveParagraphs?: boolean } = {}
 ): string {
-  const stripped = markdown
+  // Fenced code blocks come out first so no later strip pass runs inside
+  // them. The full text/plain body keeps each one as a 4-space-indented
+  // block, restored after whitespace collapse so its line layout survives;
+  // preview snippets drop them since code is not prose. Language tags drop.
+  const codeBlocks: string[] = []
+  const withoutFences = markdown.replace(
+    /^[ \t]*```[^\n]*\n([\s\S]*?)\n[ \t]*```[ \t]*$/gm,
+    (_match, code: string) => {
+      if (!options.preserveParagraphs) return '\n\n'
+      const indented = code
+        .split('\n')
+        .map((line) => (line.length > 0 ? `    ${line}` : line))
+        .join('\n')
+      codeBlocks.push(indented)
+      return `\n\n%%bp-code-block-${codeBlocks.length - 1}%%\n\n`
+    }
+  )
+
+  const stripped = withoutFences
     .replace(/<\/?[A-Za-z][^>]*\/?>/g, '') // MDX components / raw HTML tags
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '') // images
     .replace(
       /\[([^\]]*)\]\(([^)]*)\)/g,
-      // Preview snippets keep only the text; the full text/plain body keeps
-      // the URL too, since links are often the point of a newsletter.
-      options.preserveParagraphs ? '$1 ($2)' : '$1'
+      (_match, text: string, url: string) => {
+        // Preview snippets keep only the text; the full text/plain body keeps
+        // the URL too, since links are often the point of a newsletter.
+        if (!options.preserveParagraphs) return text
+        // Email clients have no base URL, so root-relative targets get the
+        // site origin (mirrors resolveRelativeUrls in the HTML pipeline).
+        const absolute =
+          url.startsWith('/') && !url.startsWith('//')
+            ? `${siteConfig.url}${url}`
+            : url
+        return `${text} (${absolute})`
+      }
     )
     .replace(/^#{1,6}\s+/gm, '') // headings
     .replace(/(\*{1,3}|_{1,3})(.*?)\1/g, '$2') // bold/italic
-    .replace(/`{1,3}[^`]*`{1,3}/g, '') // inline code
+    .replace(/`{1,3}([^`]*)`{1,3}/g, '$1') // inline code: keep the content
     .replace(/^(?:[-*+]|\d+\.)\s+/gm, '') // list markers
     .replace(/^>\s+/gm, '') // blockquotes
     .replace(/^---+$/gm, '') // hr
 
   // For a long-form text/plain body, keep blank-line paragraph breaks but
   // collapse whitespace within each paragraph (readable, not one giant line).
+  // Code blocks come back after the collapse so it cannot flatten them.
   if (options.preserveParagraphs) {
     return stripped
       .split(/\n{2,}/)
       .map((p) => p.replace(/\s+/g, ' ').trim())
       .filter(Boolean)
       .join('\n\n')
+      .replace(
+        /%%bp-code-block-(\d+)%%/g,
+        (_match, index: string) => codeBlocks[Number(index)] ?? ''
+      )
       .slice(0, maxLength)
   }
 
