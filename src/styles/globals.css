@@ -396,7 +396,10 @@ body.dark-viewport {
   background-color: var(--color-gray-950);
 }
 
-body.dark-viewport header img:not(.rounded-full) {
+/* Invert only images that opt in (monochrome logo marks). Photographic
+   content in the header, such as the member menu avatar or anything inside
+   the chat sidebar, keeps natural colors. */
+body.dark-viewport header img.dark-viewport-invert {
   filter: invert(1);
 }
 

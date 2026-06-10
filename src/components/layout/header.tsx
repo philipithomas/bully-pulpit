@@ -98,7 +98,7 @@ export function Header() {
                 alt={slug.charAt(0).toUpperCase() + slug.slice(1)}
                 width={160}
                 height={20}
-                className={logo.className}
+                className={`dark-viewport-invert ${logo.className}`}
               />
             </Link>
           ))}
