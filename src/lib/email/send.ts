@@ -36,10 +36,9 @@ export async function sendConfirmation(
 export async function sendNewSubscriberNotification(
   email: string,
   name?: string | null,
-  source?: string | null,
-  signedUpAt?: Date | null
+  source?: string | null
 ): Promise<void> {
-  const html = renderNewSubscriberEmail({ email, name, source, signedUpAt })
+  const html = renderNewSubscriberEmail({ email, name, source })
   await sendSimpleEmail({
     to: siteConfig.sesFromEmail,
     subject: `New subscriber: ${email}`,

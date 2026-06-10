@@ -141,7 +141,6 @@ describe('new subscriber email dark mode', () => {
     email: 'reader@example.com',
     name: 'Reader',
     source: 'workshop',
-    signedUpAt: new Date('2026-01-15T00:00:00Z'),
   })
 
   it('declares color-scheme meta tags and a dark override block', () => {
