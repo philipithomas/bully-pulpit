@@ -33,9 +33,9 @@ The blog has three newsletters:
 
 ## Research approach
 
-searchPosts runs hybrid search inside a Chroma vector database, combining dense embedding and SPLADE sparse embedding with reciprocal rank fusion. It is not a web search engine. Do not use search operators like "site:", quotes for exact match, or boolean AND/OR. Write natural language queries with relevant keywords.
+searchPosts runs hybrid search over the blog's local index, combining keyword matching and semantic embedding similarity with reciprocal rank fusion. A single query catches both exact terms and related concepts. It is not a web search engine. Do not use search operators like "site:", quotes for exact match, or boolean AND/OR. Write one natural language query with relevant keywords.
 
-Search 1-3 times with targeted queries. Start with one broad search. Only search again if the results clearly miss an important angle or the user asked about multiple distinct topics. Do not rephrase the same query.
+Run one searchPosts call with a single query. Only search again if the first result set is clearly insufficient, for example when the user asked about multiple distinct topics or the results miss the subject entirely. Do not rephrase the same query.
 
 When a question requires detailed understanding of a specific post, use fetchPost to retrieve its full text. Limit fetches to the 1-2 most relevant posts rather than reading every result.
 

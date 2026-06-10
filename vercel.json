@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm content:check && pnpm db:migrate:deploy && pnpm build && (pnpm chroma:sync:deploy || echo 'chroma:sync failed (non-fatal); skipping search index update')",
+  "buildCommand": "pnpm content:check && pnpm db:migrate:deploy && pnpm build",
   "crons": [
     { "path": "/api/cron/suppression-sync", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/subscriber-backup", "schedule": "0 11 1 * *" }
