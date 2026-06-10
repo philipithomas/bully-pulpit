@@ -1,0 +1,46 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`confirmation email dark mode > snapshots the dark-mode style block 1`] = `
+"@media (prefers-color-scheme: dark) {
+    body, .email-body, .email-bg { background-color: #121110 !important; }
+    .email-card { background-color: #1C1A17 !important; }
+    .email-card p { color: #D7D3CC !important; }
+    .email-card a, .email-card span { color: #ECE9E4 !important; }
+    .email-card p.email-muted { color: #A8A49D !important; }
+    .email-card a.email-button { background-color: #ECE9E4 !important; color: #121110 !important; }
+    .email-divider { border-top-color: #3A362F !important; }
+  }"
+`;
+
+exports[`new subscriber email dark mode > snapshots the dark-mode style block 1`] = `
+"@media (prefers-color-scheme: dark) {
+    body, .email-body, .email-bg { background-color: #121110 !important; }
+    .email-card { background-color: #1C1A17 !important; }
+    .email-panel { background-color: #262220 !important; }
+    .email-card h1 { color: #ECE9E4 !important; }
+    .email-card p { color: #ECE9E4 !important; }
+    .email-card p.email-muted { color: #A8A49D !important; }
+    .email-divider { border-top-color: #3A362F !important; }
+  }"
+`;
+
+exports[`newsletter shell dark mode > snapshots the dark-mode style block 1`] = `
+"@media (prefers-color-scheme: dark) {
+    body, .email-body, .email-bg { background-color: #121110 !important; }
+    .email-card { background-color: #1C1A17 !important; }
+    .content-cell, .content-cell p, .content-cell li, .content-cell ul, .content-cell ol { color: #D7D3CC !important; }
+    .content-cell h1, .content-cell h2, .content-cell h3, .content-cell h4, .content-cell h5, .content-cell h6, .content-cell strong { color: #ECE9E4 !important; }
+    .content-cell a { color: #ECE9E4 !important; text-decoration-color: #8FB8A5 !important; }
+    .content-cell h1 a, .content-cell h2 a, .content-cell h3 a { color: #ECE9E4 !important; }
+    .content-cell blockquote { color: #BEBAB3 !important; border-left-color: #4A463F !important; }
+    .content-cell code { background-color: #2A2723 !important; color: #D7D3CC !important; }
+    .content-cell pre, .content-cell pre code { background-color: #222120 !important; color: #E0DDD8 !important; }
+    .content-cell table { color: #D7D3CC !important; border-top-color: #3A362F !important; }
+    .content-cell td, .content-cell th { border-bottom-color: #3A362F !important; }
+    .content-cell hr { border-top-color: #3A362F !important; }
+    .content-cell img { opacity: 0.92; }
+    .email-footer p, .email-footer a { color: #A8A49D !important; }
+    img.email-brand { background-color: #F5F3F0 !important; padding: 4px 8px !important; }
+    a.email-brand-text { color: #ECE9E4 !important; }
+  }"
+`;
