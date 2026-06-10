@@ -1,5 +1,7 @@
 import {
+  DeleteSuppressedDestinationCommand,
   ListSuppressedDestinationsCommand,
+  NotFoundException,
   SESv2Client,
   SendEmailCommand,
 } from '@aws-sdk/client-sesv2'
@@ -98,6 +100,26 @@ export async function listSuppressedDestinations(): Promise<
     nextToken = resp.NextToken
   } while (nextToken)
   return result
+}
+
+/**
+ * Removes an address from the SES account-level suppression list. SES not
+ * knowing the address counts as success: a suppression can exist only locally
+ * (a webhook-captured bounce SES never account-suppressed), and the goal is
+ * the end state, not the deletion itself. Anything else rethrows so callers
+ * can refuse to clear local state SES would re-create.
+ */
+export async function deleteSuppressedDestination(
+  email: string
+): Promise<void> {
+  try {
+    await getSesClient().send(
+      new DeleteSuppressedDestinationCommand({ EmailAddress: email })
+    )
+  } catch (err) {
+    if (err instanceof NotFoundException) return
+    throw err
+  }
 }
 
 /**
