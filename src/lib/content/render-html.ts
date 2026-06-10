@@ -7,6 +7,7 @@ import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { siteConfig } from '@/lib/config'
 import type { Post } from '@/lib/content/types'
+import { escapeHtml } from '@/lib/email/escape'
 
 const SANS_STACK = `'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`
 const SERIF_STACK = `'Tiempos Text', Georgia, 'Times New Roman', serif`
@@ -156,10 +157,10 @@ export function renderEmailHeaderHtml(
     html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: #7E7A73; text-align: center; margin: 0 0 12px;">${publishedAt}</p>`
   }
 
-  html += `<h1 style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; text-align: center; margin: 0 0 4px;"><a href="${postUrl}" style="text-decoration: none; color: #111110;">${title}</a></h1>`
+  html += `<h1 style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; text-align: center; margin: 0 0 4px;"><a href="${postUrl}" style="text-decoration: none; color: #111110;">${escapeHtml(title)}</a></h1>`
 
   if (subtitle) {
-    html += `<p style="font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 400; color: #625e58; line-height: 1.75; text-align: center; margin: 0 0 4px;">${subtitle}</p>`
+    html += `<p style="font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 400; color: #625e58; line-height: 1.75; text-align: center; margin: 0 0 4px;">${escapeHtml(subtitle)}</p>`
   }
 
   html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: #625e58; text-align: center; margin: 0 0 24px;"><a href="${siteUrl}" style="color: #625e58; text-decoration: none;">Philip I. Thomas</a></p>`
@@ -168,7 +169,7 @@ export function renderEmailHeaderHtml(
     const emailPath = coverImage.startsWith('http')
       ? coverImage
       : `${siteUrl}${toEmailImagePath(coverImage)}`
-    const alt = coverImageAlt ?? title
+    const alt = escapeHtml(coverImageAlt ?? title)
     html += `<img src="${emailPath}" alt="${alt}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; margin: 0 0 24px;">`
   }
 
@@ -275,7 +276,7 @@ export function renderRelatedPostsHtml(posts: Post[], siteUrl: string): string {
       const thumbnail = post.frontmatter.coverImage
         ? `<td width="100" style="padding-left: 16px; vertical-align: top;">
             <a href="${url}">
-              <img src="${siteUrl}${toEmailThumbPath(post.frontmatter.coverImage)}" alt="${post.frontmatter.coverImageAlt ?? post.frontmatter.title}" width="100" height="56" style="display: block; width: 100px; height: 56px;" />
+              <img src="${siteUrl}${toEmailThumbPath(post.frontmatter.coverImage)}" alt="${escapeHtml(post.frontmatter.coverImageAlt ?? post.frontmatter.title)}" width="100" height="56" style="display: block; width: 100px; height: 56px;" />
             </a>
           </td>`
         : `<td width="100" style="padding-left: 16px; vertical-align: top;">
@@ -290,8 +291,8 @@ export function renderRelatedPostsHtml(posts: Post[], siteUrl: string): string {
         <td style="padding: 16px 0;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
             <td style="vertical-align: top;">
-              <a href="${url}" style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 17px; font-weight: 600; color: #111110; text-decoration: none; line-height: 1.4;">${post.frontmatter.title}</a>
-              ${post.excerpt ? `<p style="font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 15px; color: #625e58; line-height: 1.5; margin: 6px 0 0;">${post.excerpt}</p>` : ''}
+              <a href="${url}" style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 17px; font-weight: 600; color: #111110; text-decoration: none; line-height: 1.4;">${escapeHtml(post.frontmatter.title)}</a>
+              ${post.excerpt ? `<p style="font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 15px; color: #625e58; line-height: 1.5; margin: 6px 0 0;">${escapeHtml(post.excerpt)}</p>` : ''}
             </td>
             ${thumbnail}
           </tr></table>
