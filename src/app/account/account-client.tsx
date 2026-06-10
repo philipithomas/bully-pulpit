@@ -8,6 +8,7 @@ import {
   NewsletterRowsSkeleton,
   PreferencesPageSkeleton,
 } from '@/components/auth/preferences-skeleton'
+import { prefetchSignInModal } from '@/components/auth/sign-in-modal-lazy'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { Button } from '@/components/ui/button'
 import {
@@ -124,7 +125,13 @@ export function AccountClient() {
           <p className="text-gray-600 mb-6">
             Please sign in to manage your account.
           </p>
-          <button type="button" onClick={openModal} className="btn btn-primary">
+          <button
+            type="button"
+            onClick={openModal}
+            onMouseEnter={prefetchSignInModal}
+            onFocus={prefetchSignInModal}
+            className="btn btn-primary"
+          >
             <span className="btn-text">Sign in</span>
             <span className="btn-arrow">
               <ArrowIcon className="w-4 h-4" />

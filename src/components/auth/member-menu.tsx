@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuthContext } from '@/components/auth/auth-provider'
+import { prefetchSignInModal } from '@/components/auth/sign-in-modal-lazy'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { gravatarUrl } from '@/lib/gravatar'
 import { useAuthModal } from '@/stores/auth-store'
@@ -51,11 +52,19 @@ function SignedOutControls({ className }: { className?: string }) {
       <button
         type="button"
         onClick={openModal}
+        onMouseEnter={prefetchSignInModal}
+        onFocus={prefetchSignInModal}
         className="hidden sm:inline-block px-3 py-2 font-sans text-[13px] font-medium tracking-[0.04em] uppercase text-gray-700 hover:text-gray-900 transition-colors duration-300"
       >
         Sign in
       </button>
-      <button type="button" onClick={openModal} className="btn btn-primary">
+      <button
+        type="button"
+        onClick={openModal}
+        onMouseEnter={prefetchSignInModal}
+        onFocus={prefetchSignInModal}
+        className="btn btn-primary"
+      >
         <span className="btn-text">Subscribe</span>
         <span className="btn-arrow">
           <ArrowIcon className="w-4 h-4" />
