@@ -1,4 +1,4 @@
-import { gateway } from '@ai-sdk/gateway'
+import { type GatewayProviderOptions, gateway } from '@ai-sdk/gateway'
 import {
   convertToModelMessages,
   type ModelMessage,
@@ -19,20 +19,28 @@ export async function POST(request: Request) {
   const ip =
     headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
 
-  // Rate-limit by IP first (cheap), then run the bot check.
-  if (!(await checkRateLimit('chat', `ip:${ip}`, request))) {
+  // The rate-limit check (a Vercel Firewall self-fetch), the BotID
+  // classification call, and body parsing are independent. Both checks read
+  // only request headers, so all three run concurrently instead of paying
+  // two sequential network round trips before the model call starts.
+  // Rejection precedence is unchanged: rate limit, then bot check, then body.
+  const [allowed, { isBot }, body] = await Promise.all([
+    checkRateLimit('chat', `ip:${ip}`, request),
+    checkBotId(),
+    request.json().catch(() => null),
+  ])
+
+  if (!allowed) {
     return NextResponse.json(
       { error: 'Too many messages. Please try again later.' },
       { status: 429 }
     )
   }
 
-  const { isBot } = await checkBotId()
   if (isBot) {
     return NextResponse.json({ error: 'Access denied.' }, { status: 403 })
   }
 
-  const body = await request.json().catch(() => null)
   if (!body || !Array.isArray(body.messages) || body.messages.length === 0) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
@@ -72,9 +80,18 @@ export async function POST(request: Request) {
     // redundant duplicate tool calls.
     model: gateway('anthropic/claude-haiku-4.5'),
     providerOptions: {
-      // Gateway falls back to these models in order when the primary model
-      // or its provider is unavailable.
-      gateway: { models: ['openai/gpt-5.4-mini'] },
+      gateway: {
+        // Haiku 4.5 is served by three upstreams with different latency
+        // profiles (Anthropic direct is the fastest to first token; Bedrock
+        // and Vertex are slower). Pin Anthropic first so the gateway never
+        // routes a healthy request to a slower upstream, and sort the
+        // remaining providers fastest-first for failover.
+        order: ['anthropic'],
+        sort: 'ttft',
+        // Gateway falls back to these models in order when the primary
+        // model or its providers are unavailable.
+        models: ['openai/gpt-5.4-mini'],
+      } satisfies GatewayProviderOptions,
     },
     maxOutputTokens: 2048,
     // Stop upstream generation when the visitor hits Stop or disconnects.
