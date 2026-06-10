@@ -269,7 +269,7 @@ export function ChatSidebar() {
             <button
               type="button"
               onClick={handleNewConversation}
-              className="p-2 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600"
+              className="-m-1 p-3 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600"
               aria-label="New conversation"
             >
               <RotateCcw className="h-4 w-4" />
@@ -277,7 +277,7 @@ export function ChatSidebar() {
             <button
               type="button"
               onClick={togglePin}
-              className="hidden p-2 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600 lg:block"
+              className="-m-1 hidden p-3 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600 lg:block"
               aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
             >
               {pinned ? (
@@ -289,7 +289,7 @@ export function ChatSidebar() {
             <button
               type="button"
               onClick={closeSidebar}
-              className="p-2 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600"
+              className="-m-1 p-3 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -299,7 +299,7 @@ export function ChatSidebar() {
 
         {/* Messages */}
         <div
-          className="flex flex-1 flex-col overflow-y-auto px-4 py-4"
+          className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-4"
           onClick={handleMessagesClick}
           onKeyDown={() => {}}
           role="presentation"
@@ -326,7 +326,7 @@ export function ChatSidebar() {
               {/* Error message */}
               {isError && error && (
                 <div className="flex justify-start">
-                  <div className="max-w-[85%] rounded-lg px-3.5 py-2.5 font-sans text-sm text-red">
+                  <div className="min-w-0 max-w-[85%] wrap-anywhere rounded-lg px-3.5 py-2.5 font-sans text-sm text-red">
                     <p className="mb-2">
                       {error.message ||
                         'Something went wrong. Please try again.'}
