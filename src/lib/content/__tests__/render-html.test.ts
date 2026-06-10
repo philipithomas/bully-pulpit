@@ -405,4 +405,40 @@ describe('markdownToPlaintext', () => {
       )
     ).toBe('a (https://example.com) and b (//cdn.example.com/x)')
   })
+
+  // Real markup: Ghost-migration footnotes carry escaped brackets in the
+  // link text ([\[1\]](#fn1)), which the general link pattern cannot match,
+  // so the raw markdown used to leak into the text/plain part verbatim.
+  describe('Ghost-migration footnote markup', () => {
+    // From content/contraption/2025-02-21-rails-versus-nextjs.mdx.
+    const post = [
+      'In our increasingly complex world, many people return to vinyl because it offers simplicity, stability, and longevity[\\[1\\]](#fn1).',
+      '',
+      '1.  [Taylor Swift helps](https://www.forbes.com/sites/hughmcintyre/2025/02/18/taylor-swift-dominates-every-other-artist-as-the-global-queen-of-vinyl-sales/), too. [↩︎](#fnref1)',
+    ].join('\n')
+
+    it('keeps the visible footnote text and drops the dead fragment URL', () => {
+      const text = markdownToPlaintext(post, 100_000, {
+        preserveParagraphs: true,
+      })
+      expect(text).toContain('longevity[1].')
+      expect(text).not.toContain('#fn')
+      expect(text).not.toContain('\\[')
+      // The real link in the footnote body keeps its URL.
+      expect(text).toContain(
+        'Taylor Swift helps (https://www.forbes.com/sites/hughmcintyre/2025/02/18/taylor-swift-dominates-every-other-artist-as-the-global-queen-of-vinyl-sales/), too. ↩︎'
+      )
+    })
+
+    it('keeps preview snippets free of footnote markup', () => {
+      const preview = markdownToPlaintext(post, 500)
+      expect(preview).toContain('longevity[1].')
+      expect(preview).not.toContain('#fn')
+      expect(preview).not.toContain('\\[')
+    })
+
+    it('unwraps the footnote backlink', () => {
+      expect(markdownToPlaintext('Thanks. [↩︎](#fnref1)', 500)).toBe('Thanks. ↩︎')
+    })
+  })
 })

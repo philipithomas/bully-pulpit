@@ -88,3 +88,47 @@ describe('sendNewsletterEmail', () => {
     )
   })
 })
+
+describe('sendNewsletterEmail unsubscribe headers', () => {
+  it('carries exactly one HTTPS URI (the one-click POST target) when a POST URL is supplied', async () => {
+    // RFC 8058 section 3.1: with List-Unsubscribe-Post present, the
+    // List-Unsubscribe header carries exactly one HTTPS URI. A second URI
+    // pointing at the manual landing page would invite receivers to POST at
+    // a static page, unsubscribing nobody.
+    await sendNewsletterEmail({
+      to: 'reader@example.com',
+      subject: 'New post',
+      html: '<p>Body</p>',
+      text: 'Body',
+      unsubscribeUrl: 'https://www.philipithomas.com/unsubscribe?token=abc',
+      unsubscribePostUrl: 'https://www.philipithomas.com/api/unsubscribe/abc',
+    })
+
+    const command = sesSend.mock.calls[0][0] as SendEmailCommand
+    expect(command.input.Content?.Simple?.Headers).toEqual([
+      {
+        Name: 'List-Unsubscribe',
+        Value: '<https://www.philipithomas.com/api/unsubscribe/abc>',
+      },
+      { Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' },
+    ])
+  })
+
+  it('falls back to the manual page URL and omits List-Unsubscribe-Post for test sends', async () => {
+    await sendNewsletterEmail({
+      to: 'reader@example.com',
+      subject: 'New post',
+      html: '<p>Body</p>',
+      text: 'Body',
+      unsubscribeUrl: 'https://www.philipithomas.com/unsubscribe',
+    })
+
+    const command = sesSend.mock.calls[0][0] as SendEmailCommand
+    expect(command.input.Content?.Simple?.Headers).toEqual([
+      {
+        Name: 'List-Unsubscribe',
+        Value: '<https://www.philipithomas.com/unsubscribe>',
+      },
+    ])
+  })
+})

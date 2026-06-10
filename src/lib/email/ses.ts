@@ -154,12 +154,16 @@ export async function sendNewsletterEmail(input: {
 
   // RFC 2369 List-Unsubscribe. The RFC 8058 one-click POST target is only added
   // when a POST URL is supplied (real per-recipient sends). Test sends omit it —
-  // they have no per-recipient token, so a one-click POST would 405.
+  // they have no per-recipient token, so a one-click POST would 405. When
+  // List-Unsubscribe-Post is present, RFC 8058 section 3.1 permits exactly one
+  // HTTPS URI in List-Unsubscribe (a receiver may POST to any URI listed, and a
+  // POST to the manual landing page unsubscribes nobody), so the manual page URL
+  // stays out of the header; the footer link in the body still carries it.
   const headers = input.unsubscribePostUrl
     ? [
         {
           Name: 'List-Unsubscribe',
-          Value: `<${input.unsubscribePostUrl}>, <${input.unsubscribeUrl}>`,
+          Value: `<${input.unsubscribePostUrl}>`,
         },
         { Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' },
       ]

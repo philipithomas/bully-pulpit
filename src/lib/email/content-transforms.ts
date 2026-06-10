@@ -28,6 +28,20 @@ export function resolveRelativeUrls(
 }
 
 /**
+ * Unwraps fragment-only anchors (`<a href="#fn1">[1]</a>` → `[1]`), keeping
+ * the visible text. The email render never emits `id` targets (the markdown
+ * pipeline adds none, and the shell has none), so every fragment-only href is
+ * a dead link in email clients. Ghost-migration footnote markup is the main
+ * source: `[\[1\]](#fn1)` references and their `[↩︎](#fnref1)` backlinks.
+ */
+export function unwrapFragmentLinks(html: string): string {
+  return html.replace(
+    /<a\s[^>]*href=["']#[^"']*["'][^>]*>([\s\S]*?)<\/a>/g,
+    (_match, inner) => inner
+  )
+}
+
+/**
  * Adds an inline style to `<a>` tags lacking one: dark text with a
  * newsletter-accent-colored underline, matching the website's link treatment.
  */
@@ -51,12 +65,18 @@ export function styleContentImages(html: string): string {
   )
 }
 
-/** Applies all three body transforms in the order printing-press used. */
+/**
+ * Applies the body transforms: dead fragment anchors are unwrapped first, then
+ * the three printing-press transforms run in the order printing-press used.
+ */
 export function transformEmailBody(
   html: string,
   newsletter?: NewsletterSlug
 ): string {
   return styleContentImages(
-    styleContentLinks(resolveRelativeUrls(html), newsletter)
+    styleContentLinks(
+      resolveRelativeUrls(unwrapFragmentLinks(html)),
+      newsletter
+    )
   )
 }

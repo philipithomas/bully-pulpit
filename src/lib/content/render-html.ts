@@ -190,6 +190,15 @@ export function markdownToPlaintext(
   const stripped = withoutFences
     .replace(/<\/?[A-Za-z][^>]*\/?>/g, '') // MDX components / raw HTML tags
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '') // images
+    // Fragment-only links (Ghost-migration footnotes like [\[1\]](#fn1)):
+    // keep only the visible text. The targets exist nowhere, so a "(#fn1)"
+    // would be noise even in the full text/plain body. Link text may carry
+    // escaped brackets, which (?:\\.|[^\]\\])* steps over; the kept text is
+    // unescaped right away ([\[1\]] → [1]) so leftover backslash-bracket
+    // pairs cannot derail the general link pattern below.
+    .replace(/\[((?:\\.|[^\]\\])*)\]\(#[^)]*\)/g, (_match, text: string) =>
+      text.replace(/\\([[\]])/g, '$1')
+    )
     .replace(
       /\[([^\]]*)\]\(([^)]*)\)/g,
       (_match, text: string, url: string) => {
