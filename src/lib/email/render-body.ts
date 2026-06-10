@@ -7,6 +7,11 @@ import {
   renderRelatedPostsHtml,
 } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
+import {
+  extractYouTubeEmbeds,
+  restoreYouTubeEmbedsAsHtml,
+  restoreYouTubeEmbedsAsText,
+} from '@/lib/email/youtube-embeds'
 
 export type EmailBody = {
   subject: string
@@ -24,7 +29,13 @@ export type EmailBody = {
  */
 export async function buildEmailBodyHtml(post: Post): Promise<EmailBody> {
   const relatedPosts = getRelatedPosts(post.slug)
-  const markdownHtml = await renderMarkdownToHtml(post.content)
+  // Emails cannot play iframes: each YouTube embed becomes a clickable
+  // thumbnail in the HTML part and a watch link in the text part.
+  const { markdown: emailSource, embeds } = extractYouTubeEmbeds(post.content)
+  const markdownHtml = restoreYouTubeEmbedsAsHtml(
+    await renderMarkdownToHtml(emailSource),
+    embeds
+  )
   const relatedPostsHtml = renderRelatedPostsHtml(relatedPosts, siteConfig.url)
   const subtitle =
     post.frontmatter.subtitle || post.frontmatter.description || null
@@ -38,11 +49,14 @@ export async function buildEmailBodyHtml(post: Post): Promise<EmailBody> {
     post.newsletter === 'postcard' ? null : post.frontmatter.publishedAt
   )
   const html = emailHeader + markdownHtml + relatedPostsHtml
-  // Short snippet for the preheader/preview; full text for the text/plain part.
+  // Short snippet for the preheader/preview; full text for the text/plain
+  // part. The preview renders from the original source so the preheader stays
+  // prose (embeds are stripped there, not turned into watch links).
   const bodyPreview = markdownToPlaintext(post.content)
-  const bodyText = markdownToPlaintext(post.content, 100_000, {
-    preserveParagraphs: true,
-  })
+  const bodyText = restoreYouTubeEmbedsAsText(
+    markdownToPlaintext(emailSource, 100_000, { preserveParagraphs: true }),
+    embeds
+  )
   const previewText = subtitle ? `${subtitle} – ${bodyPreview}` : bodyPreview
   return {
     subject: post.frontmatter.title,
