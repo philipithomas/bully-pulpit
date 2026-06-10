@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { ChatInput } from '@/components/chat/chat-input'
 import { ChatMessage, ThinkingIndicator } from '@/components/chat/chat-message'
+import { chatErrorMessage } from '@/lib/chat/chat-error-message'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -327,10 +328,7 @@ export function ChatSidebar() {
               {isError && error && (
                 <div className="flex justify-start">
                   <div className="min-w-0 max-w-[85%] wrap-anywhere rounded-lg px-3.5 py-2.5 font-sans text-sm text-red">
-                    <p className="mb-2">
-                      {error.message ||
-                        'Something went wrong. Please try again.'}
-                    </p>
+                    <p className="mb-2">{chatErrorMessage(error)}</p>
                     <button
                       type="button"
                       onClick={handleRetry}
