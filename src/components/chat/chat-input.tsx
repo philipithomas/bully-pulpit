@@ -55,16 +55,17 @@ export function ChatInput({
         ref={textareaRef}
         onKeyDown={handleKeyDown}
         onInput={handleInput}
-        placeholder="Ask a question..."
+        placeholder="Ask a question…"
+        aria-label="Ask Bell a question"
         rows={1}
         disabled={isStreaming}
-        className="flex-1 resize-none bg-transparent py-1 font-sans text-sm leading-tight text-gray-950 outline-none placeholder:text-gray-400 disabled:opacity-50"
+        className="flex-1 resize-none bg-transparent py-2 font-sans text-sm leading-tight text-gray-950 placeholder:text-gray-400 disabled:opacity-50"
       />
       <button
         type="button"
         onClick={isStreaming ? onStop : handleSubmit}
         className={cn(
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors',
+          'flex h-9 w-9 shrink-0 items-center justify-center transition-colors',
           isStreaming
             ? 'bg-gray-950 text-white'
             : 'bg-gray-950 text-white hover:bg-gray-800'

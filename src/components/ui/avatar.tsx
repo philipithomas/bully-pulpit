@@ -40,7 +40,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-gray-100 font-medium text-gray-500',
+        'inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full bg-muted font-medium text-muted-foreground',
         className
       )}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}

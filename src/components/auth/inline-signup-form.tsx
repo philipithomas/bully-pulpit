@@ -101,12 +101,12 @@ export function InlineSignupForm({
       })
       if (!res.ok) {
         const data = await res.json()
-        toast.error(data.error ?? 'Subscription failed')
+        toast.error(data.error ?? 'Could not subscribe. Try again.')
         return
       }
       setStep('code')
     } catch {
-      toast.error('Unable to reach subscription service')
+      toast.error('Could not subscribe. Try again.')
     } finally {
       setLoading(false)
     }
@@ -125,7 +125,7 @@ export function InlineSignupForm({
         })
         if (!res.ok) {
           const data = await res.json()
-          toast.error(data.error ?? 'Verification failed')
+          toast.error(data.error ?? 'That code did not work. Try again.')
           setCode('')
           return
         }
@@ -133,7 +133,7 @@ export function InlineSignupForm({
         url.searchParams.set('signed-in', '1')
         window.location.assign(url.toString())
       } catch {
-        toast.error('Unable to verify code')
+        toast.error('That code did not work. Try again.')
         setCode('')
       } finally {
         setLoading(false)
@@ -161,6 +161,7 @@ export function InlineSignupForm({
             onComplete={verifyCode}
             disabled={loading}
             autoFocus
+            aria-label="6-digit code"
           >
             <InputOTPGroup>
               <InputOTPSlot index={0} />
@@ -239,7 +240,7 @@ export function InlineSignupForm({
           aria-label="Email address"
           required
           autoFocus={autoFocus}
-          className="border border-gray-300 bg-white px-3 py-2 flex-grow w-full focus:outline-none focus:ring-0 focus:border-gray-900 text-sm h-10 font-sans"
+          className="border border-gray-300 bg-white px-3 py-2 flex-grow w-full focus:border-gray-900 text-sm h-10 font-sans"
         />
         <button
           type="submit"

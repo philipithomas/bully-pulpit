@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "We can't deliver email to this address — contact mail@philipithomas.com.",
+            'We cannot deliver email to this address. Contact mail@philipithomas.com.',
         },
         { status: 422 }
       )

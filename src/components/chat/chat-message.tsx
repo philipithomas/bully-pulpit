@@ -3,6 +3,7 @@ import Link from 'next/link'
 import type { ComponentPropsWithoutRef } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -22,12 +23,6 @@ function PulsingDots() {
   )
 }
 
-function ToolSpinner() {
-  return (
-    <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-gray-300 border-t-transparent" />
-  )
-}
-
 function ToolStatus({ label, done }: { label: string; done?: boolean }) {
   return (
     <div className="my-1.5 flex items-center gap-2 font-sans text-xs text-gray-400">
@@ -36,7 +31,7 @@ function ToolStatus({ label, done }: { label: string; done?: boolean }) {
           ✓
         </span>
       ) : (
-        <ToolSpinner />
+        <Spinner className="h-2.5 w-2.5 text-gray-400" />
       )}
       {label}
     </div>
@@ -225,7 +220,7 @@ export function ChatMessage({
               const errorText =
                 'errorText' in part ? (part.errorText as string) : null
               return (
-                <p key={key} className="my-1.5 font-sans text-xs text-red-400">
+                <p key={key} className="my-1.5 font-sans text-xs text-red">
                   {errorText || 'Something went wrong with this step.'}
                 </p>
               )
@@ -247,7 +242,7 @@ export function ChatMessage({
                       ? `${done ? 'Read' : 'Reading'} ${input.slug}`
                       : done
                         ? 'Read post'
-                        : 'Reading post...'
+                        : 'Reading post…'
                   }
                 />
               )
@@ -256,7 +251,7 @@ export function ChatMessage({
             // searchPosts (default)
             const query = input?.query
             const truncated =
-              query && query.length > 40 ? `${query.slice(0, 40)}...` : query
+              query && query.length > 40 ? `${query.slice(0, 40)}…` : query
             return (
               <ToolStatus
                 key={key}
@@ -266,7 +261,7 @@ export function ChatMessage({
                     ? `${done ? 'Searched' : 'Searching'} "${truncated}"`
                     : done
                       ? 'Searched posts'
-                      : 'Searching...'
+                      : 'Searching…'
                 }
               />
             )

@@ -48,7 +48,7 @@ export function renderConfirmationEmail(input: {
               </tr>
             </table>
             <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.5; color: #7E7A73;">
-              This code expires in 15 minutes. If you didn't request this, you can safely ignore this email.
+              This code expires in 15 minutes. If you did not request this, you can safely ignore this email.
             </p>
           </td>
         </tr>
@@ -89,9 +89,9 @@ export function renderConfirmationText(input: {
     '',
     input.magicLink,
     '',
-    "This code expires in 15 minutes. If you didn't request this, you can safely ignore this email.",
+    'This code expires in 15 minutes. If you did not request this, you can safely ignore this email.',
     '',
-    '—',
+    '--',
     `© ${year} The Contraption Company LLC`,
     '169 Madison Ave. Suite 2174, New York, NY 10016 USA',
   ].join('\n')

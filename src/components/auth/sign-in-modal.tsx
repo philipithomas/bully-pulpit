@@ -59,12 +59,13 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error ?? 'Something went wrong')
+        toast.error(data.error ?? 'Could not subscribe. Try again.')
+        return
       }
 
       setStep('code')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Something went wrong')
+    } catch {
+      toast.error('Could not subscribe. Try again.')
     } finally {
       setLoading(false)
     }
@@ -85,7 +86,9 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
 
         if (!res.ok) {
           const data = await res.json()
-          throw new Error(data.error ?? 'Verification failed')
+          toast.error(data.error ?? 'That code did not work. Try again.')
+          setCode('')
+          return
         }
 
         closeModal()
@@ -93,8 +96,8 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
         const url = new URL(window.location.href)
         url.searchParams.set('signed-in', '1')
         window.location.assign(url.toString())
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Something went wrong')
+      } catch {
+        toast.error('That code did not work. Try again.')
         setCode('')
       } finally {
         setLoading(false)
@@ -127,12 +130,12 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com"
                   required
-                  className="w-full border border-gray-300 bg-white px-4 py-3 text-sm font-sans text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-0"
+                  className="w-full border border-gray-300 bg-white px-4 py-3 text-sm font-sans text-gray-900 placeholder:text-gray-400 focus:border-gray-900"
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gray-950 text-white py-3 text-sm font-semibold tracking-wide uppercase hover:bg-gray-800 transition-colors disabled:opacity-70"
+                  className="w-full bg-gray-950 text-white py-3 text-sm font-semibold tracking-wide uppercase hover:bg-gray-800 transition-colors disabled:opacity-50"
                 >
                   {loading ? (
                     <Spinner className="h-4 w-4 mx-auto" />
@@ -159,6 +162,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                 onComplete={verifyCode}
                 disabled={loading}
                 autoFocus
+                aria-label="6-digit code"
                 containerClassName="justify-center"
               >
                 <InputOTPGroup>

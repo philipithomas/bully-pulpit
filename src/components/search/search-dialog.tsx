@@ -6,6 +6,7 @@ import { Search } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -162,12 +163,12 @@ export function SearchDialog({
         const data = await res.json().catch(() => null)
         setResults([])
         searchIdRef.current = null
-        setSearchError(data?.error ?? 'Search failed — try again.')
+        setSearchError(data?.error ?? 'Search failed. Try again.')
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
       setResults([])
-      setSearchError('Search failed — try again.')
+      setSearchError('Search failed. Try again.')
     } finally {
       if (!controller.signal.aborted) setLoading(false)
     }
@@ -256,7 +257,7 @@ export function SearchDialog({
             if (e.target === e.currentTarget) onOpenChange(false)
           }}
         >
-          <div className="w-full max-w-lg bg-white shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
+          <div className="w-[calc(100%-2rem)] max-w-lg bg-card shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
             <DialogPrimitive.Title className="sr-only">
               Search
             </DialogPrimitive.Title>
@@ -267,12 +268,11 @@ export function SearchDialog({
                 value={query}
                 onChange={(e) => handleInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search posts..."
-                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm text-gray-950 outline-none placeholder:text-gray-400"
+                placeholder="Search posts…"
+                aria-label="Search posts"
+                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm text-gray-950 placeholder:text-gray-400"
               />
-              {loading && (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-gray-500" />
-              )}
+              {loading && <Spinner className="h-4 w-4 text-gray-400" />}
             </div>
 
             {(() => {
@@ -356,7 +356,10 @@ export function SearchDialog({
 
               if (query.length >= 2 && !loading) {
                 return (
-                  <div className="px-4 py-8 text-center font-sans text-sm text-gray-400">
+                  <div
+                    role="status"
+                    className="px-4 py-8 text-center font-sans text-sm text-gray-400"
+                  >
                     {searchError ?? 'No results found'}
                   </div>
                 )

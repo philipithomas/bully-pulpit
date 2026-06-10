@@ -105,6 +105,7 @@
   --color-offwhite-light: #faf9f7;
 
   /* Grays */
+  --color-gray-50: #f2f2f1; /* alias: keeps the un-padded spelling warm */
   --color-gray-050: #f2f2f1;
   --color-gray-075: #eceae6;
   --color-gray-100: #e0ddd8;
@@ -126,8 +127,62 @@
   --color-blue: #54759e;
   --color-vivid-blue: #0056ac;
   --color-red: #c43e2a;
+  --color-red-deep: #a33422; /* text-on-tint red: clears AA where red falls short */
   --color-black: #0a0a0a;
   --color-white: #ffffff;
+}
+
+/* ============================
+   shadcn token contract
+   Semantic tokens mapped onto the warm palette so vendored shadcn
+   components inherit the site look. Radius mappings are deliberately
+   not wired: interactive controls are square (no rounded-* classes),
+   media keeps Tailwind's default radii.
+   ============================ */
+
+:root {
+  --background: var(--color-offwhite);
+  --foreground: var(--color-gray-950);
+  --card: var(--color-offwhite-light);
+  --card-foreground: var(--color-gray-950);
+  --popover: var(--color-offwhite-light);
+  --popover-foreground: var(--color-gray-950);
+  --primary: var(--color-gray-950);
+  --primary-foreground: var(--color-white);
+  --secondary: var(--color-gray-075);
+  --secondary-foreground: var(--color-gray-900);
+  --muted: var(--color-gray-100);
+  --muted-foreground: var(--color-gray-500);
+  --accent: var(--color-offwhite-dark);
+  --accent-foreground: var(--color-gray-900);
+  --destructive: var(--color-red);
+  --destructive-foreground: var(--color-white);
+  --border: var(--color-gray-200);
+  --input: var(--color-gray-200);
+  --ring: var(--color-gray-950);
+  --radius: 0rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 }
 
 /* ============================
@@ -137,6 +192,26 @@
 ::selection {
   background-color: var(--color-yellow);
   color: var(--color-black);
+}
+
+/* One site-wide keyboard focus indicator: a square gray-950 outline.
+   Unlayered so it also restores an indicator where a utility set
+   outline-none. The OTP input is excluded: its invisible real input
+   sits over the slots, which carry their own active border. */
+:focus-visible:not([data-input-otp]) {
+  outline: 2px solid var(--color-gray-950);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {
@@ -217,6 +292,13 @@ body:has(> * [data-bg="gray-050"]) {
 
 .btn:active {
   transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-primary {
