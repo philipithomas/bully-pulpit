@@ -27,7 +27,14 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
             alt={post.frontmatter.coverImageAlt ?? post.frontmatter.title}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            // All three featured cards sit above the fold on desktop. The
+            // large card is the LCP candidate, so it keeps the head preload;
+            // the side cards load eagerly at high fetch priority without a
+            // preload (their 33vw renditions are small, and a preload would
+            // compete with the hero in the head).
             priority={large}
+            loading={large ? undefined : 'eager'}
+            fetchPriority="high"
             sizes={large ? '(max-width: 1024px) 100vw, 66vw' : '33vw'}
           />
         </div>

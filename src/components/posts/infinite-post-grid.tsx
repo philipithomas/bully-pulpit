@@ -29,7 +29,11 @@ export function InfinitePostGrid({
             key={post.slug}
             ref={i === posts.length - 1 ? lastPostRef : undefined}
           >
-            <PostCard post={post} priority={i < priorityCount} />
+            <PostCard
+              post={post}
+              priority={i === 0 && priorityCount > 0}
+              eager={i < priorityCount}
+            />
           </div>
         ))}
       </div>

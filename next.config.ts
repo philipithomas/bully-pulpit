@@ -32,7 +32,12 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 2678400,
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    // 1920 stays: the post hero renders 1280px CSS (100vw under 1312px), so
+    // 1x desktops need 1280 and 2x prose images need 1344 — both select 1920.
+    // 2048 dropped: it only served as the ceiling for >=2x heroes (2560 px
+    // needed), which 1920 now caps at a ~6% linear resolution cost for ~12%
+    // fewer bytes and one fewer variant per cover.
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
   },
   async headers() {
     return [

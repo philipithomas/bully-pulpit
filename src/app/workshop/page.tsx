@@ -41,10 +41,11 @@ export default function WorkshopPage() {
         </div>
       </div>
       <div className="container py-12 md:py-16">
+        {/* priorityCount matches the lg:grid-cols-3 top row above the fold */}
         <InfinitePostGrid
           initialPosts={posts}
           newsletter="workshop"
-          priorityCount={2}
+          priorityCount={3}
         />
       </div>
     </div>

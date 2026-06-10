@@ -15,13 +15,18 @@
   font-display: swap;
 }
 
+/* Italic faces are prose-internal (em inside article bodies) and typically
+   below the fold, so they use font-display: optional — the fallback italic
+   holds for a cold first paint instead of reflowing mid-read. The three
+   preloaded roman faces (Sohne 400/600, Tiempos Text 400) and Sohne Mono
+   (above-the-fold date labels on cards and the postcard calendar) keep swap. */
 @font-face {
   font-family: "Sohne";
   src: url("https://fonts.philipithomas.com/klim/soehne-buch-kursiv.woff2")
     format("woff2");
   font-weight: 400;
   font-style: italic;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -39,7 +44,7 @@
     format("woff2");
   font-weight: 600;
   font-style: italic;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -57,7 +62,7 @@
     format("woff2");
   font-weight: 400;
   font-style: italic;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {

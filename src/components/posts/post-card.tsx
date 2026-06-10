@@ -14,9 +14,13 @@ export type PostSummary = Pick<
 export function PostCard({
   post,
   priority = false,
+  eager = false,
 }: {
   post: PostSummary
+  /** Head-preload the cover (LCP candidate, first card only) */
   priority?: boolean
+  /** Load the cover eagerly at high fetch priority, without a preload */
+  eager?: boolean
 }) {
   return (
     <article className="group bg-offwhite-light border border-gray-100 rounded-sm overflow-hidden h-full">
@@ -32,6 +36,10 @@ export function PostCard({
               alt={post.frontmatter.coverImageAlt ?? post.frontmatter.title}
               fill
               priority={priority}
+              loading={!priority && eager ? 'eager' : undefined}
+              // Next 16 priority only preloads; the high fetch priority for
+              // above-the-fold cards must be set explicitly
+              fetchPriority={priority || eager ? 'high' : undefined}
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
