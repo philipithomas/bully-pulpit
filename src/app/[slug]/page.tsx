@@ -66,9 +66,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: item.frontmatter.title,
       description,
-      type: 'article',
-      // Page-level openGraph replaces the root layout's, so fall back to the
-      // site image when the item has no cover.
+      // Page-level openGraph replaces the root layout's, so restate the
+      // canonical url and site name here.
+      url: `/${item.slug}`,
+      siteName: siteConfig.title,
+      ...(post
+        ? {
+            type: 'article',
+            publishedTime: post.frontmatter.publishedAt,
+            authors: [siteConfig.author],
+          }
+        : { type: 'website' }),
+      // Fall back to the site image when the item has no cover.
       images: [{ url: item.frontmatter.coverImage ?? siteConfig.image }],
     },
     twitter: {
@@ -108,7 +117,7 @@ export default async function SlugPage({ params }: Props) {
     <article className={bg?.className} data-bg={bg?.dataBg}>
       <SetNewsletter newsletter={post?.newsletter ?? null} />
       <JsonLd
-        type="article"
+        type={post ? 'article' : 'webpage'}
         post={post ?? undefined}
         page={page ?? undefined}
       />

@@ -4,10 +4,13 @@ import Link from 'next/link'
 import { coverPreloadAttrs } from '@/lib/content/cover-preload'
 import { getAllPosts } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
+import { feedDiscovery } from '@/lib/feeds/discovery'
 
 export const metadata: Metadata = {
   title: 'Photography',
   description: 'Cover photographs from posts across the site.',
+  // Page-level alternates replace the root layout's, so restate the feeds.
+  alternates: { canonical: '/photography', types: feedDiscovery() },
 }
 
 /**

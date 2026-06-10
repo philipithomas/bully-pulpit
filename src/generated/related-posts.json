@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T23:13:33.289Z",
+  "generatedAt": "2026-06-10T23:17:54.908Z",
   "posts": {
     "2026-06": {
       "related": [
@@ -157,7 +157,7 @@
         },
         {
           "slug": "chat-with-my-dog",
-          "score": 0.3045739
+          "score": 0.3046343
         }
       ]
     },
@@ -173,7 +173,7 @@
         },
         {
           "slug": "chat-with-my-dog",
-          "score": 0.2575396
+          "score": 0.2577279
         }
       ]
     },
@@ -232,7 +232,7 @@
           "score": 0.4496396
         },
         {
-          "slug": "tacit-knowledge-in-softwar",
+          "slug": "tacit-knowledge-in-software",
           "score": 0.4691743
         },
         {
@@ -257,7 +257,7 @@
         }
       ]
     },
-    "tacit-knowledge-in-softwar": {
+    "tacit-knowledge-in-software": {
       "related": [
         {
           "slug": "build-and-tinker",
@@ -276,7 +276,7 @@
     "digital-gardening": {
       "related": [
         {
-          "slug": "tacit-knowledge-in-softwar",
+          "slug": "tacit-knowledge-in-software",
           "score": 0.3221591
         },
         {
@@ -308,7 +308,7 @@
     "build-and-tinker": {
       "related": [
         {
-          "slug": "tacit-knowledge-in-softwar",
+          "slug": "tacit-knowledge-in-software",
           "score": 0.2485592
         },
         {
@@ -348,7 +348,7 @@
           "score": 0.2351082
         },
         {
-          "slug": "tacit-knowledge-in-softwar",
+          "slug": "tacit-knowledge-in-software",
           "score": 0.2877051
         }
       ]
@@ -424,7 +424,7 @@
           "score": 0.3005653
         },
         {
-          "slug": "tacit-knowledge-in-softwar",
+          "slug": "tacit-knowledge-in-software",
           "score": 0.3619162
         },
         {
@@ -516,7 +516,7 @@
     "taste-skill-gaps": {
       "related": [
         {
-          "slug": "tacit-knowledge-in-softwar",
+          "slug": "tacit-knowledge-in-software",
           "score": 0.4725455
         },
         {
@@ -540,7 +540,7 @@
           "score": 0.2657121
         },
         {
-          "slug": "tacit-knowledge-in-softwar",
+          "slug": "tacit-knowledge-in-software",
           "score": 0.3020693
         }
       ]
@@ -553,7 +553,7 @@
         },
         {
           "slug": "chat-with-my-dog",
-          "score": 0.2073567
+          "score": 0.2075373
         },
         {
           "slug": "openclaw-is-my-new-coworker",
@@ -565,7 +565,7 @@
       "related": [
         {
           "slug": "chat-with-my-dog",
-          "score": 0.2938125
+          "score": 0.2938344
         },
         {
           "slug": "openclaw-is-my-new-coworker",
@@ -581,7 +581,7 @@
       "related": [
         {
           "slug": "chat-with-my-dog",
-          "score": 0.2792625
+          "score": 0.2798499
         },
         {
           "slug": "claude-launching-and-tools",
@@ -725,15 +725,15 @@
       "related": [
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.2073567
+          "score": 0.2075373
         },
         {
           "slug": "archetypes-of-llm-apps",
-          "score": 0.2402377
+          "score": 0.2401921
         },
         {
           "slug": "mcp-and-the-future-of-ai",
-          "score": 0.2429292
+          "score": 0.2428924
         }
       ]
     },
@@ -785,7 +785,7 @@
         }
       ]
     },
-    "finding-a-software-jojb": {
+    "finding-a-software-job": {
       "related": [
         {
           "slug": "lost-and-found",
@@ -904,7 +904,7 @@
           "score": 0.1938553
         },
         {
-          "slug": "finding-a-software-jojb",
+          "slug": "finding-a-software-job",
           "score": 0.2276885
         },
         {
@@ -941,7 +941,7 @@
         },
         {
           "slug": "chat-with-my-dog",
-          "score": 0.2402377
+          "score": 0.2401921
         }
       ]
     },
@@ -949,7 +949,7 @@
       "related": [
         {
           "slug": "chat-with-my-dog",
-          "score": 0.3226443
+          "score": 0.3219682
         },
         {
           "slug": "software-in-the-ai-era",
@@ -1061,7 +1061,7 @@
       "related": [
         {
           "slug": "chat-with-my-dog",
-          "score": 0.3525473
+          "score": 0.352349
         },
         {
           "slug": "bts-find-api",
@@ -1164,7 +1164,7 @@
           "score": 0.3151988
         },
         {
-          "slug": "finding-a-software-jojb",
+          "slug": "finding-a-software-job",
           "score": 0.3208035
         }
       ]
@@ -1209,7 +1209,7 @@
         },
         {
           "slug": "chat-with-my-dog",
-          "score": 0.3135092
+          "score": 0.3136872
         },
         {
           "slug": "code-as-content-and-digital-proprioception",
@@ -1400,7 +1400,7 @@
           "score": 0.4809656
         },
         {
-          "slug": "finding-a-software-jojb",
+          "slug": "finding-a-software-job",
           "score": 0.4832921
         },
         {
@@ -1541,7 +1541,7 @@
       "related": [
         {
           "slug": "moonlight-s-pitch-deck",
-          "score": 0.300584
+          "score": 0.2993822
         },
         {
           "slug": "is-fractional-work-the-future",
@@ -1941,15 +1941,15 @@
       "related": [
         {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.2300193
+          "score": 0.2316067
         },
         {
           "slug": "how-i-build-multiple-products",
-          "score": 0.2832895
+          "score": 0.2888016
         },
         {
           "slug": "introducing-contraption-co",
-          "score": 0.2906488
+          "score": 0.2920038
         }
       ]
     },
@@ -1961,7 +1961,7 @@
         },
         {
           "slug": "moonlight-s-pitch-deck",
-          "score": 0.3078891
+          "score": 0.3056243
         },
         {
           "slug": "rethinking-work-beyond-the-factory",

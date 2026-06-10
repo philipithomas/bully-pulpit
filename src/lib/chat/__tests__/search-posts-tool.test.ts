@@ -50,13 +50,13 @@ describe('searchPosts tool output', () => {
 
   it('cites the section for excerpts that sit under a heading', async () => {
     const results = await run('software engineering job search timeline')
-    const post = results.find((r) => r.url === '/finding-a-software-jojb')
+    const post = results.find((r) => r.url === '/finding-a-software-job')
     expect(post).toBeDefined()
     const withSection = post!.excerpts.filter((e) => e.section)
     expect(withSection.length).toBeGreaterThan(0)
     for (const excerpt of withSection) {
       expect(excerpt.section!.url).toMatch(
-        /^\/finding-a-software-jojb#[a-z0-9][a-z0-9_-]*$/
+        /^\/finding-a-software-job#[a-z0-9][a-z0-9_-]*$/
       )
     }
   })
