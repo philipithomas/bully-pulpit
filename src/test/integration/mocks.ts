@@ -15,6 +15,7 @@ export function sesMock() {
   return {
     sendSimpleEmail: vi.fn(async () => undefined),
     sendNewsletterEmail: vi.fn(async () => undefined),
+    sendEmailWithAttachment: vi.fn(async () => undefined),
     listSuppressedDestinations: vi.fn(async () => []),
   }
 }

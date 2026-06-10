@@ -4,6 +4,7 @@ import {
   SendEmailCommand,
 } from '@aws-sdk/client-sesv2'
 import { siteConfig } from '@/lib/config'
+import { buildMimeMessage, type MimeAttachment } from '@/lib/email/mime'
 
 let client: SESv2Client | null = null
 
@@ -44,6 +45,33 @@ export async function sendSimpleEmail(input: {
           },
         },
       },
+    })
+  )
+}
+
+/**
+ * A plain-text email with one file attachment (subscriber backup). SESv2
+ * Simple content cannot carry attachments, so this sends Content.Raw with a
+ * hand-rolled multipart/mixed MIME message (see @/lib/email/mime).
+ */
+export async function sendEmailWithAttachment(input: {
+  to: string[]
+  subject: string
+  text: string
+  attachment: MimeAttachment
+}): Promise<void> {
+  const raw = buildMimeMessage({
+    from: siteConfig.sesFromEmail,
+    to: input.to,
+    subject: `${siteConfig.emailSubjectPrefix}${input.subject}`,
+    text: input.text,
+    attachment: input.attachment,
+  })
+  await getSesClient().send(
+    new SendEmailCommand({
+      FromEmailAddress: siteConfig.sesFromEmail,
+      Destination: { ToAddresses: input.to },
+      Content: { Raw: { Data: raw } },
     })
   )
 }
