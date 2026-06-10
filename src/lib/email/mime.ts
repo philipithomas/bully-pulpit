@@ -48,7 +48,6 @@ function toBase64Body(content: string | Uint8Array): string {
  */
 function headerValue(value: string): string {
   const flat = value.replace(/[\r\n]+/g, ' ')
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: printable-ASCII range check
   return /^[\x20-\x7e]*$/.test(flat)
     ? flat
     : `=?UTF-8?B?${Buffer.from(flat, 'utf-8').toString('base64')}?=`
