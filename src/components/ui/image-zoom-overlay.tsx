@@ -28,14 +28,25 @@ export function ImageZoomOverlay({
     hd.src = image.fullSrc
   }, [image.fullSrc])
 
-  // Escape key
+  // Escape closes; Tab stays on the container. The overlay is a single
+  // control surface with no focusable children, so holding focus on the
+  // container is a sufficient trap.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose()
+      if (e.key === 'Tab') {
+        e.preventDefault()
+        overlayRef.current?.focus()
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   })
+
+  // Move focus into the overlay on mount; the opener restores it on close
+  useEffect(() => {
+    overlayRef.current?.focus()
+  }, [])
 
   // Lock body scroll
   useEffect(() => {
@@ -53,6 +64,10 @@ export function ImageZoomOverlay({
   return (
     <div
       ref={overlayRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={image.alt || 'Image viewer'}
+      tabIndex={-1}
       className={`fixed inset-0 z-60 flex items-center justify-center bg-[#0A0A0A]/95 ${
         closing ? 'image-zoom-closing' : 'image-zoom-opening'
       }`}

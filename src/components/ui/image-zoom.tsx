@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ZoomedImage } from '@/components/ui/image-zoom-overlay'
 
@@ -20,6 +20,8 @@ export function ImageZoom() {
   const pathname = usePathname()
   const [zoomedImage, setZoomedImage] = useState<ZoomedImage | null>(null)
   const [mounted, setMounted] = useState(false)
+  // Element focused before the overlay opened; focus returns to it on close
+  const triggerRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => setMounted(true), [])
 
@@ -34,6 +36,10 @@ export function ImageZoom() {
       if (!target) return
 
       e.preventDefault()
+      triggerRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null
       setZoomedImage({
         src: target.currentSrc || target.src,
         fullSrc: target.dataset.fullSrc ?? null,
@@ -50,7 +56,11 @@ export function ImageZoom() {
   return createPortal(
     <ImageZoomOverlay
       image={zoomedImage}
-      onClose={() => setZoomedImage(null)}
+      onClose={() => {
+        setZoomedImage(null)
+        triggerRef.current?.focus()
+        triggerRef.current = null
+      }}
     />,
     document.body
   ) as ReactNode

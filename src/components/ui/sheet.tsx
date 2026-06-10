@@ -56,7 +56,7 @@ function SheetContent({
           {title}
         </DialogPrimitive.Title>
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 -m-2 p-2 text-gray-400 opacity-70 transition-opacity hover:opacity-100">
+        <DialogPrimitive.Close className="absolute right-4 top-4 -m-2 p-2 text-gray-600 transition-colors hover:text-gray-950">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

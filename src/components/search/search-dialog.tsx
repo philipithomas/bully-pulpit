@@ -5,7 +5,7 @@ import { track } from '@vercel/analytics'
 import { Search } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
@@ -222,6 +222,20 @@ export function SearchDialog({
   const showAskAI = query.length >= 2
   const displayResults = query.length < 2 ? recentPosts : results
   const maxIndex = showAskAI ? displayResults.length : displayResults.length - 1
+  // Combobox wiring: the input keeps DOM focus while aria-activedescendant
+  // tracks the highlighted option. Exactly one element carries the listbox
+  // id at a time: the results list when it renders, otherwise the
+  // "Ask Bell" row container (so its option is never orphaned).
+  const baseId = useId()
+  const listboxId = `${baseId}-listbox`
+  const askOptionId = `${baseId}-option-ask`
+  const expanded = displayResults.length > 0 || showAskAI
+  const activeOptionId =
+    showAskAI && activeIndex === displayResults.length
+      ? askOptionId
+      : displayResults[activeIndex]
+        ? `${baseId}-option-${activeIndex}`
+        : undefined
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -267,6 +281,11 @@ export function SearchDialog({
                 onKeyDown={handleKeyDown}
                 placeholder="Search posts…"
                 aria-label="Search posts"
+                role="combobox"
+                aria-expanded={expanded}
+                aria-controls={expanded ? listboxId : undefined}
+                aria-activedescendant={activeOptionId}
+                aria-autocomplete="list"
                 className="flex-1 bg-transparent px-3 py-3 font-sans text-sm text-gray-950 placeholder:text-gray-400"
               />
               {loading && <Spinner className="h-4 w-4 text-gray-400" />}
@@ -283,7 +302,13 @@ export function SearchDialog({
                         Recent
                       </p>
                     )}
-                    <ul className="max-h-80 overflow-y-auto p-2">
+                    <ul
+                      role="listbox"
+                      id={listboxId}
+                      aria-label={isRecent ? 'Recent posts' : 'Search results'}
+                      aria-owns={showAskAI ? askOptionId : undefined}
+                      className="max-h-80 overflow-y-auto p-2"
+                    >
                       {displayResults.map((result, i) => {
                         const titleLower = result.title.toLowerCase().trim()
                         const snippet = result.matches.find(
@@ -295,9 +320,13 @@ export function SearchDialog({
                               .startsWith(titleLower)
                         )
                         return (
-                          <li key={result.slug}>
+                          <li key={result.slug} role="presentation">
                             <button
                               type="button"
+                              role="option"
+                              id={`${baseId}-option-${i}`}
+                              aria-selected={i === activeIndex}
+                              tabIndex={-1}
                               onClick={() => navigate(result.slug, result.url)}
                               onMouseEnter={() => setActiveIndex(i)}
                               className={cn(
@@ -366,9 +395,22 @@ export function SearchDialog({
             })()}
 
             {showAskAI && (
-              <div className="border-t border-gray-100 p-2">
+              <div
+                className="border-t border-gray-100 p-2"
+                {...(displayResults.length === 0
+                  ? {
+                      role: 'listbox',
+                      id: listboxId,
+                      'aria-label': 'Search results',
+                    }
+                  : {})}
+              >
                 <button
                   type="button"
+                  role="option"
+                  id={askOptionId}
+                  aria-selected={activeIndex === displayResults.length}
+                  tabIndex={-1}
                   onClick={handleAskAI}
                   onMouseEnter={() => setActiveIndex(displayResults.length)}
                   className={cn(
