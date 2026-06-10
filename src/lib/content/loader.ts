@@ -28,18 +28,23 @@ function getFullCoverImage(coverImage: string | undefined): string | undefined {
   return undefined
 }
 
-function getCoverDimensions(
-  coverImage: string | undefined
+/**
+ * Reads intrinsic dimensions for an image under public/ (JPEG/PNG only),
+ * keyed by its public path (e.g. /images/posts/foo.jpg). Cached for the
+ * lifetime of the build.
+ */
+export function getImageDimensions(
+  publicPath: string | undefined
 ): ImageDimensions | undefined {
-  if (!coverImage) return undefined
-  const cached = dimensionsCache.get(coverImage)
+  if (!publicPath) return undefined
+  const cached = dimensionsCache.get(publicPath)
   if (cached) return cached
-  const filePath = path.join(PUBLIC_DIR, coverImage)
+  const filePath = path.join(PUBLIC_DIR, publicPath)
   if (!fs.existsSync(filePath)) return undefined
   try {
     const buf = fs.readFileSync(filePath)
     const dims = parseImageDimensions(buf)
-    if (dims) dimensionsCache.set(coverImage, dims)
+    if (dims) dimensionsCache.set(publicPath, dims)
     return dims
   } catch {
     return undefined
@@ -125,7 +130,7 @@ export function getPostsByNewsletter(newsletter: Newsletter): Post[] {
         frontmatter: { ...parsed.data, publishedAt: parsed.data.publishedAt },
         content,
         excerpt: parsed.data.description ?? extractExcerpt(content),
-        coverDimensions: getCoverDimensions(parsed.data.coverImage),
+        coverDimensions: getImageDimensions(parsed.data.coverImage),
         fullCoverImage: getFullCoverImage(parsed.data.coverImage),
       } as Post
     })

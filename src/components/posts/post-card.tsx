@@ -1,6 +1,6 @@
-import { format, parseISO } from 'date-fns'
 import Image from 'next/image'
 import Link from 'next/link'
+import { coverPreloadAttrs } from '@/lib/content/cover-preload'
 import type { Post } from '@/lib/content/types'
 
 // Minimal shape PostCard consumes. Listing pages map full Post objects to
@@ -8,7 +8,7 @@ import type { Post } from '@/lib/content/types'
 // (`content`) never lands in the RSC payload.
 export type PostSummary = Pick<
   Post,
-  'slug' | 'newsletter' | 'frontmatter' | 'excerpt'
+  'slug' | 'newsletter' | 'frontmatter' | 'excerpt' | 'coverDimensions'
 >
 
 export function PostCard({
@@ -20,7 +20,11 @@ export function PostCard({
 }) {
   return (
     <article className="group bg-offwhite-light border border-gray-100 rounded-sm overflow-hidden h-full">
-      <Link href={`/${post.slug}`} className="block h-full">
+      <Link
+        href={`/${post.slug}`}
+        className="block h-full"
+        {...coverPreloadAttrs(post)}
+      >
         {post.frontmatter.coverImage && (
           <div className="relative overflow-hidden aspect-[3/2]">
             <Image
@@ -35,7 +39,7 @@ export function PostCard({
         )}
         <div className="p-4 md:p-5">
           <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
-            {format(parseISO(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
+            {post.frontmatter.publishedAt}
           </time>
           <h2 className="text-lg font-semibold text-gray-950 group-hover:text-forest transition-colors mt-1">
             {post.frontmatter.title}

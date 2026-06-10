@@ -1,16 +1,16 @@
-import { format, parseISO } from 'date-fns'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import remarkGfm from 'remark-gfm'
 import { SetNewsletter } from '@/components/layout/newsletter-context'
+import { mdxComponents } from '@/components/posts/mdx-components'
 import { RelatedPosts } from '@/components/posts/related-posts'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { JsonLd } from '@/components/seo/json-ld'
 import { SpotifyEmbed } from '@/components/ui/spotify-embed'
 import { YouTubeEmbed } from '@/components/ui/youtube-embed'
-import { siteConfig } from '@/lib/config'
+import { POST_COVER_SIZES } from '@/lib/content/cover-preload'
 import {
   extractExcerpt,
   getAllPosts,
@@ -93,7 +93,7 @@ export default async function SlugPage({ params }: Props) {
             post.newsletter !== 'postcard' &&
             post.frontmatter.publishedAt && (
               <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
-                {format(parseISO(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
+                {post.frontmatter.publishedAt}
               </time>
             )}
           <h1 className="font-sans font-semibold text-3xl leading-tight tracking-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl text-pretty mt-3">
@@ -134,7 +134,7 @@ export default async function SlugPage({ params }: Props) {
                 : {})}
               className="w-full cursor-zoom-in"
               priority
-              sizes="(min-width: 1312px) 1280px, calc(100vw - 2rem)"
+              sizes={POST_COVER_SIZES}
             />
           </div>
         )}
@@ -148,7 +148,7 @@ export default async function SlugPage({ params }: Props) {
                 remarkPlugins: [remarkGfm],
               },
             }}
-            components={{ SpotifyEmbed, YouTubeEmbed }}
+            components={{ SpotifyEmbed, YouTubeEmbed, ...mdxComponents }}
           />
         </div>
 

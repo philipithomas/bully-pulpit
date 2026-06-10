@@ -28,6 +28,8 @@ const RELATED_JSON = path.join(
 const MAX_WEB_WIDTH = 2560
 const MAX_EMAIL_COVER_BYTES = 110 * 1024
 const MAX_EMAIL_THUMB_BYTES = 15 * 1024
+// Vercel image optimization rejects sources larger than 8192px per side.
+const MAX_OPTIMIZER_SOURCE_PX = 8192
 
 const errors: string[] = []
 
@@ -98,6 +100,32 @@ async function main() {
       errors.push(
         `${path.relative(process.cwd(), src)} is ${meta.width}px wide (max ${MAX_WEB_WIDTH}) — run \`pnpm images:optimize\``
       )
+    }
+  }
+
+  // 5: in-article images must stay within the Vercel image optimizer source
+  // limit (8192px per side) — they render through next/image, and an
+  // over-limit source fails to optimize in production with no local signal.
+  const postsDir = path.join(IMAGES, 'posts')
+  if (fs.existsSync(postsDir)) {
+    const stack = [postsDir]
+    while (stack.length > 0) {
+      const dir = stack.pop() as string
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          stack.push(full)
+          continue
+        }
+        if (!/\.(jpe?g|png)$/i.test(entry.name)) continue
+        const meta = await sharp(full).metadata()
+        const longest = Math.max(meta.width ?? 0, meta.height ?? 0)
+        if (longest > MAX_OPTIMIZER_SOURCE_PX) {
+          errors.push(
+            `${path.relative(process.cwd(), full)} is ${longest}px on its longest side (Vercel optimizer limit ${MAX_OPTIMIZER_SOURCE_PX}) — resize the source`
+          )
+        }
+      }
     }
   }
 
