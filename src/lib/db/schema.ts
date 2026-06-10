@@ -92,6 +92,20 @@ export const emailSends = pgTable(
   ]
 )
 
+// One row per post that has had a send started, holding the runId of the most
+// recent sendNewsletterWorkflow run. The send/retry guards look the runId up and
+// ask the Workflow runtime for its status: a run that is pending/running blocks a
+// second start (which would double-send), while a completed/failed/cancelled run
+// means any leftover pending email_sends rows are a STALLED send that retry is
+// meant to resume. Pending rows alone cannot tell those two states apart.
+export const sendRuns = pgTable('send_runs', {
+  postSlug: text('post_slug').primaryKey(),
+  runId: text('run_id').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
 export const logins = pgTable(
   'logins',
   {
@@ -141,3 +155,5 @@ export type NewEmailSend = typeof emailSends.$inferInsert
 export type Login = typeof logins.$inferSelect
 export type NewLogin = typeof logins.$inferInsert
 export type EmailSuppression = typeof emailSuppressions.$inferSelect
+export type SendRun = typeof sendRuns.$inferSelect
+export type NewSendRun = typeof sendRuns.$inferInsert

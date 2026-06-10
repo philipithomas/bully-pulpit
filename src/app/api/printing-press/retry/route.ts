@@ -2,22 +2,21 @@ import { NextResponse } from 'next/server'
 import { start } from 'workflow/api'
 import { guardAdmin } from '@/lib/auth/admin'
 import { getPostBySlug } from '@/lib/content/loader'
-import {
-  countPendingBySlug,
-  resetFailedBySlug,
-} from '@/lib/db/queries/email-sends'
+import { resetFailedBySlug } from '@/lib/db/queries/email-sends'
+import { recordSendRun } from '@/lib/db/queries/send-runs'
 import { isNewsletter } from '@/lib/db/queries/subscribers'
+import { isSendRunActive } from '@/lib/email/send-guard'
 import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
 
 /**
  * Resumes/retries a send: clears send_error on failed rows (back to pending),
- * then starts the workflow which drains all pending rows for the slug.
+ * then starts the workflow which drains all pending rows for the slug. This is
+ * the designed recovery path for a stalled send (run died with rows still
+ * pending), so it must NOT refuse just because rows are pending.
  *
- * Mirrors the Send route's guards: a retry while rows are still pending would
- * start a second workflow run racing the in-flight one over the same rows
- * (the client-side canRetry flag resets on a page reload mid-blast, so the
- * server must refuse). Pending is checked BEFORE healing failed rows, since
- * the heal itself creates pending rows.
+ * Mirrors the Send route's guard: it refuses only while a real workflow run is
+ * still in flight (isSendRunActive checks run status, not pending rows), which
+ * is the only case a second run would race the first over the same rows.
  */
 export async function POST(request: Request) {
   const session = await guardAdmin()
@@ -46,8 +45,10 @@ export async function POST(request: Request) {
       )
     }
 
-    // Guard against racing an in-flight send: refuse while rows are pending.
-    if ((await countPendingBySlug(slug)) > 0) {
+    // Guard against racing an in-flight run: refuse only while a real workflow
+    // run is still live. A stalled send (run dead, rows still pending) falls
+    // through so retry can resume it. See isSendRunActive.
+    if (await isSendRunActive(slug)) {
       return NextResponse.json(
         { error: 'A send for this post is already in progress.' },
         { status: 409 }
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
 
     const reset = await resetFailedBySlug(slug)
     const run = await start(sendNewsletterWorkflow, [slug])
+    await recordSendRun(slug, run.runId)
     return NextResponse.json({ ok: true, reset, runId: run.runId })
   } catch (err) {
     console.error('[printing-press/retry] error:', err)
