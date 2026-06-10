@@ -9,6 +9,14 @@ vi.mock('botid/server', () =>
 vi.mock('@/lib/email/ses', () =>
   import('@/test/integration/mocks').then((m) => m.sesMock())
 )
+// The subscribe handler checks domain deliverability via DNS before sending.
+// Stub the resolver so the test never touches the network: every domain
+// resolves to a working MX record.
+vi.mock('node:dns/promises', () => ({
+  resolveMx: vi.fn(async () => [{ exchange: 'mx.example.com', priority: 10 }]),
+  resolve4: vi.fn(async () => []),
+  resolve6: vi.fn(async () => []),
+}))
 
 import { POST as verifyPost } from '@/app/api/auth/verify/route'
 import { POST as subscribePost } from '@/app/api/subscribe/route'

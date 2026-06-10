@@ -4,6 +4,7 @@ import {
   createOrRetrieve,
   InvalidEmailError,
   SuppressedEmailError,
+  UndeliverableEmailError,
 } from '@/lib/auth/subscriber-service'
 import {
   serializeSubscriber,
@@ -58,6 +59,15 @@ export async function POST(request: Request) {
     if (err instanceof InvalidEmailError) {
       return NextResponse.json(
         { error: 'Invalid email address' },
+        { status: 400 }
+      )
+    }
+    if (err instanceof UndeliverableEmailError) {
+      return NextResponse.json(
+        {
+          error:
+            'That email domain cannot receive mail. Check the address and try again.',
+        },
         { status: 400 }
       )
     }

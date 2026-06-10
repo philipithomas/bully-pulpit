@@ -6,6 +6,7 @@ import {
 } from '@/lib/db/queries/subscribers'
 import { isSuppressed } from '@/lib/db/queries/suppressions'
 import type { Subscriber } from '@/lib/db/schema'
+import { canReceiveMail } from '@/lib/email/deliverability'
 import { sendNewSubscriberNotification } from '@/lib/email/send'
 
 /** Thrown for a malformed email address (maps to HTTP 400). */
@@ -13,6 +14,14 @@ export class InvalidEmailError extends Error {
   constructor() {
     super('Invalid email address')
     this.name = 'InvalidEmailError'
+  }
+}
+
+/** Thrown when the email's domain has no mail host per DNS (maps to HTTP 400). */
+export class UndeliverableEmailError extends Error {
+  constructor() {
+    super('Email domain cannot receive mail')
+    this.name = 'UndeliverableEmailError'
   }
 }
 
@@ -92,6 +101,14 @@ export async function createOrRetrieve(input: {
     throw new InvalidEmailError()
   }
   const googleVerified = input.googleVerified ?? false
+
+  // Every non-Google branch below sends a confirmation or sign-in email, so
+  // check DNS deliverability first: before any DB row is created and before
+  // SES can hard-bounce on a typo domain. Google sign-in sends no email and
+  // skips the check. canReceiveMail fails open on resolver trouble.
+  if (!googleVerified && !(await canReceiveMail(email))) {
+    throw new UndeliverableEmailError()
+  }
 
   const existing = await findByEmail(email)
   if (existing) {
