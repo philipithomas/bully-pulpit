@@ -15,11 +15,11 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://plausible.io https://telegraph.contraption.co https://static.cloudflareinsights.com https://accounts.google.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com https://accounts.google.com",
       "style-src 'self' 'unsafe-inline' https://fonts.philipithomas.com",
       "font-src 'self' https://fonts.philipithomas.com",
       "img-src 'self' data: https:",
-      "connect-src 'self' https://plausible.io https://telegraph.contraption.co https://cloudflareinsights.com https://accounts.google.com https://oauth2.googleapis.com",
+      "connect-src 'self' https://cloudflareinsights.com https://accounts.google.com https://oauth2.googleapis.com",
       // 'self' is required by Vercel BotID/Kasada, which frames its bot-check
       // challenge from a same-origin /…/fp path (withBotId proxies it first-party).
       "frame-src 'self' https://accounts.google.com https://www.youtube.com https://open.spotify.com https://podcasters.spotify.com",

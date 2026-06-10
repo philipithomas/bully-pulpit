@@ -153,9 +153,6 @@ export function SearchDialog({
         const data = await res.json()
         setResults(data.results ?? [])
         searchIdRef.current = data.searchId ?? null
-        window.plausible?.('Search', {
-          props: { query: q, results: (data.results ?? []).length },
-        })
         track('Search', { query: q, results: (data.results ?? []).length })
       } else {
         // Surface definitive rejections (e.g. the 429 rate limit) instead of
