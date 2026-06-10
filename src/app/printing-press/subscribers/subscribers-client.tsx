@@ -1,14 +1,6 @@
 'use client'
 
-import {
-  Check,
-  Copy,
-  Download,
-  RefreshCw,
-  Search,
-  Trash2,
-  Upload,
-} from 'lucide-react'
+import { Check, Copy, Download, Search, Trash2, Upload } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Avatar } from '@/components/ui/avatar'
@@ -54,7 +46,6 @@ export function SubscribersClient({
   )
   const [deleting, setDeleting] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [syncing, setSyncing] = useState(false)
 
   const reqId = useRef(0)
   const firstRender = useRef(true)
@@ -203,54 +194,6 @@ export function SubscribersClient({
     [query, runSearch]
   )
 
-  // Temporary migration helper: mirrors all subscribers from the legacy
-  // printing-press service (idempotent — safe to run repeatedly). Starts a
-  // durable workflow and polls until it settles.
-  const onSync = useCallback(async () => {
-    setSyncing(true)
-    try {
-      const startRes = await fetch('/api/printing-press/sync', {
-        method: 'POST',
-      })
-      const started = await startRes.json().catch(() => null)
-      if (!startRes.ok || !started?.runId) {
-        toast.error(
-          started?.error ?? `Sync failed to start (${startRes.status})`
-        )
-        return
-      }
-      const deadline = Date.now() + 10 * 60 * 1000
-      while (Date.now() < deadline) {
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-        const pollRes = await fetch(
-          `/api/printing-press/sync?runId=${encodeURIComponent(started.runId)}`
-        )
-        const poll = await pollRes.json().catch(() => null)
-        if (!pollRes.ok) {
-          toast.error(poll?.error ?? 'Could not check sync status')
-          return
-        }
-        if (poll.status === 'completed') {
-          const r = poll.result
-          toast.success(
-            `Synced ${r.legacyTotal} legacy subscribers: ${r.created} new, ${r.updated} updated, ${r.unchanged} unchanged`
-          )
-          await runSearch(query)
-          return
-        }
-        if (poll.status === 'failed' || poll.status === 'cancelled') {
-          toast.error(`Sync ${poll.status}. Check the workflow logs.`)
-          return
-        }
-      }
-      toast.error('Sync is still running; check back shortly')
-    } catch {
-      toast.error('Sync failed. Check your connection.')
-    } finally {
-      setSyncing(false)
-    }
-  }, [query, runSearch])
-
   return (
     <div>
       {/* Toolbar: search + CSV export/import */}
@@ -270,21 +213,6 @@ export function SubscribersClient({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onSync}
-            disabled={syncing}
-            title="One-time migration: mirror all subscribers from the legacy printing-press service (idempotent)"
-          >
-            {syncing ? (
-              <Spinner className="h-4 w-4" />
-            ) : (
-              <RefreshCw className="h-4 w-4 text-gray-400" />
-            )}
-            {syncing ? 'Syncing…' : 'Sync from printing press'}
-          </Button>
           <a
             href="/api/printing-press/subscribers/export"
             className={cn(
