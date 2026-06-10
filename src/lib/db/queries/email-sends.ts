@@ -209,17 +209,3 @@ export async function lastCompletedSend(): Promise<{
   if (!row) return null
   return { ...row, lastSentAt: new Date(row.lastSentAt) }
 }
-
-export async function countPendingBySlug(slug: string): Promise<number> {
-  const rows = await getDb()
-    .select({ count: sql<number>`count(*)::int` })
-    .from(emailSends)
-    .where(
-      and(
-        eq(emailSends.postSlug, slug),
-        isNull(emailSends.sentAt),
-        isNull(emailSends.sendError)
-      )
-    )
-  return rows[0]?.count ?? 0
-}

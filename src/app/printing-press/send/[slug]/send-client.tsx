@@ -57,6 +57,15 @@ export function SendClient({
     if (!active) return
     let polls = 0
     let sawPending = false
+    // Stall detection: if no row moves (sent + failed unchanged) for this many
+    // consecutive polls while rows are still pending, the run has died. 36
+    // polls x 2.5s = 90s, comfortably above the workflow's worst case (a 60s
+    // max batch backoff plus a batch's send time). Flipping active off then
+    // surfaces the Retry / resume button so the stalled send can be taken over
+    // in-tab, not just after a reload.
+    const STALL_POLLS = 36
+    let lastProcessed = -1
+    let stalledPolls = 0
     const id = setInterval(async () => {
       polls += 1
       try {
@@ -73,7 +82,16 @@ export function SendClient({
         if (data.pending > 0) sawPending = true
         if (data.pending === 0 && (sawPending || polls >= 6)) {
           setActive(false)
+          return
         }
+        const processed = data.sent + data.failed
+        if (data.pending > 0 && processed === lastProcessed) {
+          stalledPolls += 1
+          if (stalledPolls >= STALL_POLLS) setActive(false)
+        } else {
+          stalledPolls = 0
+        }
+        lastProcessed = processed
       } catch {
         // transient; keep polling
       }
