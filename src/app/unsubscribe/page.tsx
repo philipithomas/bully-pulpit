@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -71,10 +72,10 @@ function UnsubscribeContent() {
           setSaved(true)
           setSaveError(null)
         } else {
-          setSaveError("Couldn't save — try again")
+          setSaveError('Could not save. Try again.')
         }
       } catch {
-        setSaveError("Couldn't save — try again")
+        setSaveError('Could not save. Try again.')
       } finally {
         setSaving(null)
       }
@@ -125,9 +126,9 @@ function UnsubscribeContent() {
             Unsubscribed
           </h1>
           <p className="text-gray-600 mb-6">
-            You've been unsubscribed from all newsletters. You can re-subscribe
-            anytime — or sign in to your account to permanently delete your
-            data.
+            You have been unsubscribed from all newsletters. You can
+            re-subscribe anytime. To permanently delete your data, sign in to
+            your account.
           </p>
           <button
             type="button"
@@ -161,7 +162,7 @@ function UnsubscribeContent() {
     <div className="bg-offwhite min-h-[60vh]">
       <div className="container max-w-lg py-12 md:py-16">
         <h1 className="text-3xl font-semibold tracking-tight text-gray-950 mb-2">
-          Email Preferences
+          Email preferences
         </h1>
         {sourceNewsletter && (
           <p className="text-gray-500 mb-8">
@@ -212,7 +213,9 @@ function UnsubscribeContent() {
             <p className="text-sm text-gray-500 mt-3">Preferences saved.</p>
           )}
           {saveError && (
-            <p className="text-sm text-red-600 mt-3">{saveError}</p>
+            <p role="alert" className="text-sm text-red mt-3">
+              {saveError}
+            </p>
           )}
         </section>
 
@@ -223,7 +226,7 @@ function UnsubscribeContent() {
               setDeleteError(null)
               setShowDeleteModal(true)
             }}
-            className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
+            className="text-sm font-medium text-red hover:text-red/80 transition-colors"
           >
             Unsubscribe from all emails
           </button>
@@ -236,25 +239,28 @@ function UnsubscribeContent() {
             Unsubscribe from everything?
           </DialogTitle>
           <DialogDescription className="mb-6">
-            You'll stop receiving all newsletters. You can re-subscribe anytime.
-            To permanently delete your data instead, sign in to your account.
+            You will stop receiving all newsletters. You can re-subscribe
+            anytime. To permanently delete your data instead, sign in to your
+            account.
           </DialogDescription>
           {deleteError && (
-            <p className="text-sm text-red-600 mb-6">{deleteError}</p>
+            <p role="alert" className="text-sm text-red mb-6">
+              {deleteError}
+            </p>
           )}
-          <div className="flex gap-3 justify-end">
-            <button
+          <div className="flex flex-wrap gap-3 justify-end">
+            <Button
               type="button"
+              variant="outline"
               onClick={() => setShowDeleteModal(false)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="destructive"
               onClick={handleDelete}
               disabled={deleting}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
               {deleting ? (
                 <span className="flex items-center gap-2">
@@ -264,7 +270,7 @@ function UnsubscribeContent() {
               ) : (
                 'Unsubscribe from all'
               )}
-            </button>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

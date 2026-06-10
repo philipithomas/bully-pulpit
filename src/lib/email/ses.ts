@@ -97,7 +97,7 @@ export async function sendNewsletterEmail(input: {
   // The HTML shell carries an unsubscribe footer; mirror it here so the
   // text/plain part has a visible opt-out (CAN-SPAM, and spam filters compare
   // the two parts). Appended at send time because the URL is per-recipient.
-  const text = `${body}\n\n—\nUnsubscribe: ${input.unsubscribeUrl}`
+  const text = `${body}\n\n--\nUnsubscribe: ${input.unsubscribeUrl}`
 
   // RFC 2369 List-Unsubscribe. The RFC 8058 one-click POST target is only added
   // when a POST URL is supplied (real per-recipient sends). Test sends omit it —

@@ -11,7 +11,13 @@ export type PostSummary = Pick<
   'slug' | 'newsletter' | 'frontmatter' | 'excerpt'
 >
 
-export function PostCard({ post }: { post: PostSummary }) {
+export function PostCard({
+  post,
+  priority = false,
+}: {
+  post: PostSummary
+  priority?: boolean
+}) {
   return (
     <article className="group bg-offwhite-light border border-gray-100 rounded-sm overflow-hidden h-full">
       <Link href={`/${post.slug}`} className="block h-full">
@@ -21,6 +27,7 @@ export function PostCard({ post }: { post: PostSummary }) {
               src={post.frontmatter.coverImage}
               alt={post.frontmatter.coverImageAlt ?? post.frontmatter.title}
               fill
+              priority={priority}
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />

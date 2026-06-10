@@ -12,7 +12,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Avatar } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Dialog,
   DialogClose,
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import type { SubscriberListItem } from '@/lib/db/queries/subscribers'
+import { cn } from '@/lib/utils'
 
 const NEWSLETTERS = [
   { key: 'subscribedPostcard', name: 'Postcard', dot: 'bg-indigo' },
@@ -31,11 +33,7 @@ const NEWSLETTERS = [
 ] as const
 
 function joinedLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  return new Date(iso).toISOString().slice(0, 10)
 }
 
 export function SubscribersClient({
@@ -264,19 +262,21 @@ export function SubscribersClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by email…"
-            className="h-10 w-full border border-gray-200 bg-white pr-9 pl-9 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none"
+            aria-label="Search subscribers by email"
+            className="h-10 w-full border border-gray-200 bg-white pr-9 pl-9 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400"
           />
           {loading && (
             <Spinner className="-translate-y-1/2 absolute top-1/2 right-3 h-4 w-4 text-gray-400" />
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={onSync}
             disabled={syncing}
             title="One-time migration: mirror all subscribers from the legacy printing-press service (idempotent)"
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-300 bg-white px-3 font-medium text-gray-900 text-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
           >
             {syncing ? (
               <Spinner className="h-4 w-4" />
@@ -284,20 +284,24 @@ export function SubscribersClient({
               <RefreshCw className="h-4 w-4 text-gray-400" />
             )}
             {syncing ? 'Syncing…' : 'Sync from printing press'}
-          </button>
+          </Button>
           <a
             href="/api/printing-press/subscribers/export"
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50"
+            className={cn(
+              buttonVariants({ variant: 'outline', size: 'sm' }),
+              'cursor-pointer'
+            )}
           >
             <Download className="h-4 w-4 text-gray-400" />
             Export
           </a>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={importing}
             title="CSV columns: email, name, postcard, contraption, workshop, confirmed"
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50 disabled:opacity-50"
           >
             {importing ? (
               <Spinner className="h-4 w-4" />
@@ -305,7 +309,7 @@ export function SubscribersClient({
               <Upload className="h-4 w-4 text-gray-400" />
             )}
             Import
-          </button>
+          </Button>
           <input
             ref={fileRef}
             type="file"
@@ -339,9 +343,7 @@ export function SubscribersClient({
                     {s.email}
                   </span>
                   {!s.confirmedAt && (
-                    <span className="rounded-sm bg-amber-100 px-1.5 py-px text-[10px] font-medium text-amber-800">
-                      unconfirmed
-                    </span>
+                    <Badge variant="warning">unconfirmed</Badge>
                   )}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
@@ -364,10 +366,10 @@ export function SubscribersClient({
                   onClick={() => copyEmail(s.email, s.uuid)}
                   aria-label="Copy email"
                   title="Copy email"
-                  className="rounded-md p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                  className="p-2.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                 >
                   {copied === s.uuid ? (
-                    <Check className="h-4 w-4 text-green-700" />
+                    <Check className="h-4 w-4 text-forest" />
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}
@@ -377,7 +379,7 @@ export function SubscribersClient({
                   onClick={() => setDeleteTarget(s)}
                   aria-label="Delete subscriber"
                   title="Delete subscriber"
-                  className="rounded-md p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                  className="p-2.5 text-gray-400 transition-colors hover:bg-red/10 hover:text-red"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -408,7 +410,7 @@ export function SubscribersClient({
                 {deleteTarget?.email}
               </span>{' '}
               and all of their data (subscription, email + sign-in history).
-              This can't be undone.
+              This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 flex justify-end gap-3">

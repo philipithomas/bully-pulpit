@@ -40,7 +40,11 @@ export default function WorkshopPage() {
         </div>
       </div>
       <div className="container py-12 md:py-16">
-        <InfinitePostGrid initialPosts={posts} newsletter="workshop" />
+        <InfinitePostGrid
+          initialPosts={posts}
+          newsletter="workshop"
+          priorityCount={2}
+        />
       </div>
     </div>
   )

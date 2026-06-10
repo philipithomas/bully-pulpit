@@ -179,7 +179,7 @@ export function GoogleSignInButton({ onSuccess }: { onSuccess?: () => void }) {
       type="button"
       onClick={requestSignIn}
       disabled={loading}
-      className="w-full flex items-center justify-center gap-3 border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-70 cursor-pointer"
+      className="w-full flex items-center justify-center gap-3 border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-050 transition-colors disabled:opacity-50 cursor-pointer"
     >
       {loading ? (
         <Spinner className="h-5 w-5" />

@@ -1,16 +1,19 @@
 'use client'
 
 import { PostCard, type PostSummary } from '@/components/posts/post-card'
+import { Spinner } from '@/components/ui/spinner'
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll'
 
 export function InfinitePostGrid({
   initialPosts,
   newsletter,
   skip = 0,
+  priorityCount = 0,
 }: {
   initialPosts: PostSummary[]
   newsletter: string
   skip?: number
+  priorityCount?: number
 }) {
   const { posts, loading, lastPostRef } = useInfiniteScroll(
     newsletter,
@@ -26,13 +29,14 @@ export function InfinitePostGrid({
             key={post.slug}
             ref={i === posts.length - 1 ? lastPostRef : undefined}
           >
-            <PostCard post={post} />
+            <PostCard post={post} priority={i < priorityCount} />
           </div>
         ))}
       </div>
       {loading && (
-        <div className="flex justify-center py-8">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
+        <div role="status" className="flex justify-center py-8">
+          <Spinner className="h-6 w-6 text-gray-500" />
+          <span className="sr-only">Loading more posts</span>
         </div>
       )}
     </>

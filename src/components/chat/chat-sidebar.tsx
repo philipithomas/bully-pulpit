@@ -18,7 +18,7 @@ function WelcomeScreen({ userName }: { userName?: string | null }) {
       <Image src="/images/bell.svg" alt="Bell" width={48} height={48} />
       <div>
         <p className="font-sans text-sm font-semibold text-gray-950">
-          {userName ? `Hey ${userName}, I'm Bell.` : "Hey, I'm Bell."}
+          {userName ? `Hey ${userName}, this is Bell.` : 'Hey, this is Bell.'}
         </p>
         <p className="mt-1 font-serif text-sm text-gray-500">
           I can search Philip&apos;s writing and answer questions about his
@@ -279,7 +279,7 @@ export function ChatSidebar() {
             <button
               type="button"
               onClick={handleNewConversation}
-              className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600"
+              className="p-2 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600"
               aria-label="New conversation"
             >
               <RotateCcw className="h-4 w-4" />
@@ -287,7 +287,7 @@ export function ChatSidebar() {
             <button
               type="button"
               onClick={togglePin}
-              className="hidden rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600 lg:block"
+              className="hidden p-2 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600 lg:block"
               aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
             >
               {pinned ? (
@@ -299,7 +299,7 @@ export function ChatSidebar() {
             <button
               type="button"
               onClick={closeSidebar}
-              className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600"
+              className="p-2 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -336,7 +336,7 @@ export function ChatSidebar() {
               {/* Error message */}
               {isError && error && (
                 <div className="flex justify-start">
-                  <div className="max-w-[85%] rounded-lg px-3.5 py-2.5 font-sans text-sm text-red-500">
+                  <div className="max-w-[85%] rounded-lg px-3.5 py-2.5 font-sans text-sm text-red">
                     <p className="mb-2">
                       {error.message ||
                         'Something went wrong. Please try again.'}
@@ -344,7 +344,7 @@ export function ChatSidebar() {
                     <button
                       type="button"
                       onClick={handleRetry}
-                      className="text-xs text-red-400 underline underline-offset-2 transition-colors hover:text-red-600"
+                      className="text-xs text-red underline underline-offset-2 transition-colors hover:text-red/80"
                     >
                       Try again
                     </button>

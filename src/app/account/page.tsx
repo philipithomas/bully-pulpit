@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuthContext } from '@/components/auth/auth-provider'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -69,10 +70,10 @@ export default function AccountPage() {
           setSaved(true)
           setSaveError(null)
         } else {
-          setSaveError("Couldn't save — try again")
+          setSaveError('Could not save. Try again.')
         }
       } catch {
-        setSaveError("Couldn't save — try again")
+        setSaveError('Could not save. Try again.')
       } finally {
         setSaving(null)
       }
@@ -137,7 +138,7 @@ export default function AccountPage() {
       <div className="bg-offwhite min-h-[60vh]">
         <div className="container max-w-lg py-12 md:py-16">
           <h1 className="text-3xl font-semibold tracking-tight text-gray-950 mb-4">
-            Account Deleted
+            Account deleted
           </h1>
           <p className="text-gray-600 mb-6">
             Your subscription and all associated data have been permanently
@@ -207,13 +208,17 @@ export default function AccountPage() {
               <p className="text-sm text-gray-500 mt-3">Preferences saved.</p>
             )}
             {saveError && (
-              <p className="text-sm text-red-600 mt-3">{saveError}</p>
+              <p role="alert" className="text-sm text-red mt-3">
+                {saveError}
+              </p>
             )}
           </section>
         )}
 
         {!prefs && prefsError && (
-          <p className="mb-10 text-sm text-red-600">{prefsError}</p>
+          <p role="alert" className="mb-10 text-sm text-red">
+            {prefsError}
+          </p>
         )}
 
         {!prefs && !prefsError && (
@@ -240,7 +245,7 @@ export default function AccountPage() {
               setDeleteError(null)
               setShowDeleteModal(true)
             }}
-            className="text-sm font-medium text-red-600 hover:text-red-800 transition-colors"
+            className="text-sm font-medium text-red hover:text-red/80 transition-colors"
           >
             Delete my data
           </button>
@@ -255,21 +260,23 @@ export default function AccountPage() {
             data including email history. This cannot be undone.
           </DialogDescription>
           {deleteError && (
-            <p className="text-sm text-red-600 mb-6">{deleteError}</p>
+            <p role="alert" className="text-sm text-red mb-6">
+              {deleteError}
+            </p>
           )}
-          <div className="flex gap-3 justify-end">
-            <button
+          <div className="flex flex-wrap gap-3 justify-end">
+            <Button
               type="button"
+              variant="outline"
               onClick={() => setShowDeleteModal(false)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="destructive"
               onClick={handleDelete}
               disabled={deleting}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
               {deleting ? (
                 <span className="flex items-center gap-2">
@@ -279,7 +286,7 @@ export default function AccountPage() {
               ) : (
                 'Delete my data'
               )}
-            </button>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

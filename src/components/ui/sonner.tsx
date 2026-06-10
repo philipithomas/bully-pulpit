@@ -10,11 +10,11 @@ function Toaster(props: ToasterProps) {
         unstyled: true,
         classNames: {
           toast:
-            'bg-white border border-gray-200 shadow-lg px-4 py-3 font-sans text-sm flex items-start gap-3 w-[360px]',
+            'bg-card border border-border shadow-lg px-4 py-3 font-sans text-sm flex items-start gap-3 w-[min(360px,calc(100vw-2rem))]',
           title: 'font-semibold text-gray-950',
           description: 'text-gray-600 text-sm',
-          error: 'bg-white border-red/30 [&>[data-icon]]:text-red',
-          success: 'bg-white border-forest/30 [&>[data-icon]]:text-forest',
+          error: 'bg-card border-red/30 [&>[data-icon]]:text-red',
+          success: 'bg-card border-forest/30 [&>[data-icon]]:text-forest',
         },
       }}
       {...props}

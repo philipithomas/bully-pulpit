@@ -44,10 +44,10 @@ function SheetContent({
         // aria-describedby at a nonexistent id (and warning about it).
         aria-describedby={undefined}
         className={cn(
-          'fixed inset-y-0 z-50 flex w-72 max-w-[85vw] flex-col bg-offwhite shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out',
+          'fixed inset-y-0 z-50 flex w-72 max-w-[85vw] flex-col bg-background shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out',
           side === 'left'
-            ? 'left-0 border-r border-gray-200 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left'
-            : 'right-0 border-l border-gray-200 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
+            ? 'left-0 border-r border-border data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left'
+            : 'right-0 border-l border-border data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
           className
         )}
         {...props}
@@ -56,7 +56,7 @@ function SheetContent({
           {title}
         </DialogPrimitive.Title>
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm text-gray-400 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-400">
+        <DialogPrimitive.Close className="absolute right-4 top-4 -m-2 p-2 text-gray-400 opacity-70 transition-opacity hover:opacity-100">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

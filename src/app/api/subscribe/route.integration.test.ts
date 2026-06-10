@@ -123,7 +123,7 @@ describe('POST /api/subscribe', () => {
     const body = await res.json()
     expect(body).toEqual({
       error:
-        "We can't deliver email to this address — contact mail@philipithomas.com.",
+        'We cannot deliver email to this address. Contact mail@philipithomas.com.',
     })
     expect(sendSimpleEmail).not.toHaveBeenCalled()
 

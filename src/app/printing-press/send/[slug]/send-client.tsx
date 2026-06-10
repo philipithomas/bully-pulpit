@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/printing-press/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -99,7 +100,6 @@ export function SendClient({
   }, [slug, adminEmail])
 
   const confirmSend = useCallback(async () => {
-    setConfirmOpen(false)
     setStarting(true)
     try {
       const res = await fetch('/api/printing-press/send', {
@@ -111,6 +111,7 @@ export function SendClient({
       if (res.ok) {
         toast.success('Sending started')
         setActive(true)
+        setConfirmOpen(false)
       } else {
         toast.error(data.error ?? 'Could not start send')
       }
@@ -153,21 +154,11 @@ export function SendClient({
 
   return (
     <div>
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Badge variant="secondary" className="capitalize">
-            {newsletter}
-          </Badge>
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-950">
-          {subject}
-        </h1>
-        {previewText && (
-          <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-            {previewText}
-          </p>
-        )}
-      </div>
+      <PageHeader title={subject} description={previewText}>
+        <Badge variant="secondary" className="capitalize">
+          {newsletter}
+        </Badge>
+      </PageHeader>
 
       {/* Status */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -243,20 +234,29 @@ export function SendClient({
         />
       </div>
 
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!starting) setConfirmOpen(open)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Send to {eligible} subscribers?</DialogTitle>
             <DialogDescription>
               This emails “{subject}” to every confirmed {newsletter} subscriber
-              who hasn’t received it yet. This can’t be undone.
+              who has not received it yet. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 mt-4">
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" disabled={starting}>
+                Cancel
+              </Button>
             </DialogClose>
-            <Button onClick={confirmSend}>Send now</Button>
+            <Button onClick={confirmSend} disabled={starting}>
+              {starting ? <Spinner className="h-4 w-4" /> : 'Send now'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
