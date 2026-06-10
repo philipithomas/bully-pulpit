@@ -1,12 +1,4 @@
-function requireEnv(name: string): string {
-  const value = process.env[name]
-  if (!value) {
-    throw new Error(
-      `Missing ${name}. Copy .env.example to .env.local and fill in values.`
-    )
-  }
-  return value
-}
+import { requireEnv } from '@/lib/env'
 
 const staticConfig = {
   title: 'Philip I. Thomas',
