@@ -8,6 +8,7 @@ import { isSuppressed } from '@/lib/db/queries/suppressions'
 import type { Subscriber } from '@/lib/db/schema'
 import { canReceiveMail } from '@/lib/email/deliverability'
 import { sendNewSubscriberNotification } from '@/lib/email/send'
+import type { ConfirmationPurpose } from '@/lib/email/templates/confirmation'
 
 /** Thrown for a malformed email address (maps to HTTP 400). */
 export class InvalidEmailError extends Error {
@@ -62,9 +63,12 @@ async function notifyNewSubscriber(subscriber: Subscriber): Promise<void> {
   }
 }
 
-async function sendLoginBestEffort(subscriber: Subscriber): Promise<void> {
+async function sendLoginBestEffort(
+  subscriber: Subscriber,
+  purpose: ConfirmationPurpose
+): Promise<void> {
   try {
-    await createAndSendLogin(subscriber)
+    await createAndSendLogin(subscriber, purpose)
   } catch (err) {
     console.error('[subscriber] confirmation/sign-in email failed:', err)
   }
@@ -76,24 +80,33 @@ async function sendLoginBestEffort(subscriber: Subscriber): Promise<void> {
  * inside sendLoginBestEffort's try is swallowed.
  */
 async function sendLoginOrRejectSuppressed(
-  subscriber: Subscriber
+  subscriber: Subscriber,
+  purpose: ConfirmationPurpose
 ): Promise<void> {
   if (await isSuppressed(subscriber.email)) {
     console.warn(`[subscriber] suppressed address blocked: ${subscriber.email}`)
     throw new SuppressedEmailError()
   }
-  await sendLoginBestEffort(subscriber)
+  await sendLoginBestEffort(subscriber, purpose)
 }
 
 /**
  * Creates or retrieves a subscriber, branching exactly like printing-press's
  * create_or_retrieve: Google sign-in confirms immediately; otherwise an OTP /
- * magic-link email is sent (resend for unconfirmed, sign-in code for confirmed).
+ * magic-link email is sent (confirmation resend for unconfirmed, sign-in code
+ * for confirmed).
+ *
+ * `name`, `source`, and `newsletters` apply only when the row is CREATED. For
+ * an existing subscriber the call is a pure sign-in: the caller is
+ * unauthenticated and unverified, so it must not be able to rewrite stored
+ * preferences (for example re-subscribing someone who opted down).
  */
 export async function createOrRetrieve(input: {
   email: string
   name?: string | null
   source?: string | null
+  /** Newsletter slugs the new row opts into; omitted means all (column defaults). */
+  newsletters?: string[]
   googleVerified?: boolean
 }): Promise<CreateResult> {
   const email = input.email.trim().toLowerCase()
@@ -119,9 +132,9 @@ export async function createOrRetrieve(input: {
     }
 
     if (existing.confirmedAt == null) {
-      await sendLoginOrRejectSuppressed(existing)
+      await sendLoginOrRejectSuppressed(existing, 'confirm')
     } else if (!googleVerified) {
-      await sendLoginOrRejectSuppressed(existing)
+      await sendLoginOrRejectSuppressed(existing, 'sign-in')
     }
 
     return { subscriber: existing, isNew: false }
@@ -131,6 +144,13 @@ export async function createOrRetrieve(input: {
     email,
     name: input.name,
     source: input.source,
+    ...(input.newsletters
+      ? {
+          subscribedContraption: input.newsletters.includes('contraption'),
+          subscribedWorkshop: input.newsletters.includes('workshop'),
+          subscribedPostcard: input.newsletters.includes('postcard'),
+        }
+      : {}),
   })
 
   if (googleVerified) {
@@ -139,6 +159,6 @@ export async function createOrRetrieve(input: {
     return { subscriber: confirmed, isNew: true }
   }
 
-  await sendLoginOrRejectSuppressed(subscriber)
+  await sendLoginOrRejectSuppressed(subscriber, 'confirm')
   return { subscriber, isNew: true }
 }

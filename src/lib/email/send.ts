@@ -5,6 +5,7 @@ import { transformEmailBody } from '@/lib/email/content-transforms'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { sendNewsletterEmail, sendSimpleEmail } from '@/lib/email/ses'
 import {
+  type ConfirmationPurpose,
   renderConfirmationEmail,
   renderConfirmationText,
 } from '@/lib/email/templates/confirmation'
@@ -16,15 +17,19 @@ import { renderNewsletterShell } from '@/lib/email/templates/newsletter-shell'
 export async function sendConfirmation(
   email: string,
   code: string,
-  magicLink: string
+  magicLink: string,
+  options?: { purpose?: ConfirmationPurpose; newsletters?: string[] }
 ): Promise<void> {
-  const html = renderConfirmationEmail({ code, magicLink })
-  const text = renderConfirmationText({ code, magicLink })
+  const purpose = options?.purpose ?? 'sign-in'
+  const input = { code, magicLink, purpose, newsletters: options?.newsletters }
   await sendSimpleEmail({
     to: email,
-    subject: 'Your sign-in code for philipithomas.com',
-    html,
-    text,
+    subject:
+      purpose === 'confirm'
+        ? 'Confirm your subscription to philipithomas.com'
+        : 'Your sign-in code for philipithomas.com',
+    html: renderConfirmationEmail(input),
+    text: renderConfirmationText(input),
   })
 }
 

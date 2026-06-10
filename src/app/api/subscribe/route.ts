@@ -6,10 +6,6 @@ import {
   SuppressedEmailError,
   UndeliverableEmailError,
 } from '@/lib/auth/subscriber-service'
-import {
-  serializeSubscriber,
-  updateSubscriber,
-} from '@/lib/db/queries/subscribers'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
@@ -36,25 +32,20 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { subscriber } = await createOrRetrieve({
+    // For a new email this creates the row (applying name, source, and the
+    // requested newsletters) and sends a confirmation code. For an existing
+    // subscriber it is a pure sign-in: the caller is unauthenticated, so the
+    // stored name, source, and newsletter preferences stay untouched.
+    await createOrRetrieve({
       email,
       name,
       source: source || undefined,
+      newsletters: Array.isArray(newsletters) ? newsletters : undefined,
     })
 
-    // Update newsletter preferences if explicitly specified
-    if (Array.isArray(newsletters)) {
-      const updated = await updateSubscriber(subscriber.uuid, {
-        subscribedContraption: newsletters.includes('contraption'),
-        subscribedWorkshop: newsletters.includes('workshop'),
-        subscribedPostcard: newsletters.includes('postcard'),
-      })
-      return NextResponse.json({
-        subscriber: serializeSubscriber(updated ?? subscriber),
-      })
-    }
-
-    return NextResponse.json({ subscriber: serializeSubscriber(subscriber) })
+    // Same minimal body whether the email was new or already subscribed: the
+    // response must not leak subscriber data or act as an enumeration oracle.
+    return NextResponse.json({ ok: true })
   } catch (err) {
     if (err instanceof InvalidEmailError) {
       return NextResponse.json(

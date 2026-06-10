@@ -1,0 +1,16 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`confirm variant > snapshots the plaintext confirmation copy 1`] = `
+"Hey,
+
+Thanks for subscribing to Contraption, Workshop, and Postcard at philipithomas.com. Enter this code to confirm your subscription:
+
+123456
+
+Or use this link to confirm directly:
+
+https://www.philipithomas.com/auth/verify?token=abc
+
+This code expires in 15 minutes. If you did not sign up, you can safely ignore this email and you will not receive any newsletters.
+"
+`;

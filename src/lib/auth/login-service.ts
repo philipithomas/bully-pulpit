@@ -17,6 +17,7 @@ import {
   sendConfirmation,
   sendNewSubscriberNotification,
 } from '@/lib/email/send'
+import type { ConfirmationPurpose } from '@/lib/email/templates/confirmation'
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
 
@@ -74,12 +75,24 @@ async function createCodeLogin(
   }
 }
 
+/** Display names of the newsletters a subscriber's row opts into, for email copy. */
+function subscribedNewsletterNames(subscriber: Subscriber): string[] {
+  const names: string[] = []
+  if (subscriber.subscribedContraption) names.push('Contraption')
+  if (subscriber.subscribedWorkshop) names.push('Workshop')
+  if (subscriber.subscribedPostcard) names.push('Postcard')
+  return names
+}
+
 /**
  * Creates a 6-digit code login AND a magic-link login (both 15-min expiry) and
- * emails them. Ported from printing-press's create_and_send_login.
+ * emails them. Ported from printing-press's create_and_send_login. `purpose`
+ * picks the email copy: 'confirm' for a new or still-unconfirmed subscription
+ * (names what the row subscribes to), 'sign-in' for a returning member.
  */
 export async function createAndSendLogin(
-  subscriber: Subscriber
+  subscriber: Subscriber,
+  purpose: ConfirmationPurpose = 'sign-in'
 ): Promise<void> {
   const expiredAt = new Date(Date.now() + FIFTEEN_MINUTES_MS)
 
@@ -97,7 +110,10 @@ export async function createAndSendLogin(
   })
 
   const magicLink = `${siteConfig.url}/auth/verify?token=${magicToken}`
-  await sendConfirmation(subscriber.email, code, magicLink)
+  await sendConfirmation(subscriber.email, code, magicLink, {
+    purpose,
+    newsletters: subscribedNewsletterNames(subscriber),
+  })
   await markEmailSent(codeLogin.id)
   await markEmailSent(magicLogin.id)
 }
