@@ -95,15 +95,6 @@ export const siteConfig = {
   get awsRegion() {
     return process.env.AWS_REGION ?? 'us-east-1'
   },
-  /** Legacy printing-press service — only used by the one-time migration sync. */
-  get printingPressUrl() {
-    return (
-      process.env.PRINTING_PRESS_URL ?? 'https://printing-press.contraption.co'
-    )
-  },
-  get m2mApiKey() {
-    return requireEnv('M2M_API_KEY')
-  },
   get adminEmails(): string[] {
     return (process.env.ADMIN_EMAILS ?? 'mail@philipithomas.com')
       .split(',')
