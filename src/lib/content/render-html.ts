@@ -112,16 +112,29 @@ function toEmailThumbPath(imagePath: string): string {
   return `/images/email/thumbnails/${basename}`
 }
 
-export async function renderMarkdownToHtml(content: string): Promise<string> {
-  const result = await unified()
+/**
+ * Renders markdown to sanitized HTML. The default mode bakes the email
+ * typography in as inline styles (email clients ignore stylesheets); pass
+ * `inlineStyles: false` for clean semantic HTML where the consumer supplies
+ * its own typography, such as RSS and JSON Feed readers.
+ */
+export async function renderMarkdownToHtml(
+  content: string,
+  options: { inlineStyles?: boolean } = {}
+): Promise<string> {
+  const { inlineStyles = true } = options
+  const processor = unified()
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkRehype)
     .use(rehypeSanitize)
-    .use(applyInlineStyles)
-    .use(useEmailPostImageVariants)
-    .use(rehypeStringify)
-    .process(content)
+  if (inlineStyles) {
+    // Email mode: bake in typography and swap in-article images for their
+    // 600px email variants. Feeds keep clean semantic HTML and full-resolution
+    // images, absolutized later via resolveRelativeUrls.
+    processor.use(applyInlineStyles).use(useEmailPostImageVariants)
+  }
+  const result = await processor.use(rehypeStringify).process(content)
 
   return String(result)
 }

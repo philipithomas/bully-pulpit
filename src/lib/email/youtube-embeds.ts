@@ -132,15 +132,17 @@ function renderEmbedHtml(embed: ExtractedYouTubeEmbed): string {
  * Replaces each token in rendered email HTML with the linked-thumbnail
  * markup. Tokens normally render as their own paragraph, which is replaced
  * wholesale; a bare token (embed written inline in a sentence) is replaced
- * in place as a fallback.
+ * in place as a fallback. Callers with a different markup idiom (the feed
+ * render path uses styleless HTML) pass their own `renderEmbed`.
  */
 export function restoreYouTubeEmbedsAsHtml(
   html: string,
-  embeds: ExtractedYouTubeEmbed[]
+  embeds: ExtractedYouTubeEmbed[],
+  renderEmbed: (embed: ExtractedYouTubeEmbed) => string = renderEmbedHtml
 ): string {
   let result = html
   for (const embed of embeds) {
-    const block = renderEmbedHtml(embed)
+    const block = renderEmbed(embed)
     const paragraph = new RegExp(`<p[^>]*>\\s*${embed.token}\\s*</p>`)
     result = paragraph.test(result)
       ? result.replace(paragraph, block)
