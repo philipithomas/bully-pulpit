@@ -31,7 +31,7 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
             src={post.frontmatter.coverImage}
             alt={post.frontmatter.coverImageAlt ?? post.frontmatter.title}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
             // All three featured cards sit above the fold on desktop. The
             // large card is the LCP candidate, so it keeps the head preload;
             // the side cards load eagerly at high fetch priority without a
@@ -49,7 +49,7 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
           {post.frontmatter.publishedAt}
         </time>
         <h2
-          className={`font-semibold tracking-tight text-gray-950 group-hover:text-forest transition-colors duration-300 mt-1 ${large ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
+          className={`font-semibold tracking-tight text-gray-950 group-hover:text-forest transition-colors duration-500 mt-1 ${large ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
         >
           {post.frontmatter.title}
         </h2>

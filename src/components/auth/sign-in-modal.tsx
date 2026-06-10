@@ -59,13 +59,13 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
 
       if (!res.ok) {
         const data = await res.json()
-        toast.error(data.error ?? 'Could not subscribe. Try again.')
+        toast.error(data.error ?? 'Could not sign in. Try again.')
         return
       }
 
       setStep('code')
     } catch {
-      toast.error('Could not subscribe. Try again.')
+      toast.error('Could not sign in. Try again.')
     } finally {
       setLoading(false)
     }
