@@ -1,19 +1,14 @@
 import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { accentHoverText } from '@/components/posts/newsletter-accent'
 import { coverPreloadAttrs } from '@/lib/content/cover-preload'
 import type { Newsletter, Post } from '@/lib/content/types'
 
-const accentClasses = {
-  forest: { bg: 'bg-forest', hoverText: 'group-hover:text-forest' },
-  walnut: { bg: 'bg-walnut', hoverText: 'group-hover:text-walnut' },
-  indigo: { bg: 'bg-indigo', hoverText: 'group-hover:text-indigo' },
-} as const
-
-const newsletterColor: Record<Newsletter, keyof typeof accentClasses> = {
-  contraption: 'forest',
-  workshop: 'walnut',
-  postcard: 'indigo',
+const accentBg: Record<Newsletter, string> = {
+  contraption: 'bg-forest',
+  workshop: 'bg-walnut',
+  postcard: 'bg-indigo',
 }
 
 interface RelatedPostsProps {
@@ -28,9 +23,6 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {posts.map((post) => {
-          const color = newsletterColor[post.newsletter]
-          const accent = accentClasses[color]
-
           return (
             <Link
               key={post.slug}
@@ -53,7 +45,9 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
                     sizes="(min-width: 768px) 33vw, 100vw"
                   />
                 ) : (
-                  <div className={`w-full h-full ${accent.bg}`} />
+                  <div
+                    className={`w-full h-full ${accentBg[post.newsletter]}`}
+                  />
                 )}
               </div>
 
@@ -63,7 +57,7 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
                   {post.frontmatter.publishedAt}
                 </time>
                 <h4
-                  className={`font-sans text-lg font-semibold text-gray-950 ${accent.hoverText} transition-colors duration-500 mb-2`}
+                  className={`font-sans text-lg font-semibold text-gray-950 ${accentHoverText[post.newsletter]} transition-colors duration-500 mb-2`}
                 >
                   {post.frontmatter.title}
                 </h4>
