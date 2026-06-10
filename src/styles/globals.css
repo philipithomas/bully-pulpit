@@ -489,6 +489,13 @@ body.dark-viewport header .btn-primary .btn-arrow {
   letter-spacing: -0.02em;
 }
 
+/* Anchor targets: breathing room above a heading reached via a #fragment
+   link. The header scrolls away with the page, so this is an offset for
+   readability, not overlap avoidance. */
+.prose :is(h1, h2, h3, h4, h5, h6)[id] {
+  scroll-margin-top: 1.5rem;
+}
+
 .prose blockquote {
   border-left-color: var(--color-gray-200);
 }

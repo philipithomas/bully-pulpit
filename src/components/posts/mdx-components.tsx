@@ -1,7 +1,12 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import type { ComponentPropsWithoutRef } from 'react'
+import {
+  type ComponentPropsWithoutRef,
+  isValidElement,
+  type ReactNode,
+} from 'react'
 import { getImageDimensions } from '@/lib/content/loader'
+import { createSlugger } from '@/lib/content/slugify'
 
 /**
  * The prose column is max-w-2xl (672px) inside the 1rem/1.5rem container.
@@ -69,3 +74,48 @@ function MdxLink(props: ComponentPropsWithoutRef<'a'>) {
 }
 
 export const mdxComponents = { img: MdxImage, a: MdxLink }
+
+/** Flattens React children to their text content, depth first. */
+function getTextContent(node: ReactNode): string {
+  if (typeof node === 'string') return node
+  if (typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(getTextContent).join('')
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return getTextContent(node.props.children)
+  }
+  return ''
+}
+
+type HeadingTag = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+
+/**
+ * Headings with stable GitHub-style anchor ids, slugged from their text via
+ * the shared slugify util so anchors computed from raw markdown (for
+ * example Bell citations) land on the same ids. Call once per MDXRemote
+ * render: the slugger deduplicates repeated headings within one document
+ * and must not leak counts across documents.
+ */
+export function createHeadingComponents() {
+  const slug = createSlugger()
+  function makeHeading(Tag: HeadingTag) {
+    return function MdxHeading({
+      children,
+      ...rest
+    }: ComponentPropsWithoutRef<HeadingTag>) {
+      const id = slug(getTextContent(children))
+      return (
+        <Tag id={id || undefined} {...rest}>
+          {children}
+        </Tag>
+      )
+    }
+  }
+  return {
+    h1: makeHeading('h1'),
+    h2: makeHeading('h2'),
+    h3: makeHeading('h3'),
+    h4: makeHeading('h4'),
+    h5: makeHeading('h5'),
+    h6: makeHeading('h6'),
+  }
+}
