@@ -1,6 +1,14 @@
 'use client'
 
-import { Check, Copy, Download, Search, Trash2, Upload } from 'lucide-react'
+import {
+  Check,
+  Copy,
+  Download,
+  MailCheck,
+  Search,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Avatar } from '@/components/ui/avatar'
@@ -16,6 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import type { SubscriberListItem } from '@/lib/db/queries/subscribers'
+import { suppressionSentence } from '@/lib/printing-press'
 import { cn } from '@/lib/utils'
 
 const NEWSLETTERS = [
@@ -45,6 +54,10 @@ export function SubscribersClient({
     null
   )
   const [deleting, setDeleting] = useState(false)
+  const [clearTarget, setClearTarget] = useState<SubscriberListItem | null>(
+    null
+  )
+  const [clearing, setClearing] = useState(false)
   const [importing, setImporting] = useState(false)
 
   const reqId = useRef(0)
@@ -152,6 +165,36 @@ export function SubscribersClient({
       setDeleting(false)
     }
   }, [deleteTarget])
+
+  const confirmClear = useCallback(async () => {
+    if (!clearTarget) return
+    setClearing(true)
+    try {
+      const res = await fetch('/api/printing-press/suppressions', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: clearTarget.email }),
+      })
+      if (res.ok) {
+        setRows((prev) =>
+          prev.map((r) =>
+            r.uuid === clearTarget.uuid
+              ? { ...r, suppressedAt: null, suppressionReason: null }
+              : r
+          )
+        )
+        toast.success('Suppression cleared')
+        setClearTarget(null)
+      } else {
+        const data = await res.json().catch(() => null)
+        toast.error(data?.error ?? 'Could not clear the suppression')
+      }
+    } catch {
+      toast.error('Could not clear the suppression')
+    } finally {
+      setClearing(false)
+    }
+  }, [clearTarget])
 
   const onImportFile = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -273,6 +316,9 @@ export function SubscribersClient({
                   {!s.confirmedAt && (
                     <Badge variant="warning">unconfirmed</Badge>
                   )}
+                  {s.suppressedAt && (
+                    <Badge variant="destructive">suppressed</Badge>
+                  )}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
                   {s.name && <span className="text-gray-500">{s.name}</span>}
@@ -287,8 +333,24 @@ export function SubscribersClient({
                   ))}
                   <span>joined {joinedLabel(s.createdAt)}</span>
                 </div>
+                {s.suppressedAt && s.suppressionReason && (
+                  <p className="mt-1 text-red-deep text-xs">
+                    {suppressionSentence(s.suppressionReason, s.suppressedAt)}
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-0.5">
+                {s.suppressedAt && (
+                  <button
+                    type="button"
+                    onClick={() => setClearTarget(s)}
+                    aria-label="Clear suppression"
+                    title="Clear suppression"
+                    className="p-2.5 text-gray-400 transition-colors hover:bg-red/10 hover:text-red"
+                  >
+                    <MailCheck className="h-4 w-4" />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => copyEmail(s.email, s.uuid)}
@@ -351,6 +413,39 @@ export function SubscribersClient({
               disabled={deleting}
             >
               {deleting ? <Spinner className="h-4 w-4" /> : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={clearTarget !== null}
+        onOpenChange={(o) => !o && setClearTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear suppression?</DialogTitle>
+            <DialogDescription>
+              This removes the suppression for{' '}
+              <span className="font-medium text-gray-700">
+                {clearTarget?.email}
+              </span>{' '}
+              from the SES account-level list and from this site, so future
+              sends deliver to the address again. Clear it only when you know
+              the address works: another bounce or complaint damages sender
+              reputation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex justify-end gap-3">
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={confirmClear}
+              disabled={clearing}
+            >
+              {clearing ? <Spinner className="h-4 w-4" /> : 'Clear suppression'}
             </Button>
           </div>
         </DialogContent>

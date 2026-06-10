@@ -2,6 +2,7 @@ import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import {
   emailSends,
+  emailSuppressions,
   logins,
   type Subscriber,
   subscribers,
@@ -263,12 +264,17 @@ export type SubscriberListItem = {
   subscribedContraption: boolean
   subscribedWorkshop: boolean
   createdAt: string
+  /** When the address was suppressed (bounce/complaint), null if deliverable. */
+  suppressedAt: string | null
+  suppressionReason: string | null
 }
 
 /**
  * Paginated subscriber list for the admin UI, optionally filtered by an email
  * substring. The search value is bound as a parameter (no SQL injection); `%`/`_`
  * in it act as LIKE wildcards, which is harmless for an admin search box.
+ * Each row carries its email_suppressions match (both sides store lowercased
+ * emails, and the suppression email is unique, so the join cannot fan out).
  */
 export async function listSubscribers(opts: {
   search?: string
@@ -291,15 +297,20 @@ export async function listSubscribers(opts: {
   // id breaks created_at ties (CSV imports share one NOW()) so offset paging
   // is stable — without it, pages can skip or duplicate rows.
   const rows = await getDb()
-    .select()
+    .select({
+      subscriber: subscribers,
+      suppressedAt: emailSuppressions.createdAt,
+      suppressionReason: emailSuppressions.reason,
+    })
     .from(subscribers)
+    .leftJoin(emailSuppressions, eq(emailSuppressions.email, subscribers.email))
     .where(where)
     .orderBy(desc(subscribers.createdAt), desc(subscribers.id))
     .limit(limit)
     .offset(offset)
 
   return {
-    rows: rows.map((s) => ({
+    rows: rows.map(({ subscriber: s, suppressedAt, suppressionReason }) => ({
       uuid: s.uuid,
       email: s.email,
       name: s.name,
@@ -308,6 +319,8 @@ export async function listSubscribers(opts: {
       subscribedContraption: s.subscribedContraption,
       subscribedWorkshop: s.subscribedWorkshop,
       createdAt: s.createdAt.toISOString(),
+      suppressedAt: suppressedAt ? suppressedAt.toISOString() : null,
+      suppressionReason: suppressionReason ?? null,
     })),
     total,
   }

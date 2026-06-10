@@ -26,6 +26,19 @@ export async function upsertSuppression(
 }
 
 /**
+ * Removes the suppression row for an email (admin manual clear). Returns true
+ * when a row existed. Callers must clear SES first: the suppression-sync cron
+ * re-creates any row the SES account-level list still carries.
+ */
+export async function deleteSuppression(email: string): Promise<boolean> {
+  const deleted = await getDb()
+    .delete(emailSuppressions)
+    .where(eq(emailSuppressions.email, email.toLowerCase()))
+    .returning({ id: emailSuppressions.id })
+  return deleted.length > 0
+}
+
+/**
  * Deletes rows from the given source whose email is absent from `emails`,
  * making a sync authoritative for that source. An empty `emails` list deletes
  * every row for the source — callers must only pass an empty list when the

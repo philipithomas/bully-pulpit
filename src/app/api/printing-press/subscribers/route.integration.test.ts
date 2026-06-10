@@ -16,6 +16,7 @@ import { signSession } from '@/lib/auth/jwt'
 import { parseCsv } from '@/lib/csv'
 import {
   emailSends,
+  emailSuppressions,
   logins,
   type NewSubscriber,
   subscribers,
@@ -156,6 +157,34 @@ describe('GET list', () => {
     expect(json.offset).toBe(2)
     expect(json.rows).toHaveLength(1)
     expect(json.rows[0].email).toBe('alice@example.com')
+  })
+
+  it('carries suppression state (when and why) on affected rows only', async () => {
+    await signInAsAdmin()
+    await seedSubscriber({ email: 'fine@example.com' })
+    await seedSubscriber({ email: 'gone@example.com' })
+    const suppressedAt = new Date('2026-06-10T14:03:00.000Z')
+    await db.insert(emailSuppressions).values({
+      email: 'gone@example.com',
+      reason: 'BOUNCE',
+      source: 'ses_suppression_list',
+      createdAt: suppressedAt,
+    })
+
+    const json = await (await listGet(listRequest())).json()
+    expect(json.total).toBe(2)
+
+    const gone = json.rows.find(
+      (r: { email: string }) => r.email === 'gone@example.com'
+    )
+    expect(gone.suppressedAt).toBe(suppressedAt.toISOString())
+    expect(gone.suppressionReason).toBe('BOUNCE')
+
+    const fine = json.rows.find(
+      (r: { email: string }) => r.email === 'fine@example.com'
+    )
+    expect(fine.suppressedAt).toBeNull()
+    expect(fine.suppressionReason).toBeNull()
   })
 })
 

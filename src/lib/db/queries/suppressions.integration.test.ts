@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   deleteBySourceNotIn,
+  deleteSuppression,
   isSuppressed,
   upsertSuppression,
 } from '@/lib/db/queries/suppressions'
@@ -83,6 +84,32 @@ describe('upsertSuppression', () => {
     const rows = await db.select().from(emailSuppressions)
     expect(rows).toHaveLength(1)
     expect(rows[0].source).toBeNull()
+  })
+})
+
+describe('deleteSuppression', () => {
+  it('deletes the matching row case-insensitively and reports it existed', async () => {
+    await db.insert(emailSuppressions).values([
+      {
+        email: 'gone@example.com',
+        reason: 'BOUNCE',
+        source: 'ses_suppression_list',
+      },
+      {
+        email: 'other@example.com',
+        reason: 'BOUNCE',
+        source: 'ses_suppression_list',
+      },
+    ])
+
+    expect(await deleteSuppression('GoNe@Example.COM')).toBe(true)
+
+    const remaining = await db.select().from(emailSuppressions)
+    expect(remaining.map((r) => r.email)).toEqual(['other@example.com'])
+  })
+
+  it('returns false when no row matches', async () => {
+    expect(await deleteSuppression('absent@example.com')).toBe(false)
   })
 })
 

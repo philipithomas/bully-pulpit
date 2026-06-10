@@ -17,3 +17,21 @@ export function isRecent(
 ): boolean {
   return new Date(publishedAt).getTime() >= now - windowMs
 }
+
+/**
+ * One prose sentence for the subscribers list describing why delivery to an
+ * address is off. The suppression-sync cron writes the SES suppression list's
+ * terse enum ('BOUNCE'), but the reason column is free text, so any other
+ * string renders gracefully too. Either shape reads as mid-sentence detail
+ * after the date, per the colophon: sentence case, ISO date, no contractions.
+ */
+export function suppressionSentence(
+  reason: string,
+  suppressedAt: string
+): string {
+  const date = suppressedAt.slice(0, 10)
+  const detail = /^[A-Z_]+$/.test(reason)
+    ? reason.toLowerCase().replace(/_/g, ' ')
+    : (reason.charAt(0).toLowerCase() + reason.slice(1)).replace(': ', ', ')
+  return `Deliverability off since ${date}: ${detail.replace(/\.+$/, '')}.`
+}
