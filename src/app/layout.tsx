@@ -13,6 +13,7 @@ import { CoverPreload } from '@/components/posts/cover-preload'
 import { ImageZoom } from '@/components/ui/image-zoom'
 import { Toaster } from '@/components/ui/sonner'
 import { siteConfig } from '@/lib/config'
+import { feedDiscovery } from '@/lib/feeds/discovery'
 
 // The above-the-fold faces (Sohne 400/600, Tiempos Text 400) — otherwise the
 // browser discovers them only after downloading and parsing the CSS. Emitted
@@ -38,6 +39,9 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   metadataBase: new URL(siteConfig.url),
+  alternates: {
+    types: feedDiscovery(),
+  },
   openGraph: {
     type: 'website',
     locale: 'en_US',

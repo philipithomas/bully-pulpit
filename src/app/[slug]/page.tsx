@@ -23,6 +23,7 @@ import {
   getPostBySlug,
 } from '@/lib/content/loader'
 import { getRelatedPosts } from '@/lib/content/related'
+import { feedDiscovery } from '@/lib/feeds/discovery'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -51,7 +52,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: item.frontmatter.title,
     description,
-    alternates: { canonical: `/${item.slug}` },
+    alternates: {
+      canonical: `/${item.slug}`,
+      // Posts lead with their newsletter's feed; standalone pages advertise
+      // the full set with the combined feed first.
+      types: feedDiscovery(post?.newsletter),
+    },
     openGraph: {
       title: item.frontmatter.title,
       description,

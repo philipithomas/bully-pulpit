@@ -5,11 +5,12 @@ import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
+import { feedDiscovery } from '@/lib/feeds/discovery'
 
 // Auth redirects land on /?signed-in=1 and /?error=invalid-token; the
 // canonical collapses those variants.
 export const metadata: Metadata = {
-  alternates: { canonical: '/' },
+  alternates: { canonical: '/', types: feedDiscovery() },
 }
 
 export default function HomePage() {

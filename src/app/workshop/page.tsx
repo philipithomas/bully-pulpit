@@ -3,11 +3,15 @@ import Image from 'next/image'
 import { InfinitePostGrid } from '@/components/posts/infinite-post-grid'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
+import { feedDiscovery } from '@/lib/feeds/discovery'
 
 export const metadata: Metadata = {
   title: 'Workshop',
   description: siteConfig.newsletters.workshop.tagline,
-  alternates: { canonical: '/workshop' },
+  alternates: {
+    canonical: '/workshop',
+    types: feedDiscovery('workshop'),
+  },
 }
 
 export default function WorkshopPage() {

@@ -7,11 +7,15 @@ import { siteConfig } from '@/lib/config'
 import { coverPreloadAttrs } from '@/lib/content/cover-preload'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
+import { feedDiscovery } from '@/lib/feeds/discovery'
 
 export const metadata: Metadata = {
   title: 'Contraption',
   description: siteConfig.newsletters.contraption.tagline,
-  alternates: { canonical: '/contraption' },
+  alternates: {
+    canonical: '/contraption',
+    types: feedDiscovery('contraption'),
+  },
 }
 
 function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
