@@ -147,6 +147,19 @@ async function main() {
     }
   }
 
+  // Warning only: body images should ship with alt text. Decorative empties
+  // are allowed, so this lists offenders without failing the build.
+  const emptyAlt: string[] = []
+  for (const post of posts) {
+    for (const match of post.content.matchAll(/!\[\]\(([^)]+)\)/g)) {
+      emptyAlt.push(`${post.slug}: image ${match[1]} has empty alt text`)
+    }
+  }
+  if (emptyAlt.length > 0) {
+    console.warn(`Content check warnings (${emptyAlt.length} empty alt(s)):`)
+    for (const w of emptyAlt) console.warn(`  ! ${w}`)
+  }
+
   if (errors.length > 0) {
     console.error(`Content check failed (${errors.length} problem(s)):\n`)
     for (const e of errors) console.error(`  ✗ ${e}`)
