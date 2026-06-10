@@ -263,6 +263,8 @@ export type SubscriberListItem = {
   subscribedPostcard: boolean
   subscribedContraption: boolean
   subscribedWorkshop: boolean
+  /** Where the signup came from (external referrer origin, or a placeholder like csv_import). */
+  source: string | null
   createdAt: string
   /** When the address was suppressed (bounce/complaint), null if deliverable. */
   suppressedAt: string | null
@@ -318,6 +320,7 @@ export async function listSubscribers(opts: {
       subscribedPostcard: s.subscribedPostcard,
       subscribedContraption: s.subscribedContraption,
       subscribedWorkshop: s.subscribedWorkshop,
+      source: s.source,
       createdAt: s.createdAt.toISOString(),
       suppressedAt: suppressedAt ? suppressedAt.toISOString() : null,
       suppressionReason: suppressionReason ?? null,
