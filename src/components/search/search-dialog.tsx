@@ -95,23 +95,15 @@ export function SearchDialog({
           .catch(() => {})
       }
     } else {
-      // The dialog stays mounted after first open (lazy chunk), so cancel
-      // pending work on close — a debounced fetch for a dismissed query
-      // would log analytics and clobber state behind the closed dialog.
-      if (debounceRef.current) clearTimeout(debounceRef.current)
+      // The dialog stays mounted after first open (lazy chunk), so cancel the
+      // in-flight request on close — a fetch for a dismissed query would
+      // clobber state behind the closed dialog.
       abortRef.current?.abort()
       setLoading(false)
     }
   }, [open, recentPosts.length])
 
   const abortRef = useRef<AbortController>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [])
 
   const fetchResults = useCallback(async (q: string) => {
     const controller = new AbortController()
@@ -147,11 +139,12 @@ export function SearchDialog({
       setQuery(value)
       setActiveIndex(0)
       setSearchError(null)
-      // Abort + reflect state synchronously: a stale in-flight response must
-      // never paint over a newer query, and showing the spinner through the
-      // debounce keeps the "No results found" state from flashing.
+      // Abort the previous in-flight request synchronously so a stale response
+      // can never paint over a newer query. Search is pure in-process BM25 over
+      // the committed local index (no network, no cost), so there is no debounce:
+      // we fire on every keystroke and rely on this abort + the per-query cache
+      // to keep the latest query authoritative.
       abortRef.current?.abort()
-      if (debounceRef.current) clearTimeout(debounceRef.current)
       if (value.length < 2) {
         setResults([])
         setLoading(false)
@@ -164,7 +157,7 @@ export function SearchDialog({
         return
       }
       setLoading(true)
-      debounceRef.current = setTimeout(() => fetchResults(value), 80)
+      fetchResults(value)
     },
     [fetchResults]
   )
@@ -248,7 +241,13 @@ export function SearchDialog({
                 aria-controls={expanded ? listboxId : undefined}
                 aria-activedescendant={activeOptionId}
                 aria-autocomplete="list"
-                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm text-gray-950 placeholder:text-gray-400"
+                // Command-palette exception: the dialog autofocuses this input
+                // on open, so the global :focus-visible keyboard ring is
+                // redundant noise on top of the blinking cursor, placeholder,
+                // and the distinct dialog frame. Suppress the outline on THIS
+                // input only — the global indicator stays intact everywhere
+                // else, and no replacement ring is added.
+                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm text-gray-950 placeholder:text-gray-400 focus:outline-none focus-visible:outline-none"
               />
               {loading && <Spinner className="h-4 w-4 text-gray-400" />}
             </div>

@@ -50,17 +50,24 @@ export function ChatInput({
   }, [])
 
   return (
+    // items-end keeps the field and the square button bottom-aligned as the
+    // textarea grows. The field is wrapped in a bordered box that shares the
+    // button's 40px height (min-h-10) at a single line, so the two controls
+    // read as one row instead of a short borderless textarea floating above a
+    // taller button. Square corners and warm tokens, matching the search input.
     <div className="flex items-end gap-2 border-t border-gray-100 p-3">
-      <textarea
-        ref={textareaRef}
-        onKeyDown={handleKeyDown}
-        onInput={handleInput}
-        placeholder="Ask a question…"
-        aria-label="Ask Bell a question"
-        rows={1}
-        disabled={isStreaming}
-        className="flex-1 resize-none bg-transparent py-2 font-sans text-sm leading-tight text-gray-950 placeholder:text-gray-400 disabled:opacity-50"
-      />
+      <div className="flex min-h-10 flex-1 items-center border border-gray-200 bg-card px-3">
+        <textarea
+          ref={textareaRef}
+          onKeyDown={handleKeyDown}
+          onInput={handleInput}
+          placeholder="Ask a question…"
+          aria-label="Ask Bell a question"
+          rows={1}
+          disabled={isStreaming}
+          className="w-full resize-none bg-transparent py-2 font-sans text-sm leading-tight text-gray-950 placeholder:text-gray-400 disabled:opacity-50"
+        />
+      </div>
       <button
         type="button"
         onClick={isStreaming ? onStop : handleSubmit}
