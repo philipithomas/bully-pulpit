@@ -3,6 +3,8 @@ import {
   resolveRelativeUrls,
   styleContentImages,
   styleContentLinks,
+  transformEmailBody,
+  unwrapFragmentLinks,
 } from '@/lib/email/content-transforms'
 
 // Ported from printing-press templates/mod.rs tests. Base URL is the canonical
@@ -73,6 +75,63 @@ describe('resolveRelativeUrls', () => {
     expect(resolveRelativeUrls(html)).toBe(
       `<a href="${BASE}/local">local</a> <a href="https://external.com">ext</a> <img src="${BASE}/img.png">`
     )
+  })
+})
+
+describe('unwrapFragmentLinks', () => {
+  // Real markup: the Ghost-migration footnote reference in
+  // content/contraption/2025-02-21-rails-versus-nextjs.mdx ([\[1\]](#fn1))
+  // as renderMarkdownToHtml emits it, inline link style included. No #fn1
+  // id exists anywhere in the email, so the anchor is a dead link.
+  const footnoteRef =
+    'many people return to vinyl because it offers simplicity, stability, and longevity<a href="#fn1" style="color: inherit; text-decoration: underline; text-decoration-color: #b1ada6;">[1]</a>.'
+
+  it('unwraps a footnote reference, keeping the visible text', () => {
+    expect(unwrapFragmentLinks(footnoteRef)).toBe(
+      'many people return to vinyl because it offers simplicity, stability, and longevity[1].'
+    )
+  })
+
+  it('unwraps the footnote backlink in the footnote list', () => {
+    expect(
+      unwrapFragmentLinks(
+        '<li>Thanks, Benjamin Franklin. <a href="#fnref1" style="color: inherit; text-decoration: underline; text-decoration-color: #b1ada6;">↩︎</a></li>'
+      )
+    ).toBe('<li>Thanks, Benjamin Franklin. ↩︎</li>')
+  })
+
+  it('unwraps multiple fragment anchors independently', () => {
+    expect(
+      unwrapFragmentLinks(
+        'Ruby<a href="#fn3">[3]</a> and Rails<a href="#fn2">[2]</a>'
+      )
+    ).toBe('Ruby[3] and Rails[2]')
+  })
+
+  it('leaves absolute links unchanged', () => {
+    const html = '<a href="https://example.com/page#section">link</a>'
+    expect(unwrapFragmentLinks(html)).toBe(html)
+  })
+
+  it('leaves root-relative links unchanged', () => {
+    const html = '<a href="/blog/my-post">link</a>'
+    expect(unwrapFragmentLinks(html)).toBe(html)
+  })
+
+  it('handles single-quoted hrefs', () => {
+    expect(unwrapFragmentLinks("<a href='#fn1'>[1]</a>")).toBe('[1]')
+  })
+})
+
+describe('transformEmailBody', () => {
+  it('drops dead fragment anchors before styling links', () => {
+    const out = transformEmailBody(
+      '<p>Stable and long-lived<a href="#fn1">[1]</a>. See <a href="/colophon">the colophon</a>.</p>',
+      'contraption'
+    )
+    expect(out).not.toContain('href="#')
+    expect(out).toContain('Stable and long-lived[1].')
+    expect(out).toContain(`href="${BASE}/colophon"`)
   })
 })
 
