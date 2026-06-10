@@ -92,14 +92,15 @@ function ChatMarkdown({
         em: ({ children }) => <em>{children}</em>,
         // Inline code only — code inside a fence is unstyled here and the
         // styled <pre> wrapper below takes over (className-based detection
-        // misses fences without a language tag).
+        // misses fences without a language tag). gray-100/gray-075 instead
+        // of gray-050, which disappears against the offwhite panel.
         code: (props: ComponentPropsWithoutRef<'code'>) => (
-          <code className="rounded bg-gray-050 px-1 py-0.5 font-mono text-[0.875em]">
+          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[0.875em]">
             {props.children}
           </code>
         ),
         pre: ({ children }) => (
-          <pre className="mb-3 overflow-x-auto rounded bg-gray-050 p-3 font-mono text-[0.8125em] last:mb-0 [&_code]:block [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-[1em]">
+          <pre className="mb-3 overflow-x-auto rounded bg-gray-075 p-3 font-mono text-[0.8125em] last:mb-0 [&_code]:block [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-[1em]">
             {children}
           </pre>
         ),

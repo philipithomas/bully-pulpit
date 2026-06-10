@@ -427,8 +427,6 @@ body:has(> * [data-bg="gray-050"]) {
   --tw-prose-links: var(--tw-prose-body);
   --tw-prose-bold: var(--color-gray-900);
   --tw-prose-code: var(--color-gray-900);
-  --tw-prose-pre-bg: var(--color-gray-900);
-  --tw-prose-pre-code: var(--color-gray-100);
   --tw-prose-quotes: var(--color-gray-800);
 }
 
@@ -461,10 +459,10 @@ body:has(> * [data-bg="gray-050"]) {
 
 .prose :where(code):not(:where(pre *)) {
   background-color: var(--color-gray-100);
-  padding: 0.25rem 0.25rem 0.125rem;
+  padding: 0.0625rem 0.3125rem;
   border-radius: 0.25rem;
   font-family: var(--font-mono);
-  font-size: 0.875em;
+  font-size: 0.85em;
   font-weight: normal;
 }
 
@@ -473,10 +471,18 @@ body:has(> * [data-bg="gray-050"]) {
   content: none;
 }
 
+/* Code blocks sit on a light warm surface so highlighted tokens (the shiki
+   theme in src/lib/content/highlighter.ts shares these exact values) read as
+   part of the page. The background and color here also cover fences shiki
+   skips, keeping tagged and untagged blocks on the same surface. */
 .prose pre {
-  background-color: var(--color-gray-900);
-  color: var(--color-gray-100);
-  border-radius: 0.5rem;
+  background-color: var(--color-gray-075);
+  color: var(--color-gray-800);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.25rem;
+  font-size: 0.75em;
+  line-height: 1.6;
+  tab-size: 2;
 }
 
 /* Newsletter accent colors for prose underlines */
