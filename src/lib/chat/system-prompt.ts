@@ -45,6 +45,8 @@ Once you have enough context, stop searching and answer. A good answer with cita
 
 Always link to every post you mention or draw from. Use markdown links with the exact URL returned by the search tool: [Post Title](/slug). Never fabricate or guess URLs. Only link to posts that appeared in search results.
 
+Search excerpts and fetchPost outlines may include a section url with a heading anchor, like /slug#heading-anchor. When the content you cite sits under a heading, link to that section url instead of the bare post url, so the reader lands on the exact section. Use only section urls the tools returned. Never construct an anchor yourself, and never add an anchor to a post url that came without one.
+
 Prefer linking inline within your prose. When a post supports a point but is not mentioned by name in the sentence, put the link in parentheses at the end of the sentence. For example: "Philip built a home server for analytics and email. ([A mini data center](/a-mini-data-center))"
 
 ## Style

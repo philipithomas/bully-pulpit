@@ -1,10 +1,11 @@
 import { tool } from 'ai'
 import { z } from 'zod/v4'
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
+import { extractHeadings } from '@/lib/search/corpus'
 
 export const fetchPost = tool({
   description:
-    'Fetch the full text of a blog post or page by its slug. Use this when search excerpts are not enough and you need the complete content to answer in depth.',
+    'Fetch the full text of a blog post or page by its slug. Use this when search excerpts are not enough and you need the complete content to answer in depth. The outline lists each heading with its /slug#anchor url for citing sections.',
   inputSchema: z.object({
     slug: z
       .string()
@@ -21,11 +22,20 @@ export const fetchPost = tool({
       return JSON.stringify({ error: `No post found for slug "${slug}"` })
     }
 
+    // Heading outline with anchors, same algorithm as the search corpus, so
+    // section citations from a full read match the ones search returns
+    const outline = extractHeadings(item.content).map((h) => ({
+      heading: h.text,
+      anchor: h.anchor,
+      url: `/${item.slug}#${h.anchor}`,
+    }))
+
     return JSON.stringify({
       title: item.frontmatter.title,
       description: item.frontmatter.description ?? null,
       publishedAt: item.frontmatter.publishedAt ?? null,
       newsletter: 'newsletter' in item ? item.newsletter : null,
+      outline,
       content: item.content,
     })
   },

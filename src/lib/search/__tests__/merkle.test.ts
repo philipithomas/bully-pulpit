@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { CorpusPost } from '@/lib/search/corpus'
+import { buildCorpus } from '@/lib/search/corpus'
+import { EMBEDDING_DIMS, EMBEDDING_MODEL } from '@/lib/search/embedding'
+import { loadSearchIndex } from '@/lib/search/index-file'
 import {
   buildMerkleTree,
   chunkHash,
@@ -116,5 +119,18 @@ describe('diffMerkleTrees', () => {
       committed
     )
     expect(diff.stale).toEqual(['alpha'])
+  })
+})
+
+describe('committed index stability', () => {
+  it('matches the recomputed merkle root: heading metadata is hash-transparent', () => {
+    // Chunk hashes commit to model:dims:text only. Section anchors are chunk
+    // metadata, so the committed index must still verify byte-for-byte.
+    const index = loadSearchIndex()
+    expect(index).not.toBeNull()
+    expect(index!.model).toBe(EMBEDDING_MODEL)
+    expect(index!.dims).toBe(EMBEDDING_DIMS)
+    const tree = buildMerkleTree(buildCorpus(), EMBEDDING_MODEL, EMBEDDING_DIMS)
+    expect(tree.root).toBe(index!.merkleRoot)
   })
 })
