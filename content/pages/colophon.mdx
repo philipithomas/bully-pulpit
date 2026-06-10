@@ -15,7 +15,7 @@ Three typefaces from [Klim Type Foundry](https://klim.co.nz/) in Wellington, New
 
 ## Technical
 
-The [site](https://github.com/philipithomas/bully-pulpit) is a Next.js application with MDX content, statically generated at build time and hosted on [Vercel](https://vercel.com/). Search uses [Chroma](https://www.trychroma.com/) with SPLADE embeddings.
+The [site](https://github.com/philipithomas/bully-pulpit) is a Next.js application with MDX content, statically generated at build time and hosted on [Vercel](https://vercel.com/). Search runs on a local index committed to the repository, combining BM25 keyword matching with OpenAI embeddings.
 
 A Mac Mini at my home in San Francisco handles email delivery, analytics, and a handful of other services through Docker containers behind a Cloudflare Tunnel. I wrote about the motivation in [A mini data center](/a-mini-data-center) and published a complete setup guide in [How to host web apps on a Mac Mini](/how-to-host-web-apps-on-a-mac-mini). The framework powering it, [Toolbox](https://github.com/contraptionco/toolbox), is open source.
 

@@ -10,19 +10,13 @@ import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
-interface SearchMatch {
-  document: string
-  score: number
-  type: string
-}
-
 interface SearchResult {
   slug: string
   title: string
   url: string
   newsletter: string
   coverImage: string
-  matches: SearchMatch[]
+  excerpts: string[]
 }
 
 const NEWSLETTER_COLORS: Record<string, string> = {
@@ -30,16 +24,6 @@ const NEWSLETTER_COLORS: Record<string, string> = {
   workshop: 'bg-walnut',
   postcard: 'bg-indigo',
   page: 'bg-gray-400',
-}
-
-function getSessionId() {
-  const key = 'search_session_id'
-  let id = sessionStorage.getItem(key)
-  if (!id) {
-    id = crypto.randomUUID()
-    sessionStorage.setItem(key, id)
-  }
-  return id
 }
 
 function highlightQuery(text: string, query: string) {
@@ -59,17 +43,6 @@ function highlightQuery(text: string, query: string) {
   })
 }
 
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/<[^>]+>/g, '')
-    .trim()
-}
-
 export function SearchDialog({
   open,
   onOpenChange,
@@ -85,7 +58,8 @@ export function SearchDialog({
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
-  const searchIdRef = useRef<string | null>(null)
+  // Client-side cache keyed by query so back-typing repaints instantly
+  const cacheRef = useRef(new Map<string, SearchResult[]>())
 
   // Focus input and load recent posts when dialog opens
   useEffect(() => {
@@ -94,7 +68,6 @@ export function SearchDialog({
       setResults([])
       setSearchError(null)
       setActiveIndex(0)
-      searchIdRef.current = null
       setTimeout(() => inputRef.current?.focus(), 50)
 
       if (recentPosts.length === 0) {
@@ -114,7 +87,7 @@ export function SearchDialog({
                   url: `/${p.slug}`,
                   newsletter: p.newsletter,
                   coverImage: p.coverImage,
-                  matches: [],
+                  excerpts: [],
                 })
               )
             )
@@ -144,25 +117,23 @@ export function SearchDialog({
     const controller = new AbortController()
     abortRef.current = controller
     try {
-      const sid = getSessionId()
-      const res = await fetch(
-        `/api/search?q=${encodeURIComponent(q)}&sid=${sid}`,
-        { signal: controller.signal }
-      )
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+        signal: controller.signal,
+      })
       if (res.ok) {
         const data = await res.json()
         setResults(data.results ?? [])
-        searchIdRef.current = data.searchId ?? null
+        if (cacheRef.current.size > 100) cacheRef.current.clear()
+        cacheRef.current.set(q, data.results ?? [])
         window.plausible?.('Search', {
           props: { query: q, results: (data.results ?? []).length },
         })
         track('Search', { query: q, results: (data.results ?? []).length })
       } else {
-        // Surface definitive rejections (e.g. the 429 rate limit) instead of
-        // leaving the previous query's results on screen with no feedback.
+        // Surface definitive rejections instead of leaving the previous
+        // query's results on screen with no feedback.
         const data = await res.json().catch(() => null)
         setResults([])
-        searchIdRef.current = null
         setSearchError(data?.error ?? 'Search failed. Try again.')
       }
     } catch (e) {
@@ -187,30 +158,22 @@ export function SearchDialog({
       if (value.length < 2) {
         setResults([])
         setLoading(false)
-        searchIdRef.current = null
+        return
+      }
+      const cached = cacheRef.current.get(value)
+      if (cached) {
+        setResults(cached)
+        setLoading(false)
         return
       }
       setLoading(true)
-      debounceRef.current = setTimeout(() => fetchResults(value), 200)
+      debounceRef.current = setTimeout(() => fetchResults(value), 80)
     },
     [fetchResults]
   )
 
   const navigate = useCallback(
-    (slug: string, url: string) => {
-      // Log selection — fire and forget
-      if (searchIdRef.current) {
-        fetch('/api/search/select', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            searchId: searchIdRef.current,
-            selectedSlug: slug,
-            selectedUrl: url,
-          }),
-        }).catch(() => {})
-      }
-
+    (slug: string) => {
       onOpenChange(false)
       router.push(`/${slug}`)
     },
@@ -239,8 +202,7 @@ export function SearchDialog({
         if (showAskAI && activeIndex === displayResults.length) {
           handleAskAI()
         } else if (displayResults[activeIndex]) {
-          const r = displayResults[activeIndex]
-          navigate(r.slug, r.url)
+          navigate(displayResults[activeIndex].slug)
         }
       }
     },
@@ -288,20 +250,12 @@ export function SearchDialog({
                     )}
                     <ul className="max-h-80 overflow-y-auto p-2">
                       {displayResults.map((result, i) => {
-                        const titleLower = result.title.toLowerCase().trim()
-                        const snippet = result.matches.find(
-                          (m) =>
-                            m.type === 'content' &&
-                            !m.document
-                              .toLowerCase()
-                              .trim()
-                              .startsWith(titleLower)
-                        )
+                        const snippet = result.excerpts[0]
                         return (
                           <li key={result.slug}>
                             <button
                               type="button"
-                              onClick={() => navigate(result.slug, result.url)}
+                              onClick={() => navigate(result.slug)}
                               onMouseEnter={() => setActiveIndex(i)}
                               className={cn(
                                 'flex w-full gap-3 rounded px-3 py-2.5 text-left transition-colors',
@@ -338,10 +292,7 @@ export function SearchDialog({
                                 </p>
                                 {snippet && (
                                   <p className="mt-0.5 line-clamp-2 font-serif text-xs text-gray-500">
-                                    {highlightQuery(
-                                      stripMarkdown(snippet.document),
-                                      query
-                                    )}
+                                    {highlightQuery(snippet, query)}
                                   </p>
                                 )}
                               </div>
