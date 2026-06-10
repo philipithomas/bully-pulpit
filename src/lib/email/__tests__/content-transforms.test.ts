@@ -5,9 +5,9 @@ import {
   styleContentLinks,
 } from '@/lib/email/content-transforms'
 
-// Ported from printing-press templates/mod.rs tests. Base URL is the no-`www`
-// siteConfig.url, matching the absolute links the body renderer already emits.
-const BASE = 'https://philipithomas.com'
+// Ported from printing-press templates/mod.rs tests. Base URL is the canonical
+// www siteConfig.url, matching the absolute links the body renderer already emits.
+const BASE = 'https://www.philipithomas.com'
 
 describe('resolveRelativeUrls', () => {
   it('rewrites href with double quotes', () => {

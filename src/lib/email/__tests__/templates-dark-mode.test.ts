@@ -23,8 +23,8 @@ function extractDarkBlock(html: string): string {
 describe('newsletter shell dark mode', () => {
   const baseInput = {
     content: '<p>Hello</p>',
-    unsubscribeUrl: 'https://philipithomas.com/unsubscribe',
-    siteUrl: 'https://philipithomas.com',
+    unsubscribeUrl: 'https://www.philipithomas.com/unsubscribe',
+    siteUrl: 'https://www.philipithomas.com',
   }
 
   it('declares color-scheme meta tags', () => {
@@ -89,7 +89,7 @@ describe('full newsletter render for a real post', () => {
       bodyHtml: body.html,
       newsletter: 'contraption',
       previewText: body.previewText,
-      unsubscribeUrl: 'https://philipithomas.com/unsubscribe',
+      unsubscribeUrl: 'https://www.philipithomas.com/unsubscribe',
     })
     // Meta tags and the dark override block survive the full pipeline:
     // rehype-sanitize runs on the markdown body only, before the shell wraps it.
@@ -110,7 +110,7 @@ describe('full newsletter render for a real post', () => {
 describe('confirmation email dark mode', () => {
   const html = renderConfirmationEmail({
     code: '123456',
-    magicLink: 'https://philipithomas.com/api/auth/magic?token=abc',
+    magicLink: 'https://www.philipithomas.com/api/auth/magic?token=abc',
   })
 
   it('declares color-scheme meta tags and a dark override block', () => {
@@ -124,7 +124,7 @@ describe('confirmation email dark mode', () => {
       '<body class="email-body" style="margin: 0; padding: 0; background-color: #F5F3F0;">'
     )
     expect(html).toContain(
-      'class="email-button" href="https://philipithomas.com/api/auth/magic?token=abc" style="display: inline-block; background-color: #111110; color: #ffffff;'
+      'class="email-button" href="https://www.philipithomas.com/api/auth/magic?token=abc" style="display: inline-block; background-color: #111110; color: #ffffff;'
     )
     expect(html).toContain(
       '.email-card a.email-button { background-color: #ECE9E4 !important; color: #121110 !important; }'

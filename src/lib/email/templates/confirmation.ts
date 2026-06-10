@@ -46,7 +46,7 @@ export function renderConfirmationEmail(input: {
               Hey,
             </p>
             <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.5; color: #3B3834;">
-              Your sign-in code for <a href="https://philipithomas.com" style="color: #3B3834; text-decoration: none; font-weight: 600;">philipithomas.com</a> is:
+              Your sign-in code for <a href="https://www.philipithomas.com" style="color: #3B3834; text-decoration: none; font-weight: 600;">philipithomas.com</a> is:
             </p>
             <div style="text-align: center; padding: 20px 0 28px;">
               <span style="font-family: 'Sohne Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 32px; font-weight: 600; letter-spacing: 0.3em; color: #111110;">${code}</span>
