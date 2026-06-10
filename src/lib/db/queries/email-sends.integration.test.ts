@@ -196,17 +196,19 @@ describe('markSent and markPermanentFailure', () => {
 
 describe('pendingRowIdsBySlug', () => {
   it('returns only pending rows for the slug, ordered by id ascending', async () => {
-    const [aliceId, bobId, carolId] = await seedSubscribers([
+    const [aliceId, bobId, carolId, daveId, erinId] = await seedSubscribers([
       'alice@example.com',
       'bob@example.com',
       'carol@example.com',
+      'dave@example.com',
+      'erin@example.com',
     ])
     const pending1 = await seedSend(aliceId, 'post-a')
     await seedSend(bobId, 'post-a', { sentAt: new Date() })
     await seedSend(carolId, 'post-a', { sendError: 'boom' })
     await seedSend(aliceId, 'post-b')
-    const pending2 = await seedSend(bobId, 'post-a')
-    const pending3 = await seedSend(carolId, 'post-a')
+    const pending2 = await seedSend(daveId, 'post-a')
+    const pending3 = await seedSend(erinId, 'post-a')
 
     const ids = await pendingRowIdsBySlug('post-a')
     expect(ids).toEqual(
@@ -221,11 +223,12 @@ describe('pendingRowIdsBySlug', () => {
 
 describe('resetFailedBySlug', () => {
   it('clears send_error only on failed-not-sent rows for the slug and reports the count', async () => {
-    const [aliceId, bobId, carolId, daveId] = await seedSubscribers([
+    const [aliceId, bobId, carolId, daveId, erinId] = await seedSubscribers([
       'alice@example.com',
       'bob@example.com',
       'carol@example.com',
       'dave@example.com',
+      'erin@example.com',
     ])
     const failed = await seedSend(aliceId, 'post-a', {
       sendError: 'boom',
@@ -236,7 +239,7 @@ describe('resetFailedBySlug', () => {
     const failedOtherSlug = await seedSend(daveId, 'post-b', {
       sendError: 'boom',
     })
-    const sentWithError = await seedSend(aliceId, 'post-a', {
+    const sentWithError = await seedSend(erinId, 'post-a', {
       sentAt: new Date(),
       sendError: 'late bounce',
     })
@@ -275,20 +278,22 @@ describe('resetFailedBySlug', () => {
 
 describe('sendStatsBySlug', () => {
   it('buckets sent, pending, and failed counts for a slug', async () => {
-    const [aliceId] = await seedSubscribers(['alice@example.com'])
+    const [s1, s2, s3, s4, s5, s6, s7] = await seedSubscribers(
+      Array.from({ length: 7 }, (_, i) => `stats-${i}@example.com`)
+    )
     // post-a: 2 sent, 3 pending, 1 failed, 1 sent-with-error (counts as sent)
-    await seedSend(aliceId, 'post-a', { sentAt: new Date() })
-    await seedSend(aliceId, 'post-a', { sentAt: new Date() })
-    await seedSend(aliceId, 'post-a')
-    await seedSend(aliceId, 'post-a')
-    await seedSend(aliceId, 'post-a')
-    await seedSend(aliceId, 'post-a', { sendError: 'boom' })
-    await seedSend(aliceId, 'post-a', {
+    await seedSend(s1, 'post-a', { sentAt: new Date() })
+    await seedSend(s2, 'post-a', { sentAt: new Date() })
+    await seedSend(s3, 'post-a')
+    await seedSend(s4, 'post-a')
+    await seedSend(s5, 'post-a')
+    await seedSend(s6, 'post-a', { sendError: 'boom' })
+    await seedSend(s7, 'post-a', {
       sentAt: new Date(),
       sendError: 'late bounce',
     })
     // noise on another slug
-    await seedSend(aliceId, 'post-b')
+    await seedSend(s1, 'post-b')
 
     const stats = await sendStatsBySlug('post-a')
     expect(stats).toEqual({ total: 7, sent: 3, pending: 3, failed: 1 })
@@ -306,12 +311,16 @@ describe('sendStatsBySlug', () => {
 
 describe('allSendStats', () => {
   it('groups stats by post slug', async () => {
-    const [aliceId] = await seedSubscribers(['alice@example.com'])
+    const [aliceId, bobId, carolId] = await seedSubscribers([
+      'alice@example.com',
+      'bob@example.com',
+      'carol@example.com',
+    ])
     await seedSend(aliceId, 'post-a', { sentAt: new Date() })
-    await seedSend(aliceId, 'post-a', { sendError: 'boom' })
-    await seedSend(aliceId, 'post-a')
+    await seedSend(bobId, 'post-a', { sendError: 'boom' })
+    await seedSend(carolId, 'post-a')
     await seedSend(aliceId, 'post-b', { sentAt: new Date() })
-    await seedSend(aliceId, 'post-b', { sentAt: new Date() })
+    await seedSend(bobId, 'post-b', { sentAt: new Date() })
 
     const stats = await allSendStats()
     expect(Object.keys(stats).sort()).toEqual(['post-a', 'post-b'])
