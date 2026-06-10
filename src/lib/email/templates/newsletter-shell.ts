@@ -7,22 +7,32 @@ import { escapeHtml } from '@/lib/email/escape'
 // from printing-press's newsletter.html.
 const PREHEADER_SPACER = `${'&#8199;&#847; '.repeat(120)}${'&shy; '.repeat(150)}&nbsp;`
 
+// Lightened accent tints for dark mode: the light-mode accents (forest
+// #2B4A3E, walnut #6B4D3A, indigo #2C3E6B) disappear against a near-black
+// background, so link underlines swap to these in the dark override.
+const darkAccentColors: Record<NewsletterSlug, string> = {
+  contraption: '#8FB8A5',
+  workshop: '#C29B7E',
+  postcard: '#97A8D9',
+}
+const DEFAULT_DARK_ACCENT = '#A8A49D'
+
 function brandHeader(newsletter: NewsletterSlug | '', siteUrl: string): string {
   switch (newsletter) {
     case 'contraption':
       return `<a href="${siteUrl}/contraption" style="text-decoration: none;">
-              <img src="${siteUrl}/images/contraption-email.png" alt="Contraption" width="95" height="17" style="height: 17px; width: 95px;">
+              <img class="email-brand" src="${siteUrl}/images/contraption-email.png" alt="Contraption" width="95" height="17" style="height: 17px; width: 95px;">
             </a>`
     case 'workshop':
       return `<a href="${siteUrl}/workshop" style="text-decoration: none;">
-              <img src="${siteUrl}/images/workshop-brand-email.png" alt="Workshop" width="87" height="24" style="height: 24px; width: 87px;">
+              <img class="email-brand" src="${siteUrl}/images/workshop-brand-email.png" alt="Workshop" width="87" height="24" style="height: 24px; width: 87px;">
             </a>`
     case 'postcard':
       return `<a href="${siteUrl}/postcard" style="text-decoration: none;">
-              <img src="${siteUrl}/images/postcard-email.png" alt="Postcard" width="79" height="18" style="height: 18px; width: 79px;">
+              <img class="email-brand" src="${siteUrl}/images/postcard-email.png" alt="Postcard" width="79" height="18" style="height: 18px; width: 79px;">
             </a>`
     default:
-      return `<a href="${siteUrl}" style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #111110; text-decoration: none;">philipithomas.com</a>`
+      return `<a class="email-brand-text" href="${siteUrl}" style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #111110; text-decoration: none;">philipithomas.com</a>`
   }
 }
 
@@ -40,6 +50,9 @@ export function renderNewsletterShell(input: {
 }): string {
   const siteUrl = input.siteUrl ?? siteConfig.url
   const bgColor = '#ffffff'
+  const darkAccent = input.newsletter
+    ? darkAccentColors[input.newsletter]
+    : DEFAULT_DARK_ACCENT
   const year = new Date().getFullYear()
   const unsubscribeUrl = escapeHtml(input.unsubscribeUrl)
   const previewText = input.previewText ? escapeHtml(input.previewText) : ''
@@ -54,8 +67,11 @@ export function renderNewsletterShell(input: {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
 <title>${escapeHtml(siteConfig.title)}</title>
 <style>
+  :root { color-scheme: light dark; supported-color-schemes: light dark; }
   body { margin: 0; padding: 0; background-color: ${bgColor}; font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
   @font-face { font-family: 'Sohne'; src: url('https://fonts.philipithomas.com/klim/soehne-buch.woff2') format('woff2'); font-weight: 400; font-display: swap; }
   @font-face { font-family: 'Sohne'; src: url('https://fonts.philipithomas.com/klim/soehne-halbfett.woff2') format('woff2'); font-weight: 600; font-display: swap; }
@@ -67,11 +83,33 @@ export function renderNewsletterShell(input: {
   @media (max-width: 620px) {
     .content-cell { padding: 24px 20px !important; }
   }
+  /* Dark mode: inline styles stay the light-mode source of truth; these
+     overrides re-skin clients that honor prefers-color-scheme (Apple Mail,
+     iOS Mail, Outlook web). Warm near-black surfaces, warm light gray text,
+     lightened accent underlines. Images keep their colors: no filters. */
+  @media (prefers-color-scheme: dark) {
+    body, .email-body, .email-bg { background-color: #121110 !important; }
+    .email-card { background-color: #1C1A17 !important; }
+    .content-cell, .content-cell p, .content-cell li, .content-cell ul, .content-cell ol { color: #D7D3CC !important; }
+    .content-cell h1, .content-cell h2, .content-cell h3, .content-cell h4, .content-cell h5, .content-cell h6, .content-cell strong { color: #ECE9E4 !important; }
+    .content-cell a { color: #ECE9E4 !important; text-decoration-color: ${darkAccent} !important; }
+    .content-cell h1 a, .content-cell h2 a, .content-cell h3 a { color: #ECE9E4 !important; }
+    .content-cell blockquote { color: #BEBAB3 !important; border-left-color: #4A463F !important; }
+    .content-cell code { background-color: #2A2723 !important; color: #D7D3CC !important; }
+    .content-cell pre, .content-cell pre code { background-color: #222120 !important; color: #E0DDD8 !important; }
+    .content-cell table { color: #D7D3CC !important; border-top-color: #3A362F !important; }
+    .content-cell td, .content-cell th { border-bottom-color: #3A362F !important; }
+    .content-cell hr { border-top-color: #3A362F !important; }
+    .content-cell img { opacity: 0.92; }
+    .email-footer p, .email-footer a { color: #A8A49D !important; }
+    img.email-brand { background-color: #F5F3F0 !important; padding: 4px 8px !important; }
+    a.email-brand-text { color: #ECE9E4 !important; }
+  }
 </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: ${bgColor};">
+<body class="email-body" style="margin: 0; padding: 0; background-color: ${bgColor};">
 ${preheader}
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: ${bgColor};">
+<table class="email-bg" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: ${bgColor};">
   <tr>
     <td align="center" style="padding: 40px 20px 0;">
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
@@ -85,7 +123,7 @@ ${preheader}
   </tr>
   <tr>
     <td align="center" style="padding: 0 20px;">
-      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff;">
+      <table class="email-card" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff;">
         <tr>
           <td class="content-cell" style="padding: 32px; font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 17px; line-height: 1.6; color: #3B3834; overflow: hidden; word-break: break-word;">
             ${input.content}
@@ -98,7 +136,7 @@ ${preheader}
     <td align="center" style="padding: 20px;">
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
         <tr>
-          <td style="text-align: center; padding: 16px 0;">
+          <td class="email-footer" style="text-align: center; padding: 16px 0;">
             <p style="margin: 0 0 8px; font-size: 11px; color: #9E9A93;">
               <a href="${unsubscribeUrl}" style="color: #9E9A93; text-decoration: underline;">Unsubscribe</a>
             </p>
