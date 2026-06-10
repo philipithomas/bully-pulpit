@@ -30,10 +30,7 @@ export function PostcardLatestLink({ href, latestKey, label }: Props) {
       className="relative flex flex-col items-center justify-center p-3 bg-indigo text-white rounded-sm hover:bg-indigo/90 transition-colors text-center"
     >
       {!seen && (
-        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#C45B4A]/70" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#C45B4A]" />
-        </span>
+        <span className="absolute -top-1 -right-1 inline-flex h-2.5 w-2.5 rounded-full bg-red" />
       )}
       <span className="font-mono text-xs font-semibold">{label}</span>
     </Link>

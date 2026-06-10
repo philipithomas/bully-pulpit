@@ -11,6 +11,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
+import { siteConfig } from '@/lib/config'
 import { formatMemberCount } from '@/lib/format-member-count'
 import { getExternalReferrer } from '@/lib/referrer'
 
@@ -27,15 +28,14 @@ interface Props {
   showSubscriberCount?: boolean
 }
 
-const newsletters = [
-  { id: 'contraption', label: 'Contraption', desc: 'Essays and projects.' },
-  {
-    id: 'workshop',
-    label: 'Workshop',
-    desc: 'Journal about work in progress.',
-  },
-  { id: 'postcard', label: 'Postcard', desc: "What I'm up to." },
-] as const
+// Taglines come from siteConfig so the picker and llms.txt cannot drift.
+const newsletters = (['contraption', 'workshop', 'postcard'] as const).map(
+  (id) => ({
+    id,
+    label: siteConfig.newsletters[id].name,
+    desc: siteConfig.newsletters[id].tagline,
+  })
+)
 
 type Step = 'email' | 'code'
 

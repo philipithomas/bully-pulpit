@@ -41,7 +41,7 @@ export function PostCard({
               // Next 16 priority only preloads; the high fetch priority for
               // above-the-fold cards must be set explicitly
               fetchPriority={priority || eager ? 'high' : undefined}
-              className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+              className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
           </div>
@@ -51,7 +51,7 @@ export function PostCard({
             {post.frontmatter.publishedAt}
           </time>
           <h2
-            className={`text-lg font-semibold text-gray-950 ${accentHoverText[post.newsletter]} transition-colors mt-1`}
+            className={`text-lg font-semibold text-gray-950 ${accentHoverText[post.newsletter]} transition-colors duration-500 mt-1`}
           >
             {post.frontmatter.title}
           </h2>

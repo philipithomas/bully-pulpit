@@ -8,6 +8,7 @@ import {
   NewsletterRowsSkeleton,
   PreferencesPageSkeleton,
 } from '@/components/auth/preferences-skeleton'
+import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -124,7 +125,10 @@ export function AccountClient() {
             Please sign in to manage your account.
           </p>
           <button type="button" onClick={openModal} className="btn btn-primary">
-            Sign in
+            <span className="btn-text">Sign in</span>
+            <span className="btn-arrow">
+              <ArrowIcon className="w-4 h-4" />
+            </span>
           </button>
         </div>
       </div>

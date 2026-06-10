@@ -2,8 +2,17 @@
 
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { InlineSignupForm } from '@/components/auth/inline-signup-form'
+import type { Newsletter } from '@/lib/content/types'
 
-export function SubscribeCta() {
+// What a subscriber receives, per newsletter: Contraption sends essays,
+// Workshop sends work in progress notes, Postcard sends monthly updates.
+const newsletterNoun: Record<Newsletter, string> = {
+  contraption: 'essays',
+  workshop: 'notes',
+  postcard: 'updates',
+}
+
+export function SubscribeCta({ newsletter }: { newsletter: Newsletter }) {
   const { user } = useAuthContext()
 
   // No loading gate: the CTA must be in the static HTML for logged-out
@@ -13,7 +22,7 @@ export function SubscribeCta() {
   return (
     <div className="mx-auto max-w-2xl border-t border-gray-200 mt-12 pt-8">
       <p className="font-serif text-gray-600 text-lg mb-5">
-        Get new essays by email.
+        Get new {newsletterNoun[newsletter]} by email.
       </p>
       <InlineSignupForm />
     </div>

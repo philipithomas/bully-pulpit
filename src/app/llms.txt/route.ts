@@ -13,6 +13,15 @@ export async function GET() {
     )
     .join('\n')
 
+  // Taglines come from siteConfig so llms.txt and the signup picker cannot
+  // drift.
+  const newsletterList = (['contraption', 'workshop', 'postcard'] as const)
+    .map((id) => {
+      const newsletter = siteConfig.newsletters[id]
+      return `- ${newsletter.name}: ${newsletter.tagline}`
+    })
+    .join('\n')
+
   const body = `# ${siteConfig.title}
 
 > ${siteConfig.description}
@@ -23,9 +32,7 @@ ${siteConfig.author}
 
 ## Newsletters
 
-- Contraption: Essays and projects.
-- Workshop: Journal about work in progress.
-- Postcard: What I'm up to.
+${newsletterList}
 
 ## Posts
 

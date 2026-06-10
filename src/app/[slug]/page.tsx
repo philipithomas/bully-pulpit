@@ -195,7 +195,7 @@ export default async function SlugPage({ params }: Props) {
         </div>
 
         {/* Subscribe CTA for posts */}
-        {post && <SubscribeCta />}
+        {post && <SubscribeCta newsletter={post.newsletter} />}
 
         {/* Previous and next posts in the same newsletter */}
         {post && <PostNavigation previous={previous} next={next} />}
