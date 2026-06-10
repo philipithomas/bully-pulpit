@@ -1,8 +1,7 @@
 ---
 name: critique
-description: Give critical feedback on an MDX post — evaluate argument, structure, voice consistency, and fit within the site's body of work. Does not edit the file.
-user_invocable: true
-argument: file path to the MDX post (relative or absolute)
+description: Give critical feedback on an MDX post: evaluate argument, structure, voice consistency, and fit within the site's body of work. Does not edit the file.
+argument-hint: [path to the MDX post]
 ---
 
 # Critique
@@ -15,7 +14,7 @@ The user provides a file path as the argument: `$ARGUMENTS`
 
 If no argument is provided, ask the user which file to critique.
 
-Resolve the path relative to the project root (`/Users/philip/code/working/bully-pulpit/`) if it is not absolute. The file should be an MDX file in `content/contraption/`, `content/workshop/`, or `content/postcard/`.
+Resolve the path relative to the repository root (the working directory, where `package.json` lives) if it is not absolute. The file should be an MDX file in `content/contraption/`, `content/workshop/`, or `content/postcard/`.
 
 ## Context to gather
 
