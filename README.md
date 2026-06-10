@@ -1,6 +1,6 @@
 # Bully Pulpit
 
-Personal website and blog for [philipithomas.com](https://philipithomas.com).
+Personal website and blog for [philipithomas.com](https://www.philipithomas.com).
 
 ## Features
 

@@ -49,7 +49,9 @@ export const siteConfig = {
    * localhost, and everything else — production, local builds, tests — gets
    * the real domain. VERCEL_BRANCH_URL is used over VERCEL_URL because it is
    * stable across redeploys of the branch, so emailed links outlive the
-   * specific deployment that sent them.
+   * specific deployment that sent them. The canonical production host is the
+   * www subdomain, hardcoded; the apex domain 301-redirects to www at the
+   * Vercel domain level.
    */
   get url(): string {
     if (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_BRANCH_URL) {
@@ -58,7 +60,7 @@ export const siteConfig = {
     if (process.env.NODE_ENV === 'development') {
       return 'http://localhost:3000'
     }
-    return 'https://philipithomas.com'
+    return 'https://www.philipithomas.com'
   },
   /** '[PREVIEW] ' / '[DEVELOPMENT] ' outside production, '' in production. */
   get emailSubjectPrefix(): string {

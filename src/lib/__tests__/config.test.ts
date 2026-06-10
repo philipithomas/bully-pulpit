@@ -42,11 +42,11 @@ describe('siteConfig.url', () => {
     expect(siteConfig.url).toBe('http://localhost:3000')
   })
 
-  it('uses the production domain in production and in tests/builds', () => {
+  it('uses the www production domain in production and in tests/builds', () => {
     vi.stubEnv('VERCEL_ENV', 'production')
-    expect(siteConfig.url).toBe('https://philipithomas.com')
+    expect(siteConfig.url).toBe('https://www.philipithomas.com')
     vi.unstubAllEnvs()
-    expect(siteConfig.url).toBe('https://philipithomas.com')
+    expect(siteConfig.url).toBe('https://www.philipithomas.com')
   })
 })
 

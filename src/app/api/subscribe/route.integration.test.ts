@@ -106,7 +106,7 @@ describe('POST /api/subscribe', () => {
     expect(message.html).toContain(codeLogin?.token)
     expect(message.text).toContain(codeLogin?.token)
     expect(message.html).toContain(
-      `https://philipithomas.com/auth/verify?token=${magicLogin?.token}`
+      `https://www.philipithomas.com/auth/verify?token=${magicLogin?.token}`
     )
   })
 
