@@ -186,7 +186,7 @@ export function ChatMessage({
     <div className={cn('flex', isUser ? 'justify-end' : '')}>
       <div
         className={cn(
-          'min-w-0 max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
+          'min-w-0 max-w-[85%] wrap-anywhere rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
           isUser
             ? 'bg-gray-050 font-sans text-gray-950'
             : 'font-serif text-gray-950'

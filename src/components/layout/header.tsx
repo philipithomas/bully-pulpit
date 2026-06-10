@@ -95,7 +95,7 @@ export function Header() {
             onMouseEnter={prefetchSearch}
             onFocus={prefetchSearch}
             aria-label="Search"
-            className="p-2 -m-2"
+            className="p-3 -m-3"
           >
             <Search
               className="h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600"
@@ -108,7 +108,7 @@ export function Header() {
             onMouseEnter={prefetchChat}
             onFocus={prefetchChat}
             aria-label="Ask Bell"
-            className="p-2 -m-2"
+            className="p-3 -m-3"
           >
             <BellIcon
               className="h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600"

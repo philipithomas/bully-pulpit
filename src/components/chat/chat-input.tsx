@@ -65,7 +65,7 @@ export function ChatInput({
         type="button"
         onClick={isStreaming ? onStop : handleSubmit}
         className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center transition-colors',
+          'flex h-10 w-10 shrink-0 items-center justify-center transition-colors',
           isStreaming
             ? 'bg-gray-950 text-white'
             : 'bg-gray-950 text-white hover:bg-gray-800'
