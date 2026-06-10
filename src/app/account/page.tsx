@@ -4,6 +4,10 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuthContext } from '@/components/auth/auth-provider'
+import {
+  NewsletterRowsSkeleton,
+  PreferencesPageSkeleton,
+} from '@/components/auth/preferences-skeleton'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -106,13 +110,7 @@ export default function AccountPage() {
   }, [logout])
 
   if (loading) {
-    return (
-      <div className="bg-offwhite min-h-[60vh]">
-        <div className="container max-w-lg py-16 flex justify-center">
-          <Spinner className="h-6 w-6 text-gray-400" />
-        </div>
-      </div>
-    )
+    return <PreferencesPageSkeleton title="Account" />
   }
 
   if (!user) {
@@ -222,10 +220,12 @@ export default function AccountPage() {
         )}
 
         {!prefs && !prefsError && (
-          <div className="mb-10 flex items-center gap-2 text-sm text-gray-500">
-            <Spinner className="h-3.5 w-3.5" />
-            <span>Loading preferences</span>
-          </div>
+          <section className="mb-10">
+            <h2 className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-4">
+              Newsletters
+            </h2>
+            <NewsletterRowsSkeleton />
+          </section>
         )}
 
         <div className="flex items-center justify-between border-t border-gray-200 pt-8">

@@ -6,7 +6,8 @@ export function PageHeader({
   children,
 }: {
   title: string
-  description?: string
+  // ReactNode so loading states can pass a skeleton line.
+  description?: ReactNode
   children?: ReactNode
 }) {
   return (
