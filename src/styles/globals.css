@@ -545,16 +545,32 @@ body.dark-viewport header .btn-primary .btn-arrow {
   cursor: zoom-in;
 }
 
+[data-zoomable] {
+  cursor: zoom-in;
+}
+
 /* ============================
    Image zoom overlay
    ============================ */
 
+/* Overlay fade. Duration mirrors ZOOM_MS in image-zoom-overlay.tsx so the
+   backdrop and the image zoom travel together, like medium-zoom. */
 .image-zoom-opening {
-  animation: image-zoom-fade-in 200ms ease-out;
+  animation: image-zoom-fade-in 280ms ease-out;
 }
 
 .image-zoom-closing {
-  animation: image-zoom-fade-out 150ms ease-in forwards;
+  animation: image-zoom-fade-out 280ms ease-in forwards;
+}
+
+/* Crossfade when the overlay upgrades to the full-resolution image.
+   Duration mirrors FADE_MS in image-zoom-overlay.tsx. */
+.image-zoom-hd-in {
+  animation: image-zoom-fade-in 300ms ease forwards;
+}
+
+.image-zoom-hd-out {
+  animation: image-zoom-fade-out 300ms ease forwards;
 }
 
 @keyframes image-zoom-fade-in {

@@ -136,7 +136,7 @@ export default function HomePage() {
                 {...mobilePortrait}
                 className="w-full h-auto cursor-zoom-in"
                 data-zoomable=""
-                data-full-src="/images/full/philip-horizontal.jpg"
+                data-full-src="/images/full/portrait.jpg"
               />
             </picture>
           </div>
