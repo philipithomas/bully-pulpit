@@ -67,14 +67,26 @@ function ChatMarkdown({
         li: ({ children }) => (
           <li className="mb-1 [&>p]:mb-1 [&>p:last-child]:mb-0">{children}</li>
         ),
+        // Real headings, demoted two levels so chat replies do not collide
+        // with the page outline. Preflight resets heading font and margin,
+        // so these render identically to the styled paragraphs they replace.
         h1: ({ children }) => (
-          <p className="mb-2 font-sans font-semibold">{children}</p>
+          <h3 className="mb-2 font-sans font-semibold">{children}</h3>
         ),
         h2: ({ children }) => (
-          <p className="mb-2 font-sans font-semibold">{children}</p>
+          <h4 className="mb-2 font-sans font-semibold">{children}</h4>
         ),
         h3: ({ children }) => (
-          <p className="mb-2 font-sans font-semibold">{children}</p>
+          <h5 className="mb-2 font-sans font-semibold">{children}</h5>
+        ),
+        h4: ({ children }) => (
+          <h6 className="mb-2 font-sans font-semibold">{children}</h6>
+        ),
+        h5: ({ children }) => (
+          <h6 className="mb-2 font-sans font-semibold">{children}</h6>
+        ),
+        h6: ({ children }) => (
+          <h6 className="mb-2 font-sans font-semibold">{children}</h6>
         ),
         strong: ({ children }) => <strong>{children}</strong>,
         em: ({ children }) => <em>{children}</em>,
