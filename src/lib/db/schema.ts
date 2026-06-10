@@ -39,6 +39,8 @@ export const subscribers = pgTable(
   (table) => [
     index('idx_subscribers_email').on(table.email),
     index('idx_subscribers_uuid').on(table.uuid),
+    // Eligibility and active-count queries filter on confirmed_at IS NOT NULL.
+    index('idx_subscribers_confirmed_at').on(table.confirmedAt),
   ]
 )
 

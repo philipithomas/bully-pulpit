@@ -128,6 +128,57 @@ describe('PATCH', () => {
     expect(row.subscribedPostcard).toBe(true)
     expect(row.name).toBe('Reader')
   })
+
+  it('returns 400 (not 500) for a malformed JSON body', async () => {
+    const subscriber = await seedSubscriber()
+    await signIn(subscriber)
+
+    const response = await PATCH(
+      new Request('http://localhost/api/auth/preferences', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: 'not json',
+      })
+    )
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Invalid request body' })
+  })
+
+  it('returns 400 for an unknown key and changes nothing', async () => {
+    const subscriber = await seedSubscriber()
+    await signIn(subscriber)
+
+    const response = await PATCH(
+      patchRequest({ subscribed_workshop: false, role: 'admin' })
+    )
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Invalid preferences in request body',
+    })
+
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.uuid, subscriber.uuid))
+    expect(row.subscribedWorkshop).toBe(true)
+  })
+
+  it('returns 400 for a non-boolean newsletter flag and changes nothing', async () => {
+    const subscriber = await seedSubscriber()
+    await signIn(subscriber)
+
+    const response = await PATCH(patchRequest({ subscribed_workshop: 'no' }))
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Invalid preferences in request body',
+    })
+
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.uuid, subscriber.uuid))
+    expect(row.subscribedWorkshop).toBe(true)
+  })
 })
 
 describe('DELETE', () => {

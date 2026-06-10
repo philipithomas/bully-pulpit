@@ -59,7 +59,10 @@ export async function PATCH(
   const resolved = await resolveSubscriber(token)
   if (!resolved) return notFound()
 
-  const body = await request.json()
+  const body = await request.json().catch(() => null)
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
   await updateSubscriber(resolved.subscriber.uuid, prefsFromBody(body))
   return NextResponse.json({ success: true })
 }

@@ -167,6 +167,15 @@ describe('DELETE', () => {
     expect(await res.json()).toEqual({ error: 'uuid is required' })
   })
 
+  it('returns 400 (not 500) for a malformed JSON body', async () => {
+    await signInAsAdmin()
+    const res = await deleteSubscriber(
+      new NextRequest(BASE, { method: 'DELETE', body: 'not json' })
+    )
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'Invalid request body' })
+  })
+
   it('returns 404 for an unknown uuid', async () => {
     await signInAsAdmin()
     const res = await deleteSubscriber(deleteRequest({ uuid: randomUUID() }))

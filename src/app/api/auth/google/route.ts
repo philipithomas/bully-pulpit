@@ -17,7 +17,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 
-  const { code } = await request.json()
+  const body = await request.json().catch(() => null)
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+  const { code } = body
 
   if (!code) {
     return NextResponse.json(

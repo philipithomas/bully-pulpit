@@ -136,6 +136,29 @@ describe('PATCH /api/unsubscribe/[token]', () => {
     expect(after.subscribedWorkshop).toBe(true)
     expect(after.name).toBe('Janet')
   })
+
+  it('returns 400 (not 500) for a malformed JSON body and changes nothing', async () => {
+    const { subscriber, token } = await seed()
+
+    const res = await PATCH(
+      request(token, {
+        method: 'PATCH',
+        body: 'not json',
+        headers: { 'content-type': 'application/json' },
+      }),
+      params(token)
+    )
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      error: 'Invalid request body',
+    })
+
+    const after = await subscriberRow(subscriber.id)
+    expect(after.subscribedPostcard).toBe(true)
+    expect(after.subscribedContraption).toBe(true)
+    expect(after.subscribedWorkshop).toBe(true)
+  })
 })
 
 describe('unknown token', () => {
