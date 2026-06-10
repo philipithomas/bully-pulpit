@@ -13,6 +13,7 @@ export async function GET() {
     '/contraption',
     '/workshop',
     '/postcard',
+    '/sitemap',
     '/print',
     '/photography',
   ]
