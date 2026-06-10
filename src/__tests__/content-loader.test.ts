@@ -50,7 +50,7 @@ describe('content loader', () => {
   it('finds page by slug', () => {
     const page = getPageBySlug('terms')
     expect(page).not.toBeNull()
-    expect(page!.frontmatter.title).toBe('Terms of Service')
+    expect(page!.frontmatter.title).toBe('Terms of service')
   })
 
   it('returns null for missing slug', () => {
