@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ZoomedImage } from '@/components/ui/image-zoom-overlay'
 
-// Keeps react-zoom-pan-pinch out of the shared first-load bundle;
+// Keeps the overlay out of the shared first-load bundle;
 // the chunk loads only when an image is actually zoomed.
 const ImageZoomOverlay = dynamic(
   () =>
@@ -64,10 +64,21 @@ export function ImageZoom() {
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null
+      const rect = target.getBoundingClientRect()
       setZoomedImage({
         src: target.currentSrc || target.src,
         fullSrc: target.dataset.fullSrc ?? null,
         alt: target.alt ?? '',
+        // Plain object copy: the overlay animates from and back to this box.
+        rect:
+          rect.width > 0 && rect.height > 0
+            ? {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+              }
+            : null,
       })
     }
 
