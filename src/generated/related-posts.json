@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T22:42:52.496Z",
+  "generatedAt": "2026-06-10T23:13:33.289Z",
   "posts": {
     "2026-06": {
       "related": [
@@ -12,8 +12,8 @@
           "score": 0.139288
         },
         {
-          "slug": "2024-03",
-          "score": 0.1458878
+          "slug": "2023-09",
+          "score": 0.141733
         }
       ]
     },
@@ -85,7 +85,7 @@
       "related": [
         {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.1853843
+          "score": 0.1947775
         },
         {
           "slug": "one-year-of-dependable-software",
@@ -100,16 +100,16 @@
     "sync-phone-numbers-and-webhooks": {
       "related": [
         {
-          "slug": "git",
-          "score": 0.2373647
-        },
-        {
           "slug": "2025-06",
-          "score": 0.2406534
+          "score": 0.2271449
         },
         {
           "slug": "2026-02",
-          "score": 0.2436501
+          "score": 0.2325492
+        },
+        {
+          "slug": "git",
+          "score": 0.238594
         }
       ]
     },
@@ -153,7 +153,7 @@
         },
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.2995091
+          "score": 0.2944584
         },
         {
           "slug": "chat-with-my-dog",
@@ -165,7 +165,7 @@
       "related": [
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.2155409
+          "score": 0.2162602
         },
         {
           "slug": "mcp-and-the-future-of-ai",
@@ -201,7 +201,7 @@
         },
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.2348018
+          "score": 0.2342482
         },
         {
           "slug": "craft-in-the-digital-era",
@@ -301,7 +301,7 @@
         },
         {
           "slug": "2023-10",
-          "score": 0.31667
+          "score": 0.3107577
         }
       ]
     },
@@ -361,7 +361,7 @@
         },
         {
           "slug": "launching-booklet",
-          "score": 0.2695829
+          "score": 0.2693575
         },
         {
           "slug": "sharing-a-project-i-built-postcard",
@@ -437,15 +437,15 @@
       "related": [
         {
           "slug": "sync-phone-numbers-and-webhooks",
-          "score": 0.2373647
+          "score": 0.238594
         },
         {
           "slug": "agent-experience",
           "score": 0.2537502
         },
         {
-          "slug": "chroma",
-          "score": 0.2552431
+          "slug": "claude-launching-and-tools",
+          "score": 0.2540081
         }
       ]
     },
@@ -453,7 +453,7 @@
       "related": [
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.1932802
+          "score": 0.2000565
         },
         {
           "slug": "archetypes-of-llm-apps",
@@ -472,12 +472,12 @@
           "score": 0.3356775
         },
         {
-          "slug": "2026-02",
-          "score": 0.3444245
+          "slug": "sync-phone-numbers-and-webhooks",
+          "score": 0.3397352
         },
         {
-          "slug": "sync-phone-numbers-and-webhooks",
-          "score": 0.3472264
+          "slug": "2026-02",
+          "score": 0.3444245
         }
       ]
     },
@@ -549,15 +549,15 @@
       "related": [
         {
           "slug": "mcp-and-the-future-of-ai",
-          "score": 0.1932802
-        },
-        {
-          "slug": "openclaw-is-my-new-coworker",
-          "score": 0.2155409
+          "score": 0.2000565
         },
         {
           "slug": "chat-with-my-dog",
-          "score": 0.2171933
+          "score": 0.2073567
+        },
+        {
+          "slug": "openclaw-is-my-new-coworker",
+          "score": 0.2162602
         }
       ]
     },
@@ -573,7 +573,7 @@
         },
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.3114457
+          "score": 0.3115856
         }
       ]
     },
@@ -584,12 +584,12 @@
           "score": 0.2792625
         },
         {
-          "slug": "digital-quiet",
-          "score": 0.2985506
+          "slug": "claude-launching-and-tools",
+          "score": 0.2985036
         },
         {
-          "slug": "claude-launching-and-tools",
-          "score": 0.3050378
+          "slug": "digital-quiet",
+          "score": 0.2985506
         }
       ]
     },
@@ -713,7 +713,7 @@
         },
         {
           "slug": "sync-phone-numbers-and-webhooks",
-          "score": 0.2598142
+          "score": 0.2592797
         },
         {
           "slug": "2026-04",
@@ -725,7 +725,7 @@
       "related": [
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.2171933
+          "score": 0.2073567
         },
         {
           "slug": "archetypes-of-llm-apps",
@@ -821,7 +821,7 @@
       "related": [
         {
           "slug": "booklet-architecture",
-          "score": 0.3270056
+          "score": 0.3293568
         },
         {
           "slug": "software-in-the-ai-era",
@@ -829,7 +829,7 @@
         },
         {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.3656626
+          "score": 0.3732261
         }
       ]
     },
@@ -845,7 +845,7 @@
         },
         {
           "slug": "booklet-architecture",
-          "score": 0.3263484
+          "score": 0.3246619
         }
       ]
     },
@@ -877,7 +877,7 @@
         },
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.2883104
+          "score": 0.2938727
         }
       ]
     },
@@ -937,7 +937,7 @@
         },
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.2318578
+          "score": 0.2391887
         },
         {
           "slug": "chat-with-my-dog",
@@ -965,15 +965,15 @@
       "related": [
         {
           "slug": "2025-12",
-          "score": 0.0992937
+          "score": 0.0989911
         },
         {
           "slug": "2025-08",
-          "score": 0.1026582
+          "score": 0.1002497
         },
         {
-          "slug": "2025-11",
-          "score": 0.1064492
+          "slug": "2025-04",
+          "score": 0.1057678
         }
       ]
     },
@@ -1048,12 +1048,12 @@
           "score": 0.484998
         },
         {
-          "slug": "2025-10",
-          "score": 0.4966502
+          "slug": "slow-travel",
+          "score": 0.4964885
         },
         {
-          "slug": "slow-travel",
-          "score": 0.4998445
+          "slug": "2025-10",
+          "score": 0.4966502
         }
       ]
     },
@@ -1081,7 +1081,7 @@
         },
         {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.3392456
+          "score": 0.3433902
         },
         {
           "slug": "talking-shop-aaron-cohn-realnice",
@@ -1157,7 +1157,7 @@
       "related": [
         {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.2807105
+          "score": 0.2998184
         },
         {
           "slug": "advice-for-marketplace-startups",
@@ -1189,7 +1189,7 @@
       "related": [
         {
           "slug": "2023-06",
-          "score": 0.0857299
+          "score": 0.0846012
         },
         {
           "slug": "2024-09",
@@ -1205,7 +1205,7 @@
       "related": [
         {
           "slug": "booklet-architecture",
-          "score": 0.2677242
+          "score": 0.269857
         },
         {
           "slug": "chat-with-my-dog",
@@ -1272,12 +1272,12 @@
           "score": 0.1933823
         },
         {
-          "slug": "introducing-contraption-co",
-          "score": 0.2474909
+          "slug": "rethinking-work-beyond-the-factory",
+          "score": 0.2338033
         },
         {
-          "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.2483731
+          "slug": "introducing-contraption-co",
+          "score": 0.2474909
         }
       ]
     },
@@ -1317,15 +1317,15 @@
       "related": [
         {
           "slug": "digital-quiet",
-          "score": 0.1563972
+          "score": 0.1515618
         },
         {
           "slug": "software-in-the-ai-era",
-          "score": 0.1853843
+          "score": 0.1947775
         },
         {
           "slug": "one-year-of-dependable-software",
-          "score": 0.194102
+          "score": 0.1995999
         }
       ]
     },
@@ -1349,15 +1349,15 @@
       "related": [
         {
           "slug": "craft-in-the-digital-era",
-          "score": 0.3369987
+          "score": 0.3322357
         },
         {
           "slug": "introducing-contraption-co",
-          "score": 0.3645071
+          "score": 0.3656599
         },
         {
           "slug": "introducing-workshop",
-          "score": 0.4044392
+          "score": 0.3923913
         }
       ]
     },
@@ -1381,11 +1381,11 @@
       "related": [
         {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.1563972
+          "score": 0.1515618
         },
         {
           "slug": "launching-booklet",
-          "score": 0.1799151
+          "score": 0.1802765
         },
         {
           "slug": "rethink-chat",
@@ -1396,16 +1396,16 @@
     "engineering-over-enforcement": {
       "related": [
         {
+          "slug": "rethinking-work-beyond-the-factory",
+          "score": 0.4809656
+        },
+        {
           "slug": "finding-a-software-jojb",
           "score": 0.4832921
         },
         {
           "slug": "code-as-content-and-digital-proprioception",
           "score": 0.485845
-        },
-        {
-          "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.4882244
         }
       ]
     },
@@ -1413,15 +1413,15 @@
       "related": [
         {
           "slug": "launching-booklet",
-          "score": 0.1937522
+          "score": 0.1910682
         },
         {
           "slug": "how-to-replace-social-media-with-a-personal-newsletter",
-          "score": 0.2923858
+          "score": 0.2928952
         },
         {
           "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
-          "score": 0.2996561
+          "score": 0.302263
         }
       ]
     },
@@ -1429,15 +1429,15 @@
       "related": [
         {
           "slug": "launching-booklet",
-          "score": 0.2588018
+          "score": 0.2603728
         },
         {
           "slug": "code-a-booklet-ai-feature",
-          "score": 0.2677242
+          "score": 0.269857
         },
         {
           "slug": "how-to-host-web-apps-on-a-mac-mini",
-          "score": 0.2718123
+          "score": 0.2711093
         }
       ]
     },
@@ -1469,7 +1469,7 @@
         },
         {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.3038844
+          "score": 0.3130483
         }
       ]
     },
@@ -1481,7 +1481,7 @@
         },
         {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.194102
+          "score": 0.1995999
         },
         {
           "slug": "software-in-the-ai-era",
@@ -1509,15 +1509,15 @@
       "related": [
         {
           "slug": "2023-09",
-          "score": 0.0731716
+          "score": 0.0715305
         },
         {
           "slug": "2023-11",
-          "score": 0.0875112
+          "score": 0.084992
         },
         {
           "slug": "2025-08",
-          "score": 0.0901585
+          "score": 0.0892079
         }
       ]
     },
@@ -1525,31 +1525,31 @@
       "related": [
         {
           "slug": "digital-quiet",
-          "score": 0.1799151
+          "score": 0.1802765
         },
         {
           "slug": "community-media-companies",
-          "score": 0.1937522
+          "score": 0.1910682
         },
         {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.2440493
+          "score": 0.2365748
         }
       ]
     },
     "introducing-frctnl": {
       "related": [
         {
+          "slug": "moonlight-s-pitch-deck",
+          "score": 0.300584
+        },
+        {
           "slug": "is-fractional-work-the-future",
           "score": 0.3054657
         },
         {
-          "slug": "moonlight-s-pitch-deck",
-          "score": 0.305854
-        },
-        {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.3309108
+          "score": 0.3195253
         }
       ]
     },
@@ -1557,15 +1557,15 @@
       "related": [
         {
           "slug": "2023-10",
-          "score": 0.0731716
+          "score": 0.0715305
         },
         {
           "slug": "2024-09",
-          "score": 0.0881284
+          "score": 0.0872603
         },
         {
-          "slug": "2023-05",
-          "score": 0.0957969
+          "slug": "2026-05",
+          "score": 0.0950279
         }
       ]
     },
@@ -1573,7 +1573,7 @@
       "related": [
         {
           "slug": "2023-07",
-          "score": 0.1191937
+          "score": 0.120502
         },
         {
           "slug": "2024-05",
@@ -1581,7 +1581,7 @@
         },
         {
           "slug": "2023-09",
-          "score": 0.1297941
+          "score": 0.1283761
         }
       ]
     },
@@ -1589,47 +1589,47 @@
       "related": [
         {
           "slug": "2023-06",
-          "score": 0.0821694
-        },
-        {
-          "slug": "2023-05",
-          "score": 0.0926289
+          "score": 0.0800151
         },
         {
           "slug": "2023-02",
-          "score": 0.0954886
+          "score": 0.0956897
+        },
+        {
+          "slug": "2023-05",
+          "score": 0.0961616
         }
       ]
     },
     "2023-06": {
       "related": [
         {
-          "slug": "2023-04",
-          "score": 0.0796957
+          "slug": "2023-07",
+          "score": 0.0800151
         },
         {
-          "slug": "2023-07",
-          "score": 0.0821694
+          "slug": "2023-04",
+          "score": 0.0808113
         },
         {
           "slug": "2024-06",
-          "score": 0.0857299
+          "score": 0.0846012
         }
       ]
     },
     "2023-05": {
       "related": [
         {
-          "slug": "2023-04",
-          "score": 0.085755
+          "slug": "2023-12",
+          "score": 0.08958
         },
         {
-          "slug": "2023-12",
-          "score": 0.0907199
+          "slug": "2023-04",
+          "score": 0.0900324
         },
         {
           "slug": "2023-06",
-          "score": 0.0912365
+          "score": 0.0925235
         }
       ]
     },
@@ -1637,15 +1637,15 @@
       "related": [
         {
           "slug": "2023-02",
-          "score": 0.0575524
+          "score": 0.0566637
         },
         {
           "slug": "2023-03",
-          "score": 0.0783151
+          "score": 0.0773979
         },
         {
           "slug": "2023-06",
-          "score": 0.0796957
+          "score": 0.0808113
         }
       ]
     },
@@ -1653,15 +1653,15 @@
       "related": [
         {
           "slug": "introducing-workshop",
-          "score": 0.3867729
+          "score": 0.3907798
         },
         {
           "slug": "introducing-frctnl",
-          "score": 0.4392724
+          "score": 0.4394316
         },
         {
-          "slug": "fresh-coat-of-paint",
-          "score": 0.4442814
+          "slug": "digital-product-studios",
+          "score": 0.4402201
         }
       ]
     },
@@ -1669,11 +1669,11 @@
       "related": [
         {
           "slug": "2023-04",
-          "score": 0.0783151
+          "score": 0.0773979
         },
         {
           "slug": "2023-02",
-          "score": 0.0786353
+          "score": 0.0798594
         },
         {
           "slug": "2022-12",
@@ -1685,15 +1685,15 @@
       "related": [
         {
           "slug": "2023-04",
-          "score": 0.0575524
+          "score": 0.0566637
         },
         {
           "slug": "2023-01",
-          "score": 0.0671427
+          "score": 0.0688824
         },
         {
           "slug": "2022-12",
-          "score": 0.07165
+          "score": 0.0735088
         }
       ]
     },
@@ -1701,7 +1701,7 @@
       "related": [
         {
           "slug": "2023-02",
-          "score": 0.0671427
+          "score": 0.0688824
         },
         {
           "slug": "2022-12",
@@ -1709,7 +1709,7 @@
         },
         {
           "slug": "2023-04",
-          "score": 0.0814969
+          "score": 0.0873822
         }
       ]
     },
@@ -1741,7 +1741,7 @@
         },
         {
           "slug": "launching-booklet",
-          "score": 0.2761616
+          "score": 0.276188
         }
       ]
     },
@@ -1749,7 +1749,7 @@
       "related": [
         {
           "slug": "2023-02",
-          "score": 0.07165
+          "score": 0.0735088
         },
         {
           "slug": "2022-11",
@@ -1820,8 +1820,8 @@
           "score": 0.0859841
         },
         {
-          "slug": "2023-02",
-          "score": 0.0911006
+          "slug": "2022-12",
+          "score": 0.0914881
         }
       ]
     },
@@ -1829,15 +1829,15 @@
       "related": [
         {
           "slug": "advice-for-marketplace-startups",
-          "score": 0.2709261
+          "score": 0.272071
         },
         {
           "slug": "one-year-of-dependable-software",
-          "score": 0.3374888
+          "score": 0.3353723
         },
         {
           "slug": "introducing-contraption-co",
-          "score": 0.3563877
+          "score": 0.3562592
         }
       ]
     },
@@ -1849,7 +1849,7 @@
         },
         {
           "slug": "2023-02",
-          "score": 0.0782427
+          "score": 0.0766536
         },
         {
           "slug": "2022-10",
@@ -1925,11 +1925,11 @@
       "related": [
         {
           "slug": "buyers-define-marketplaces",
-          "score": 0.191187
+          "score": 0.183722
         },
         {
           "slug": "when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks",
-          "score": 0.2709261
+          "score": 0.272071
         },
         {
           "slug": "tech-talent-agents",
@@ -1941,15 +1941,15 @@
       "related": [
         {
           "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.267084
+          "score": 0.2300193
         },
         {
           "slug": "how-i-build-multiple-products",
-          "score": 0.2858449
+          "score": 0.2832895
         },
         {
           "slug": "introducing-contraption-co",
-          "score": 0.2940364
+          "score": 0.2906488
         }
       ]
     },
@@ -1957,15 +1957,15 @@
       "related": [
         {
           "slug": "advice-for-marketplace-startups",
-          "score": 0.191187
+          "score": 0.183722
         },
         {
           "slug": "moonlight-s-pitch-deck",
-          "score": 0.3419367
+          "score": 0.3078891
         },
         {
-          "slug": "tech-talent-agents",
-          "score": 0.3787291
+          "slug": "rethinking-work-beyond-the-factory",
+          "score": 0.362595
         }
       ]
     }
