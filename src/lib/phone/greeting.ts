@@ -9,6 +9,12 @@ import { generateText } from 'ai'
 export const FALLBACK_GREETING =
   'You have reached the Contraption Company. Leave a message after the tone.'
 
+// Twilio gives voice webhooks 15 seconds to respond before playing an
+// application error to the caller. The weather fetch is capped at 2 seconds,
+// so an 8 second cap on the gateway call leaves comfortable headroom for the
+// route to render TwiML with the fallback greeting instead.
+const GREETING_TIMEOUT_MS = 8_000
+
 const SYSTEM_PROMPT = `You write voicemail greetings for the Contraption Company. Generate ONLY the greeting text, nothing else. Keep it to 1-2 sentences. Professional but with dry/cheeky humor.
 
 Company tagline: Crafting digital tools.
@@ -78,6 +84,8 @@ export async function generateGreeting(
       model: gateway('anthropic/claude-haiku-4.5'),
       maxOutputTokens: 200,
       temperature: 1.0,
+      abortSignal: AbortSignal.timeout(GREETING_TIMEOUT_MS),
+      maxRetries: 0,
       experimental_telemetry: { isEnabled: true, functionId: 'phone-greeting' },
       system: SYSTEM_PROMPT,
       prompt: `Current date and time in New York: ${nycNow(now)}\nCurrent weather: ${weather}`,

@@ -58,6 +58,37 @@ describe('generateGreeting', () => {
     expect(consoleError).toHaveBeenCalled()
   })
 
+  it('falls back to the static greeting when the gateway call times out', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('unknown'))
+    )
+    // AbortSignal.timeout rejects the pending call with a TimeoutError
+    // DOMException; the catch path must treat it like any other failure.
+    mockedGenerateText.mockRejectedValueOnce(
+      new DOMException(
+        'The operation was aborted due to timeout',
+        'TimeoutError'
+      )
+    )
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(generateGreeting()).resolves.toBe(FALLBACK_GREETING)
+    expect(consoleError).toHaveBeenCalled()
+  })
+
+  it('bounds the gateway call with an abort timeout and no retries', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('unknown'))
+    )
+    // biome-ignore lint/suspicious/noExplicitAny: partial generateText result
+    mockedGenerateText.mockResolvedValueOnce({ text: 'Hello.' } as any)
+    await generateGreeting()
+    const call = mockedGenerateText.mock.calls[0][0]
+    expect(call.abortSignal).toBeInstanceOf(AbortSignal)
+    expect(call.maxRetries).toBe(0)
+  })
+
   it('falls back when the model returns empty text', async () => {
     vi.stubGlobal(
       'fetch',
