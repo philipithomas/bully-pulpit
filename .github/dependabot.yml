@@ -5,6 +5,12 @@ updates:
     schedule:
       interval: 'weekly'
     open-pull-requests-limit: 5
+    ignore:
+      # sharp 0.35.0 ships an exports map that hides its type declarations
+      # (TS7016 under moduleResolution bundler). Remove once a fixed release
+      # exists upstream: https://github.com/lovell/sharp/issues
+      - dependency-name: 'sharp'
+        versions: ['0.35.0']
     groups:
       minor-and-patch:
         patterns: ['*']
