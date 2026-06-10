@@ -395,6 +395,10 @@ body.dark-viewport header img:not(.rounded-full) {
   filter: invert(1);
 }
 
+body.dark-viewport header .wordmark {
+  color: var(--color-white);
+}
+
 body.dark-viewport header nav a {
   color: #b1ada6;
 }
@@ -452,40 +456,6 @@ body.dark-viewport header .btn-primary .btn-arrow {
 
 .animate-caret-blink {
   animation: caret-blink 1.2s ease-out infinite;
-}
-
-/* ============================
-   Reveal animation
-   ============================ */
-
-@keyframes reveal-up {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.reveal {
-  opacity: 0;
-  transform: translateY(12px);
-}
-
-.reveal.revealed {
-  animation: reveal-up 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reveal {
-    opacity: 1;
-    transform: none;
-  }
-  .reveal.revealed {
-    animation: none;
-  }
 }
 
 /* ============================

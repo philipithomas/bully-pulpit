@@ -14,11 +14,12 @@ export default function WorkshopPage() {
   // the serialized RSC payload
   const posts = getPostsByNewsletter('workshop')
     .slice(0, 24)
-    .map(({ slug, newsletter, frontmatter, excerpt }) => ({
+    .map(({ slug, newsletter, frontmatter, excerpt, coverDimensions }) => ({
       slug,
       newsletter,
       frontmatter,
       excerpt,
+      coverDimensions,
     }))
 
   return (

@@ -1,10 +1,10 @@
-import { format, parseISO } from 'date-fns'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { InfinitePostGrid } from '@/components/posts/infinite-post-grid'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { siteConfig } from '@/lib/config'
+import { coverPreloadAttrs } from '@/lib/content/cover-preload'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
 
@@ -18,6 +18,7 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
     <Link
       href={`/${post.slug}`}
       className="relative block group bg-offwhite-light border border-gray-100 rounded-sm overflow-hidden h-full"
+      {...coverPreloadAttrs(post)}
     >
       {post.frontmatter.coverImage && (
         <div className="relative overflow-hidden aspect-[3/2]">
@@ -33,7 +34,7 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
       )}
       <div className="p-4 md:p-5">
         <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
-          {format(parseISO(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
+          {post.frontmatter.publishedAt}
         </time>
         <h2
           className={`font-semibold tracking-tight text-gray-950 group-hover:text-forest transition-colors duration-300 mt-1 ${large ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
@@ -62,11 +63,12 @@ export default function ContraptionPage() {
   // the serialized RSC payload
   const rest = posts
     .slice(3, 3 + 24)
-    .map(({ slug, newsletter, frontmatter, excerpt }) => ({
+    .map(({ slug, newsletter, frontmatter, excerpt, coverDimensions }) => ({
       slug,
       newsletter,
       frontmatter,
       excerpt,
+      coverDimensions,
     }))
 
   return (

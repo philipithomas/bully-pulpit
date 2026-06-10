@@ -10,8 +10,8 @@ import { SignInToast } from '@/components/auth/sign-in-toast'
 import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
 import { NewsletterProvider } from '@/components/layout/newsletter-context'
+import { CoverPreload } from '@/components/posts/cover-preload'
 import { ImageZoom } from '@/components/ui/image-zoom'
-import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { Toaster } from '@/components/ui/sonner'
 import { siteConfig } from '@/lib/config'
 
@@ -96,7 +96,7 @@ export default function RootLayout({
             <SignInModal />
             <SignInToast />
             <Toaster />
-            <ScrollReveal />
+            <CoverPreload />
             <ImageZoom />
             <Plausible />
             <Analytics />

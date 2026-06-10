@@ -51,6 +51,19 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // Static images — long browser cache with stale-while-revalidate so
+      // repeat visits skip the revalidation round trip (sources keep their
+      // filenames, so bound freshness at a day instead of immutable)
+      {
+        source: '/images/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value:
+              'public, max-age=86400, s-maxage=31536000, stale-while-revalidate=2592000',
+          },
+        ],
+      },
       // RSS/JSON feeds — CDN caches 1 hour
       {
         source: '/feed/(.*)',
