@@ -8,7 +8,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { slug } = await request.json()
+  const body = await request.json().catch(() => null)
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+  const { slug } = body
   if (!slug || typeof slug !== 'string') {
     return NextResponse.json({ error: 'slug is required' }, { status: 400 })
   }

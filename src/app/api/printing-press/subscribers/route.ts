@@ -35,7 +35,11 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { uuid } = await request.json()
+  const body = await request.json().catch(() => null)
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+  const { uuid } = body
   if (!uuid || typeof uuid !== 'string') {
     return NextResponse.json({ error: 'uuid is required' }, { status: 400 })
   }

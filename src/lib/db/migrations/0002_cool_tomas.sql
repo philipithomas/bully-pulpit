@@ -1,0 +1,1 @@
+CREATE INDEX "idx_subscribers_confirmed_at" ON "subscribers" USING btree ("confirmed_at");

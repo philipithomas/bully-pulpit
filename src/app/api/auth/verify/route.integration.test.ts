@@ -143,6 +143,18 @@ describe('POST /api/auth/verify', () => {
     expect(adminNotificationCalls()).toHaveLength(1)
   })
 
+  it('returns 400 (not 500) for a malformed JSON body', async () => {
+    const res = await verifyPost(
+      new Request('http://localhost/api/auth/verify', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: 'not json',
+      })
+    )
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'Invalid request body' })
+  })
+
   it('rejects a wrong code and increments the attempt counter', async () => {
     await subscribe('typo@example.com')
     const sub = await subscriberByEmail('typo@example.com')

@@ -24,6 +24,14 @@ describe('integration harness', () => {
     )
   })
 
+  it('applies the confirmed_at index migration', async () => {
+    const indexes = await db.execute(
+      sql`SELECT indexname FROM pg_indexes WHERE tablename = 'subscribers'`
+    )
+    const names = indexes.rows.map((r) => r.indexname)
+    expect(names).toContain('idx_subscribers_confirmed_at')
+  })
+
   it('getDb returns the PGlite-backed drizzle instance', async () => {
     const [row] = await getDb()
       .insert(subscribers)
