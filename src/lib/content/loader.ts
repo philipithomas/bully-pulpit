@@ -14,18 +14,23 @@ const PUBLIC_DIR = path.join(process.cwd(), 'public')
 
 const dimensionsCache = new Map<string, ImageDimensions>()
 
-function getFullCoverImage(coverImage: string | undefined): string | undefined {
-  if (!coverImage) return undefined
-  const fullPath = path.join(
-    PUBLIC_DIR,
-    'images',
-    'full',
-    coverImage.replace(/^\/images\//, '')
-  )
+/**
+ * Returns the preserved full-resolution variant under /images/full for an
+ * image public path (e.g. /images/posts/foo/bar.jpg), or undefined when the
+ * source was never resized. The zoom overlay upgrades to this variant.
+ */
+export function getFullImageSrc(publicPath: string): string | undefined {
+  const rel = publicPath.replace(/^\/images\//, '')
+  const fullPath = path.join(PUBLIC_DIR, 'images', 'full', rel)
   if (fs.existsSync(fullPath)) {
-    return `/images/full/${coverImage.replace(/^\/images\//, '')}`
+    return `/images/full/${rel}`
   }
   return undefined
+}
+
+function getFullCoverImage(coverImage: string | undefined): string | undefined {
+  if (!coverImage) return undefined
+  return getFullImageSrc(coverImage)
 }
 
 /**

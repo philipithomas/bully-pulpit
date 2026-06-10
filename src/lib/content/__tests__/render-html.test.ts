@@ -264,6 +264,26 @@ describe('renderMarkdownToHtml', () => {
     )
     expect(html).toMatch(/<a[^>]*style="[^"]*text-decoration: underline/)
   })
+
+  it('rewrites in-article post images to their email variants', async () => {
+    const html = await renderMarkdownToHtml(
+      '![A photo](/images/posts/october-2023/IMG_9933.JPG)'
+    )
+    expect(html).toContain(
+      'src="/images/email/posts/october-2023/IMG_9933.JPG"'
+    )
+    expect(html).not.toContain('src="/images/posts/')
+  })
+
+  it('leaves external and non-pipeline image srcs untouched', async () => {
+    const html = await renderMarkdownToHtml(
+      '![ext](https://cdn.example.com/img.jpg)\n\n![gif](/images/posts/launching-booklet/wall-street.gif)'
+    )
+    expect(html).toContain('src="https://cdn.example.com/img.jpg"')
+    expect(html).toContain(
+      'src="/images/posts/launching-booklet/wall-street.gif"'
+    )
+  })
 })
 
 describe('markdownToPlaintext', () => {

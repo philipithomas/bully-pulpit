@@ -79,6 +79,34 @@ function toEmailImagePath(imagePath: string): string {
   return `/images/email/covers/${basename}`
 }
 
+// In-article images the optimize pipeline mirrors under email/posts/ (same
+// relative path, 600px wide). GIFs and external URLs have no variant and pass
+// through untouched.
+const POST_IMAGE_SRC = /^\/images\/posts\/.+\.(jpe?g|png)$/i
+
+// Email counterpart to covers' toEmailImagePath: swaps in-article image srcs
+// for their 600px variants so emails never ship multi-megabyte camera files.
+function useEmailPostImageVariants() {
+  return (tree: HastNode) => {
+    const visit = (node: HastNode) => {
+      if (node.type === 'element' && node.tagName === 'img') {
+        const src = node.properties?.src
+        if (typeof src === 'string' && POST_IMAGE_SRC.test(src)) {
+          node.properties = node.properties ?? {}
+          node.properties.src = src.replace(
+            /^\/images\/posts\//,
+            '/images/email/posts/'
+          )
+        }
+      }
+      if (node.children) {
+        for (const child of node.children) visit(child)
+      }
+    }
+    visit(tree)
+  }
+}
+
 function toEmailThumbPath(imagePath: string): string {
   const basename = path.basename(imagePath)
   return `/images/email/thumbnails/${basename}`
@@ -91,6 +119,7 @@ export async function renderMarkdownToHtml(content: string): Promise<string> {
     .use(remarkRehype)
     .use(rehypeSanitize)
     .use(applyInlineStyles)
+    .use(useEmailPostImageVariants)
     .use(rehypeStringify)
     .process(content)
 
