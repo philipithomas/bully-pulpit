@@ -51,6 +51,9 @@ export async function createSubscriber(input: {
   email: string
   name?: string | null
   source?: string | null
+  subscribedPostcard?: boolean
+  subscribedContraption?: boolean
+  subscribedWorkshop?: boolean
 }): Promise<Subscriber> {
   const rows = await getDb()
     .insert(subscribers)
@@ -58,6 +61,16 @@ export async function createSubscriber(input: {
       email: input.email.toLowerCase(),
       name: input.name ?? null,
       source: input.source ?? null,
+      // Omitted flags fall back to the column defaults (all true).
+      ...(input.subscribedPostcard !== undefined
+        ? { subscribedPostcard: input.subscribedPostcard }
+        : {}),
+      ...(input.subscribedContraption !== undefined
+        ? { subscribedContraption: input.subscribedContraption }
+        : {}),
+      ...(input.subscribedWorkshop !== undefined
+        ? { subscribedWorkshop: input.subscribedWorkshop }
+        : {}),
     })
     .returning()
   return rows[0]

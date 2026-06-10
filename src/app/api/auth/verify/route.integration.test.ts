@@ -97,7 +97,7 @@ describe('POST /api/auth/verify', () => {
     expect(sesSend).toHaveBeenCalledTimes(1)
     expect(sesSend.mock.calls[0][0].to).toBe('reader@example.com')
     expect(sesSend.mock.calls[0][0].subject).toBe(
-      'Your sign-in code for philipithomas.com'
+      'Confirm your subscription to philipithomas.com'
     )
 
     const created = await subscriberByEmail('reader@example.com')

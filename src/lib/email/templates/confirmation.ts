@@ -1,12 +1,75 @@
 import { escapeHtml } from '@/lib/email/escape'
 
-/** Sign-in email with a 6-digit code and a magic link. Ported from confirmation.html. */
-export function renderConfirmationEmail(input: {
+/**
+ * 'confirm' for a new or still-unconfirmed subscription, 'sign-in' for a
+ * returning confirmed member. Same OTP and magic-link mechanics; only the copy
+ * changes.
+ */
+export type ConfirmationPurpose = 'confirm' | 'sign-in'
+
+export type ConfirmationInput = {
   code: string
   magicLink: string
-}): string {
+  purpose?: ConfirmationPurpose
+  /** Newsletter display names the confirm copy mentions, e.g. ['Contraption', 'Postcard']. */
+  newsletters?: string[]
+}
+
+/** Joins names per the colophon list style: "A", "A and B", "A, B, and C". */
+export function joinNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? ''
+  if (names.length === 2) return `${names[0]} and ${names[1]}`
+  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`
+}
+
+const SITE_LINK_HTML =
+  '<a href="https://www.philipithomas.com" style="color: #3B3834; text-decoration: none; font-weight: 600;">philipithomas.com</a>'
+
+type Copy = {
+  title: string
+  introHtml: string
+  introText: string
+  linkLineHtml: string
+  linkLineText: string
+  buttonLabel: string
+  footer: string
+}
+
+function copyFor(input: ConfirmationInput): Copy {
+  if ((input.purpose ?? 'sign-in') === 'confirm') {
+    const list = joinNames(input.newsletters ?? [])
+    return {
+      title: 'Confirm your subscription',
+      introHtml: list
+        ? `Thanks for subscribing to ${escapeHtml(list)} at ${SITE_LINK_HTML}. Enter this code to confirm your subscription:`
+        : `Thanks for subscribing to ${SITE_LINK_HTML}. Enter this code to confirm your subscription:`,
+      introText: list
+        ? `Thanks for subscribing to ${list} at philipithomas.com. Enter this code to confirm your subscription:`
+        : 'Thanks for subscribing to philipithomas.com. Enter this code to confirm your subscription:',
+      linkLineHtml: 'Or click the link below to confirm directly:',
+      linkLineText: 'Or use this link to confirm directly:',
+      buttonLabel: 'Confirm subscription',
+      footer:
+        'This code expires in 15 minutes. If you did not sign up, you can safely ignore this email and you will not receive any newsletters.',
+    }
+  }
+  return {
+    title: 'Your sign-in code',
+    introHtml: `Your sign-in code for ${SITE_LINK_HTML} is:`,
+    introText: 'Your sign-in code for philipithomas.com is:',
+    linkLineHtml: 'Or click the link below to sign in directly:',
+    linkLineText: 'Or use this link to sign in directly:',
+    buttonLabel: 'Sign in now',
+    footer:
+      'This code expires in 15 minutes. If you did not request this, you can safely ignore this email.',
+  }
+}
+
+/** Confirmation / sign-in email with a 6-digit code and a magic link. Ported from confirmation.html. */
+export function renderConfirmationEmail(input: ConfirmationInput): string {
   const code = escapeHtml(input.code)
   const magicLink = escapeHtml(input.magicLink)
+  const copy = copyFor(input)
   const year = new Date().getFullYear()
   return `<!DOCTYPE html>
 <html>
@@ -15,7 +78,7 @@ export function renderConfirmationEmail(input: {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <meta name="supported-color-schemes" content="light dark">
-<title>Your sign-in code</title>
+<title>${copy.title}</title>
 <style>
   :root { color-scheme: light dark; supported-color-schemes: light dark; }
   body { margin: 0; padding: 0; background-color: #F5F3F0; font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
@@ -46,23 +109,23 @@ export function renderConfirmationEmail(input: {
               Hey,
             </p>
             <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.5; color: #3B3834;">
-              Your sign-in code for <a href="https://www.philipithomas.com" style="color: #3B3834; text-decoration: none; font-weight: 600;">philipithomas.com</a> is:
+              ${copy.introHtml}
             </p>
             <div style="text-align: center; padding: 20px 0 28px;">
               <span style="font-family: 'Sohne Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 32px; font-weight: 600; letter-spacing: 0.3em; color: #111110;">${code}</span>
             </div>
             <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.5; color: #3B3834;">
-              Or click the link below to sign in directly:
+              ${copy.linkLineHtml}
             </p>
             <table border="0" cellpadding="0" cellspacing="0" width="100%">
               <tr>
                 <td align="center" style="padding: 0 0 28px;">
-                  <a class="email-button" href="${magicLink}" style="display: inline-block; background-color: #111110; color: #ffffff; font-family: 'Sohne', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px;">Sign in now &rarr;</a>
+                  <a class="email-button" href="${magicLink}" style="display: inline-block; background-color: #111110; color: #ffffff; font-family: 'Sohne', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px;">${copy.buttonLabel} &rarr;</a>
                 </td>
               </tr>
             </table>
             <p class="email-muted" style="margin: 0 0 8px; font-size: 13px; line-height: 1.5; color: #7E7A73;">
-              This code expires in 15 minutes. If you did not request this, you can safely ignore this email.
+              ${copy.footer}
             </p>
           </td>
         </tr>
@@ -83,27 +146,25 @@ export function renderConfirmationEmail(input: {
 }
 
 /**
- * Plaintext alternative for the sign-in email. Built from the RAW code and
- * link (escapeHtml belongs only to the HTML part) and mirrors the HTML's full
- * content — spam filters compare the two parts for consistency.
+ * Plaintext alternative for the confirmation / sign-in email. Built from the
+ * RAW code and link (escapeHtml belongs only to the HTML part) and mirrors the
+ * HTML's full content — spam filters compare the two parts for consistency.
  */
-export function renderConfirmationText(input: {
-  code: string
-  magicLink: string
-}): string {
+export function renderConfirmationText(input: ConfirmationInput): string {
+  const copy = copyFor(input)
   const year = new Date().getFullYear()
   return [
     'Hey,',
     '',
-    'Your sign-in code for philipithomas.com is:',
+    copy.introText,
     '',
     input.code,
     '',
-    'Or use this link to sign in directly:',
+    copy.linkLineText,
     '',
     input.magicLink,
     '',
-    'This code expires in 15 minutes. If you did not request this, you can safely ignore this email.',
+    copy.footer,
     '',
     '--',
     `© ${year} The Contraption Company LLC`,
