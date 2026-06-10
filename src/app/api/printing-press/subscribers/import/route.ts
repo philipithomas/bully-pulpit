@@ -35,12 +35,15 @@ export async function POST(request: NextRequest) {
   const cIdx = col('contraption')
   const wIdx = col('workshop')
   const confIdx = col('confirmed')
+  const srcIdx = col('source')
 
   // Dedupe by email — a single INSERT … ON CONFLICT can't touch a row twice.
   // A column that's absent entirely defaults to subscribed/confirmed for NEW
   // rows only (the common "here's my list, sign them up" case) — existing rows
   // keep their current flags, so a bare email list can't re-subscribe someone
-  // who opted out. A present-but-blank cell means false.
+  // who opted out. A present-but-blank cell means false. Source is optional
+  // free text; importSubscribers backfills it without overwriting a real
+  // captured referrer on existing rows.
   const byEmail = new Map<string, ImportRow>()
   let skipped = 0
   for (const r of rows.slice(1)) {
@@ -57,6 +60,7 @@ export async function POST(request: NextRequest) {
       contraption: cIdx < 0 ? true : truthy(r[cIdx]),
       workshop: wIdx < 0 ? true : truthy(r[wIdx]),
       confirmed: confIdx < 0 ? true : truthy(r[confIdx]),
+      source: srcIdx >= 0 ? r[srcIdx]?.trim() || null : null,
     })
   }
 

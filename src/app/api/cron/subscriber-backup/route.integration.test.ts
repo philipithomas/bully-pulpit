@@ -79,11 +79,13 @@ describe('backup send', () => {
     await seedSubscriber({
       email: 'evil@example.com',
       name: '=SUM(A1)',
+      source: '=2+5',
       confirmedAt: new Date(),
     })
     await seedSubscriber({
       email: 'plain@example.com',
       name: 'Plain Name',
+      source: 'https://example.org/',
       subscribedPostcard: false,
     })
 
@@ -115,6 +117,7 @@ describe('backup send', () => {
       'contraption',
       'workshop',
       'confirmed',
+      'source',
       'created_at',
     ])
     const data = parsed.slice(1)
@@ -125,11 +128,14 @@ describe('backup send', () => {
     expect(data[0][1]).toBe('Plain Name')
     expect(data[0][2]).toBe('false')
     expect(data[0][5]).toBe('false')
+    expect(data[0][6]).toBe('https://example.org/')
 
-    // The formula-leading name is neutralized with a leading apostrophe.
+    // Formula-leading name and source cells are neutralized with a leading
+    // apostrophe.
     expect(data[1][0]).toBe('evil@example.com')
     expect(data[1][1]).toBe("'=SUM(A1)")
     expect(data[1][5]).toBe('true')
+    expect(data[1][6]).toBe("'=2+5")
   })
 
   it('states the subscriber count in the plain-text body', async () => {

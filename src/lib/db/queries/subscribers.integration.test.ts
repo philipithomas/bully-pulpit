@@ -220,6 +220,7 @@ describe('importSubscribers', () => {
     contraption: true,
     workshop: true,
     confirmed: true,
+    source: null,
     ...overrides,
   })
   const allPresent = {
@@ -335,6 +336,109 @@ describe('importSubscribers', () => {
       allPresent
     )
     expect((await findByEmail('named@example.com'))?.name).toBe('New Name')
+  })
+
+  it('new rows take the CSV source, falling back to csv_import', async () => {
+    await importSubscribers(
+      [
+        row('attributed@example.com', { source: 'https://example.org/' }),
+        row('plain@example.com'),
+      ],
+      allPresent
+    )
+
+    expect((await findByEmail('attributed@example.com'))?.source).toBe(
+      'https://example.org/'
+    )
+    expect((await findByEmail('plain@example.com'))?.source).toBe('csv_import')
+  })
+
+  it('backfills source over NULL and the csv_import placeholder', async () => {
+    await seed({ email: 'null-source@example.com', source: null })
+    await seed({ email: 'placeholder@example.com', source: 'csv_import' })
+
+    await importSubscribers(
+      [
+        row('null-source@example.com', { source: 'https://example.org/' }),
+        row('placeholder@example.com', { source: 'https://example.net/' }),
+      ],
+      allPresent
+    )
+
+    expect((await findByEmail('null-source@example.com'))?.source).toBe(
+      'https://example.org/'
+    )
+    expect((await findByEmail('placeholder@example.com'))?.source).toBe(
+      'https://example.net/'
+    )
+  })
+
+  it('never overwrites a real captured referrer', async () => {
+    await seed({
+      email: 'captured@example.com',
+      source: 'https://news.ycombinator.com/',
+    })
+
+    await importSubscribers(
+      [row('captured@example.com', { source: 'https://example.org/' })],
+      allPresent
+    )
+
+    expect((await findByEmail('captured@example.com'))?.source).toBe(
+      'https://news.ycombinator.com/'
+    )
+  })
+
+  it('a source-less import leaves existing sources untouched', async () => {
+    await seed({ email: 'null-source@example.com', source: null })
+    await seed({ email: 'placeholder@example.com', source: 'csv_import' })
+    await seed({
+      email: 'captured@example.com',
+      source: 'https://news.ycombinator.com/',
+    })
+
+    await importSubscribers(
+      [
+        row('null-source@example.com'),
+        row('placeholder@example.com'),
+        row('captured@example.com'),
+      ],
+      nonePresent
+    )
+
+    expect((await findByEmail('null-source@example.com'))?.source).toBeNull()
+    expect((await findByEmail('placeholder@example.com'))?.source).toBe(
+      'csv_import'
+    )
+    expect((await findByEmail('captured@example.com'))?.source).toBe(
+      'https://news.ycombinator.com/'
+    )
+  })
+
+  it('a bare email,source backfill cannot touch flags, names, or confirmation', async () => {
+    await seed({
+      email: 'optout@example.com',
+      name: 'Existing Name',
+      subscribedPostcard: false,
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      source: 'csv_import',
+    })
+
+    // The import route maps a bare email,source file to defaults (true) for
+    // every flag with present=false, mirroring the bare-email-list case.
+    await importSubscribers(
+      [row('optout@example.com', { source: 'https://example.org/' })],
+      nonePresent
+    )
+
+    const optout = await findByEmail('optout@example.com')
+    expect(optout?.source).toBe('https://example.org/') // backfilled
+    expect(optout?.name).toBe('Existing Name')
+    expect(optout?.subscribedPostcard).toBe(false) // opt-outs survive
+    expect(optout?.subscribedContraption).toBe(false)
+    expect(optout?.subscribedWorkshop).toBe(false)
+    expect(optout?.confirmedAt).toBeNull() // absent confirmed column can't confirm
   })
 })
 

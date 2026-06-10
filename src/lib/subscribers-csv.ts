@@ -15,10 +15,12 @@ export function subscribersToCsv(rows: ExportRow[]): string {
       'contraption',
       'workshop',
       'confirmed',
+      'source',
       'created_at',
     ],
-    // email + name are subscriber-controlled free text; neutralize spreadsheet
-    // formula injection before the admin opens the file in Excel/Sheets.
+    // email + name + source are subscriber-influenced free text (source comes
+    // from document.referrer); neutralize spreadsheet formula injection before
+    // the admin opens the file in Excel/Sheets.
     rows.map((r) => [
       neutralizeFormula(r.email),
       neutralizeFormula(r.name ?? ''),
@@ -26,6 +28,7 @@ export function subscribersToCsv(rows: ExportRow[]): string {
       r.contraption,
       r.workshop,
       r.confirmed,
+      neutralizeFormula(r.source ?? ''),
       r.createdAt,
     ])
   )
