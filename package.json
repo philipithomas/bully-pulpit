@@ -31,7 +31,7 @@
     "@ai-sdk/gateway": "^3.0.127",
     "@ai-sdk/openai": "^3.0.69",
     "@ai-sdk/react": "^3.0.201",
-    "@aws-sdk/client-sesv2": "^3.1065.0",
+    "@aws-sdk/client-sesv2": "^3.1066.0",
     "@chroma-core/chroma-cloud-qwen": "^0.1.12",
     "@chroma-core/chroma-cloud-splade": "^0.1.12",
     "@neondatabase/serverless": "^1.1.0",
