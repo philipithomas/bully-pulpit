@@ -31,7 +31,7 @@ export function PostNavigation({ previous, next }: PostNavigationProps) {
     >
       <div
         className={
-          both ? 'grid grid-cols-1 sm:grid-cols-2 gap-6' : 'grid grid-cols-1'
+          both ? 'grid grid-cols-1 sm:grid-cols-2 gap-8' : 'grid grid-cols-1'
         }
       >
         {previous && <NavCell post={previous} direction="previous" />}
@@ -49,10 +49,16 @@ function NavCell({
   direction: 'previous' | 'next'
 }) {
   const isNext = direction === 'next'
+  // The arrow nudges toward its direction and takes the newsletter accent on
+  // hover, tying the directional cue to the tinted title beneath it.
+  const arrowClass = `w-3.5 h-3.5 transition-all duration-500 ease-in-out ${
+    hoverText[post.newsletter]
+  } ${isNext ? 'group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`
 
   return (
     <Link
       href={`/${post.slug}`}
+      rel={isNext ? 'next' : 'prev'}
       className={`group flex flex-col no-underline ${
         isNext ? 'sm:items-end sm:text-right' : ''
       }`}
@@ -62,23 +68,17 @@ function NavCell({
         {isNext ? (
           <>
             Next
-            <ArrowRight
-              aria-hidden="true"
-              className="w-3.5 h-3.5 transition-transform duration-500 ease-in-out group-hover:translate-x-0.5"
-            />
+            <ArrowRight aria-hidden="true" className={arrowClass} />
           </>
         ) : (
           <>
-            <ArrowLeft
-              aria-hidden="true"
-              className="w-3.5 h-3.5 transition-transform duration-500 ease-in-out group-hover:-translate-x-0.5"
-            />
+            <ArrowLeft aria-hidden="true" className={arrowClass} />
             Previous
           </>
         )}
       </span>
       <span
-        className={`font-sans text-lg font-semibold text-gray-950 ${hoverText[post.newsletter]} transition-colors duration-500`}
+        className={`font-sans text-lg font-semibold text-gray-950 text-pretty ${hoverText[post.newsletter]} transition-colors duration-500`}
       >
         {post.frontmatter.title}
       </span>
