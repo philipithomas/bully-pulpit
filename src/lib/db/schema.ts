@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
 
@@ -76,6 +77,15 @@ export const emailSends = pgTable(
     index('idx_email_sends_subscriber').on(table.subscriberId),
     index('idx_email_sends_unsubscribe_token').on(table.unsubscribeToken),
     index('idx_email_sends_post_slug').on(table.postSlug),
+    // DB backstop against duplicate enqueues: one row per recipient per post,
+    // no matter how many workflow runs race. Inserts go through
+    // bulkCreateQueued's onConflictDoNothing so a conflict is a no-op, not an
+    // error. This guards enqueue duplication only; SES delivery stays
+    // at-least-once.
+    uniqueIndex('idx_email_sends_subscriber_post').on(
+      table.subscriberId,
+      table.postSlug
+    ),
     index('idx_email_sends_queue')
       .on(table.nextAttemptAt)
       .where(sql`sent_at IS NULL AND send_error IS NULL`),

@@ -25,6 +25,11 @@ export async function markUnsubscribed(id: number): Promise<void> {
 /**
  * Inserts one queued email_sends row per subscriber for a post and returns the
  * created row ids. Chunked to stay well under Postgres parameter limits.
+ *
+ * Conflicts on the (subscriber_id, post_slug) unique index are ignored: when
+ * two workflow runs race the enqueue, the loser's insert becomes a no-op and
+ * the subscriber keeps a single row. The returned ids cover only rows this
+ * call actually created; pendingRowIdsBySlug picks up the rest.
  */
 export async function bulkCreateQueued(input: {
   subscriberIds: number[]
@@ -52,6 +57,9 @@ export async function bulkCreateQueued(input: {
           nextAttemptAt: sql`NOW()`,
         }))
       )
+      .onConflictDoNothing({
+        target: [emailSends.subscriberId, emailSends.postSlug],
+      })
       .returning({ id: emailSends.id })
     ids.push(...rows.map((r) => r.id))
   }
