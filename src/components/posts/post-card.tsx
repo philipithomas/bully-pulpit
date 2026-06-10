@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { accentHoverText } from '@/components/posts/newsletter-accent'
 import { coverPreloadAttrs } from '@/lib/content/cover-preload'
 import type { Post } from '@/lib/content/types'
 
@@ -49,7 +50,9 @@ export function PostCard({
           <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
             {post.frontmatter.publishedAt}
           </time>
-          <h2 className="text-lg font-semibold text-gray-950 group-hover:text-forest transition-colors mt-1">
+          <h2
+            className={`text-lg font-semibold text-gray-950 ${accentHoverText[post.newsletter]} transition-colors mt-1`}
+          >
             {post.frontmatter.title}
           </h2>
           {(post.frontmatter.subtitle || post.frontmatter.description) && (

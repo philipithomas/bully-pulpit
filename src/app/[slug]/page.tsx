@@ -8,6 +8,7 @@ import {
   createHeadingComponents,
   mdxComponents,
 } from '@/components/posts/mdx-components'
+import { accentHoverText } from '@/components/posts/newsletter-accent'
 import { PostNavigation } from '@/components/posts/post-navigation'
 import { RelatedPosts } from '@/components/posts/related-posts'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
@@ -133,7 +134,9 @@ export default async function SlugPage({ params }: Props) {
                 height={36}
                 className="w-9 h-9 rounded-full"
               />
-              <span className="font-sans text-sm font-medium text-gray-600 group-hover:text-forest transition-colors duration-300">
+              <span
+                className={`font-sans text-sm font-medium text-gray-600 ${accentHoverText[post.newsletter]} transition-colors duration-300`}
+              >
                 Philip I. Thomas
               </span>
             </a>

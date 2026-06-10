@@ -1,13 +1,8 @@
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { accentHoverText } from '@/components/posts/newsletter-accent'
 import { coverPreloadAttrs } from '@/lib/content/cover-preload'
-import type { Newsletter, Post } from '@/lib/content/types'
-
-const hoverText: Record<Newsletter, string> = {
-  contraption: 'group-hover:text-forest',
-  workshop: 'group-hover:text-walnut',
-  postcard: 'group-hover:text-indigo',
-}
+import type { Post } from '@/lib/content/types'
 
 interface PostNavigationProps {
   previous: Post | null
@@ -52,7 +47,7 @@ function NavCell({
   // The arrow nudges toward its direction and takes the newsletter accent on
   // hover, tying the directional cue to the tinted title beneath it.
   const arrowClass = `w-3.5 h-3.5 transition-all duration-500 ease-in-out ${
-    hoverText[post.newsletter]
+    accentHoverText[post.newsletter]
   } ${isNext ? 'group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`
 
   return (
@@ -78,7 +73,7 @@ function NavCell({
         )}
       </span>
       <span
-        className={`font-sans text-lg font-semibold text-gray-950 text-pretty ${hoverText[post.newsletter]} transition-colors duration-500`}
+        className={`font-sans text-lg font-semibold text-gray-950 text-pretty ${accentHoverText[post.newsletter]} transition-colors duration-500`}
       >
         {post.frontmatter.title}
       </span>
