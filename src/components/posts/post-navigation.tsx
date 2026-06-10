@@ -62,17 +62,23 @@ function NavCell({
         {isNext ? (
           <>
             Next
-            <ArrowRight aria-hidden="true" className="w-3.5 h-3.5" />
+            <ArrowRight
+              aria-hidden="true"
+              className="w-3.5 h-3.5 transition-transform duration-500 ease-in-out group-hover:translate-x-0.5"
+            />
           </>
         ) : (
           <>
-            <ArrowLeft aria-hidden="true" className="w-3.5 h-3.5" />
+            <ArrowLeft
+              aria-hidden="true"
+              className="w-3.5 h-3.5 transition-transform duration-500 ease-in-out group-hover:-translate-x-0.5"
+            />
             Previous
           </>
         )}
       </span>
       <span
-        className={`font-serif text-lg text-gray-950 ${hoverText[post.newsletter]} transition-colors duration-500`}
+        className={`font-sans text-lg font-semibold text-gray-950 ${hoverText[post.newsletter]} transition-colors duration-500`}
       >
         {post.frontmatter.title}
       </span>
