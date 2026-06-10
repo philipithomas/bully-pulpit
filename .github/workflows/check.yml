@@ -35,5 +35,8 @@ jobs:
       - name: Content pipeline check
         run: pnpm content:check
 
+      - name: Internal link check
+        run: pnpm links:check
+
       - name: Build
         run: pnpm build

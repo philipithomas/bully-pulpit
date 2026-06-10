@@ -10,3 +10,6 @@ next-env.d.ts
 .env*.local
 .DS_Store
 .env*
+
+# lychee link checker cache (local runs; CI caches it via actions/cache)
+.lycheecache

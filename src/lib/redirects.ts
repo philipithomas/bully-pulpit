@@ -124,6 +124,9 @@ export function getRedirects(): Redirect[] {
     },
     // contraption.co legacy redirects
     { source: '/projects', destination: '/', permanent: true },
+    // Ghost portal signup page, linked from a 2024 post and its email blast.
+    // The home page carries the signup form now.
+    { source: '/subscribe', destination: '/', permanent: true },
     { source: '/check-email', destination: '/', permanent: true },
     { source: '/live-analytics', destination: '/', permanent: true },
     // Legacy RSS feed paths (contraption.co: /rss/, philipithomas.com: /posts.rss)
