@@ -6,11 +6,11 @@ export const dynamic = 'force-static'
 
 export async function GET() {
   const posts = getPostsByNewsletter('contraption')
-  const xml = generateRss(
-    posts,
-    `${siteConfig.newsletters.contraption.name} | ${siteConfig.title}`,
-    `${siteConfig.url}/feed/contraption/rss.xml`
-  )
+  const xml = await generateRss(posts, {
+    title: `${siteConfig.newsletters.contraption.name} | ${siteConfig.title}`,
+    description: siteConfig.newsletters.contraption.tagline,
+    feedUrl: `${siteConfig.url}/feed/contraption/rss.xml`,
+  })
   return new Response(xml, {
     headers: {
       'Content-Type': 'application/rss+xml; charset=utf-8',

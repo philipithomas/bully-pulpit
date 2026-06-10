@@ -8,10 +8,10 @@ export const dynamic = 'force-static'
 export async function GET() {
   const posts = getPostsByNewsletter('postcard')
   return NextResponse.json(
-    generateJsonFeed(
-      posts,
-      `${siteConfig.newsletters.postcard.name} | ${siteConfig.title}`,
-      `${siteConfig.url}/feed/postcard/feed.json`
-    )
+    await generateJsonFeed(posts, {
+      title: `${siteConfig.newsletters.postcard.name} | ${siteConfig.title}`,
+      description: siteConfig.newsletters.postcard.tagline,
+      feedUrl: `${siteConfig.url}/feed/postcard/feed.json`,
+    })
   )
 }
