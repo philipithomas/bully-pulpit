@@ -31,8 +31,12 @@ function chunk(ids: number[]): number[][] {
  * pending row ids (newly enqueued + any left over from a prior run) chunked for
  * sending. Because eligibility excludes already-sent/pending rows, re-running is
  * idempotent and resumes a stalled send rather than duplicating it.
+ *
+ * Exported (like sendBatch) so the integration tests can invoke the step
+ * directly; without the workflow compiler a 'use step' function is a plain
+ * async function.
  */
-async function enqueueRecipients(slug: string): Promise<number[][]> {
+export async function enqueueRecipients(slug: string): Promise<number[][]> {
   'use step'
   const post = getPostBySlug(slug)
   if (!post) {
@@ -71,7 +75,7 @@ async function enqueueRecipients(slug: string): Promise<number[][]> {
  * duplicate on retry (SESv2 SendEmail exposes no idempotency key). Acceptable for
  * a newsletter.
  */
-async function sendBatch(rowIds: number[]): Promise<{
+export async function sendBatch(rowIds: number[]): Promise<{
   sent: number
   failed: number
 }> {
