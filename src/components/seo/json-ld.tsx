@@ -7,6 +7,18 @@ interface JsonLdProps {
   page?: Page
 }
 
+/**
+ * Plain JSON.stringify is unsafe inside a script element: a string field
+ * containing "</script" would close the tag early and turn the remainder of
+ * the page into attacker-controlled markup. Escaping "<" as the JSON escape
+ * sequence backslash-u003c keeps the parsed value byte-identical while making
+ * early termination impossible. Content here is owner-authored, so this is a
+ * latent guard.
+ */
+export function serializeJsonLd(schema: object): string {
+  return JSON.stringify(schema).replace(/</g, '\\u003c')
+}
+
 export function JsonLd({ type, post, page }: JsonLdProps) {
   const item = post ?? page
 
@@ -25,7 +37,7 @@ export function JsonLd({ type, post, page }: JsonLdProps) {
     return (
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
       />
     )
   }
@@ -59,7 +71,7 @@ export function JsonLd({ type, post, page }: JsonLdProps) {
     return (
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
       />
     )
   }
