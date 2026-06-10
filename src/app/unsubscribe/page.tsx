@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useState } from 'react'
+import { PreferencesPageSkeleton } from '@/components/auth/preferences-skeleton'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -143,13 +144,7 @@ function UnsubscribeContent() {
   }
 
   if (!prefs) {
-    return (
-      <div className="bg-offwhite min-h-[60vh]">
-        <div className="container max-w-lg py-16 flex justify-center">
-          <Spinner className="h-6 w-6 text-gray-400" />
-        </div>
-      </div>
-    )
+    return <PreferencesPageSkeleton />
   }
 
   const sourceNewsletter = prefs.newsletter
@@ -280,15 +275,7 @@ function UnsubscribeContent() {
 
 export default function UnsubscribePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="bg-offwhite min-h-[60vh]">
-          <div className="container max-w-lg py-16 flex justify-center">
-            <Spinner className="h-6 w-6 text-gray-400" />
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<PreferencesPageSkeleton />}>
       <UnsubscribeContent />
     </Suspense>
   )
