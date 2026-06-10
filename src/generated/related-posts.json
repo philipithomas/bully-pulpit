@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T16:08:53.979Z",
+  "generatedAt": "2026-06-10T22:42:52.496Z",
   "posts": {
     "2026-06": {
       "related": [
@@ -213,15 +213,15 @@
       "related": [
         {
           "slug": "chroma",
-          "score": 0.2084087
+          "score": 0.2089947
         },
         {
           "slug": "git",
-          "score": 0.2908997
+          "score": 0.2913854
         },
         {
           "slug": "2026-02",
-          "score": 0.3295449
+          "score": 0.3292154
         }
       ]
     },
@@ -869,7 +869,7 @@
       "related": [
         {
           "slug": "chroma-for-ruby",
-          "score": 0.2084087
+          "score": 0.2089947
         },
         {
           "slug": "git",
