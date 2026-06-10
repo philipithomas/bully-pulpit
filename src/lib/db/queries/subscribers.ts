@@ -333,6 +333,7 @@ export type ExportRow = {
   contraption: boolean
   workshop: boolean
   confirmed: boolean
+  source: string | null
   createdAt: string
 }
 
@@ -349,6 +350,7 @@ export async function allSubscribersForExport(): Promise<ExportRow[]> {
     contraption: s.subscribedContraption,
     workshop: s.subscribedWorkshop,
     confirmed: s.confirmedAt != null,
+    source: s.source,
     createdAt: s.createdAt.toISOString(),
   }))
 }
@@ -360,6 +362,7 @@ export type ImportRow = {
   contraption: boolean
   workshop: boolean
   confirmed: boolean
+  source: string | null
 }
 
 const IMPORT_CHUNK = 500
@@ -378,9 +381,13 @@ export type ImportColumnsPresent = {
  * sets defaults on NEW rows and leaves existing rows untouched — so importing a
  * bare email list can't re-subscribe someone who opted out. A name is only
  * overwritten when the import provides one; confirmation is monotonic — an
- * import can confirm a subscriber but never un-confirm one. Returns how many
- * rows were created vs updated. Callers must dedupe by email first (a single
- * INSERT … ON CONFLICT can't touch the same row twice).
+ * import can confirm a subscriber but never un-confirm one. Source is
+ * backfill-only: new rows take the CSV source (falling back to 'csv_import');
+ * existing rows take it only when the stored source is NULL or 'csv_import',
+ * so a re-sync can restore attribution but never overwrite a real captured
+ * referrer. Returns how many rows were created vs updated. Callers must dedupe
+ * by email first (a single INSERT … ON CONFLICT can't touch the same row
+ * twice).
  */
 export async function importSubscribers(
   rows: ImportRow[],
@@ -400,7 +407,7 @@ export async function importSubscribers(
           subscribedContraption: r.contraption,
           subscribedWorkshop: r.workshop,
           confirmedAt: r.confirmed ? new Date() : null,
-          source: 'csv_import',
+          source: r.source ?? 'csv_import',
         }))
       )
       .onConflictDoUpdate({
@@ -422,6 +429,16 @@ export async function importSubscribers(
                 confirmedAt: sql`COALESCE(${subscribers.confirmedAt}, excluded.confirmed_at)`,
               }
             : {}),
+          // Backfill attribution only where the stored value carries no
+          // information (NULL or the 'csv_import' placeholder). NULLIF treats
+          // the 'csv_import' fallback the insert stamps on source-less rows as
+          // "no source in this CSV", so a bare email list leaves existing
+          // sources untouched and a real captured referrer is never replaced.
+          source: sql`CASE
+            WHEN ${subscribers.source} IS NULL OR ${subscribers.source} = 'csv_import'
+              THEN COALESCE(NULLIF(excluded.source, 'csv_import'), ${subscribers.source})
+            ELSE ${subscribers.source}
+          END`,
           updatedAt: sql`NOW()`,
         },
       })

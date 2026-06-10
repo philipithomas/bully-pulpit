@@ -272,7 +272,7 @@ export function SubscribersClient({
             size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={importing}
-            title="CSV columns: email, name, postcard, contraption, workshop, confirmed"
+            title="CSV columns: email, name, postcard, contraption, workshop, confirmed, source"
           >
             {importing ? (
               <Spinner className="h-4 w-4" />
