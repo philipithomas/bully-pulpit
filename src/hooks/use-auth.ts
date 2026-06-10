@@ -17,10 +17,17 @@ function hasSessionCookie(): boolean {
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
+  // null until the cookie is read on the client. The header renders both
+  // presentations while null and lets the pre-paint session hint script in
+  // the root layout pick the visible one, so first paint is correct for
+  // both anonymous visitors and returning members.
+  const [hasSession, setHasSession] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!hasSessionCookie()) {
+    const present = hasSessionCookie()
+    setHasSession(present)
+    if (!present) {
       setLoading(false)
       return
     }
@@ -39,5 +46,5 @@ export function useAuth() {
     setUser(null)
   }, [])
 
-  return { user, loading, logout }
+  return { user, hasSession, loading, logout }
 }

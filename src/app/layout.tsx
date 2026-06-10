@@ -70,7 +70,9 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the session hint script below adds a
+    // data-member attribute to <html> before React hydrates.
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link
           rel="preconnect"
@@ -78,6 +80,17 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <FontPreloads />
+        {/* Pre-paint session hint. Pages are statically cached, so the HTML
+            always carries the signed-out header; this script flags returning
+            members on <html> before first paint so CSS in the member menu
+            shows the avatar placeholder instead of the sign-in controls.
+            Same pattern as a dark mode flicker fix. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "if(/(?:^|; ?)bp_has_session=/.test(document.cookie))document.documentElement.setAttribute('data-member','')",
+          }}
+        />
       </head>
       <body className="font-sans font-normal antialiased text-gray-900 bg-offwhite flex flex-col min-h-screen">
         <AuthProvider>
