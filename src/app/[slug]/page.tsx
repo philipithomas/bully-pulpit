@@ -8,6 +8,7 @@ import {
   createHeadingComponents,
   mdxComponents,
 } from '@/components/posts/mdx-components'
+import { PostNavigation } from '@/components/posts/post-navigation'
 import { RelatedPosts } from '@/components/posts/related-posts'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { JsonLd } from '@/components/seo/json-ld'
@@ -17,6 +18,7 @@ import { siteConfig } from '@/lib/config'
 import { POST_COVER_SIZES } from '@/lib/content/cover-preload'
 import {
   extractExcerpt,
+  getAdjacentPosts,
   getAllPosts,
   getPageBySlug,
   getPages,
@@ -80,6 +82,9 @@ export default async function SlugPage({ params }: Props) {
 
   const item = post ?? page!
   const relatedPosts = post ? getRelatedPosts(post.slug) : []
+  const { previous, next } = post
+    ? getAdjacentPosts(post.slug)
+    : { previous: null, next: null }
   const bgMap: Record<string, { className: string; dataBg: string }> = {
     workshop: { className: 'bg-offwhite-warm', dataBg: 'offwhite-warm' },
     contraption: { className: 'bg-gray-050', dataBg: 'gray-050' },
@@ -168,6 +173,9 @@ export default async function SlugPage({ params }: Props) {
 
         {/* Subscribe CTA for posts */}
         {post && <SubscribeCta />}
+
+        {/* Previous and next posts in the same newsletter */}
+        {post && <PostNavigation previous={previous} next={next} />}
 
         {/* Related posts */}
         {post && relatedPosts.length > 0 && (

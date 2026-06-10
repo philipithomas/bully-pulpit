@@ -159,6 +159,33 @@ export function getPostBySlug(slug: string): Post | null {
   return all.find((p) => p.slug === slug) ?? null
 }
 
+export interface AdjacentPosts {
+  /** The older post in the same newsletter, or null at the start. */
+  previous: Post | null
+  /** The newer post in the same newsletter, or null at the end. */
+  next: Post | null
+}
+
+/**
+ * Finds the posts published immediately before and after the given post,
+ * scoped to the same newsletter. Posts sort newest first, so the entry
+ * after the current index is older (previous) and the entry before it
+ * is newer (next).
+ */
+export function getAdjacentPosts(slug: string): AdjacentPosts {
+  const post = getPostBySlug(slug)
+  if (!post) return { previous: null, next: null }
+
+  const posts = getPostsByNewsletter(post.newsletter)
+  const index = posts.findIndex((p) => p.slug === post.slug)
+  if (index === -1) return { previous: null, next: null }
+
+  return {
+    previous: posts[index + 1] ?? null,
+    next: posts[index - 1] ?? null,
+  }
+}
+
 export function getPages(): Page[] {
   const dir = path.join(CONTENT_DIR, 'pages')
   if (!fs.existsSync(dir)) return []
