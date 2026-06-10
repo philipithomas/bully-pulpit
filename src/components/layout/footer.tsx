@@ -53,6 +53,12 @@ export function Footer() {
             >
               Colophon
             </Link>
+            <Link
+              href="/sitemap"
+              className="hover:text-white transition-colors"
+            >
+              Sitemap
+            </Link>
           </nav>
         </div>
         <div className="mt-12 pt-8 border-t border-gray-900 text-center">

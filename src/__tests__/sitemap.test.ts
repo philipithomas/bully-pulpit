@@ -46,13 +46,14 @@ describe('sitemap.xml route', () => {
     return response.text()
   }
 
-  it('lists the homepage, newsletter indexes, and print page', async () => {
+  it('lists the homepage, newsletter indexes, and static pages', async () => {
     const xml = await getSitemapXml()
     for (const path of [
       '',
       '/contraption',
       '/workshop',
       '/postcard',
+      '/sitemap',
       '/print',
     ]) {
       expect(xml).toContain(`<loc>${siteConfig.url}${path}</loc>`)
