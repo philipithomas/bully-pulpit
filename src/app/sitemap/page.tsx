@@ -33,7 +33,7 @@ const appPages: { href: string; title: string }[] = [
   { href: '/workshop', title: 'Workshop' },
   { href: '/postcard', title: 'Postcard' },
   { href: '/photography', title: 'Photography' },
-  { href: '/print', title: 'Print edition, concluded' },
+  { href: '/print', title: 'Print edition' },
 ]
 
 export default function SitemapPage() {
