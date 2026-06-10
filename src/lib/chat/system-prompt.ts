@@ -1,5 +1,8 @@
+import type { PageContextContent } from '@/lib/chat/page-context'
+
 interface SystemPromptOptions {
   pageContext?: { path?: string; title?: string }
+  pageContent?: PageContextContent | null
   userName?: string | null
 }
 
@@ -75,6 +78,14 @@ If the search returns no relevant results, say so honestly rather than speculati
     if (page.path === '/') {
       parts.push(
         `\n## Current page\n\nThe user is on the homepage. If they ask about "this page" or "the current page", describe the site: it is philipithomas.com, the personal website and blog of Philip I. Thomas. It features three newsletters (Contraption, Workshop, Postcard) and an archive of essays. Search broadly to give them an overview.`
+      )
+    } else if (options.pageContent) {
+      const pc = options.pageContent
+      const fallback = pc.truncated
+        ? ` The content below is truncated. If the user needs detail beyond what is shown, use fetchPost with slug "${pc.slug}" to read the full text.`
+        : ''
+      parts.push(
+        `\n## Current page\n\nThe user is currently viewing "${pc.title}" (${page.path}). Its content is included below between the current-page-content markers. Treat it as already retrieved: when the user asks about "this page", "the current page", or "this post", answer directly from it without calling tools.${fallback}\n\n<current-page-content>\n${pc.content}\n</current-page-content>`
       )
     } else {
       const slug = page.path!.replace(/^\//, '').replace(/\/$/, '')

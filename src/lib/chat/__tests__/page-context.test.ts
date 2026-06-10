@@ -1,0 +1,64 @@
+import { describe, expect, it } from 'vitest'
+import {
+  getPageContextContent,
+  PAGE_CONTENT_MAX_CHARS,
+} from '@/lib/chat/page-context'
+import { getAllPosts, getPageBySlug } from '@/lib/content/loader'
+
+describe('getPageContextContent', () => {
+  it('resolves a known post path to its title and content', () => {
+    const post = getAllPosts()[0]
+    const result = getPageContextContent(`/${post.slug}`)
+    expect(result).not.toBeNull()
+    expect(result?.slug).toBe(post.slug)
+    expect(result?.title).toBe(post.frontmatter.title)
+    expect(result?.content.length).toBeGreaterThan(0)
+    expect(result?.content.length).toBeLessThanOrEqual(PAGE_CONTENT_MAX_CHARS)
+  })
+
+  it('resolves a known content page path', () => {
+    const page = getPageBySlug('colophon')
+    expect(page).not.toBeNull()
+    const result = getPageContextContent('/colophon')
+    expect(result).not.toBeNull()
+    expect(result?.title).toBe(page?.frontmatter.title)
+  })
+
+  it('handles a trailing slash', () => {
+    const post = getAllPosts()[0]
+    expect(getPageContextContent(`/${post.slug}/`)?.slug).toBe(post.slug)
+  })
+
+  it('returns null for the homepage', () => {
+    expect(getPageContextContent('/')).toBeNull()
+  })
+
+  it('returns null for unknown paths', () => {
+    expect(getPageContextContent('/no-such-post-exists-here')).toBeNull()
+  })
+
+  it('returns null for nested paths', () => {
+    expect(getPageContextContent('/feed/contraption')).toBeNull()
+  })
+
+  it('returns null for non-string input', () => {
+    expect(getPageContextContent(undefined)).toBeNull()
+    expect(getPageContextContent(42)).toBeNull()
+    expect(getPageContextContent({ path: '/colophon' })).toBeNull()
+  })
+
+  it('truncates long content and sets the truncated flag', () => {
+    const post = getAllPosts()[0]
+    const result = getPageContextContent(`/${post.slug}`, 100)
+    expect(result?.truncated).toBe(true)
+    expect(result?.content.length).toBe(100)
+  })
+
+  it('strips markdown image and link syntax from the content', () => {
+    for (const post of getAllPosts().slice(0, 10)) {
+      const result = getPageContextContent(`/${post.slug}`)
+      expect(result?.content).not.toContain('![')
+      expect(result?.content).not.toMatch(/\]\(/)
+    }
+  })
+})
