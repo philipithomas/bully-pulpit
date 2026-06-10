@@ -5,7 +5,7 @@ import {
   isValidElement,
   type ReactNode,
 } from 'react'
-import { getImageDimensions } from '@/lib/content/loader'
+import { getFullImageSrc, getImageDimensions } from '@/lib/content/loader'
 import { createSlugger } from '@/lib/content/slugify'
 
 /**
@@ -19,8 +19,10 @@ const PROSE_IMAGE_SIZES = '(min-width: 704px) 672px, 100vw'
  * In-article images: local JPEG/PNG sources render through next/image with
  * build-time intrinsic dimensions (no layout shift), lazy loading, and a
  * responsive srcset served by Vercel image optimization. data-full-src keeps
- * the zoom overlay on the original file instead of an optimized variant.
- * Anything else (GIF, SVG, external) falls back to a plain lazy <img>.
+ * the zoom overlay on the original file instead of an optimized variant:
+ * the preserved /images/full copy when the source was resized, the source
+ * itself otherwise. Anything else (GIF, SVG, external) falls back to a plain
+ * lazy <img>.
  */
 function MdxImage(props: ComponentPropsWithoutRef<'img'>) {
   const { src, alt = '', ...rest } = props
@@ -35,7 +37,7 @@ function MdxImage(props: ComponentPropsWithoutRef<'img'>) {
           width={dims.width}
           height={dims.height}
           sizes={PROSE_IMAGE_SIZES}
-          data-full-src={src}
+          data-full-src={getFullImageSrc(src) ?? src}
         />
       )
     }

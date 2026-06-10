@@ -28,8 +28,11 @@ const RELATED_JSON = path.join(
 const MAX_WEB_WIDTH = 2560
 const MAX_EMAIL_COVER_BYTES = 110 * 1024
 const MAX_EMAIL_THUMB_BYTES = 15 * 1024
-// Vercel image optimization rejects sources larger than 8192px per side.
-const MAX_OPTIMIZER_SOURCE_PX = 8192
+// In-article images: web sources are capped on the long edge (also keeps them
+// far under the 8192px Vercel image optimizer source limit), and the email
+// variants share the cover budget (both are 600px wide JPEGs).
+const MAX_POST_LONG_EDGE = 1600
+const MAX_EMAIL_POST_BYTES = MAX_EMAIL_COVER_BYTES
 
 const errors: string[] = []
 
@@ -103,9 +106,10 @@ async function main() {
     }
   }
 
-  // 5: in-article images must stay within the Vercel image optimizer source
-  // limit (8192px per side) — they render through next/image, and an
-  // over-limit source fails to optimize in production with no local signal.
+  // 5: in-article images go through the same pipeline as covers — the web
+  // source is capped at MAX_POST_LONG_EDGE and a 600px email variant exists
+  // under email/posts/ within budget. Emails reference those variants, so a
+  // missing or oversized one ships a degraded newsletter with no local signal.
   const postsDir = path.join(IMAGES, 'posts')
   if (fs.existsSync(postsDir)) {
     const stack = [postsDir]
@@ -120,9 +124,23 @@ async function main() {
         if (!/\.(jpe?g|png)$/i.test(entry.name)) continue
         const meta = await sharp(full).metadata()
         const longest = Math.max(meta.width ?? 0, meta.height ?? 0)
-        if (longest > MAX_OPTIMIZER_SOURCE_PX) {
+        if (longest > MAX_POST_LONG_EDGE) {
           errors.push(
-            `${path.relative(process.cwd(), full)} is ${longest}px on its longest side (Vercel optimizer limit ${MAX_OPTIMIZER_SOURCE_PX}) — resize the source`
+            `${path.relative(process.cwd(), full)} is ${longest}px on its longest side (max ${MAX_POST_LONG_EDGE}) — run \`pnpm images:optimize\``
+          )
+        }
+        const rel = path.relative(IMAGES, full)
+        const variant = path.join(IMAGES, 'email', rel)
+        if (!fs.existsSync(variant)) {
+          errors.push(
+            `${rel}: missing email variant ${path.relative(process.cwd(), variant)} — run \`pnpm images:optimize\``
+          )
+          continue
+        }
+        const size = fs.statSync(variant).size
+        if (size > MAX_EMAIL_POST_BYTES) {
+          errors.push(
+            `${rel}: email variant is ${(size / 1024).toFixed(0)}KB (budget ${MAX_EMAIL_POST_BYTES / 1024}KB) — run \`pnpm images:optimize\``
           )
         }
       }
