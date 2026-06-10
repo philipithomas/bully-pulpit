@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`voicemail email > snapshots the dark-mode style block 1`] = `
+"@media (prefers-color-scheme: dark) {
+    body, .email-body, .email-bg { background-color: #121110 !important; }
+    .email-card { background-color: #1C1A17 !important; }
+    .email-panel { background-color: #262220 !important; }
+    .email-card h1, .email-card h2 { color: #ECE9E4 !important; }
+    .email-card p { color: #ECE9E4 !important; }
+    .email-card p.email-muted { color: #A8A49D !important; }
+    .email-divider { border-top-color: #3A362F !important; }
+  }"
+`;

@@ -138,3 +138,78 @@ describe('buildMimeMessage', () => {
     expect(new Uint8Array(Buffer.from(body, 'base64'))).toEqual(bytes)
   })
 })
+
+describe('buildMimeMessage with an html alternative', () => {
+  const html = '<p>Call me back.</p>'
+
+  function buildWithHtml(): string {
+    return build({
+      subject: 'Voicemail from +15551234567 to NYC (42s)',
+      text: 'Call me back.',
+      html,
+      attachment: {
+        filename: 'voicemail-RE123.mp3',
+        contentType: 'audio/mpeg',
+        content: new Uint8Array([1, 2, 3, 4]),
+      },
+    })
+  }
+
+  function altBoundaryOf(message: string): string {
+    const match = message.match(/boundary="(=_alt_[0-9a-f]{32})"/)
+    if (!match) throw new Error('no alternative boundary in message')
+    return match[1]
+  }
+
+  it('nests a multipart/alternative body inside multipart/mixed', () => {
+    const message = buildWithHtml()
+    const mixed = boundaryOf(message)
+    const alt = altBoundaryOf(message)
+    expect(mixed).toMatch(/^=_bp_[0-9a-f]{32}$/)
+    expect(message).toContain(
+      `Content-Type: multipart/alternative; boundary="${alt}"`
+    )
+    // Text part precedes the html part (RFC 2046: increasing preference).
+    const textIndex = message.indexOf('Content-Type: text/plain; charset=utf-8')
+    const htmlIndex = message.indexOf('Content-Type: text/html; charset=utf-8')
+    expect(textIndex).toBeGreaterThan(-1)
+    expect(htmlIndex).toBeGreaterThan(textIndex)
+    // The alternative part closes before the attachment opens.
+    expect(message.indexOf(`--${alt}--`)).toBeLessThan(
+      message.indexOf('Content-Type: audio/mpeg')
+    )
+    expect(message.endsWith(`--${mixed}--\r\n`)).toBe(true)
+  })
+
+  it('round-trips both alternative bodies through base64', () => {
+    const message = buildWithHtml()
+    const alt = altBoundaryOf(message)
+    const parts = message.split(`--${alt}`)
+    const textBody = parts[1].split('\r\n\r\n')[1].trim()
+    const htmlBody = parts[2].split('\r\n\r\n')[1].trim()
+    expect(Buffer.from(textBody, 'base64').toString('utf-8')).toBe(
+      'Call me back.'
+    )
+    expect(Buffer.from(htmlBody, 'base64').toString('utf-8')).toBe(html)
+  })
+
+  it('keeps the attachment a sibling of the alternative part', () => {
+    const message = buildWithHtml()
+    const mixed = boundaryOf(message)
+    const attachmentPart = message.split(`--${mixed}`)[2]
+    expect(attachmentPart).toContain('Content-Type: audio/mpeg')
+    expect(attachmentPart).toContain(
+      'Content-Disposition: attachment; filename="voicemail-RE123.mp3"'
+    )
+    const body = attachmentPart.split('\r\n\r\n')[1].trim()
+    expect(new Uint8Array(Buffer.from(body, 'base64'))).toEqual(
+      new Uint8Array([1, 2, 3, 4])
+    )
+  })
+
+  it('omits the alternative wrapper when no html is supplied', () => {
+    const message = build()
+    expect(message).not.toContain('multipart/alternative')
+    expect(message).not.toContain('text/html')
+  })
+})

@@ -52,14 +52,16 @@ export async function sendSimpleEmail(input: {
 }
 
 /**
- * A plain-text email with one file attachment (subscriber backup). SESv2
- * Simple content cannot carry attachments, so this sends Content.Raw with a
- * hand-rolled multipart/mixed MIME message (see @/lib/email/mime).
+ * An email with one file attachment (subscriber backup CSV, voicemail audio).
+ * SESv2 Simple content cannot carry attachments, so this sends Content.Raw
+ * with a hand-rolled multipart/mixed MIME message (see @/lib/email/mime).
+ * When `html` is supplied the body is a multipart/alternative part.
  */
 export async function sendEmailWithAttachment(input: {
   to: string[]
   subject: string
   text: string
+  html?: string
   attachment: MimeAttachment
 }): Promise<void> {
   const raw = buildMimeMessage({
@@ -67,6 +69,7 @@ export async function sendEmailWithAttachment(input: {
     to: input.to,
     subject: `${siteConfig.emailSubjectPrefix}${input.subject}`,
     text: input.text,
+    html: input.html,
     attachment: input.attachment,
   })
   await getSesClient().send(
