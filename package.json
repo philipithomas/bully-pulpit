@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "postbuild": "pnpm canonical:check",
+    "canonical:check": "tsx scripts/check-canonical.ts",
     "start": "next start",
     "check": "biome check .",
     "test": "vitest run",
