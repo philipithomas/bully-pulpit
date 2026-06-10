@@ -1,6 +1,7 @@
-import Image, { getImageProps } from 'next/image'
+import { getImageProps } from 'next/image'
 import Link from 'next/link'
 import { InlineSignupForm } from '@/components/auth/inline-signup-form'
+import { NewsletterRow } from '@/components/newsletters/newsletter-row'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
@@ -144,25 +145,7 @@ export default function HomePage() {
             </p>
             <div className="space-y-4">
               {newsletters.map((nl) => (
-                <Link
-                  key={nl.slug}
-                  href={`/${nl.slug}`}
-                  className="flex items-center gap-3 group"
-                >
-                  <span className="w-[76px] shrink-0 flex items-center">
-                    <Image
-                      src={nl.logo.src}
-                      alt={nl.name}
-                      width={100}
-                      height={nl.logo.height}
-                      style={{ height: nl.logo.height }}
-                      className="w-auto shrink-0"
-                    />
-                  </span>
-                  <span className="font-serif text-sm text-gray-500 group-hover:text-gray-700 transition-colors duration-300">
-                    {nl.tagline}
-                  </span>
-                </Link>
+                <NewsletterRow key={nl.slug} newsletter={nl} />
               ))}
             </div>
             <p className="font-serif text-sm text-gray-500 mt-6">

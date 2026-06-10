@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
+import { NewsletterIntro } from '@/components/newsletters/newsletter-intro'
 import { InfinitePostGrid } from '@/components/posts/infinite-post-grid'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { siteConfig } from '@/lib/config'
@@ -96,6 +97,14 @@ export default function ContraptionPage() {
             {siteConfig.newsletters.contraption.tagline}
           </p>
         </div>
+
+        {/* Introduction */}
+        <NewsletterIntro>
+          <em>Contraption</em> is my main newsletter: essays about building
+          digital tools and the businesses behind them, plus launches of my new
+          projects. I publish about once a month, when a piece is ready. It is
+          for people who build software and care about craft.
+        </NewsletterIntro>
 
         {/* Featured section: large left + two stacked right */}
         {featured.length > 0 && (

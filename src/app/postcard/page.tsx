@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
+import { NewsletterIntro } from '@/components/newsletters/newsletter-intro'
 import { PostcardLatestLink } from '@/components/postcard/latest-link'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
@@ -98,6 +99,14 @@ export default function PostcardPage() {
             {siteConfig.newsletters.postcard.tagline}
           </p>
         </div>
+
+        {/* Introduction */}
+        <NewsletterIntro>
+          <em>Postcard</em> is my monthly update: where I traveled, what I
+          built, and what I am reading and listening to. I send one at the start
+          of each month in place of posting on social media. It is for friends,
+          family, and anyone curious about what I am up to.
+        </NewsletterIntro>
 
         <div className="space-y-8">
           {Array.from(years.entries())

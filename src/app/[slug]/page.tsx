@@ -5,6 +5,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc'
 import remarkGfm from 'remark-gfm'
 import { SetNewsletter } from '@/components/layout/newsletter-context'
 import { mdxComponents } from '@/components/posts/mdx-components'
+import { OtherNewsletters } from '@/components/posts/other-newsletters'
 import { RelatedPosts } from '@/components/posts/related-posts'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { JsonLd } from '@/components/seo/json-ld'
@@ -154,6 +155,9 @@ export default async function SlugPage({ params }: Props) {
 
         {/* Subscribe CTA for posts */}
         {post && <SubscribeCta />}
+
+        {/* Cross-promotion of the other two newsletters */}
+        {post && <OtherNewsletters current={post.newsletter} />}
 
         {/* Related posts */}
         {post && relatedPosts.length > 0 && (

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
+import { NewsletterIntro } from '@/components/newsletters/newsletter-intro'
 import { InfinitePostGrid } from '@/components/posts/infinite-post-grid'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
@@ -41,6 +42,14 @@ export default function WorkshopPage() {
         </div>
       </div>
       <div className="container py-12 md:py-16">
+        {/* Introduction */}
+        <NewsletterIntro>
+          <em>Workshop</em> is a journal about work in progress. I write short
+          notes a few times each month: tools I am building, problems I hit, and
+          what I learn along the way. It is rougher and more frequent than my
+          essays. Read it if you like seeing how things get made.
+        </NewsletterIntro>
+
         {/* priorityCount matches the lg:grid-cols-3 top row above the fold */}
         <InfinitePostGrid
           initialPosts={posts}
