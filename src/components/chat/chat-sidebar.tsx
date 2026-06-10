@@ -80,6 +80,11 @@ export function ChatSidebar() {
     []
   )
 
+  // Screen reader announcement for the latest completed reply. Set once per
+  // finished message (not per streamed token) so the live region announces
+  // each reply exactly once instead of re-reading partial text on every chunk.
+  const [announcement, setAnnouncement] = useState('')
+
   const {
     messages,
     sendMessage,
@@ -92,8 +97,15 @@ export function ChatSidebar() {
     id: chatId,
     transport,
     experimental_throttle: 50,
-    onFinish: () => {
+    onFinish: ({ message, isAbort, isError }) => {
       saveMessagesFromRef()
+      if (isAbort || isError || message.role !== 'assistant') return
+      const text = message.parts
+        .filter((part) => part.type === 'text')
+        .map((part) => part.text)
+        .join(' ')
+        .trim()
+      if (text) setAnnouncement(text)
     },
   })
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -140,10 +152,17 @@ export function ChatSidebar() {
     }
   }, [open, initialQuery, sendMessage, setMessages])
 
-  // Auto-scroll when messages update or status changes
+  // Auto-scroll when messages update or status changes. The CSS
+  // reduced-motion kill switch cannot reach JS-initiated smooth scrolls, so
+  // gate the behavior here too.
   useEffect(() => {
     if (messages.length > 0 || status === 'submitted') {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      const reduceMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches
+      messagesEndRef.current?.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      })
     }
   }, [messages, status])
 
@@ -157,14 +176,27 @@ export function ChatSidebar() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, closeSidebar])
 
-  // Lock body scroll on mobile when open (not pinned)
+  // Lock body scroll on mobile when open (not pinned), and make the page
+  // behind the modal inert so focus and screen readers stay inside the
+  // dialog. The sidebar renders as a direct child of <header> (a plain
+  // `header > div` selector would catch the panel itself), so inert the page
+  // regions around it: the skip link, the header container, main, and footer.
   useEffect(() => {
     if (!open || pinned) return
     const isMobile = window.innerWidth < 640
     if (!isMobile) return
     document.body.style.overflow = 'hidden'
+    const pageBehind = document.querySelectorAll<HTMLElement>(
+      'body > a[href="#content"], header > div.container, main, footer'
+    )
+    for (const el of pageBehind) {
+      el.setAttribute('inert', '')
+    }
     return () => {
       document.body.style.overflow = ''
+      for (const el of pageBehind) {
+        el.removeAttribute('inert')
+      }
     }
   }, [open, pinned])
 
@@ -249,6 +281,8 @@ export function ChatSidebar() {
           order and accessibility tree when closed */}
       <div
         inert={!open}
+        role="dialog"
+        aria-label="Bell chat"
         className={cn(
           'fixed top-0 right-0 z-50 flex h-full w-full flex-col bg-offwhite-light transition-[transform,box-shadow] duration-300 sm:w-[420px]',
           // entered paints the first frame closed: the component lazy-mounts
@@ -344,6 +378,13 @@ export function ChatSidebar() {
             </div>
           )}
           <div ref={messagesEndRef} />
+        </div>
+
+        {/* Polite live region: announces each completed reply once. Wiring
+            aria-live to the streaming message list would re-announce the
+            growing text on every token. */}
+        <div aria-live="polite" className="sr-only">
+          {announcement}
         </div>
 
         {/* Input */}

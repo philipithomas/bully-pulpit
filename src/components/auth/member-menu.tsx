@@ -165,7 +165,11 @@ export function MemberMenu() {
           />
         )}
       </button>
+      {/* inert removes the visually hidden items from the tab order and
+          accessibility tree when closed; opacity and pointer-events alone
+          left them keyboard-focusable. */}
       <div
+        inert={!open}
         className={`absolute right-0 top-full pt-3 z-50 ${
           open ? '' : 'pointer-events-none'
         }`}
