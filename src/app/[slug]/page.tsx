@@ -58,8 +58,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: [{ url: item.frontmatter.coverImage ?? siteConfig.image }],
     },
     twitter: {
+      card: 'summary_large_image',
       title: item.frontmatter.title,
       description,
+      // Page-level twitter metadata replaces the root layout's, so mirror
+      // the openGraph image fallback here as well.
+      images: [{ url: item.frontmatter.coverImage ?? siteConfig.image }],
     },
   }
 }
