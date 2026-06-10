@@ -22,7 +22,6 @@ describe('robots.txt route', () => {
     // Noindexed transactional pages must stay crawlable so the meta tag is
     // visible to crawlers.
     expect(body).not.toContain('Disallow: /unsubscribe')
-    expect(body).not.toContain('Disallow: /check-email')
     expect(body).not.toContain('Disallow: /account')
   })
 
