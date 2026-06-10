@@ -63,9 +63,6 @@ export default function HomePage() {
           </h1>
           <div className="font-serif text-lg text-gray-600 leading-relaxed mb-8 lg:mb-12 max-w-prose">
             <p className="mb-4">
-              I build digital tools and write about the process.
-            </p>
-            <p className="mb-4">
               I live in San Francisco. I&apos;m interested in coffee,
               fermentation, and urbanism.
             </p>
