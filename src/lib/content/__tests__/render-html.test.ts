@@ -8,6 +8,7 @@ import {
   renderMarkdownToHtml,
   renderRelatedPostsHtml,
 } from '@/lib/content/render-html'
+import type { Post } from '@/lib/content/types'
 
 describe('renderEmailHeaderHtml', () => {
   const siteUrl = 'https://www.philipithomas.com'
@@ -136,6 +137,22 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).not.toContain('Sohne Mono')
   })
 
+  it('escapes HTML in title, subtitle, and alt text', () => {
+    const html = renderEmailHeaderHtml(
+      'Ampersands & <Angles>',
+      siteUrl,
+      'my-post',
+      'A subtitle & <markup>',
+      '/images/covers/cover.jpg',
+      'Alt & <text>'
+    )
+    expect(html).toContain('Ampersands &amp; &lt;Angles&gt;</a></h1>')
+    expect(html).toContain('A subtitle &amp; &lt;markup&gt;</p>')
+    expect(html).toContain('alt="Alt &amp; &lt;text&gt;"')
+    expect(html).not.toContain('<Angles>')
+    expect(html).not.toContain('<markup>')
+  })
+
   it('renders all elements together', () => {
     const html = renderEmailHeaderHtml(
       'Full Post',
@@ -229,6 +246,29 @@ describe('renderRelatedPostsHtml', () => {
     expect(html).not.toMatch(
       /src="https:\/\/www\.philipithomas\.com\/images\/covers\//
     )
+  })
+
+  it('escapes HTML in title, excerpt, and alt text', () => {
+    const post: Post = {
+      slug: 'tools-and-toys',
+      newsletter: 'contraption',
+      frontmatter: {
+        title: 'Tools & <Toys>',
+        publishedAt: '2025-01-15',
+        coverImage: '/images/covers/tools.jpg',
+        coverImageAlt: 'Bench & <vise>',
+        featured: false,
+        draft: false,
+      },
+      content: '',
+      excerpt: 'Building & <breaking> things.',
+    }
+    const html = renderRelatedPostsHtml([post], siteUrl)
+    expect(html).toContain('Tools &amp; &lt;Toys&gt;</a>')
+    expect(html).toContain('Building &amp; &lt;breaking&gt; things.</p>')
+    expect(html).toContain('alt="Bench &amp; &lt;vise&gt;"')
+    expect(html).not.toContain('<Toys>')
+    expect(html).not.toContain('<breaking>')
   })
 })
 

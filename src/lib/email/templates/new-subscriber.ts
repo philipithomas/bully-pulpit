@@ -20,7 +20,7 @@ export function renderNewSubscriberEmail(input: {
     : `<p class="email-muted" style="margin: 0 0 16px; font-size: 13px; color: #7E7A73;">Source: Direct</p>`
 
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,6 +49,9 @@ export function renderNewSubscriberEmail(input: {
 <table class="email-bg" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F5F3F0;">
   <tr>
     <td align="center" style="padding: 40px 20px;">
+      <!--[if mso]>
+      <table border="0" cellpadding="0" cellspacing="0" width="540" align="center"><tr><td>
+      <![endif]-->
       <table class="email-card" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 540px; background-color: #ffffff; border-radius: 4px;">
         <tr>
           <td style="padding: 40px 40px 20px;">
@@ -74,6 +77,9 @@ export function renderNewSubscriberEmail(input: {
           </td>
         </tr>
       </table>
+      <!--[if mso]>
+      </td></tr></table>
+      <![endif]-->
     </td>
   </tr>
 </table>

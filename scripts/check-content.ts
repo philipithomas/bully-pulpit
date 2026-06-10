@@ -1,7 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
+import { siteConfig } from '@/lib/config'
 import { getAllPosts } from '@/lib/content/loader'
+import { buildEmailBodyHtml } from '@/lib/email/render-body'
+import { renderFullNewsletter } from '@/lib/email/send'
 import { buildCorpusFromPosts } from '@/lib/search/corpus'
 import { EMBEDDING_DIMS, EMBEDDING_MODEL } from '@/lib/search/embedding'
 import { loadSearchIndex } from '@/lib/search/index-file'
@@ -18,8 +21,12 @@ import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
  *   3. No source image is wider than the web maximum (pnpm images:optimize).
  *   4. The committed search index matches the recomputed merkle tree over the
  *      post corpus, and related-posts.json covers every post (pnpm search:index).
- *   5. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
+ *   5. In-article images are within the long-edge cap and have an email
+ *      variant within budget (pnpm images:optimize).
+ *   6. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
  *      with non-empty alt text — a missing or empty alt fails the build.
+ *   7. The rendered email HTML for every post stays under Gmail's clipping
+ *      threshold (warn near the line, fail over it).
  */
 
 const IMAGES = path.join(process.cwd(), 'public/images')
@@ -39,8 +46,12 @@ const MAX_EMAIL_THUMB_BYTES = 15 * 1024
 // variants share the cover budget (both are 600px wide JPEGs).
 const MAX_POST_LONG_EDGE = 1600
 const MAX_EMAIL_POST_BYTES = MAX_EMAIL_COVER_BYTES
+// Gmail clips messages near 102KB of HTML; warn close to the line, fail over it.
+const MAX_EMAIL_HTML_BYTES = 100 * 1024
+const WARN_EMAIL_HTML_BYTES = 95 * 1024
 
 const errors: string[] = []
+const warnings: string[] = []
 
 function checkEmailVariant(
   dir: string,
@@ -240,6 +251,37 @@ async function main() {
         )
       }
     }
+  }
+
+  // 7: rendered newsletter size. Renders each post's full email offline
+  // (body + transforms + shell, no network) with a representative
+  // per-recipient unsubscribe URL, and holds it under Gmail's clipping
+  // threshold (~102KB of HTML). A clipped email hides the footer, including
+  // the unsubscribe link.
+  const unsubscribeUrl = `${siteConfig.url}/unsubscribe?token=00000000-0000-0000-0000-000000000000`
+  for (const post of posts) {
+    const body = await buildEmailBodyHtml(post)
+    const html = renderFullNewsletter({
+      bodyHtml: body.html,
+      newsletter: post.newsletter,
+      previewText: body.previewText,
+      unsubscribeUrl,
+    })
+    const bytes = Buffer.byteLength(html, 'utf8')
+    if (bytes > MAX_EMAIL_HTML_BYTES) {
+      errors.push(
+        `${post.slug}: rendered email HTML is ${(bytes / 1024).toFixed(0)}KB (budget ${MAX_EMAIL_HTML_BYTES / 1024}KB; Gmail clips near 102KB) — shorten the post`
+      )
+    } else if (bytes > WARN_EMAIL_HTML_BYTES) {
+      warnings.push(
+        `${post.slug}: rendered email HTML is ${(bytes / 1024).toFixed(0)}KB, near the ${MAX_EMAIL_HTML_BYTES / 1024}KB budget (Gmail clips near 102KB)`
+      )
+    }
+  }
+
+  if (warnings.length > 0) {
+    console.warn(`Content check warnings (${warnings.length}):`)
+    for (const w of warnings) console.warn(`  ! ${w}`)
   }
 
   if (errors.length > 0) {

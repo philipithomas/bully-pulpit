@@ -76,7 +76,7 @@ export function renderNewsletterShell(input: {
     : ''
 
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -126,6 +126,9 @@ ${preheader}
 <table class="email-bg" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: ${bgColor};">
   <tr>
     <td align="center" style="padding: 40px 20px 0;">
+      <!--[if mso]>
+      <table border="0" cellpadding="0" cellspacing="0" width="600" align="center"><tr><td>
+      <![endif]-->
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
         <tr>
           <td style="padding: 0; text-align: center;">
@@ -133,10 +136,16 @@ ${preheader}
           </td>
         </tr>
       </table>
+      <!--[if mso]>
+      </td></tr></table>
+      <![endif]-->
     </td>
   </tr>
   <tr>
     <td align="center" style="padding: 0 20px;">
+      <!--[if mso]>
+      <table border="0" cellpadding="0" cellspacing="0" width="600" align="center"><tr><td>
+      <![endif]-->
       <table class="email-card" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff;">
         <tr>
           <td class="content-cell" style="padding: 32px; font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 17px; line-height: 1.6; color: #3B3834; overflow: hidden; word-break: break-word;">
@@ -144,10 +153,16 @@ ${preheader}
           </td>
         </tr>
       </table>
+      <!--[if mso]>
+      </td></tr></table>
+      <![endif]-->
     </td>
   </tr>
   <tr>
     <td align="center" style="padding: 20px;">
+      <!--[if mso]>
+      <table border="0" cellpadding="0" cellspacing="0" width="600" align="center"><tr><td>
+      <![endif]-->
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
         <tr>
           <td class="email-footer" style="text-align: center; padding: 16px 0;">
@@ -161,6 +176,9 @@ ${preheader}
           </td>
         </tr>
       </table>
+      <!--[if mso]>
+      </td></tr></table>
+      <![endif]-->
     </td>
   </tr>
 </table>
