@@ -26,6 +26,11 @@ export async function GET(_request: Request, { params }: Props) {
   ].join('\n')
 
   return new NextResponse(markdown, {
-    headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
+    headers: {
+      'Content-Type': 'text/markdown; charset=utf-8',
+      // Served publicly at /:slug.md via rewrite; keep the markdown mirror
+      // out of search results so it cannot compete with the HTML page.
+      'X-Robots-Tag': 'noindex',
+    },
   })
 }

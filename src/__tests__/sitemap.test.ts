@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { GET } from '@/app/sitemap.xml/route'
+import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPages } from '@/lib/content/loader'
 
 describe('sitemap', () => {
@@ -33,6 +35,54 @@ describe('sitemap', () => {
     const postSlugs = new Set(posts.map((p) => p.slug))
     for (const page of pages) {
       expect(postSlugs.has(page.slug)).toBe(false)
+    }
+  })
+})
+
+describe('sitemap.xml route', () => {
+  async function getSitemapXml(): Promise<string> {
+    const response = await GET()
+    expect(response.headers.get('Content-Type')).toContain('application/xml')
+    return response.text()
+  }
+
+  it('lists the homepage, newsletter indexes, and print page', async () => {
+    const xml = await getSitemapXml()
+    for (const path of [
+      '',
+      '/contraption',
+      '/workshop',
+      '/postcard',
+      '/print',
+    ]) {
+      expect(xml).toContain(`<loc>${siteConfig.url}${path}</loc>`)
+    }
+  })
+
+  it('lists every post with a lastmod date', async () => {
+    const xml = await getSitemapXml()
+    for (const post of getAllPosts()) {
+      const lastmod = new Date(post.frontmatter.publishedAt).toISOString()
+      expect(xml).toContain(
+        `<url><loc>${siteConfig.url}/${post.slug}</loc><lastmod>${lastmod}</lastmod></url>`
+      )
+    }
+  })
+
+  it('excludes the policy pages', async () => {
+    const xml = await getSitemapXml()
+    for (const slug of ['terms', 'privacy', 'policies']) {
+      expect(xml).not.toContain(`<loc>${siteConfig.url}/${slug}</loc>`)
+    }
+  })
+
+  it('lists the remaining content pages', async () => {
+    const xml = await getSitemapXml()
+    const excluded = new Set(['terms', 'privacy', 'policies'])
+    const remaining = getPages().filter((p) => !excluded.has(p.slug))
+    expect(remaining.length).toBeGreaterThan(0)
+    for (const page of remaining) {
+      expect(xml).toContain(`<loc>${siteConfig.url}/${page.slug}</loc>`)
     }
   })
 })

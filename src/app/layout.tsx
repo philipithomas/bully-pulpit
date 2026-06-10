@@ -51,6 +51,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: siteConfig.title,
     description: siteConfig.description,
+    // X falls back to og:image, but explicit twitter images are more robust.
+    images: [{ url: siteConfig.image, width: 1200, height: 630 }],
   },
   icons: {
     icon: [

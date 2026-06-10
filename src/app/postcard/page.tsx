@@ -8,6 +8,7 @@ import { getPostsByNewsletter } from '@/lib/content/loader'
 export const metadata: Metadata = {
   title: 'Postcard',
   description: siteConfig.newsletters.postcard.tagline,
+  alternates: { canonical: '/postcard' },
 }
 
 const MONTH_LABELS = [
