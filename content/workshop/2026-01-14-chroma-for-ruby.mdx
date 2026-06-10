@@ -21,16 +21,21 @@ Traditional dense vector search, like that built on [OpenAI's vector embedding m
 
 I originally got around this by wrapping Booklet's search function with a full-text search layer:
 
-```
+```ruby
 @search = current_member.searches.create(query: query).embed
 
-member_name_matches = if @community.directory_enabled? || current_member.admin?
-  @community.members.active
-    .where("lower(members.name) LIKE ?", "%#{@search.query.downcase}%")
-    .order(Arel.sql("CASE WHEN lower(members.name) LIKE ? THEN 1 ELSE 2 END, members.name", "#{@search.query.downcase}%"))
-else
-  @community.members.active.where(id: 0)
-end
+member_name_matches =
+  if @community.directory_enabled? || current_member.admin?
+    @community.members.active
+      .where("lower(members.name) LIKE ?", "%#{@search.query.downcase}%")
+      .order(Arel.sql(
+        "CASE WHEN lower(members.name) LIKE ? THEN 1 ELSE 2 END, " \
+        "members.name",
+        "#{@search.query.downcase}%"
+      ))
+  else
+    @community.members.active.where(id: 0)
+  end
 ```
 
 This meant that if I searched "Philip", my profile would come to the top of the list, separate from the semantic search.

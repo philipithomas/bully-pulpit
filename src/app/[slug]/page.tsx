@@ -1,3 +1,4 @@
+import rehypeShikiFromHighlighter from '@shikijs/rehype/core'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
@@ -16,6 +17,7 @@ import { SpotifyEmbed } from '@/components/ui/spotify-embed'
 import { YouTubeEmbed } from '@/components/ui/youtube-embed'
 import { siteConfig } from '@/lib/config'
 import { POST_COVER_SIZES } from '@/lib/content/cover-preload'
+import { codeThemeName, getHighlighter } from '@/lib/content/highlighter'
 import {
   extractExcerpt,
   getAdjacentPosts,
@@ -85,6 +87,9 @@ export default async function SlugPage({ params }: Props) {
   const page = post ? null : getPageBySlug(slug)
 
   if (!post && !page) notFound()
+
+  // Build-time syntax highlighting; the singleton resolves once per worker.
+  const highlighter = await getHighlighter()
 
   const item = post ?? page!
   const relatedPosts = post ? getRelatedPosts(post.slug) : []
@@ -166,6 +171,15 @@ export default async function SlugPage({ params }: Props) {
             options={{
               mdxOptions: {
                 remarkPlugins: [remarkGfm],
+                rehypePlugins: [
+                  [
+                    rehypeShikiFromHighlighter,
+                    highlighter,
+                    // Unknown fence languages render as plain text on the
+                    // same surface instead of failing the build.
+                    { theme: codeThemeName, fallbackLanguage: 'text' },
+                  ],
+                ],
               },
             }}
             components={{
