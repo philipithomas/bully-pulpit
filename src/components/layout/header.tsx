@@ -60,6 +60,24 @@ export function Header() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
+  // Warm the chat and search chunks once during idle time after first paint,
+  // so the first tap is instant on touch devices where the hover/focus
+  // prefetch never fires. Idle/timeout scheduling keeps it off the hydration
+  // path; repeat calls are no-ops because dynamic import caches the module.
+  useEffect(() => {
+    const warm = () => {
+      prefetchChat()
+      prefetchSearch()
+    }
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(warm, { timeout: 5000 })
+      return () => window.cancelIdleCallback(id)
+    }
+    // Safari has no requestIdleCallback
+    const id = window.setTimeout(warm, 2000)
+    return () => window.clearTimeout(id)
+  }, [])
+
   return (
     <header className="py-4 md:py-6">
       <div className="container flex items-center justify-between">
