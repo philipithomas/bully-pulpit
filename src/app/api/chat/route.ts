@@ -10,6 +10,7 @@ import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
 import { getPageContextContent } from '@/lib/chat/page-context'
+import { sanitizeChatMessages } from '@/lib/chat/sanitize-messages'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -56,11 +57,19 @@ export async function POST(request: Request) {
       : undefined
   const userName = typeof body.userName === 'string' ? body.userName : null
 
-  // Cap the conversation the model sees — the client accumulates history in
-  // sessionStorage, and an unbounded array is an easy token-burn vector.
+  // Sanitize before conversion: convertToModelMessages would turn a crafted
+  // { role: 'system' } message in the client payload into a real system
+  // message, so only user and assistant messages with expected part shapes
+  // survive. The slice caps the conversation the model sees — the client
+  // accumulates history in sessionStorage, and an unbounded array is an easy
+  // token-burn vector.
+  const sanitizedMessages = sanitizeChatMessages(body.messages).slice(-40)
+  if (sanitizedMessages.length === 0) {
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
+  }
   let messages: ModelMessage[]
   try {
-    messages = await convertToModelMessages(body.messages.slice(-40))
+    messages = await convertToModelMessages(sanitizedMessages)
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
