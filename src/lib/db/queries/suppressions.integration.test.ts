@@ -84,6 +84,43 @@ describe('upsertSuppression', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].source).toBeNull()
   })
+
+  it('lets the hourly sync take over source without downgrading a webhook reason', async () => {
+    const richReason =
+      'Permanent bounce (General): smtp; 550 5.1.1 user unknown'
+    await upsertSuppression('gone@example.com', richReason, 'ses-webhook')
+    // The reconciliation cron only knows SES's terse enum.
+    await upsertSuppression(
+      'gone@example.com',
+      'BOUNCE',
+      'ses_suppression_list'
+    )
+
+    const rows = await db.select().from(emailSuppressions)
+    expect(rows).toHaveLength(1)
+    // Reason kept rich; source handed to the sync so deleteBySourceNotIn
+    // still clears the row when SES un-suppresses the address.
+    expect(rows[0]).toMatchObject({
+      email: 'gone@example.com',
+      reason: richReason,
+      source: 'ses_suppression_list',
+    })
+  })
+
+  it('lets the webhook upgrade a terse sync reason in place', async () => {
+    await upsertSuppression(
+      'gone@example.com',
+      'BOUNCE',
+      'ses_suppression_list'
+    )
+    const richReason =
+      'Permanent bounce (General): smtp; 550 5.1.1 user unknown'
+    await upsertSuppression('gone@example.com', richReason, 'ses-webhook')
+
+    const rows = await db.select().from(emailSuppressions)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ reason: richReason, source: 'ses-webhook' })
+  })
 })
 
 describe('deleteBySourceNotIn', () => {

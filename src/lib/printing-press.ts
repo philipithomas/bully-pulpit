@@ -17,3 +17,21 @@ export function isRecent(
 ): boolean {
   return new Date(publishedAt).getTime() >= now - windowMs
 }
+
+/**
+ * One prose sentence for the subscribers list describing why delivery to an
+ * address is off. Reasons come in two shapes: rich webhook strings such as
+ * 'Permanent bounce (General): smtp; 550 5.1.1 user unknown' and the SES
+ * suppression list's terse enum ('BOUNCE'). Both read as mid-sentence detail
+ * after the date, per the colophon: sentence case, ISO date, no contractions.
+ */
+export function suppressionSentence(
+  reason: string,
+  suppressedAt: string
+): string {
+  const date = suppressedAt.slice(0, 10)
+  const detail = /^[A-Z_]+$/.test(reason)
+    ? reason.toLowerCase().replace(/_/g, ' ')
+    : (reason.charAt(0).toLowerCase() + reason.slice(1)).replace(': ', ', ')
+  return `Deliverability off since ${date}: ${detail.replace(/\.+$/, '')}.`
+}

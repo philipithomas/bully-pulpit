@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import type { SubscriberListItem } from '@/lib/db/queries/subscribers'
+import { suppressionSentence } from '@/lib/printing-press'
 import { cn } from '@/lib/utils'
 
 const NEWSLETTERS = [
@@ -273,6 +274,9 @@ export function SubscribersClient({
                   {!s.confirmedAt && (
                     <Badge variant="warning">unconfirmed</Badge>
                   )}
+                  {s.suppressedAt && (
+                    <Badge variant="destructive">suppressed</Badge>
+                  )}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
                   {s.name && <span className="text-gray-500">{s.name}</span>}
@@ -287,6 +291,11 @@ export function SubscribersClient({
                   ))}
                   <span>joined {joinedLabel(s.createdAt)}</span>
                 </div>
+                {s.suppressedAt && s.suppressionReason && (
+                  <p className="mt-1 text-red-deep text-xs">
+                    {suppressionSentence(s.suppressionReason, s.suppressedAt)}
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-0.5">
                 <button
