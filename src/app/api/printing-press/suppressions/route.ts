@@ -6,7 +6,7 @@ import { deleteSuppressedDestination } from '@/lib/email/ses'
 /**
  * Manual suppression clearing for the Printing press subscribers list. SES is
  * cleared before the local row: if the account-level removal fails, the row
- * stays so the admin still sees the suppression (and the hourly sync would
+ * stays so the admin still sees the suppression (and the 15-minute sync would
  * have re-created it anyway). "Not found in SES" counts as success inside
  * deleteSuppressedDestination, so local-only records clear cleanly.
  */

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { suppressionSentence } from '@/lib/printing-press'
 
 describe('suppressionSentence', () => {
-  it('renders a rich webhook bounce reason as one prose sentence', () => {
+  it('renders a rich free-text bounce reason as one prose sentence', () => {
     expect(
       suppressionSentence(
         'Permanent bounce (General): smtp; 550 5.1.1 user unknown',

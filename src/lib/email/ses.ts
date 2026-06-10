@@ -105,9 +105,9 @@ export async function listSuppressedDestinations(): Promise<
 /**
  * Removes an address from the SES account-level suppression list. SES not
  * knowing the address counts as success: a suppression can exist only locally
- * (a webhook-captured bounce SES never account-suppressed), and the goal is
- * the end state, not the deletion itself. Anything else rethrows so callers
- * can refuse to clear local state SES would re-create.
+ * (cleared in the SES console between polls), and the goal is the end state,
+ * not the deletion itself. Anything else rethrows so callers can refuse to
+ * clear local state SES would re-create.
  */
 export async function deleteSuppressedDestination(
   email: string

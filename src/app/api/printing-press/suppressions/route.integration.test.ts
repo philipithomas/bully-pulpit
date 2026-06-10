@@ -35,8 +35,8 @@ const signInAsAdmin = () => signInAs('admin@example.com')
 async function seedSuppression(email: string) {
   await db.insert(emailSuppressions).values({
     email,
-    reason: 'Permanent bounce (General): smtp; 550 5.1.1 user unknown',
-    source: 'ses-webhook',
+    reason: 'BOUNCE',
+    source: 'ses_suppression_list',
   })
 }
 
@@ -148,7 +148,7 @@ describe('clearing', () => {
       error: 'Could not clear the suppression in SES',
     })
     // The row survives, so the admin still sees the suppression and the
-    // hourly sync stays consistent with SES.
+    // 15-minute sync stays consistent with SES.
     expect(await allSuppressions()).toHaveLength(1)
   })
 })

@@ -20,9 +20,9 @@ export function isRecent(
 
 /**
  * One prose sentence for the subscribers list describing why delivery to an
- * address is off. Reasons come in two shapes: rich webhook strings such as
- * 'Permanent bounce (General): smtp; 550 5.1.1 user unknown' and the SES
- * suppression list's terse enum ('BOUNCE'). Both read as mid-sentence detail
+ * address is off. The suppression-sync cron writes the SES suppression list's
+ * terse enum ('BOUNCE'), but the reason column is free text, so any other
+ * string renders gracefully too. Either shape reads as mid-sentence detail
  * after the date, per the colophon: sentence case, ISO date, no contractions.
  */
 export function suppressionSentence(

@@ -6,8 +6,12 @@ import {
 import { listSuppressedDestinations } from '@/lib/email/ses'
 import { requireEnv } from '@/lib/env'
 
-// Hourly Vercel Cron. Vercel automatically sends `Authorization: Bearer
-// $CRON_SECRET` to cron paths when CRON_SECRET is set.
+// Vercel Cron, every 15 minutes: the SES account-level suppression list is
+// the only capture mechanism for bounces and complaints, so the poll runs
+// often enough that the admin panel and per-send checks stay close to real
+// time. Each run is one ListSuppressedDestinations page per 1000 suppressed
+// addresses and is idempotent. Vercel automatically sends `Authorization:
+// Bearer $CRON_SECRET` to cron paths when CRON_SECRET is set.
 export async function GET(request: Request) {
   const auth = request.headers.get('authorization')
   if (auth !== `Bearer ${requireEnv('CRON_SECRET')}`) {

@@ -166,8 +166,8 @@ describe('GET list', () => {
     const suppressedAt = new Date('2026-06-10T14:03:00.000Z')
     await db.insert(emailSuppressions).values({
       email: 'gone@example.com',
-      reason: 'Permanent bounce (General): smtp; 550 5.1.1 user unknown',
-      source: 'ses-webhook',
+      reason: 'BOUNCE',
+      source: 'ses_suppression_list',
       createdAt: suppressedAt,
     })
 
@@ -178,9 +178,7 @@ describe('GET list', () => {
       (r: { email: string }) => r.email === 'gone@example.com'
     )
     expect(gone.suppressedAt).toBe(suppressedAt.toISOString())
-    expect(gone.suppressionReason).toBe(
-      'Permanent bounce (General): smtp; 550 5.1.1 user unknown'
-    )
+    expect(gone.suppressionReason).toBe('BOUNCE')
 
     const fine = json.rows.find(
       (r: { email: string }) => r.email === 'fine@example.com'

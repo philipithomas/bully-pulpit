@@ -1,12 +1,6 @@
-import { and, eq, notInArray, sql } from 'drizzle-orm'
+import { and, eq, notInArray } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { emailSuppressions } from '@/lib/db/schema'
-
-/** Source recorded by the real-time SES webhook (app/api/webhooks/ses). */
-export const SES_WEBHOOK_SOURCE = 'ses-webhook'
-
-/** Source recorded by the hourly reconciliation cron (app/api/cron/suppression-sync). */
-const SES_SYNC_SOURCE = 'ses_suppression_list'
 
 export async function isSuppressed(email: string): Promise<boolean> {
   const rows = await getDb()
@@ -27,23 +21,14 @@ export async function upsertSuppression(
     .values({ email: email.toLowerCase(), reason, source: source ?? null })
     .onConflictDoUpdate({
       target: emailSuppressions.email,
-      set: {
-        // The hourly reconciliation sync only knows SES's terse reason enum
-        // ('BOUNCE'), so it must not overwrite the rich reason the webhook
-        // captured in real time ('Permanent bounce (General): …'). It does
-        // take over `source`, which keeps the SES account-level list
-        // authoritative for cleanup via deleteBySourceNotIn: removing an
-        // address from the SES console still clears the row within the hour.
-        reason: sql`CASE WHEN excluded.source = ${SES_SYNC_SOURCE} THEN ${emailSuppressions.reason} ELSE excluded.reason END`,
-        source: sql`excluded.source`,
-      },
+      set: { reason, source: source ?? null },
     })
 }
 
 /**
  * Removes the suppression row for an email (admin manual clear). Returns true
- * when a row existed. Callers must clear SES first: the hourly sync re-creates
- * any row the SES account-level list still carries.
+ * when a row existed. Callers must clear SES first: the suppression-sync cron
+ * re-creates any row the SES account-level list still carries.
  */
 export async function deleteSuppression(email: string): Promise<boolean> {
   const deleted = await getDb()
