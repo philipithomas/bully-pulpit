@@ -11,12 +11,10 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
-import { siteConfig } from '@/lib/config'
 import { formatMemberCount } from '@/lib/format-member-count'
 import { getExternalReferrer } from '@/lib/referrer'
 
 interface Props {
-  showNewsletterPicker?: boolean
   hideWhenLoggedIn?: boolean
   autoFocus?: boolean
   className?: string
@@ -28,19 +26,9 @@ interface Props {
   showSubscriberCount?: boolean
 }
 
-// Taglines come from siteConfig so the picker and llms.txt cannot drift.
-const newsletters = (['contraption', 'workshop', 'postcard'] as const).map(
-  (id) => ({
-    id,
-    label: siteConfig.newsletters[id].name,
-    desc: siteConfig.newsletters[id].tagline,
-  })
-)
-
 type Step = 'email' | 'code'
 
 export function InlineSignupForm({
-  showNewsletterPicker = false,
   hideWhenLoggedIn = false,
   autoFocus = false,
   className,
@@ -50,9 +38,6 @@ export function InlineSignupForm({
   const { user } = useAuthContext()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
-  const [selected, setSelected] = useState<Set<string>>(
-    new Set(['contraption', 'workshop', 'postcard'])
-  )
   const [step, setStep] = useState<Step>('email')
   const [loading, setLoading] = useState(false)
   const [subscriberCount, setSubscriberCount] = useState<number | null>(null)
@@ -72,19 +57,9 @@ export function InlineSignupForm({
       ? `Join ${formatMemberCount(subscriberCount)} other subscribers:`
       : undefined)
 
-  function toggleNewsletter(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email) return
-    if (showNewsletterPicker && selected.size === 0) return
 
     setLoading(true)
     try {
@@ -94,9 +69,7 @@ export function InlineSignupForm({
         body: JSON.stringify({
           email,
           source: getExternalReferrer(),
-          newsletters: showNewsletterPicker
-            ? Array.from(selected)
-            : ['contraption', 'workshop', 'postcard'],
+          newsletters: ['contraption', 'workshop', 'postcard'],
         }),
       })
       if (!res.ok) {
@@ -203,31 +176,6 @@ export function InlineSignupForm({
         <p className="font-sans text-lg font-medium mb-3 text-gray-800">
           {resolvedHeaderText}
         </p>
-      )}
-      {showNewsletterPicker && (
-        <fieldset className="mb-5 space-y-3">
-          {newsletters.map((nl) => (
-            <label
-              key={nl.id}
-              className="flex items-start gap-3 cursor-pointer group"
-            >
-              <input
-                type="checkbox"
-                checked={selected.has(nl.id)}
-                onChange={() => toggleNewsletter(nl.id)}
-                className="mt-1 h-4 w-4 accent-gray-950 shrink-0"
-              />
-              <span>
-                <span className="font-sans text-sm font-semibold text-gray-900">
-                  {nl.label}
-                </span>
-                <span className="font-serif text-sm text-gray-500 ml-2">
-                  {nl.desc}
-                </span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
       )}
       <div className="flex items-center w-full sm:w-2/3">
         <input
