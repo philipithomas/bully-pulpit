@@ -64,7 +64,7 @@ jobs:
 
       - name: Create pull request
         if: steps.check.outputs.exists == 'false'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: postcard/${{ steps.date.outputs.next_month }}
           commit-message: "Draft postcard for ${{ steps.date.outputs.month_name }} ${{ steps.date.outputs.year }}"
