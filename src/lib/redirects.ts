@@ -122,6 +122,18 @@ export function getRedirects(): Redirect[] {
       destination: '/:slug',
       permanent: true,
     },
+    // Typo slugs corrected in 2026: the posts shipped (and were emailed)
+    // under misspelled URLs, so the old paths 301 to the fixed spellings.
+    {
+      source: '/finding-a-software-jojb',
+      destination: '/finding-a-software-job',
+      permanent: true,
+    },
+    {
+      source: '/tacit-knowledge-in-softwar',
+      destination: '/tacit-knowledge-in-software',
+      permanent: true,
+    },
     // contraption.co legacy redirects
     { source: '/projects', destination: '/', permanent: true },
     // Ghost portal signup page, linked from a 2024 post and its email blast.

@@ -17,7 +17,7 @@ async function run(slug: string): Promise<FetchPostOutput> {
 
 describe('fetchPost tool outline', () => {
   it('returns the heading outline with anchors and section urls', async () => {
-    const result = await run('finding-a-software-jojb')
+    const result = await run('finding-a-software-job')
     expect(result.error).toBeUndefined()
     expect(result.outline.length).toBeGreaterThan(0)
 
@@ -25,7 +25,7 @@ describe('fetchPost tool outline', () => {
     expect(timeline).toEqual({
       heading: 'Timeline',
       anchor: 'timeline',
-      url: '/finding-a-software-jojb#timeline',
+      url: '/finding-a-software-job#timeline',
     })
 
     // Punctuation in heading text is stripped from the anchor
@@ -34,11 +34,11 @@ describe('fetchPost tool outline', () => {
     )
     expect(didNotWork).toBeDefined()
     expect(didNotWork!.url).toBe(
-      '/finding-a-software-jojb#what-didnt-work-in-my-process'
+      '/finding-a-software-job#what-didnt-work-in-my-process'
     )
 
     for (const entry of result.outline) {
-      expect(entry.url).toBe(`/finding-a-software-jojb#${entry.anchor}`)
+      expect(entry.url).toBe(`/finding-a-software-job#${entry.anchor}`)
     }
   })
 

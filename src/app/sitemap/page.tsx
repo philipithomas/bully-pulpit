@@ -3,10 +3,13 @@ import Link from 'next/link'
 import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPages } from '@/lib/content/loader'
 import type { Newsletter } from '@/lib/content/types'
+import { feedDiscovery } from '@/lib/feeds/discovery'
 
 export const metadata: Metadata = {
   title: 'Sitemap',
   description: `A sitemap for humans: every page and post by ${siteConfig.author}.`,
+  // Page-level alternates replace the root layout's, so restate the feeds.
+  alternates: { canonical: '/sitemap', types: feedDiscovery() },
 }
 
 const newsletterLabel: Record<Newsletter, string> = {

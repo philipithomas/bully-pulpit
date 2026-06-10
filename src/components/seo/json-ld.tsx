@@ -2,7 +2,7 @@ import { siteConfig } from '@/lib/config'
 import type { Page, Post } from '@/lib/content/types'
 
 interface JsonLdProps {
-  type: 'website' | 'article'
+  type: 'website' | 'article' | 'webpage'
   post?: Post
   page?: Page
 }
@@ -32,6 +32,29 @@ export function JsonLd({ type, post, page }: JsonLdProps) {
       author: {
         '@type': 'Person',
         name: siteConfig.author,
+      },
+    }
+    return (
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
+      />
+    )
+  }
+
+  // Standalone pages (colophon, policies, …) are not articles: no publish
+  // date, no byline semantics. Emit a plain WebPage instead.
+  if (type === 'webpage' && item) {
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: item.frontmatter.title,
+      description: item.frontmatter.description ?? siteConfig.description,
+      url: `${siteConfig.url}/${item.slug}`,
+      author: {
+        '@type': 'Person',
+        name: siteConfig.author,
+        url: siteConfig.url,
       },
     }
     return (
