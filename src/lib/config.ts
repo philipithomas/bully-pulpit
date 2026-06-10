@@ -11,7 +11,7 @@ function requireEnv(name: string): string {
 const staticConfig = {
   title: 'Philip I. Thomas',
   description:
-    'I work on Chroma, building open-source search infrastructure for AI.',
+    'Philip Thomas is an engineer in San Francisco who crafts digital tools.',
   author: 'Philip I. Thomas',
   email: 'mail@philipithomas.com',
   image: '/og-image.png',
