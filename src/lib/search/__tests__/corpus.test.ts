@@ -3,6 +3,7 @@ import type { Post } from '@/lib/content/types'
 import {
   buildCorpus,
   chunkPost,
+  extractHeadings,
   MAX_CHUNK_CHARS,
   stripToPlaintext,
 } from '@/lib/search/corpus'
@@ -143,6 +144,135 @@ describe('chunkPost', () => {
     expect(all).toContain('pnpm search:index')
     expect(all).not.toContain('```')
     expect(all).not.toContain('bash\n')
+  })
+})
+
+describe('extractHeadings', () => {
+  it('returns text, anchor, and line in document order', () => {
+    const markdown =
+      'Intro.\n\n## First section\n\nBody.\n\n### Second one\n\nMore.'
+    expect(extractHeadings(markdown)).toEqual([
+      { text: 'First section', anchor: 'first-section', line: 2 },
+      { text: 'Second one', anchor: 'second-one', line: 6 },
+    ])
+  })
+
+  it('dedupes duplicate headings with -2 suffixes', () => {
+    const markdown = '## Setup\n\nA.\n\n## Setup\n\nB.\n\n## Setup\n\nC.'
+    expect(extractHeadings(markdown).map((h) => h.anchor)).toEqual([
+      'setup',
+      'setup-2',
+      'setup-3',
+    ])
+  })
+
+  it('strips inline markdown from heading text before slugging', () => {
+    const markdown = '## Using `pnpm` with **force**'
+    expect(extractHeadings(markdown)).toEqual([
+      {
+        text: 'Using pnpm with force',
+        anchor: 'using-pnpm-with-force',
+        line: 0,
+      },
+    ])
+  })
+
+  it('ignores heading-like lines inside code fences', () => {
+    const markdown =
+      '## Real heading\n\n```bash\n# not a heading\n```\n\n## Another'
+    expect(extractHeadings(markdown).map((h) => h.text)).toEqual([
+      'Real heading',
+      'Another',
+    ])
+  })
+})
+
+describe('chunk headings', () => {
+  it('attaches the governing heading with its anchor to body chunks', () => {
+    const post = makePost({
+      content:
+        'Intro before any heading.\n\n## Section one\n\nBody of section one.',
+    })
+    const body = chunkPost(post).filter((c) => c.kind === 'body')
+    const intro = body.find((c) => c.text.includes('Intro before'))
+    expect(intro).toBeDefined()
+    expect(intro!.heading).toBeUndefined()
+    const section = body.find((c) => c.text.includes('Body of section one'))
+    expect(section).toBeDefined()
+    expect(section!.heading).toEqual({
+      text: 'Section one',
+      anchor: 'section-one',
+    })
+  })
+
+  it('gives every chunk of a long section the same heading', () => {
+    const filler = 'filler '.repeat(400).trim() // far over one chunk
+    const post = makePost({
+      content: `## Long section\n\n${filler}\n\nTail paragraph of the long section.`,
+    })
+    const body = chunkPost(post).filter((c) => c.kind === 'body')
+    expect(body.length).toBeGreaterThan(1)
+    for (const chunk of body) {
+      expect(chunk.heading).toEqual({
+        text: 'Long section',
+        anchor: 'long-section',
+      })
+    }
+  })
+
+  it('dedupes anchors across a post in document order', () => {
+    const post = makePost({
+      content:
+        '## Setup\n\nFirst setup body.\n\n## Setup\n\nSecond setup body.',
+    })
+    const body = chunkPost(post).filter((c) => c.kind === 'body')
+    const first = body.find((c) => c.text.includes('First setup body'))
+    const second = body.find((c) => c.text.includes('Second setup body'))
+    expect(first!.heading!.anchor).toBe('setup')
+    expect(second!.heading!.anchor).toBe('setup-2')
+  })
+
+  it('never attaches headings to title or cover-alt chunks', () => {
+    const post = makePost({
+      frontmatter: {
+        title: 'My title',
+        coverImage: '/images/covers/x.jpg',
+        coverImageAlt: 'A red bicycle leaning on a wall',
+        publishedAt: '2026-01-01',
+        featured: false,
+        draft: false,
+      },
+      content: '## Only section\n\nBody.',
+    })
+    for (const chunk of chunkPost(post)) {
+      if (chunk.kind !== 'body') expect(chunk.heading).toBeUndefined()
+    }
+  })
+
+  it('does not treat fenced lines as headings for attribution', () => {
+    const post = makePost({
+      content:
+        '## Real heading\n\nBefore code.\n\n```bash\n# fenced comment\n```\n\nAfter code.',
+    })
+    const body = chunkPost(post).filter((c) => c.kind === 'body')
+    for (const chunk of body) {
+      expect(chunk.heading?.anchor).toBe('real-heading')
+    }
+  })
+
+  it('keeps chunk text identical with and without heading metadata', () => {
+    // Heading attribution is hash-transparent: text construction does not
+    // change, so the committed index hashes cannot move.
+    const post = makePost({
+      content: 'Intro.\n\n## Section\n\nBody text here.\n\n### Sub\n\nMore.',
+    })
+    const texts = chunkPost(post).map((c) => c.text)
+    expect(texts).toEqual([
+      'Test post',
+      'Intro.',
+      'Section\nBody text here.',
+      'Sub\nMore.',
+    ])
   })
 })
 

@@ -1,6 +1,6 @@
 import { tool } from 'ai'
 import { z } from 'zod/v4'
-import type { CorpusPost } from '@/lib/search/corpus'
+import type { ChunkHeading, CorpusPost, PostChunk } from '@/lib/search/corpus'
 import { buildCorpus } from '@/lib/search/corpus'
 import {
   decodeVector,
@@ -20,25 +20,44 @@ import { rrfFuse, topKBySimilarity } from '@/lib/search/vector'
  * recomputed from content/ at cold start and aligned to vectors by chunk
  * hash, so a stale vector can never be attributed to the wrong text. If the
  * query embedding fails, search degrades gracefully to BM25 only.
+ *
+ * Excerpts carry the section they sit under when the chunk falls below a
+ * heading: `section.url` is `/slug#anchor`, ready for the model to cite.
  */
 
-interface PostResult {
+export interface ExcerptSection {
+  heading: string
+  url: string
+}
+
+export interface ExcerptResult {
+  text: string
+  /** Present when the excerpt sits under a heading; url is /slug#anchor */
+  section?: ExcerptSection
+}
+
+export interface PostResult {
   title: string
   url: string
   newsletter: string
-  excerpts: string[]
+  excerpts: ExcerptResult[]
 }
 
 interface VectorEntry {
   slug: string
   kind: string
   text: string
+  heading?: ChunkHeading
   vector: Float32Array
+}
+
+interface PostMeta extends Pick<CorpusPost, 'title' | 'url' | 'newsletter'> {
+  chunks: PostChunk[]
 }
 
 interface VectorStore {
   entries: VectorEntry[]
-  meta: Map<string, Pick<CorpusPost, 'title' | 'url' | 'newsletter'>>
+  meta: Map<string, PostMeta>
 }
 
 const VECTOR_LIMIT = 30
@@ -51,13 +70,14 @@ function getVectorStore(): Promise<VectorStore> {
   if (!storePromise) {
     storePromise = Promise.resolve().then(() => {
       const corpus = buildCorpus()
-      const meta = new Map(
+      const meta = new Map<string, PostMeta>(
         corpus.map((post) => [
           post.slug,
           {
             title: post.title,
             url: post.url,
             newsletter: post.newsletter,
+            chunks: post.chunks,
           },
         ])
       )
@@ -85,6 +105,7 @@ function getVectorStore(): Promise<VectorStore> {
             slug: post.slug,
             kind: chunk.kind,
             text: chunk.text,
+            ...(chunk.heading ? { heading: chunk.heading } : {}),
             vector: decodeVector(vector),
           })
         }
@@ -98,7 +119,7 @@ function getVectorStore(): Promise<VectorStore> {
 
 export const searchPosts = tool({
   description:
-    'Search blog posts by query. Returns titles, URLs, and content excerpts.',
+    'Search blog posts by query. Returns titles, URLs, and content excerpts. Excerpts may carry a section with a heading and a /slug#anchor url for citing the exact section.',
   inputSchema: z.object({
     query: z.string().describe('The search query'),
   }),
@@ -146,12 +167,22 @@ export const searchPosts = tool({
       const meta = store.meta.get(slug)
       if (!meta) continue
 
+      const toSection = (
+        heading: ChunkHeading | undefined
+      ): ExcerptSection | undefined =>
+        heading
+          ? { heading: heading.text, url: `${meta.url}#${heading.anchor}` }
+          : undefined
+
       // Best vector-matched body chunk texts serve as excerpts; fill from
       // the lexical side for posts that only matched by keyword
-      const excerpts = (chunksBySlug.get(slug) ?? [])
+      const excerpts: ExcerptResult[] = (chunksBySlug.get(slug) ?? [])
         .filter((chunk) => chunk.kind === 'body')
-        .map((chunk) => chunk.text)
         .slice(0, MAX_EXCERPTS)
+        .map((chunk) => {
+          const section = toSection(chunk.heading)
+          return section ? { text: chunk.text, section } : { text: chunk.text }
+        })
       if (excerpts.length < MAX_EXCERPTS) {
         const terms = termsBySlug.get(slug)
         if (terms) {
@@ -161,8 +192,15 @@ export const searchPosts = tool({
             MAX_EXCERPTS - excerpts.length
           )) {
             const bare = excerpt.replace(/^…|…$/g, '')
-            if (excerpts.some((e) => e.includes(bare))) continue
-            excerpts.push(excerpt)
+            if (excerpts.some((e) => e.text.includes(bare))) continue
+            // Attribute the snippet to its source chunk for the section
+            const source = meta.chunks.find(
+              (chunk) => chunk.kind !== 'title' && chunk.text.includes(bare)
+            )
+            const section = toSection(source?.heading)
+            excerpts.push(
+              section ? { text: excerpt, section } : { text: excerpt }
+            )
           }
         }
       }
