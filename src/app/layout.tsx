@@ -3,7 +3,6 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
 import { preload } from 'react-dom'
 import '@/styles/globals.css'
-import { Plausible } from '@/components/analytics/plausible'
 import { AuthProvider } from '@/components/auth/auth-provider'
 import { SignInModal } from '@/components/auth/sign-in-modal'
 import { SignInToast } from '@/components/auth/sign-in-toast'
@@ -98,7 +97,6 @@ export default function RootLayout({
             <Toaster />
             <CoverPreload />
             <ImageZoom />
-            <Plausible />
             <Analytics />
             <SpeedInsights />
           </NewsletterProvider>

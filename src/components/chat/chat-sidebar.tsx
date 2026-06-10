@@ -131,13 +131,6 @@ export function ChatSidebar() {
         // Delay to ensure clean state
         setTimeout(() => {
           sendMessage({ text: initialQuery })
-          window.plausible?.('Chat Message', {
-            props: {
-              message: initialQuery,
-              depth: 1,
-              path: window.location.pathname,
-            },
-          })
           track('Chat Message', { depth: 1, path: window.location.pathname })
         }, 50)
       }
@@ -211,9 +204,6 @@ export function ChatSidebar() {
       const depth =
         messagesRef.current.filter((m) => m.role === 'user').length + 1
       sendMessage({ text })
-      window.plausible?.('Chat Message', {
-        props: { message: text, depth, path: window.location.pathname },
-      })
       track('Chat Message', { depth, path: window.location.pathname })
     },
     [sendMessage]
