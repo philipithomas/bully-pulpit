@@ -167,8 +167,7 @@ export async function verifyToken(
       await sendNewSubscriberNotification(
         subscriber.email,
         subscriber.name,
-        subscriber.source,
-        subscriber.createdAt
+        subscriber.source
       )
     } catch (err) {
       console.error('[login] new subscriber notification failed:', err)
