@@ -49,15 +49,7 @@ export function Footer() {
             </Link>
           </nav>
         </div>
-        <div className="mt-12 pt-8 border-t border-gray-900 text-center space-y-3">
-          <p className="font-serif text-[13px] text-gray-500">
-            <Link
-              href="/a-mini-data-center"
-              className="hover:text-white transition-colors duration-300"
-            >
-              Hosted on a Mac Mini in San Francisco.
-            </Link>
-          </p>
+        <div className="mt-12 pt-8 border-t border-gray-900 text-center">
           <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-gray-600">
             &copy; {new Date().getFullYear()} The Contraption Company LLC
           </p>
