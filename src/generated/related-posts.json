@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-06-09T21:00:13.343Z",
+  "generatedAt": "2026-06-10T19:09:57.008Z",
   "posts": {
+    "2026-07": {
+      "related": [
+        {
+          "slug": "2026-01",
+          "score": 0.21313351
+        },
+        {
+          "slug": "2025-12",
+          "score": 0.22660005
+        },
+        {
+          "slug": "2025-03",
+          "score": 0.24354088
+        }
+      ]
+    },
     "2026-06": {
       "related": [
         {
@@ -12,8 +28,8 @@
           "score": 0.31636643
         },
         {
-          "slug": "2025-10",
-          "score": 0.33830768
+          "slug": "2026-07",
+          "score": 0.32991874
         }
       ]
     },
@@ -124,8 +140,8 @@
           "score": 0.2710839
         },
         {
-          "slug": "2024-01",
-          "score": 0.28430808
+          "slug": "2026-07",
+          "score": 0.28224576
         }
       ]
     },
@@ -248,12 +264,12 @@
           "score": 0.21044129
         },
         {
-          "slug": "2024-01",
-          "score": 0.223652
+          "slug": "2026-07",
+          "score": 0.21313351
         },
         {
-          "slug": "2025-05",
-          "score": 0.22718453
+          "slug": "2024-01",
+          "score": 0.223652
         }
       ]
     },
@@ -324,16 +340,16 @@
     "2025-12": {
       "related": [
         {
+          "slug": "2026-07",
+          "score": 0.22660005
+        },
+        {
           "slug": "2025-10",
           "score": 0.23185003
         },
         {
           "slug": "2023-12",
           "score": 0.23263335
-        },
-        {
-          "slug": "2024-11",
-          "score": 0.2383911
         }
       ]
     },
@@ -1716,16 +1732,16 @@
     "how-to-replace-social-media-with-a-personal-newsletter": {
       "related": [
         {
+          "slug": "2026-07",
+          "score": 0.31907535
+        },
+        {
           "slug": "sharing-a-project-i-built-postcard",
           "score": 0.36817873
         },
         {
           "slug": "launching-postcard",
           "score": 0.38095158
-        },
-        {
-          "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
-          "score": 0.38917035
         }
       ]
     },
