@@ -10,6 +10,7 @@ import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { JsonLd } from '@/components/seo/json-ld'
 import { SpotifyEmbed } from '@/components/ui/spotify-embed'
 import { YouTubeEmbed } from '@/components/ui/youtube-embed'
+import { siteConfig } from '@/lib/config'
 import { POST_COVER_SIZES } from '@/lib/content/cover-preload'
 import {
   extractExcerpt,
@@ -47,13 +48,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: item.frontmatter.title,
     description,
+    alternates: { canonical: `/${item.slug}` },
     openGraph: {
       title: item.frontmatter.title,
       description,
       type: 'article',
-      ...(post?.frontmatter.coverImage && {
-        images: [{ url: post.frontmatter.coverImage }],
-      }),
+      // Page-level openGraph replaces the root layout's, so fall back to the
+      // site image when the item has no cover.
+      images: [{ url: item.frontmatter.coverImage ?? siteConfig.image }],
     },
     twitter: {
       title: item.frontmatter.title,

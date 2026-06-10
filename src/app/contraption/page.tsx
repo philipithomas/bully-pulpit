@@ -11,6 +11,7 @@ import type { Post } from '@/lib/content/types'
 export const metadata: Metadata = {
   title: 'Contraption',
   description: siteConfig.newsletters.contraption.tagline,
+  alternates: { canonical: '/contraption' },
 }
 
 function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {

@@ -7,6 +7,7 @@ import { getPostsByNewsletter } from '@/lib/content/loader'
 export const metadata: Metadata = {
   title: 'Workshop',
   description: siteConfig.newsletters.workshop.tagline,
+  alternates: { canonical: '/workshop' },
 }
 
 export default function WorkshopPage() {

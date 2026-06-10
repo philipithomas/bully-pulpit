@@ -69,7 +69,8 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      // RSS/JSON feeds — CDN caches 1 hour
+      // RSS/JSON feeds — CDN caches 1 hour; noindex keeps the feed XML/JSON
+      // out of search results without blocking feed readers
       {
         source: '/feed/(.*)',
         headers: [
@@ -77,6 +78,10 @@ const nextConfig: NextConfig = {
             key: 'Cache-Control',
             value:
               'public, max-age=600, s-maxage=3600, stale-while-revalidate=86400',
+          },
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex',
           },
         ],
       },

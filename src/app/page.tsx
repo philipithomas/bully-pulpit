@@ -1,9 +1,16 @@
+import type { Metadata } from 'next'
 import Image, { getImageProps } from 'next/image'
 import Link from 'next/link'
 import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
+
+// Auth redirects land on /?signed-in=1 and /?error=invalid-token; the
+// canonical collapses those variants.
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+}
 
 export default function HomePage() {
   const newsletters = Object.values(siteConfig.newsletters)

@@ -1,9 +1,12 @@
 import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPages } from '@/lib/content/loader'
 
+// Policy pages stay indexable but are not advertised in the sitemap.
+const EXCLUDED_PAGE_SLUGS = new Set(['terms', 'privacy', 'policies'])
+
 export async function GET() {
   const posts = getAllPosts()
-  const pages = getPages()
+  const pages = getPages().filter((p) => !EXCLUDED_PAGE_SLUGS.has(p.slug))
 
   const staticPages = [
     '',
