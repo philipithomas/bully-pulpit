@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
   let skipped = 0
   for (const r of rows.slice(1)) {
     const email = (r[emailIdx] ?? '').trim().toLowerCase()
-    if (!email || !email.includes('@')) {
+    // An empty string never contains '@', so this also skips blank cells.
+    if (!email.includes('@')) {
       if (r.some((c) => c.trim() !== '')) skipped += 1 // count malformed, ignore blank lines
       continue
     }

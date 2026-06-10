@@ -151,6 +151,7 @@ export function MemberMenu() {
         {avatarSrc && !avatarFailed && (
           /* Layered over the icon and faded in on load, so the gravatar
              arrives gently instead of popping over the placeholder. */
+          // biome-ignore lint/performance/noImgElement: external Gravatar, not a local asset
           <img
             src={avatarSrc}
             alt=""
