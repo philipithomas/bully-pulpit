@@ -1,6 +1,7 @@
-import { format, parseISO } from 'date-fns'
 import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
+import { coverPreloadAttrs } from '@/lib/content/cover-preload'
 import type { Newsletter, Post } from '@/lib/content/types'
 
 const accentClasses = {
@@ -31,10 +32,11 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
           const accent = accentClasses[color]
 
           return (
-            <a
+            <Link
               key={post.slug}
               href={`/${post.slug}`}
               className="group flex flex-col bg-offwhite-dark border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all duration-500 ease-in-out no-underline"
+              {...coverPreloadAttrs(post)}
             >
               {/* Image area */}
               <div className="aspect-video overflow-hidden">
@@ -58,7 +60,7 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
               {/* Content area */}
               <div className="flex flex-col flex-grow p-5 border-t border-gray-100 relative">
                 <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-2">
-                  {format(parseISO(post.frontmatter.publishedAt), 'yyyy-MM-dd')}
+                  {post.frontmatter.publishedAt}
                 </time>
                 <h4
                   className={`font-sans text-lg font-semibold text-gray-950 ${accent.hoverText} transition-colors duration-500 mb-2`}
@@ -74,7 +76,7 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
                   <ArrowRight className="w-4 h-4" />
                 </div>
               </div>
-            </a>
+            </Link>
           )
         })}
       </div>

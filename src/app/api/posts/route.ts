@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
       publishedAt: p.frontmatter.publishedAt,
       coverImage: p.frontmatter.coverImage,
       coverImageAlt: p.frontmatter.coverImageAlt,
+      coverDimensions: p.coverDimensions,
       excerpt: p.excerpt,
     })),
     meta: {

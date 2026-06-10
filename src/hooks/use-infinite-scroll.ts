@@ -12,6 +12,7 @@ interface PostApiResponse {
   publishedAt: string
   coverImage?: string
   coverImageAlt?: string
+  coverDimensions?: { width: number; height: number }
   excerpt: string
 }
 
@@ -77,6 +78,7 @@ export function useInfiniteScroll(
                   coverImage: p.coverImage,
                   coverImageAlt: p.coverImageAlt,
                 },
+                coverDimensions: p.coverDimensions,
                 excerpt: p.excerpt,
               }))
             return [...prev, ...newPosts]
