@@ -4,6 +4,7 @@ import type { ComponentPropsWithoutRef } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Spinner } from '@/components/ui/spinner'
+import { scrubLeakedToolJson } from '@/lib/chat/scrub-leaked-tool-json'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -198,7 +199,7 @@ export function ChatMessage({
             return (
               <div key={key}>
                 <ChatMarkdown
-                  text={part.text}
+                  text={isUser ? part.text : scrubLeakedToolJson(part.text)}
                   onLocalLinkClick={handleLocalLinkClick}
                 />
                 {isStreaming &&

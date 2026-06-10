@@ -4,7 +4,6 @@ import { checkBotId } from 'botid/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
-import { prepareChatStep } from '@/lib/chat/prepare-step'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -38,24 +37,20 @@ export async function POST(request: Request) {
   const system = getSystemPrompt({ pageContext, userName })
 
   const result = streamText({
-    model: gateway('openai/gpt-oss-120b'),
+    // Runs on AI Gateway credits — no BYOK. Replaced gpt-oss-120b/Cerebras:
+    // it leaked unbound tool-call JSON into the visible reply and made
+    // redundant duplicate tool calls.
+    model: gateway('anthropic/claude-haiku-4.5'),
     maxOutputTokens: 2048,
     experimental_telemetry: { isEnabled: true, functionId: 'bell-chat' },
-    providerOptions: {
-      // Experiment: pin gpt-oss-120b to Cerebras (fastest provider). Runs on
-      // AI Gateway credits — no BYOK, no OPENAI_API_KEY.
-      gateway: {
-        only: ['cerebras'],
-      },
-      openai: {
-        reasoningEffort: 'low',
-      },
-    },
     system,
     messages: await convertToModelMessages(messages),
     tools: { searchPosts, fetchPost },
     stopWhen: stepCountIs(7),
-    prepareStep: ({ steps }) => prepareChatStep(steps, system),
+    // The last step runs without tools so the loop always ends in prose
+    // instead of a dangling tool call.
+    prepareStep: ({ stepNumber }) =>
+      stepNumber >= 6 ? { activeTools: [] } : undefined,
   })
 
   return result.toUIMessageStreamResponse()
