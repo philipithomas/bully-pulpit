@@ -18,6 +18,8 @@ import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
  *   3. No source image is wider than the web maximum (pnpm images:optimize).
  *   4. The committed search index matches the recomputed merkle tree over the
  *      post corpus, and related-posts.json covers every post (pnpm search:index).
+ *   5. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
+ *      with non-empty alt text — a missing or empty alt fails the build.
  */
 
 const IMAGES = path.join(process.cwd(), 'public/images')
@@ -203,17 +205,41 @@ async function main() {
     }
   }
 
-  // Warning only: body images should ship with alt text. Decorative empties
-  // are allowed, so this lists offenders without failing the build.
-  const emptyAlt: string[] = []
+  // 6: every body image ships with non-empty alt text. Covers markdown
+  // `![alt](src)` and MDX `<img>`/`<Image>` (alt missing or empty/whitespace).
+  // Hard failure: no image ships without alt text — decorative ones still get
+  // a minimal honest alt rather than an empty slot.
   for (const post of posts) {
-    for (const match of post.content.matchAll(/!\[\]\(([^)]+)\)/g)) {
-      emptyAlt.push(`${post.slug}: image ${match[1]} has empty alt text`)
+    // Markdown image syntax with an empty or whitespace-only alt.
+    for (const match of post.content.matchAll(/!\[(\s*)\]\(([^)]+)\)/g)) {
+      errors.push(
+        `${post.slug}: image ${match[2]} has empty alt text — add descriptive alt text`
+      )
     }
-  }
-  if (emptyAlt.length > 0) {
-    console.warn(`Content check warnings (${emptyAlt.length} empty alt(s)):`)
-    for (const w of emptyAlt) console.warn(`  ! ${w}`)
+    // MDX <img>/<Image> elements: flag a missing alt attribute or one whose
+    // value is empty/whitespace (covers "", '', {''}, {""}, {``}).
+    for (const tag of post.content.matchAll(/<(img|Image)\b[^>]*?\/?>/gi)) {
+      const altMatch = tag[0].match(
+        /\balt\s*=\s*(?:"([^"]*)"|'([^']*)'|\{`([^`]*)`\}|\{"([^"]*)"\}|\{'([^']*)'\})/i
+      )
+      const altValue = altMatch
+        ? (altMatch[1] ??
+          altMatch[2] ??
+          altMatch[3] ??
+          altMatch[4] ??
+          altMatch[5] ??
+          '')
+        : null
+      if (altValue === null) {
+        errors.push(
+          `${post.slug}: <${tag[1]}> ${tag[0].slice(0, 80)} is missing an alt attribute — add descriptive alt text`
+        )
+      } else if (altValue.trim() === '') {
+        errors.push(
+          `${post.slug}: <${tag[1]}> ${tag[0].slice(0, 80)} has empty alt text — add descriptive alt text`
+        )
+      }
+    }
   }
 
   if (errors.length > 0) {
