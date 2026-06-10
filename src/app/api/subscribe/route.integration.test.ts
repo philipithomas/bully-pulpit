@@ -10,8 +10,17 @@ vi.mock('botid/server', () =>
 vi.mock('@/lib/email/ses', () =>
   import('@/test/integration/mocks').then((m) => m.sesMock())
 )
+// Mock the resolver seam only — @/lib/email/deliverability stays real so the
+// MX deliverability check runs its actual logic against canned DNS answers.
+vi.mock('node:dns/promises', () => ({
+  resolveMx: vi.fn(),
+  resolve4: vi.fn(),
+  resolve6: vi.fn(),
+}))
 
+import { resolve4, resolve6, resolveMx } from 'node:dns/promises'
 import { POST } from '@/app/api/subscribe/route'
+import { clearDeliverabilityCache } from '@/lib/email/deliverability'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { db, resetDb } from '@/test/integration/db'
 
@@ -23,9 +32,21 @@ function subscribeRequest(body: unknown) {
   })
 }
 
+function dnsError(code: string): Error {
+  return Object.assign(new Error(`query ${code}`), { code })
+}
+
 beforeEach(async () => {
   await resetDb()
   vi.mocked(sendSimpleEmail).mockClear()
+  // Default DNS answer: every domain has a working MX record. Tests that
+  // exercise the deliverability check override these per domain.
+  clearDeliverabilityCache()
+  vi.mocked(resolveMx)
+    .mockReset()
+    .mockResolvedValue([{ exchange: 'mx.example.com', priority: 10 }])
+  vi.mocked(resolve4).mockReset().mockRejectedValue(dnsError('ENODATA'))
+  vi.mocked(resolve6).mockReset().mockRejectedValue(dnsError('ENODATA'))
 })
 
 describe('POST /api/subscribe', () => {
@@ -137,6 +158,40 @@ describe('POST /api/subscribe', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].email).toBe('blocked@example.com')
     expect(rows[0].confirmedAt).toBeNull()
+  })
+
+  it('rejects a domain with no MX and no A/AAAA records with 400, creating nothing', async () => {
+    vi.mocked(resolveMx).mockRejectedValue(dnsError('ENOTFOUND'))
+    vi.mocked(resolve4).mockRejectedValue(dnsError('ENOTFOUND'))
+    vi.mocked(resolve6).mockRejectedValue(dnsError('ENOTFOUND'))
+
+    const res = await POST(subscribeRequest({ email: 'person@gmial.test' }))
+
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({
+      error:
+        'That email domain cannot receive mail. Check the address and try again.',
+    })
+    // The check runs before any DB write or send: no subscriber row, no
+    // login rows, no email.
+    expect(sendSimpleEmail).not.toHaveBeenCalled()
+    expect(await db.select().from(subscribers)).toHaveLength(0)
+    expect(await db.select().from(logins)).toHaveLength(0)
+  })
+
+  it('proceeds when the DNS lookup itself fails (fail open)', async () => {
+    vi.mocked(resolveMx).mockRejectedValue(dnsError('ESERVFAIL'))
+
+    const res = await POST(subscribeRequest({ email: 'person@flaky.test' }))
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.subscriber.email).toBe('person@flaky.test')
+    expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
+
+    const rows = await db.select().from(subscribers)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].email).toBe('person@flaky.test')
   })
 
   it('returns 400 for a malformed email and creates no subscriber', async () => {
