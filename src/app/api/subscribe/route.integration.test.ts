@@ -133,6 +133,40 @@ describe('POST /api/subscribe', () => {
     expect(row.subscribedWorkshop).toBe(false)
   })
 
+  it('keeps the original source when an existing subscriber re-submits (first touch wins)', async () => {
+    const first = await POST(
+      subscribeRequest({
+        email: 'returning@example.com',
+        source: 'https://news.ycombinator.com',
+      })
+    )
+    expect(first.status).toBe(200)
+
+    // The same person subscribes again later from a different referrer. The
+    // create path only sets source on INSERT; nothing on the existing-row
+    // branch may overwrite the captured attribution.
+    const second = await POST(
+      subscribeRequest({
+        email: 'returning@example.com',
+        source: 'https://www.google.com',
+        newsletters: ['workshop'],
+      })
+    )
+    expect(second.status).toBe(200)
+    const body = await second.json()
+    expect(body.subscriber.source).toBe('https://news.ycombinator.com')
+    // The preference update still applied — only source is first-touch.
+    expect(body.subscriber.subscribed_workshop).toBe(true)
+    expect(body.subscriber.subscribed_postcard).toBe(false)
+
+    const rows = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.email, 'returning@example.com'))
+    expect(rows).toHaveLength(1)
+    expect(rows[0].source).toBe('https://news.ycombinator.com')
+  })
+
   it('rejects a suppressed address with 422 and sends no email', async () => {
     await db
       .insert(emailSuppressions)

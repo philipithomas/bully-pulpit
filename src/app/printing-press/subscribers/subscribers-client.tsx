@@ -332,6 +332,11 @@ export function SubscribersClient({
                     </span>
                   ))}
                   <span>joined {joinedLabel(s.createdAt)}</span>
+                  {s.source && (
+                    <span className="max-w-56 truncate" title={s.source}>
+                      via {s.source}
+                    </span>
+                  )}
                 </div>
                 {s.suppressedAt && s.suppressionReason && (
                   <p className="mt-1 text-red-deep text-xs">

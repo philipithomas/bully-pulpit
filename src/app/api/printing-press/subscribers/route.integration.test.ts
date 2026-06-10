@@ -98,7 +98,11 @@ describe('admin guard', () => {
 describe('GET list', () => {
   it('returns rows newest-first with pagination metadata', async () => {
     await signInAsAdmin()
-    await seedSubscriber({ email: 'alice@example.com', name: 'Alice' })
+    await seedSubscriber({
+      email: 'alice@example.com',
+      name: 'Alice',
+      source: 'https://news.ycombinator.com',
+    })
     await seedSubscriber({ email: 'bob@example.com' })
     await seedSubscriber({ email: 'carol@other.org', confirmedAt: new Date() })
 
@@ -121,10 +125,13 @@ describe('GET list', () => {
       subscribedPostcard: true,
       subscribedContraption: true,
       subscribedWorkshop: true,
+      source: 'https://news.ycombinator.com',
     })
     expect(alice.uuid).toMatch(/^[0-9a-f-]{36}$/)
     expect(typeof alice.createdAt).toBe('string')
     expect(json.rows[0].confirmedAt).not.toBeNull()
+    // Rows without attribution carry an explicit null, not undefined.
+    expect(json.rows[1].source).toBeNull()
   })
 
   it('filters by case-insensitive email substring via q', async () => {
