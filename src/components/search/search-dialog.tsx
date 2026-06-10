@@ -10,19 +10,13 @@ import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
-interface SearchMatch {
-  document: string
-  score: number
-  type: string
-}
-
 interface SearchResult {
   slug: string
   title: string
   url: string
   newsletter: string
   coverImage: string
-  matches: SearchMatch[]
+  excerpts: string[]
 }
 
 const NEWSLETTER_COLORS: Record<string, string> = {
@@ -30,16 +24,6 @@ const NEWSLETTER_COLORS: Record<string, string> = {
   workshop: 'bg-walnut',
   postcard: 'bg-indigo',
   page: 'bg-gray-400',
-}
-
-function getSessionId() {
-  const key = 'search_session_id'
-  let id = sessionStorage.getItem(key)
-  if (!id) {
-    id = crypto.randomUUID()
-    sessionStorage.setItem(key, id)
-  }
-  return id
 }
 
 function highlightQuery(text: string, query: string) {
@@ -59,17 +43,6 @@ function highlightQuery(text: string, query: string) {
   })
 }
 
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/<[^>]+>/g, '')
-    .trim()
-}
-
 export function SearchDialog({
   open,
   onOpenChange,
@@ -85,7 +58,8 @@ export function SearchDialog({
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
-  const searchIdRef = useRef<string | null>(null)
+  // Client-side cache keyed by query so back-typing repaints instantly
+  const cacheRef = useRef(new Map<string, SearchResult[]>())
 
   // Focus input and load recent posts when dialog opens
   useEffect(() => {
@@ -94,7 +68,6 @@ export function SearchDialog({
       setResults([])
       setSearchError(null)
       setActiveIndex(0)
-      searchIdRef.current = null
       setTimeout(() => inputRef.current?.focus(), 50)
 
       if (recentPosts.length === 0) {
@@ -114,7 +87,7 @@ export function SearchDialog({
                   url: `/${p.slug}`,
                   newsletter: p.newsletter,
                   coverImage: p.coverImage,
-                  matches: [],
+                  excerpts: [],
                 })
               )
             )
@@ -122,44 +95,34 @@ export function SearchDialog({
           .catch(() => {})
       }
     } else {
-      // The dialog stays mounted after first open (lazy chunk), so cancel
-      // pending work on close — a debounced fetch for a dismissed query
-      // would log analytics and clobber state behind the closed dialog.
-      if (debounceRef.current) clearTimeout(debounceRef.current)
+      // The dialog stays mounted after first open (lazy chunk), so cancel the
+      // in-flight request on close — a fetch for a dismissed query would
+      // clobber state behind the closed dialog.
       abortRef.current?.abort()
       setLoading(false)
     }
   }, [open, recentPosts.length])
 
   const abortRef = useRef<AbortController>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [])
 
   const fetchResults = useCallback(async (q: string) => {
     const controller = new AbortController()
     abortRef.current = controller
     try {
-      const sid = getSessionId()
-      const res = await fetch(
-        `/api/search?q=${encodeURIComponent(q)}&sid=${sid}`,
-        { signal: controller.signal }
-      )
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+        signal: controller.signal,
+      })
       if (res.ok) {
         const data = await res.json()
         setResults(data.results ?? [])
-        searchIdRef.current = data.searchId ?? null
+        if (cacheRef.current.size > 100) cacheRef.current.clear()
+        cacheRef.current.set(q, data.results ?? [])
         track('Search', { query: q, results: (data.results ?? []).length })
       } else {
-        // Surface definitive rejections (e.g. the 429 rate limit) instead of
-        // leaving the previous query's results on screen with no feedback.
+        // Surface definitive rejections instead of leaving the previous
+        // query's results on screen with no feedback.
         const data = await res.json().catch(() => null)
         setResults([])
-        searchIdRef.current = null
         setSearchError(data?.error ?? 'Search failed. Try again.')
       }
     } catch (e) {
@@ -176,38 +139,31 @@ export function SearchDialog({
       setQuery(value)
       setActiveIndex(0)
       setSearchError(null)
-      // Abort + reflect state synchronously: a stale in-flight response must
-      // never paint over a newer query, and showing the spinner through the
-      // debounce keeps the "No results found" state from flashing.
+      // Abort the previous in-flight request synchronously so a stale response
+      // can never paint over a newer query. Search is pure in-process BM25 over
+      // the committed local index (no network, no cost), so there is no debounce:
+      // we fire on every keystroke and rely on this abort + the per-query cache
+      // to keep the latest query authoritative.
       abortRef.current?.abort()
-      if (debounceRef.current) clearTimeout(debounceRef.current)
       if (value.length < 2) {
         setResults([])
         setLoading(false)
-        searchIdRef.current = null
+        return
+      }
+      const cached = cacheRef.current.get(value)
+      if (cached) {
+        setResults(cached)
+        setLoading(false)
         return
       }
       setLoading(true)
-      debounceRef.current = setTimeout(() => fetchResults(value), 200)
+      fetchResults(value)
     },
     [fetchResults]
   )
 
   const navigate = useCallback(
-    (slug: string, url: string) => {
-      // Log selection — fire and forget
-      if (searchIdRef.current) {
-        fetch('/api/search/select', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            searchId: searchIdRef.current,
-            selectedSlug: slug,
-            selectedUrl: url,
-          }),
-        }).catch(() => {})
-      }
-
+    (slug: string) => {
       onOpenChange(false)
       router.push(`/${slug}`)
     },
@@ -250,8 +206,7 @@ export function SearchDialog({
         if (showAskAI && activeIndex === displayResults.length) {
           handleAskAI()
         } else if (displayResults[activeIndex]) {
-          const r = displayResults[activeIndex]
-          navigate(r.slug, r.url)
+          navigate(displayResults[activeIndex].slug)
         }
       }
     },
@@ -286,7 +241,13 @@ export function SearchDialog({
                 aria-controls={expanded ? listboxId : undefined}
                 aria-activedescendant={activeOptionId}
                 aria-autocomplete="list"
-                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm text-gray-950 placeholder:text-gray-400"
+                // Command-palette exception: the dialog autofocuses this input
+                // on open, so the global :focus-visible keyboard ring is
+                // redundant noise on top of the blinking cursor, placeholder,
+                // and the distinct dialog frame. Suppress the outline on THIS
+                // input only — the global indicator stays intact everywhere
+                // else, and no replacement ring is added.
+                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm text-gray-950 placeholder:text-gray-400 focus:outline-none focus-visible:outline-none"
               />
               {loading && <Spinner className="h-4 w-4 text-gray-400" />}
             </div>
@@ -310,15 +271,7 @@ export function SearchDialog({
                       className="max-h-80 overflow-y-auto p-2"
                     >
                       {displayResults.map((result, i) => {
-                        const titleLower = result.title.toLowerCase().trim()
-                        const snippet = result.matches.find(
-                          (m) =>
-                            m.type === 'content' &&
-                            !m.document
-                              .toLowerCase()
-                              .trim()
-                              .startsWith(titleLower)
-                        )
+                        const snippet = result.excerpts[0]
                         return (
                           <li key={result.slug} role="presentation">
                             <button
@@ -327,7 +280,7 @@ export function SearchDialog({
                               id={`${baseId}-option-${i}`}
                               aria-selected={i === activeIndex}
                               tabIndex={-1}
-                              onClick={() => navigate(result.slug, result.url)}
+                              onClick={() => navigate(result.slug)}
                               onMouseEnter={() => setActiveIndex(i)}
                               className={cn(
                                 'flex w-full gap-3 rounded px-3 py-2.5 text-left transition-colors',
@@ -364,10 +317,7 @@ export function SearchDialog({
                                 </p>
                                 {snippet && (
                                   <p className="mt-0.5 line-clamp-2 font-serif text-xs text-gray-500">
-                                    {highlightQuery(
-                                      stripMarkdown(snippet.document),
-                                      query
-                                    )}
+                                    {highlightQuery(snippet, query)}
                                   </p>
                                 )}
                               </div>
