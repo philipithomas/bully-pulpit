@@ -9,22 +9,20 @@ const callInput = {
 }
 
 beforeEach(() => {
-  process.env.TWILIO_ACCOUNT_SID = 'AC_test'
-  process.env.TWILIO_AUTH_TOKEN = 'token_test'
+  process.env.TWILIO_SID = 'AC_test'
+  process.env.TWILIO_SECRET = 'token_test'
 })
 
 afterEach(() => {
-  delete process.env.TWILIO_ACCOUNT_SID
-  delete process.env.TWILIO_AUTH_TOKEN
+  delete process.env.TWILIO_SID
+  delete process.env.TWILIO_SECRET
   vi.unstubAllGlobals()
 })
 
 describe('sendSms', () => {
   it('throws when credentials are missing', async () => {
-    delete process.env.TWILIO_AUTH_TOKEN
-    await expect(sendSms(smsInput)).rejects.toThrow(
-      'Missing TWILIO_ACCOUNT_SID'
-    )
+    delete process.env.TWILIO_SECRET
+    await expect(sendSms(smsInput)).rejects.toThrow('Missing TWILIO_SID')
   })
 
   it('posts form-encoded fields with basic auth and returns sid and status', async () => {
@@ -78,10 +76,8 @@ describe('sendSms', () => {
 
 describe('createCall', () => {
   it('throws when credentials are missing', async () => {
-    delete process.env.TWILIO_ACCOUNT_SID
-    await expect(createCall(callInput)).rejects.toThrow(
-      'Missing TWILIO_ACCOUNT_SID'
-    )
+    delete process.env.TWILIO_SID
+    await expect(createCall(callInput)).rejects.toThrow('Missing TWILIO_SID')
   })
 
   it('posts From, To, and Url and returns sid and status', async () => {

@@ -13,10 +13,10 @@ export type PlacedCall = {
 }
 
 function twilioCredentials(): { accountSid: string; authToken: string } {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
+  const accountSid = process.env.TWILIO_SID
+  const authToken = process.env.TWILIO_SECRET
   if (!accountSid || !authToken) {
-    throw new Error('Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN')
+    throw new Error('Missing TWILIO_SID or TWILIO_SECRET')
   }
   return { accountSid, authToken }
 }
