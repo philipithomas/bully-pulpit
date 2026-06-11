@@ -32,12 +32,6 @@ export function Footer() {
             >
               Postcard
             </Link>
-            <Link
-              href="/feed/rss.xml"
-              className="hover:text-white transition-colors"
-            >
-              RSS
-            </Link>
             <Link href="/terms" className="hover:text-white transition-colors">
               Terms
             </Link>
