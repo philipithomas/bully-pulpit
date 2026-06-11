@@ -170,8 +170,10 @@ ${preheader}
               <a href="${unsubscribeUrl}" style="color: #9E9A93; text-decoration: underline;">Unsubscribe</a>
             </p>
             <p style="margin: 0; font-size: 11px; line-height: 1.5; color: #9E9A93;">
-              &copy; ${year} The Contraption Company LLC<br>
-              169 Madison Ave. Suite 2174, New York, NY 10016 USA
+              &copy; ${year}<br>
+              The Contraption Company LLC<br>
+              169 Madison Ave. Suite 2174<br>
+              New York, NY 10016 USA
             </p>
           </td>
         </tr>

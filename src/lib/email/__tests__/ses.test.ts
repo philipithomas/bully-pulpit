@@ -82,9 +82,9 @@ describe('sendNewsletterEmail', () => {
     // CAN-SPAM postal address, matching the HTML footer in
     // templates/newsletter-shell.ts.
     const year = new Date().getFullYear()
-    expect(text).toContain(`© ${year} The Contraption Company LLC`)
+    expect(text).toContain(`© ${year}`)
     expect(text).toContain(
-      '169 Madison Ave. Suite 2174, New York, NY 10016 USA'
+      'The Contraption Company LLC\n169 Madison Ave. Suite 2174\nNew York, NY 10016 USA'
     )
   })
 })
