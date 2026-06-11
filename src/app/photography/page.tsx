@@ -132,7 +132,7 @@ export default function PhotographyPage() {
                 <span className="block font-serif text-sm leading-snug text-white">
                   {photo.alt}
                 </span>
-                <span className="mt-1 block font-mono text-[10px] font-medium tracking-[0.15em] uppercase text-gray-300">
+                <span className="mt-1 block font-mono text-xs text-gray-300">
                   {photo.post.frontmatter.title}
                 </span>
               </span>

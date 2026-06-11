@@ -18,9 +18,9 @@ interface RelatedPostsProps {
 export function RelatedPosts({ posts }: RelatedPostsProps) {
   return (
     <div className="mx-auto max-w-5xl mt-16">
-      <h3 className="font-sans text-xs font-semibold tracking-[0.15em] uppercase text-gray-500 mb-8">
-        Keep reading
-      </h3>
+      {/* No visible label: whitespace separates the cards from the post.
+          The sr-only heading keeps the section named for screen readers. */}
+      <h3 className="sr-only">Keep reading</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {posts.map((post) => {
           return (
@@ -52,8 +52,8 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
               </div>
 
               {/* Content area */}
-              <div className="flex flex-col flex-grow p-5 border-t border-gray-100 relative">
-                <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-2">
+              <div className="flex flex-col flex-grow p-5 relative">
+                <time className="font-mono text-xs text-gray-500 mb-2">
                   {post.frontmatter.publishedAt}
                 </time>
                 <h4

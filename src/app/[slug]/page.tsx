@@ -127,7 +127,7 @@ export default async function SlugPage({ params }: Props) {
           {post &&
             post.newsletter !== 'postcard' &&
             post.frontmatter.publishedAt && (
-              <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
+              <time className="font-mono text-xs text-gray-500">
                 {post.frontmatter.publishedAt}
               </time>
             )}

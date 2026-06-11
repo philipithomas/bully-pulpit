@@ -20,10 +20,7 @@ export function PostNavigation({ previous, next }: PostNavigationProps) {
   const both = previous && next
 
   return (
-    <nav
-      aria-label="Adjacent posts"
-      className="mx-auto max-w-2xl border-t border-gray-200 mt-12 pt-8"
-    >
+    <nav aria-label="Adjacent posts" className="mx-auto max-w-2xl mt-16">
       <div
         className={
           both ? 'grid grid-cols-1 sm:grid-cols-2 gap-8' : 'grid grid-cols-1'
@@ -59,7 +56,7 @@ function NavCell({
       }`}
       {...coverPreloadAttrs(post)}
     >
-      <span className="flex items-center gap-2 font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-2">
+      <span className="flex items-center gap-2 font-sans text-sm text-gray-500 mb-2">
         {isNext ? (
           <>
             Next

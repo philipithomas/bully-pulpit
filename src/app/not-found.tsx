@@ -19,7 +19,7 @@ export default function NotFound() {
         <div className="mt-10">
           <Link
             href="/"
-            className="no-underline font-mono text-xs font-semibold tracking-[0.12em] uppercase text-white/60 hover:text-white transition-colors duration-300 inline-flex items-center"
+            className="no-underline font-sans text-sm text-white/60 hover:text-white transition-colors duration-300 inline-flex items-center"
           >
             <span>Back to home</span>
             <ArrowRight className="ml-2" size={16} />

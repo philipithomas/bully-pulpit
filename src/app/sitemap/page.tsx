@@ -77,9 +77,7 @@ export default function SitemapPage() {
 
         <div className="space-y-10">
           <section>
-            <h2 className="font-mono text-xs font-semibold tracking-[0.15em] uppercase text-gray-500 mb-4">
-              Pages
-            </h2>
+            <h2 className="font-serif text-xl text-gray-950 mb-4">Pages</h2>
             <ul className="divide-y divide-gray-100">
               {pages.map((page) => (
                 <li key={page.href} className="py-3 flex items-baseline gap-4">
@@ -101,7 +99,7 @@ export default function SitemapPage() {
             const yearPosts = byYear.get(year) ?? []
             return (
               <section key={year}>
-                <h2 className="font-mono text-xs font-semibold tracking-[0.15em] uppercase text-gray-500 mb-4">
+                <h2 className="font-serif text-xl text-gray-950 mb-4">
                   {year}
                 </h2>
                 <ul className="divide-y divide-gray-100">
@@ -123,7 +121,7 @@ export default function SitemapPage() {
                         {post.frontmatter.title}
                       </Link>
                       <span
-                        className={`font-mono text-[10px] tracking-[0.1em] uppercase shrink-0 ${newsletterColor[post.newsletter]}`}
+                        className={`font-mono text-xs shrink-0 ${newsletterColor[post.newsletter]}`}
                       >
                         {newsletterLabel[post.newsletter]}
                       </span>
