@@ -12,6 +12,7 @@ import { fetchPage } from '@/lib/chat/fetch-page-tool'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
 import { getPageContextContent } from '@/lib/chat/page-context'
 import { sanitizeChatMessages } from '@/lib/chat/sanitize-messages'
+import { sanitizePageTitle } from '@/lib/chat/sanitize-title'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -49,10 +50,7 @@ export async function POST(request: Request) {
   // Narrow client-supplied fields at the trust boundary — they are
   // interpolated into the system prompt. The path must look like a site path
   // (leading slash, then only letters, digits, hyphen, underscore, slash,
-  // length-bounded). The title sits inside double quotes on the prompt's
-  // current-page line, so it is made inert before the cap: control characters
-  // (including newlines) become spaces, double quotes become single quotes,
-  // whitespace runs collapse, then the result is trimmed and capped. Anything
+  // length-bounded); the title is made inert by sanitizePageTitle. Anything
   // invalid is silently dropped so the chat never fails over page context.
   const rawPath = body.pageContext?.path
   const path =
@@ -61,17 +59,7 @@ export async function POST(request: Request) {
     /^\/[a-zA-Z0-9/_-]*$/.test(rawPath)
       ? rawPath
       : undefined
-  const rawTitle = body.pageContext?.title
-  const cleanTitle =
-    typeof rawTitle === 'string'
-      ? rawTitle
-          .replace(/\p{Cc}/gu, ' ')
-          .replace(/"/g, "'")
-          .replace(/\s+/g, ' ')
-          .trim()
-          .slice(0, 200)
-      : ''
-  const title = cleanTitle === '' ? undefined : cleanTitle
+  const title = sanitizePageTitle(body.pageContext?.title)
   const userName = typeof body.userName === 'string' ? body.userName : null
 
   // Sanitize before conversion: convertToModelMessages would turn a crafted
