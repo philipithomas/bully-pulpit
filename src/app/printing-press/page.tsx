@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { PageHeader } from '@/components/printing-press/page-header'
+import { ViewsChart } from '@/components/printing-press/views-chart'
+import { fetchDailyViews } from '@/lib/analytics/vercel-web-analytics'
 import { requireAdmin } from '@/lib/auth/admin'
 import { getAllPosts, getPostBySlug } from '@/lib/content/loader'
 import { allSendStats, lastCompletedSend } from '@/lib/db/queries/email-sends'
@@ -16,10 +18,11 @@ function iso(date: Date): string {
 
 export default async function OverviewPage() {
   await requireAdmin()
-  const [stats, sends, last] = await Promise.all([
+  const [stats, sends, last, views] = await Promise.all([
     subscriberStats(),
     allSendStats(),
     lastCompletedSend(),
+    fetchDailyViews(),
   ])
 
   const pending = Object.values(sends).reduce((a, s) => a + s.pending, 0)
@@ -99,6 +102,22 @@ export default async function OverviewPage() {
             and has not gone out yet.
           </p>
         ))}
+      </div>
+
+      <div className="mt-12 max-w-xl">
+        {views && views.length > 0 ? (
+          <ViewsChart points={views} />
+        ) : (
+          <p className="font-serif leading-relaxed text-gray-500">
+            Page view data is unavailable.{' '}
+            <a
+              href="https://vercel.com/philipithomas/bully-pulpit/analytics"
+              className="underline decoration-gray-300 underline-offset-4 transition-colors hover:decoration-current"
+            >
+              View analytics on Vercel
+            </a>
+          </p>
+        )}
       </div>
 
       <div className="mt-12 flex flex-wrap gap-4">
