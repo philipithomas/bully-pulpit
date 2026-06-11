@@ -14,11 +14,7 @@ export default async function PrintingPressLayout({
   children: ReactNode
 }) {
   // Layout-level gate (each API route + page also guards independently).
-  const session = await requireAdmin()
+  await requireAdmin()
 
-  return (
-    <PrintingPressShell adminEmail={session.email}>
-      {children}
-    </PrintingPressShell>
-  )
+  return <PrintingPressShell>{children}</PrintingPressShell>
 }

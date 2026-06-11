@@ -178,9 +178,7 @@ function Messages({
         )}
       >
         <div className="flex items-center justify-between border-gray-100 border-b px-3 py-2">
-          <span className="font-mono text-[11px] text-gray-400 uppercase tracking-[0.14em]">
-            Conversations
-          </span>
+          <span className="text-gray-500 text-xs">Conversations</span>
           <button
             type="button"
             onClick={() => {
