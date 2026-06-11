@@ -66,7 +66,8 @@ export function ViewsChart({ points }: { points: DailyViews[] }) {
         />
         {coords.map(([cx, cy], i) => (
           <circle
-            key={points[i].date}
+            // biome-ignore lint/suspicious/noArrayIndexKey: fixed ordered series rendered once; date keys can collide on sub-day buckets
+            key={i}
             cx={cx}
             cy={cy}
             r={3}

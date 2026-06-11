@@ -60,7 +60,11 @@ export async function fetchDailyViews(): Promise<DailyViews[] | null> {
   const token = process.env.VERCEL_API_TOKEN
   if (!token) return null
   try {
-    const to = new Date()
+    // Floor "to" to the current half hour so the URL — the Next data cache
+    // key — is stable per half hour, which lets the 30 minute revalidate
+    // actually engage instead of missing on a unique millisecond timestamp.
+    const HALF_HOUR = 30 * 60 * 1000
+    const to = new Date(Math.floor(Date.now() / HALF_HOUR) * HALF_HOUR)
     const from = new Date(to)
     from.setUTCDate(from.getUTCDate() - 6)
     from.setUTCHours(0, 0, 0, 0)
