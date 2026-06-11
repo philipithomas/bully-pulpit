@@ -130,7 +130,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com"
                   required
-                  className="w-full border border-gray-300 bg-white px-4 py-3 text-sm font-sans text-gray-900 placeholder:text-gray-400 focus:border-gray-900"
+                  className="w-full border border-gray-300 bg-white px-4 py-3 text-sm pointer-coarse:text-base font-sans text-gray-900 placeholder:text-gray-400 focus:border-gray-900"
                 />
                 <button
                   type="submit"
