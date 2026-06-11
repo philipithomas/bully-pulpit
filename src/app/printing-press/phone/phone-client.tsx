@@ -252,7 +252,7 @@ function Messages({
                   onChange={(e) => setNewTo(e.target.value)}
                   placeholder="+15551234567"
                   aria-label="Recipient phone number"
-                  className="h-8 w-44 border border-gray-200 bg-white px-2 text-gray-900 text-sm placeholder:text-gray-400 focus:border-gray-400"
+                  className="h-8 w-44 border border-gray-200 bg-white px-2 text-gray-900 text-sm placeholder:text-gray-400"
                 />
               ) : (
                 <span className="font-medium text-gray-900 text-sm">
@@ -334,7 +334,7 @@ function Messages({
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
                 aria-label="Send from number"
-                className="h-9 border border-gray-200 bg-white px-2 text-gray-700 text-sm focus:border-gray-400"
+                className="h-9 border border-gray-200 bg-white px-2 text-gray-700 text-sm"
               >
                 {FROM_OPTIONS.map(([label, number]) => (
                   <option key={number} value={number}>
@@ -348,7 +348,7 @@ function Messages({
                 rows={1}
                 placeholder="Write a message…"
                 aria-label="Message body"
-                className="max-h-32 min-h-9 flex-1 resize-y border border-gray-200 bg-white px-2 py-2 text-gray-900 text-sm placeholder:text-gray-400 focus:border-gray-400"
+                className="max-h-32 min-h-9 flex-1 resize-y border border-gray-200 bg-white px-2 py-2 text-gray-900 text-sm placeholder:text-gray-400"
               />
               <Button
                 type="submit"
@@ -432,7 +432,7 @@ function ConnectCall() {
             id={callerIdId}
             value={callerId}
             onChange={(e) => setCallerId(e.target.value)}
-            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900 text-sm focus:border-gray-400"
+            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900 text-sm"
           >
             {FROM_OPTIONS.map(([label, number]) => (
               <option key={number} value={number}>
@@ -454,7 +454,7 @@ function ConnectCall() {
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             placeholder="+15551234567"
-            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900 text-sm placeholder:text-gray-400 focus:border-gray-400"
+            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900 text-sm placeholder:text-gray-400"
           />
           {trimmed && !validTarget && (
             <p className="text-red text-xs">

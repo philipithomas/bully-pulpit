@@ -249,7 +249,7 @@ export function SubscribersClient({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by email…"
             aria-label="Search subscribers by email"
-            className="h-10 w-full border border-gray-200 bg-white pr-9 pl-9 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400"
+            className="h-10 w-full border border-gray-200 bg-white pr-9 pl-9 text-sm text-gray-900 placeholder:text-gray-400"
           />
           {loading && (
             <Spinner className="-translate-y-1/2 absolute top-1/2 right-3 h-4 w-4 text-gray-400" />
