@@ -291,7 +291,7 @@ export function SubscribersClient({
         </div>
       </div>
 
-      <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-gray-400">
+      <p className="mb-3 text-xs text-gray-500">
         {query ? `${total} matching` : `${total} subscribers`}
       </p>
 

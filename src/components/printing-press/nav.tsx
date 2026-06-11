@@ -1,6 +1,5 @@
 'use client'
 
-import { LayoutDashboard, Phone, Send, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -9,13 +8,12 @@ const items = [
   {
     href: '/printing-press',
     label: 'Overview',
-    icon: LayoutDashboard,
     match: (p: string) => p === '/printing-press',
   },
   {
     href: '/printing-press/posts',
     label: 'Posts',
-    icon: Send,
+    // The send flow lives under /printing-press/send but belongs to Posts.
     match: (p: string) =>
       p.startsWith('/printing-press/posts') ||
       p.startsWith('/printing-press/send'),
@@ -23,46 +21,34 @@ const items = [
   {
     href: '/printing-press/subscribers',
     label: 'Subscribers',
-    icon: Users,
     match: (p: string) => p.startsWith('/printing-press/subscribers'),
   },
   {
     href: '/printing-press/phone',
     label: 'Phone',
-    icon: Phone,
     match: (p: string) => p.startsWith('/printing-press/phone'),
   },
 ]
 
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+export function PrintingPressNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex flex-col gap-0.5">
+    <nav className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
       {items.map((item) => {
         const active = item.match(pathname)
-        const Icon = item.icon
         return (
           <Link
             key={item.href}
             href={item.href}
-            onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'group flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors',
+              'transition-colors',
               active
-                ? 'bg-gray-075 text-gray-950'
-                : 'text-gray-600 hover:bg-gray-050 hover:text-gray-900'
+                ? 'text-gray-950 underline decoration-gray-300 underline-offset-4'
+                : 'text-gray-500 hover:text-gray-900'
             )}
           >
-            <Icon
-              className={cn(
-                'h-[18px] w-[18px]',
-                active
-                  ? 'text-gray-700'
-                  : 'text-gray-400 group-hover:text-gray-600'
-              )}
-            />
             {item.label}
           </Link>
         )

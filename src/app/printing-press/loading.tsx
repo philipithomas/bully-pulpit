@@ -1,11 +1,10 @@
-import { PageHeader } from '@/components/printing-press/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 
 /** Overview skeleton: the prose summary paragraphs, line by line. */
 export default function OverviewLoading() {
   return (
     <div>
-      <PageHeader title="Overview" description="Keeping in touch." />
+      <h1 className="sr-only">Overview</h1>
       <div className="max-w-xl space-y-5">
         <div className="space-y-3">
           <Skeleton className="h-6 w-full" />

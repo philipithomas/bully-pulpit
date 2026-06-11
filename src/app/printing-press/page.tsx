@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { PageHeader } from '@/components/printing-press/page-header'
 import { requireAdmin } from '@/lib/auth/admin'
 import { getAllPosts, getPostBySlug } from '@/lib/content/loader'
 import { allSendStats, lastCompletedSend } from '@/lib/db/queries/email-sends'
@@ -35,7 +34,7 @@ export default async function OverviewPage() {
 
   return (
     <div>
-      <PageHeader title="Overview" description="Keeping in touch." />
+      <h1 className="sr-only">Overview</h1>
 
       <div className="max-w-xl space-y-5 font-serif text-gray-950">
         <p className="text-xl leading-relaxed sm:text-2xl">
@@ -99,21 +98,6 @@ export default async function OverviewPage() {
             and has not gone out yet.
           </p>
         ))}
-      </div>
-
-      <div className="mt-12 flex flex-wrap gap-4">
-        <Link
-          href="/printing-press/posts"
-          className="text-sm font-medium text-gray-700 underline-offset-4 hover:text-gray-950 hover:underline"
-        >
-          Send a post →
-        </Link>
-        <Link
-          href="/printing-press/subscribers"
-          className="text-sm font-medium text-gray-700 underline-offset-4 hover:text-gray-950 hover:underline"
-        >
-          Browse subscribers →
-        </Link>
       </div>
     </div>
   )
