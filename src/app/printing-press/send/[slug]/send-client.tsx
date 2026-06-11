@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/printing-press/page-header'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
+import { forceDarkColorScheme } from '@/lib/email/preview'
+import { cn } from '@/lib/utils'
 
 type SendStats = {
   total: number
@@ -45,12 +47,21 @@ export function SendClient({
   initialStats,
 }: Props) {
   const [view, setView] = useState<'desktop' | 'mobile'>('desktop')
+  const [scheme, setScheme] = useState<'light' | 'dark'>('light')
   const [testing, setTesting] = useState(false)
   const [starting, setStarting] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [eligible, setEligible] = useState(initialEligible)
   const [stats, setStats] = useState<SendStats>(initialStats)
   const [active, setActive] = useState(false)
+
+  // Dark preview: the email's own dark-mode block with its media condition
+  // rewritten to always apply (a sandboxed iframe cannot be forced into
+  // prefers-color-scheme: dark). Preview only; sends use previewHtml as-is.
+  const darkPreviewHtml = useMemo(
+    () => forceDarkColorScheme(previewHtml),
+    [previewHtml]
+  )
 
   // Poll send progress from the DB while a send is active.
   useEffect(() => {
@@ -222,9 +233,7 @@ export function SendClient({
 
       {/* Preview */}
       <div className="mb-3 flex items-center gap-2">
-        <span className="font-mono text-xs uppercase tracking-widest text-gray-500">
-          Preview
-        </span>
+        <span className="text-xs text-gray-500">Preview</span>
         <div className="flex gap-1">
           <Button
             variant={view === 'desktop' ? 'default' : 'outline'}
@@ -241,14 +250,44 @@ export function SendClient({
             Mobile
           </Button>
         </div>
+        <div className="flex gap-1">
+          <Button
+            variant={scheme === 'light' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setScheme('light')}
+          >
+            Light
+          </Button>
+          <Button
+            variant={scheme === 'dark' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setScheme('dark')}
+          >
+            Dark
+          </Button>
+        </div>
       </div>
-      <div className="border border-gray-200 bg-gray-100 p-4 flex justify-center overflow-auto">
+      <div
+        className={cn(
+          'border border-gray-200 p-4 flex justify-center overflow-auto',
+          scheme === 'dark' ? 'bg-gray-925' : 'bg-gray-100'
+        )}
+      >
         <iframe
           sandbox=""
-          srcDoc={previewHtml}
+          srcDoc={scheme === 'dark' ? darkPreviewHtml : previewHtml}
           title="Email preview"
-          className="bg-white border border-gray-200 h-[70vh]"
-          style={{ width: view === 'desktop' ? 600 : 375, maxWidth: '100%' }}
+          className={cn(
+            'border border-gray-200 h-[70vh]',
+            scheme === 'light' && 'bg-white'
+          )}
+          style={{
+            width: view === 'desktop' ? 600 : 375,
+            maxWidth: '100%',
+            // Match the email's dark body color so there is no white flash
+            // while the dark srcDoc loads.
+            ...(scheme === 'dark' ? { backgroundColor: '#121110' } : {}),
+          }}
         />
       </div>
 
