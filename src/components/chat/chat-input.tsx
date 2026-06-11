@@ -65,6 +65,12 @@ export function ChatInput({
           aria-label="Ask Bell a question"
           rows={1}
           disabled={isStreaming}
+          // Command-palette exception: the Bell composer sits inside a bordered
+          // box that already signals focus, so the global :focus-visible ring is
+          // redundant noise. data-no-focus-ring opts this textarea out of the
+          // global indicator (same pattern as the OTP slots and the search
+          // dialog input); the indicator stays intact everywhere else.
+          data-no-focus-ring
           className="w-full resize-none bg-transparent py-2 font-sans text-sm leading-tight text-gray-950 placeholder:text-gray-400 disabled:opacity-50"
         />
       </div>

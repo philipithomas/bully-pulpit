@@ -244,10 +244,14 @@ export function SearchDialog({
                 // Command-palette exception: the dialog autofocuses this input
                 // on open, so the global :focus-visible keyboard ring is
                 // redundant noise on top of the blinking cursor, placeholder,
-                // and the distinct dialog frame. Suppress the outline on THIS
-                // input only — the global indicator stays intact everywhere
-                // else, and no replacement ring is added.
-                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm text-gray-950 placeholder:text-gray-400 focus:outline-none focus-visible:outline-none"
+                // and the distinct dialog frame. data-no-focus-ring opts THIS
+                // input out of the global indicator (same pattern as the OTP
+                // slots) — the indicator stays intact everywhere else, and no
+                // replacement ring is added. A focus-visible:outline-none
+                // utility cannot do this: equal specificity, later-authored
+                // global rule wins, so the ring paints anyway.
+                data-no-focus-ring
+                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm text-gray-950 placeholder:text-gray-400"
               />
               {loading && <Spinner className="h-4 w-4 text-gray-400" />}
             </div>
