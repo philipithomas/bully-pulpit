@@ -20,7 +20,7 @@ export function SubscribeCta({ newsletter }: { newsletter: Newsletter }) {
   if (user) return null
 
   return (
-    <div className="mx-auto max-w-2xl border-t border-gray-200 mt-12 pt-8">
+    <div className="mx-auto max-w-2xl mt-16">
       <p className="font-serif text-gray-600 text-lg mb-5">
         Get new {newsletterNoun[newsletter]} by email.
       </p>

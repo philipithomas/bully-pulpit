@@ -45,7 +45,7 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
         </div>
       )}
       <div className="p-4 md:p-5">
-        <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
+        <time className="font-mono text-xs text-gray-500">
           {post.frontmatter.publishedAt}
         </time>
         <h2

@@ -263,7 +263,7 @@ export function SearchDialog({
                 return (
                   <>
                     {isRecent && (
-                      <p className="px-4 pt-3 pb-1 font-mono text-[10px] font-semibold tracking-[0.15em] uppercase text-gray-400">
+                      <p className="px-4 pt-3 pb-1 font-sans text-xs text-gray-500">
                         Recent
                       </p>
                     )}

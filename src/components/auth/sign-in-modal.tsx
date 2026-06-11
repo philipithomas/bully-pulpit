@@ -135,7 +135,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gray-950 text-white py-3 text-sm font-semibold tracking-wide uppercase hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  className="w-full bg-gray-950 text-white py-3 text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50"
                 >
                   {loading ? (
                     <Spinner className="h-4 w-4 mx-auto" />
@@ -198,7 +198,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
   )
 }
 
-// Button + "or" divider hide together when the GSI script is blocked,
+// Button + "or" separator hide together when the GSI script is blocked,
 // leaving the email form as the only option.
 function GoogleSignInSection({ onSuccess }: { onSuccess?: () => void }) {
   const available = useGoogleSignInAvailable()
@@ -208,13 +208,7 @@ function GoogleSignInSection({ onSuccess }: { onSuccess?: () => void }) {
   return (
     <>
       <GoogleSignInButton onSuccess={onSuccess} />
-      <div className="flex items-center gap-4">
-        <div className="h-px flex-1 bg-gray-200" />
-        <span className="text-xs text-gray-400 font-sans uppercase tracking-wide">
-          or
-        </span>
-        <div className="h-px flex-1 bg-gray-200" />
-      </div>
+      <p className="text-center font-sans text-xs text-gray-400">or</p>
     </>
   )
 }

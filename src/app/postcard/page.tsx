@@ -109,7 +109,7 @@ export default function PostcardPage() {
             .sort(([a], [b]) => b - a)
             .map(([year, yearMonths]) => (
               <div key={year}>
-                <h2 className="font-mono text-xs font-semibold tracking-[0.15em] uppercase text-gray-500 mb-4">
+                <h2 className="font-serif text-xl text-gray-950 mb-4">
                   {year}
                 </h2>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">

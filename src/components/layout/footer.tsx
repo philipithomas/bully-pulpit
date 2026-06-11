@@ -12,6 +12,15 @@ export function Footer() {
             >
               Philip I. Thomas
             </Link>
+            <p className="mt-3 text-xs text-gray-500">
+              &copy; {new Date().getFullYear()}{' '}
+              <Link
+                href="/contact"
+                className="text-inherit no-underline hover:underline"
+              >
+                The Contraption Company LLC
+              </Link>
+            </p>
           </div>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
             <Link
@@ -54,17 +63,6 @@ export function Footer() {
               Sitemap
             </Link>
           </nav>
-        </div>
-        <div className="mt-12 pt-8 border-t border-gray-900 text-center">
-          <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-gray-600">
-            &copy; {new Date().getFullYear()}{' '}
-            <Link
-              href="/contact"
-              className="text-inherit no-underline hover:underline"
-            >
-              The Contraption Company LLC
-            </Link>
-          </p>
         </div>
       </div>
     </footer>
