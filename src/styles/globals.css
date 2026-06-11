@@ -437,7 +437,7 @@ body:has(> * [data-bg="gray-050"]) {
    ============================ */
 
 .prose {
-  --tw-prose-body: var(--color-gray-800);
+  --tw-prose-body: var(--color-gray-900);
   --tw-prose-headings: var(--color-gray-950);
   --tw-prose-links: var(--tw-prose-body);
   --tw-prose-bold: var(--color-gray-900);
