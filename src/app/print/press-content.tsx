@@ -1,10 +1,6 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
-
-const STRIPE_CHECKOUT_USA = 'https://buy.stripe.com/00w4gB7P21zn0qVae19oc00'
-const STRIPE_CHECKOUT_GLOBAL = 'https://buy.stripe.com/8x26oJedqb9X6Pjfyl9oc01'
-const STRIPE_BILLING_PORTAL =
-  'https://billing.stripe.com/p/login/00w4gB7P21zn0qVae19oc00'
 
 export function PressContent() {
   return (
@@ -26,36 +22,45 @@ export function PressContent() {
               </p>
 
               <div className="mt-8 space-y-6">
+                <div className="border border-brass/50 bg-brass/10 px-4 py-3">
+                  <p className="font-sans text-sm font-semibold text-gray-950">
+                    This experiment has concluded
+                  </p>
+                  <p className="mt-1 font-serif text-sm text-gray-600 text-pretty leading-relaxed">
+                    The print edition began on 2025-12-10 and is no longer
+                    available to order. The{' '}
+                    <Link
+                      href="/introducing-the-print-edition"
+                      className="underline underline-offset-4 decoration-indigo hover:text-indigo transition-colors duration-300"
+                    >
+                      launch essay
+                    </Link>{' '}
+                    tells the full story.
+                  </p>
+                </div>
+
                 <div className="grid gap-3 sm:flex sm:flex-wrap">
-                  <a
-                    href={STRIPE_CHECKOUT_USA}
+                  <button
+                    type="button"
+                    disabled
                     className="btn btn-indigo w-full sm:w-auto"
                   >
                     <span className="btn-text">$15/mo USA delivery</span>
                     <span className="btn-arrow">
                       <ArrowIcon className="w-4 h-4" />
                     </span>
-                  </a>
-                  <a
-                    href={STRIPE_CHECKOUT_GLOBAL}
+                  </button>
+                  <button
+                    type="button"
+                    disabled
                     className="btn btn-indigo w-full sm:w-auto"
                   >
                     <span className="btn-text">$20/mo global</span>
                     <span className="btn-arrow">
                       <ArrowIcon className="w-4 h-4" />
                     </span>
-                  </a>
+                  </button>
                 </div>
-
-                <p className="text-sm text-gray-600">
-                  Already subscribed?{' '}
-                  <a
-                    href={STRIPE_BILLING_PORTAL}
-                    className="underline underline-offset-4 decoration-indigo hover:text-indigo transition-colors duration-300"
-                  >
-                    Manage billing &amp; shipping
-                  </a>
-                </p>
               </div>
             </div>
           </div>

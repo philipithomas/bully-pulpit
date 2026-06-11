@@ -174,19 +174,12 @@ export default function HomePage() {
               ))}
             </div>
             <p className="font-serif text-sm text-gray-500 mt-6">
-              Available by email,{' '}
+              Available by email or{' '}
               <Link
                 href="/feed/rss.xml"
                 className="underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 RSS
-              </Link>
-              , or{' '}
-              <Link
-                href="/print"
-                className="underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
-              >
-                snail mail
               </Link>
               .
             </p>

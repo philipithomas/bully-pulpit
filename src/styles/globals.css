@@ -316,7 +316,14 @@ body:has(> * [data-bg="gray-050"]) {
 
 .btn:disabled {
   opacity: 0.5;
-  pointer-events: none;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* A disabled button keeps pointer events so the not-allowed cursor shows,
+   but it must not lift, shadow, or run the arrow-reveal hover. */
+.btn:disabled:hover {
   transform: none;
   box-shadow: none;
 }
@@ -362,6 +369,20 @@ body:has(> * [data-bg="gray-050"]) {
   transform: translateX(-0.25rem);
 }
 
+/* Suppress the arrow-reveal hover when the button is disabled. */
+.btn-primary:disabled:hover {
+  padding-right: 1.25rem;
+}
+
+.btn-primary:disabled:hover .btn-arrow {
+  opacity: 0;
+  transform: translateX(0.5rem);
+}
+
+.btn-primary:disabled:hover .btn-text {
+  transform: none;
+}
+
 .btn-indigo {
   background-color: var(--color-indigo);
   color: white;
@@ -401,6 +422,20 @@ body:has(> * [data-bg="gray-050"]) {
 
 .btn-indigo:hover .btn-text {
   transform: translateX(-0.25rem);
+}
+
+/* Suppress the arrow-reveal hover when the button is disabled. */
+.btn-indigo:disabled:hover {
+  padding-right: 1.25rem;
+}
+
+.btn-indigo:disabled:hover .btn-arrow {
+  opacity: 0;
+  transform: translateX(0.5rem);
+}
+
+.btn-indigo:disabled:hover .btn-text {
+  transform: none;
 }
 
 /* ============================
