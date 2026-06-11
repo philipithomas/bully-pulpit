@@ -188,7 +188,7 @@ export function InlineSignupForm({
           aria-label="Email address"
           required
           autoFocus={autoFocus}
-          className="border border-gray-300 bg-white px-3 py-2 flex-grow w-full focus:border-gray-900 text-sm pointer-coarse:text-base h-10 font-sans"
+          className="border border-gray-300 bg-white px-3 py-2 flex-grow w-full text-sm pointer-coarse:text-base h-10 font-sans"
         />
         <button
           type="submit"

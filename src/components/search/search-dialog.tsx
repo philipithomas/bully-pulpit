@@ -241,16 +241,12 @@ export function SearchDialog({
                 aria-controls={expanded ? listboxId : undefined}
                 aria-activedescendant={activeOptionId}
                 aria-autocomplete="list"
-                // Command-palette exception: the dialog autofocuses this input
-                // on open, so the global :focus-visible keyboard ring is
-                // redundant noise on top of the blinking cursor, placeholder,
-                // and the distinct dialog frame. data-no-focus-ring opts THIS
-                // input out of the global indicator (same pattern as the OTP
-                // slots) — the indicator stays intact everywhere else, and no
-                // replacement ring is added. A focus-visible:outline-none
-                // utility cannot do this: equal specificity, later-authored
-                // global rule wins, so the ring paints anyway.
-                data-no-focus-ring
+                // No focus affordance on the input itself: the global focus
+                // contract in globals.css excludes text-entry controls from
+                // the site ring, and this field is borderless so the
+                // border-darkening tier paints nothing. The dialog autofocuses
+                // it on open; the blinking cursor, placeholder, and distinct
+                // dialog frame signal focus.
                 className="flex-1 bg-transparent px-3 py-3 font-sans text-sm pointer-coarse:text-base text-gray-950 placeholder:text-gray-400"
               />
               {loading && <Spinner className="h-4 w-4 text-gray-400" />}

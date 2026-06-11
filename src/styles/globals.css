@@ -200,24 +200,55 @@
   color: var(--color-black);
 }
 
-/* One site-wide keyboard focus indicator: a square gray-950 outline.
-   Unlayered so it also restores an indicator where a utility set
-   outline-none. Two opt-outs, both surfaces that already signal focus:
-   the OTP input (its invisible real input sits over the slots, which
-   carry their own active border) and [data-no-focus-ring] (the search
-   dialog and Bell composer inputs: command-palette-style fields inside
-   a frame that signals focus, where the ring is redundant noise). Opting
-   out via attribute beats fighting the cascade with a per-input utility:
-   focus-visible:outline-none has equal specificity and loses to this
-   later-authored rule, so the ring would paint anyway. */
-:focus-visible:not([data-input-otp]):not([data-no-focus-ring]) {
+/* Two-tier focus contract.
+
+   Tier one: a square gray-950 outline is the single keyboard focus
+   indicator for buttons, links, checkboxes, radios, summaries, tabs:
+   every control except text entry. Unlayered so it also restores an
+   indicator where a utility set outline-none (Tailwind utilities live
+   in a layer and lose to unlayered rules regardless of specificity, so
+   a focus-visible:outline-none utility cannot opt out; the exclusions
+   here are the only way off the ring).
+
+   Tier two: text-entry controls (inputs other than checkbox and radio,
+   textareas, selects) are excluded at the selector level. Browsers
+   treat text fields as focus-visible even on mouse click, so the
+   outline would stack on the field's own darkening border and draw a
+   double box. Their single focus indicator is the border rule below.
+   The exclusion is structural, not per component, so a future field
+   cannot regress into the double box.
+
+   Remaining opt-outs, both surfaces that already signal focus: the OTP
+   input (its invisible real input sits over the slots, which carry
+   their own active border) and [data-no-focus-ring] (an escape hatch
+   for any non-text-entry surface where the ring is redundant noise). */
+:focus-visible:not([data-input-otp]):not([data-no-focus-ring]):not(
+  input:not([type="checkbox"]):not([type="radio"])
+):not(textarea):not(select) {
   outline: 2px solid var(--color-gray-950);
   outline-offset: 2px;
 }
 
+/* Tier two indicator: a focused text field darkens its border to
+   gray-900. Global so a field that forgets a focus:border utility still
+   signals focus; unlayered so it also wins over a utility that set a
+   lighter shade. outline: none kills the browser's native ring, which
+   would otherwise paint once tier one stops matching text fields.
+   Borderless fields (the search dialog and Bell composer inputs, framed
+   by containers that signal focus) are unaffected: border-color on a
+   zero-width border paints nothing. */
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-gray-900);
+}
+
 /* Opting out of the site ring must also kill the browser's native focus
    outline, otherwise the UA default (a thin ring) paints in its place.
-   Suppress on any focus state so these fields show no outline box at all. */
+   Suppress on any focus state so these surfaces show no outline box at
+   all. Text-entry fields no longer need this hook (tier two covers
+   them); it stays for future non-text-entry surfaces. */
 [data-no-focus-ring]:focus,
 [data-no-focus-ring]:focus-visible {
   outline: none;
