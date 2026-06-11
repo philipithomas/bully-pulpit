@@ -69,7 +69,7 @@ export default function HomePage() {
           <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-gray-950 mb-6">
             Crafting digital tools
           </h1>
-          <div className="font-serif text-lg text-gray-600 leading-relaxed mb-8 lg:mb-12 max-w-prose">
+          <div className="font-serif text-lg text-gray-900 leading-relaxed mb-8 lg:mb-12 max-w-prose">
             <p className="mb-4">
               I live in San Francisco. I&apos;m interested in coffee,
               fermentation, and urbanism.
@@ -147,7 +147,7 @@ export default function HomePage() {
 
           {/* Newsletter directory */}
           <div className="mt-8">
-            <p className="font-serif text-sm text-gray-500 mb-6">
+            <p className="font-serif text-sm text-gray-600 mb-6">
               I publish three newsletters:
             </p>
             <div className="space-y-4">
@@ -167,7 +167,7 @@ export default function HomePage() {
                       className="w-auto shrink-0"
                     />
                   </span>
-                  <span className="font-serif text-sm text-gray-500 group-hover:text-gray-700 transition-colors duration-300">
+                  <span className="font-serif text-sm text-gray-600 group-hover:text-gray-700 transition-colors duration-300">
                     {nl.tagline}
                   </span>
                 </Link>
