@@ -49,8 +49,11 @@ export async function POST(request: Request) {
   // Narrow client-supplied fields at the trust boundary — they are
   // interpolated into the system prompt. The path must look like a site path
   // (leading slash, then only letters, digits, hyphen, underscore, slash,
-  // length-bounded) and the title is capped; anything invalid is silently
-  // dropped so the chat never fails over page context.
+  // length-bounded). The title sits inside double quotes on the prompt's
+  // current-page line, so it is made inert before the cap: control characters
+  // (including newlines) become spaces, double quotes become single quotes,
+  // whitespace runs collapse, then the result is trimmed and capped. Anything
+  // invalid is silently dropped so the chat never fails over page context.
   const rawPath = body.pageContext?.path
   const path =
     typeof rawPath === 'string' &&
@@ -59,8 +62,16 @@ export async function POST(request: Request) {
       ? rawPath
       : undefined
   const rawTitle = body.pageContext?.title
-  const title =
-    typeof rawTitle === 'string' ? rawTitle.slice(0, 200) : undefined
+  const cleanTitle =
+    typeof rawTitle === 'string'
+      ? rawTitle
+          .replace(/\p{Cc}/gu, ' ')
+          .replace(/"/g, "'")
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 200)
+      : ''
+  const title = cleanTitle === '' ? undefined : cleanTitle
   const userName = typeof body.userName === 'string' ? body.userName : null
 
   // Sanitize before conversion: convertToModelMessages would turn a crafted
