@@ -15,7 +15,7 @@ export interface PageContextContent {
  * strips imports, JSX/HTML tags, images, and markdown syntax while keeping
  * the prose intact.
  */
-function toPlaintext(mdx: string): string {
+export function toPlaintext(mdx: string): string {
   return mdx
     .replace(/^(import|export)\s[^\n]*$/gm, '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
