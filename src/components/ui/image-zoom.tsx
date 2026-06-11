@@ -54,21 +54,35 @@ export function ImageZoom() {
     setZoomedImage(null)
 
     const handleClick = (e: MouseEvent) => {
-      const target = (e.target as HTMLElement).closest(
+      const matched = (e.target as HTMLElement).closest(
         '.prose img, [data-zoomable]'
-      ) as HTMLImageElement | null
-      if (!target) return
+      ) as HTMLElement | null
+      if (!matched) return
+
+      // The matched element is either the image itself (prose images, the
+      // homepage portraits) or a wrapper control around one (the photography
+      // tiles, where keyboard activation targets the button, not the img).
+      const img =
+        matched instanceof HTMLImageElement
+          ? matched
+          : matched.querySelector('img')
+      if (!img) return
 
       e.preventDefault()
       triggerRef.current =
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null
-      const rect = target.getBoundingClientRect()
+      // Data attributes may sit on the wrapper or on the img itself.
+      const fullSrc = matched.dataset.fullSrc ?? img.dataset.fullSrc ?? null
+      const href = matched.dataset.zoomLinkHref ?? img.dataset.zoomLinkHref
+      const title = matched.dataset.zoomLinkTitle ?? img.dataset.zoomLinkTitle
+      const rect = img.getBoundingClientRect()
       setZoomedImage({
-        src: target.currentSrc || target.src,
-        fullSrc: target.dataset.fullSrc ?? null,
-        alt: target.alt ?? '',
+        src: img.currentSrc || img.src,
+        fullSrc,
+        alt: img.alt ?? '',
+        caption: href && title ? { href, title } : null,
         // Plain object copy: the overlay animates from and back to this box.
         rect:
           rect.width > 0 && rect.height > 0

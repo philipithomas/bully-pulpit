@@ -1,7 +1,5 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import Link from 'next/link'
-import { coverPreloadAttrs } from '@/lib/content/cover-preload'
 import { getAllPosts } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
 import { feedDiscovery } from '@/lib/feeds/discovery'
@@ -109,16 +107,22 @@ export default function PhotographyPage() {
         {photos.map((photo, index) => {
           const ratio = photo.width / photo.height
           return (
-            <Link
+            <button
               key={photo.src}
-              href={`/${photo.post.slug}`}
-              className="group relative block overflow-hidden bg-gray-100"
+              type="button"
+              aria-label={photo.alt}
+              data-zoomable=""
+              data-zoom-link-href={`/${photo.post.slug}`}
+              data-zoom-link-title={photo.post.frontmatter.title}
+              {...(photo.post.fullCoverImage
+                ? { 'data-full-src': photo.post.fullCoverImage }
+                : {})}
+              className="relative block cursor-zoom-in overflow-hidden bg-gray-100"
               style={{
                 flexGrow: ratio * 100,
                 flexBasis: `calc(var(--row-h) * ${ratio.toFixed(4)})`,
                 aspectRatio: `${photo.width} / ${photo.height}`,
               }}
-              {...coverPreloadAttrs(photo.post)}
             >
               <Image
                 src={photo.src}
@@ -128,15 +132,7 @@ export default function PhotographyPage() {
                 className="object-cover"
                 priority={index < 6}
               />
-              <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-gray-950/80 via-gray-950/40 to-transparent px-3 pt-10 pb-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
-                <span className="block font-serif text-sm leading-snug text-white">
-                  {photo.alt}
-                </span>
-                <span className="mt-1 block font-mono text-xs text-gray-300">
-                  {photo.post.frontmatter.title}
-                </span>
-              </span>
-            </Link>
+            </button>
           )
         })}
         <div aria-hidden className="grow-[9999] basis-0" />
