@@ -1,11 +1,15 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface ZoomedImage {
   src: string
   fullSrc: string | null
   alt: string
+  /** Post attribution shown as an overlay caption (the photography grid);
+   *  null for prose images, which render no caption at all. */
+  caption?: { href: string; title: string } | null
   /** Viewport rect of the clicked image: where the zoom starts and ends. */
   rect: { top: number; left: number; width: number; height: number } | null
 }
@@ -65,6 +69,7 @@ export function ImageZoomOverlay({
   const overlayRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const immediateRef = useRef<HTMLImageElement>(null)
+  const captionLinkRef = useRef<HTMLAnchorElement>(null)
   const closingRef = useRef(false)
 
   // Open: animate the image from its on-page rect to the centered layout
@@ -118,15 +123,21 @@ export function ImageZoomOverlay({
     }
   }, [image.rect, onClose, phase])
 
-  // Escape closes; Tab stays on the container. The overlay is a single
-  // control surface with no focusable children, so holding focus on the
-  // container is a sufficient trap.
+  // Escape closes; Tab is trapped. Without a caption the overlay has no
+  // focusable children, so holding focus on the container is a sufficient
+  // trap. With a caption link there are exactly two stops, so cycling in
+  // either direction is a toggle between the container and the link.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose()
       if (e.key === 'Tab') {
         e.preventDefault()
-        overlayRef.current?.focus()
+        const link = captionLinkRef.current
+        if (link && document.activeElement !== link) {
+          link.focus()
+        } else {
+          overlayRef.current?.focus()
+        }
       }
     }
     document.addEventListener('keydown', handleKeyDown)
@@ -196,6 +207,7 @@ export function ImageZoomOverlay({
     return () => clearTimeout(timer)
   }, [upgrade])
 
+  const caption = image.caption ?? null
   const fullSrc = image.fullSrc
   const showFull = upgrade !== null && fullSrc !== null
   const showImmediate = upgrade === null || upgrade.fading
@@ -260,6 +272,27 @@ export function ImageZoomOverlay({
           />
         )}
       </div>
+      {/* Post attribution for gallery photos. A sibling of the FLIP
+          container so it fades with the backdrop instead of animating with
+          the image. Clicks on the surrounding text still bubble up and
+          close; only the link itself stops propagation so it can navigate
+          (the opener clears the zoom on pathname change, and the body
+          scroll lock releases when the overlay unmounts). */}
+      {caption && (
+        <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-1.5 px-6 text-center">
+          {image.alt && (
+            <p className="font-serif text-sm text-white/90">{image.alt}</p>
+          )}
+          <Link
+            ref={captionLinkRef}
+            href={caption.href}
+            className="text-xs text-gray-300 underline decoration-gray-500 underline-offset-4 hover:text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Featured on {caption.title}
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
