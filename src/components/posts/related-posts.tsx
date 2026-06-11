@@ -16,8 +16,12 @@ interface RelatedPostsProps {
 }
 
 export function RelatedPosts({ posts }: RelatedPostsProps) {
+  // The grid is a wider visual coda, so it takes the largest break in the
+  // end-of-post stack: the sections above step at mt-16 and the related
+  // posts breathe further away. The step softens on mobile where the grid
+  // stacks to one column.
   return (
-    <div className="mx-auto max-w-5xl mt-16">
+    <div className="mx-auto max-w-5xl mt-20 md:mt-28">
       {/* No visible label: whitespace separates the cards from the post.
           The sr-only heading keeps the section named for screen readers. */}
       <h3 className="sr-only">Keep reading</h3>
