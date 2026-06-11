@@ -71,7 +71,7 @@ export function ChatInput({
           // global indicator (same pattern as the OTP slots and the search
           // dialog input); the indicator stays intact everywhere else.
           data-no-focus-ring
-          className="w-full resize-none bg-transparent py-2 font-sans text-sm leading-tight text-gray-950 placeholder:text-gray-400 disabled:opacity-50"
+          className="w-full resize-none bg-transparent py-2 font-sans text-sm pointer-coarse:text-base leading-tight text-gray-950 placeholder:text-gray-400 disabled:opacity-50"
         />
       </div>
       <button

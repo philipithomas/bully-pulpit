@@ -251,7 +251,7 @@ export function SearchDialog({
                 // utility cannot do this: equal specificity, later-authored
                 // global rule wins, so the ring paints anyway.
                 data-no-focus-ring
-                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm text-gray-950 placeholder:text-gray-400"
+                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm pointer-coarse:text-base text-gray-950 placeholder:text-gray-400"
               />
               {loading && <Spinner className="h-4 w-4 text-gray-400" />}
             </div>
