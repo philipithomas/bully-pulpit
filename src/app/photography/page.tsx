@@ -8,7 +8,7 @@ import { feedDiscovery } from '@/lib/feeds/discovery'
 
 export const metadata: Metadata = {
   title: 'Photography',
-  description: 'Cover photographs from posts across the site.',
+  description: 'I take and edit all photos on the site.',
   // Page-level alternates replace the root layout's, so restate the feeds.
   alternates: { canonical: '/photography', types: feedDiscovery() },
 }
@@ -94,7 +94,7 @@ export default function PhotographyPage() {
           Photography
         </h1>
         <p className="font-serif text-lg text-gray-600 mt-3">
-          Cover photographs from posts across the site.
+          I take and edit all photos on the site.
         </p>
       </div>
 
