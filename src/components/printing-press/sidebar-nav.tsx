@@ -1,6 +1,6 @@
 'use client'
 
-import { LayoutDashboard, Send, Users } from 'lucide-react'
+import { LayoutDashboard, Phone, Send, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -25,6 +25,12 @@ const items = [
     label: 'Subscribers',
     icon: Users,
     match: (p: string) => p.startsWith('/printing-press/subscribers'),
+  },
+  {
+    href: '/printing-press/phone',
+    label: 'Phone',
+    icon: Phone,
+    match: (p: string) => p.startsWith('/printing-press/phone'),
   },
 ]
 

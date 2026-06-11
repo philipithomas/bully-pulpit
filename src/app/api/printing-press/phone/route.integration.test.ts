@@ -1,0 +1,342 @@
+import { randomUUID } from 'node:crypto'
+import { NextRequest } from 'next/server'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
+vi.mock('next/headers', () => import('@/test/integration/session'))
+vi.mock('@/lib/phone/twilio', () => ({
+  sendSms: vi.fn(),
+  createCall: vi.fn(),
+}))
+
+import { POST as connectPost } from '@/app/api/phone/connect/route'
+import { POST as callPost } from '@/app/api/printing-press/phone/call/route'
+import { GET as conversationsGet } from '@/app/api/printing-press/phone/conversations/route'
+import { POST as sendPost } from '@/app/api/printing-press/phone/send/route'
+import { signSession } from '@/lib/auth/jwt'
+import { createTextMessage } from '@/lib/db/queries/text-messages'
+import { textMessages } from '@/lib/db/schema'
+import { createCall, sendSms } from '@/lib/phone/twilio'
+import { db, resetDb } from '@/test/integration/db'
+import { clearSessionStore, setSessionCookie } from '@/test/integration/session'
+
+const NYC = '+12123473190'
+const ALICE = '+15551110001'
+const OWNER = '+12098677445'
+const SECRET = 'test-webhook-secret'
+
+async function signInAs(email: string) {
+  setSessionCookie(await signSession({ uuid: randomUUID(), email, name: null }))
+}
+
+function conversationsRequest(qs = '') {
+  return new NextRequest(
+    `http://localhost/api/printing-press/phone/conversations${qs}`
+  )
+}
+
+function jsonRequest(path: string, body: unknown) {
+  return new Request(`http://localhost${path}`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+beforeEach(async () => {
+  await resetDb()
+  clearSessionStore()
+  vi.clearAllMocks()
+})
+
+describe('GET /api/printing-press/phone/conversations', () => {
+  it('rejects non-admins', async () => {
+    await signInAs('reader@example.com')
+    const response = await conversationsGet(conversationsRequest())
+    expect(response.status).toBe(403)
+  })
+
+  it('lists conversations for an admin', async () => {
+    await signInAs('admin@example.com')
+    await createTextMessage({
+      fromNumber: ALICE,
+      toNumber: NYC,
+      body: 'hello',
+      direction: 'inbound',
+      twilioSid: 'SM1',
+    })
+    const response = await conversationsGet(conversationsRequest())
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data.conversations).toHaveLength(1)
+    expect(data.conversations[0].number).toBe(ALICE)
+    expect(data.conversations[0].lastMessage.body).toBe('hello')
+  })
+
+  it('returns one thread when number is given', async () => {
+    await signInAs('admin@example.com')
+    await createTextMessage({
+      fromNumber: ALICE,
+      toNumber: NYC,
+      body: 'hello',
+      direction: 'inbound',
+      twilioSid: 'SM1',
+    })
+    const response = await conversationsGet(
+      conversationsRequest(`?number=${encodeURIComponent(ALICE)}`)
+    )
+    const data = await response.json()
+    expect(data.messages).toHaveLength(1)
+    expect(data.messages[0].body).toBe('hello')
+  })
+})
+
+describe('POST /api/printing-press/phone/send', () => {
+  it('rejects non-admins', async () => {
+    await signInAs('reader@example.com')
+    const response = await sendPost(
+      jsonRequest('/api/printing-press/phone/send', {
+        from: NYC,
+        to: ALICE,
+        body: 'hi',
+      })
+    )
+    expect(response.status).toBe(403)
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+  })
+
+  it('rejects a from number that is not a Twilio number', async () => {
+    await signInAs('admin@example.com')
+    const response = await sendPost(
+      jsonRequest('/api/printing-press/phone/send', {
+        from: ALICE,
+        to: ALICE,
+        body: 'hi',
+      })
+    )
+    expect(response.status).toBe(400)
+  })
+
+  it('rejects a non-E.164 recipient', async () => {
+    await signInAs('admin@example.com')
+    const response = await sendPost(
+      jsonRequest('/api/printing-press/phone/send', {
+        from: NYC,
+        to: '555-1234',
+        body: 'hi',
+      })
+    )
+    expect(response.status).toBe(400)
+  })
+
+  it('rejects an empty body', async () => {
+    await signInAs('admin@example.com')
+    const response = await sendPost(
+      jsonRequest('/api/printing-press/phone/send', {
+        from: NYC,
+        to: ALICE,
+        body: '  ',
+      })
+    )
+    expect(response.status).toBe(400)
+  })
+
+  it('rejects an over-long body', async () => {
+    await signInAs('admin@example.com')
+    const response = await sendPost(
+      jsonRequest('/api/printing-press/phone/send', {
+        from: NYC,
+        to: ALICE,
+        body: 'x'.repeat(1601),
+      })
+    )
+    expect(response.status).toBe(400)
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+  })
+
+  it('sends through Twilio and records the outbound message', async () => {
+    await signInAs('admin@example.com')
+    vi.mocked(sendSms).mockResolvedValueOnce({ sid: 'SM9', status: 'queued' })
+
+    const response = await sendPost(
+      jsonRequest('/api/printing-press/phone/send', {
+        from: NYC,
+        to: ALICE,
+        body: 'On my way',
+      })
+    )
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data.message).toMatchObject({
+      fromNumber: NYC,
+      toNumber: ALICE,
+      body: 'On my way',
+      direction: 'outbound',
+      twilioSid: 'SM9',
+      status: 'queued',
+    })
+    expect(vi.mocked(sendSms)).toHaveBeenCalledWith({
+      from: NYC,
+      to: ALICE,
+      body: 'On my way',
+    })
+  })
+
+  it('records a failed row when Twilio rejects the send', async () => {
+    await signInAs('admin@example.com')
+    vi.mocked(sendSms).mockRejectedValueOnce(new Error('invalid number'))
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const response = await sendPost(
+      jsonRequest('/api/printing-press/phone/send', {
+        from: NYC,
+        to: ALICE,
+        body: 'On my way',
+      })
+    )
+    expect(response.status).toBe(502)
+    const rows = await db.select().from(textMessages)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      direction: 'outbound',
+      status: 'failed',
+      twilioSid: null,
+    })
+    expect(consoleError).toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/printing-press/phone/call (click-to-call trigger)', () => {
+  beforeEach(() => {
+    process.env.PHONE_WEBHOOK_SECRET = SECRET
+    process.env.OWNER_PHONE_NUMBER = OWNER
+  })
+
+  afterEach(() => {
+    delete process.env.PHONE_WEBHOOK_SECRET
+    delete process.env.OWNER_PHONE_NUMBER
+  })
+
+  it('rejects non-admins', async () => {
+    await signInAs('reader@example.com')
+    const response = await callPost(
+      jsonRequest('/api/printing-press/phone/call', {
+        target: ALICE,
+        callerId: NYC,
+      })
+    )
+    expect(response.status).toBe(403)
+    expect(vi.mocked(createCall)).not.toHaveBeenCalled()
+  })
+
+  it('rejects a non-E.164 target', async () => {
+    await signInAs('admin@example.com')
+    const response = await callPost(
+      jsonRequest('/api/printing-press/phone/call', {
+        target: '555-1234',
+        callerId: NYC,
+      })
+    )
+    expect(response.status).toBe(400)
+    expect(vi.mocked(createCall)).not.toHaveBeenCalled()
+  })
+
+  it('rejects a caller id that is not an owned Twilio number', async () => {
+    await signInAs('admin@example.com')
+    const response = await callPost(
+      jsonRequest('/api/printing-press/phone/call', {
+        target: ALICE,
+        callerId: ALICE,
+      })
+    )
+    expect(response.status).toBe(400)
+    expect(vi.mocked(createCall)).not.toHaveBeenCalled()
+  })
+
+  it('errors when the owner number is unset', async () => {
+    delete process.env.OWNER_PHONE_NUMBER
+    await signInAs('admin@example.com')
+    const response = await callPost(
+      jsonRequest('/api/printing-press/phone/call', {
+        target: ALICE,
+        callerId: NYC,
+      })
+    )
+    expect(response.status).toBe(500)
+    expect(vi.mocked(createCall)).not.toHaveBeenCalled()
+  })
+
+  it('rings the owner first with a secret-bearing connect callback', async () => {
+    await signInAs('admin@example.com')
+    vi.mocked(createCall).mockResolvedValueOnce({
+      sid: 'CA9',
+      status: 'queued',
+    })
+
+    const response = await callPost(
+      jsonRequest('/api/printing-press/phone/call', {
+        target: ALICE,
+        callerId: NYC,
+      })
+    )
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data).toMatchObject({ sid: 'CA9', status: 'queued' })
+
+    const call = vi.mocked(createCall).mock.calls[0][0]
+    expect(call.from).toBe(NYC)
+    expect(call.to).toBe(OWNER)
+    expect(call.twimlUrl).toContain('/api/phone/connect?')
+    expect(call.twimlUrl).toContain(`secret=${SECRET}`)
+    expect(call.twimlUrl).toContain(`target=${encodeURIComponent(ALICE)}`)
+    expect(call.twimlUrl).toContain(`callerId=${encodeURIComponent(NYC)}`)
+  })
+})
+
+describe('POST /api/phone/connect (click-to-call callback)', () => {
+  beforeEach(() => {
+    process.env.PHONE_WEBHOOK_SECRET = SECRET
+  })
+
+  afterEach(() => {
+    delete process.env.PHONE_WEBHOOK_SECRET
+  })
+
+  function connectRequest(qs: string) {
+    return new Request(`https://philipithomas.com/api/phone/connect?${qs}`, {
+      method: 'POST',
+    })
+  }
+
+  it('rejects a bad secret', async () => {
+    const response = await connectPost(
+      connectRequest(`secret=wrong&target=${ALICE}&callerId=${NYC}`)
+    )
+    expect(response.status).toBe(401)
+  })
+
+  it('rejects a non-E.164 target', async () => {
+    const response = await connectPost(
+      connectRequest(`secret=${SECRET}&target=evil&callerId=${NYC}`)
+    )
+    expect(response.status).toBe(400)
+  })
+
+  it('rejects a caller id we do not own', async () => {
+    const response = await connectPost(
+      connectRequest(`secret=${SECRET}&target=${ALICE}&callerId=${ALICE}`)
+    )
+    expect(response.status).toBe(400)
+  })
+
+  it('returns XML-escaped Dial TwiML', async () => {
+    const response = await connectPost(
+      connectRequest(
+        `secret=${SECRET}&target=${encodeURIComponent(ALICE)}&callerId=${encodeURIComponent(NYC)}`
+      )
+    )
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toContain('text/xml')
+    const xml = await response.text()
+    expect(xml).toContain(`<Dial callerId="${NYC}">${ALICE}</Dial>`)
+  })
+})

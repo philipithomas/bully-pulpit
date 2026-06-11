@@ -2,9 +2,10 @@ import { randomBytes } from 'node:crypto'
 
 /**
  * Minimal MIME message builder for SESv2 Raw sends — no dependency. SESv2
- * Simple content cannot carry attachments, so the subscriber-backup cron
- * hand-rolls a multipart/mixed message: a short text/plain body plus one
- * base64-encoded attachment. Pure (no I/O) so it unit-tests directly.
+ * Simple content cannot carry attachments, so the subscriber-backup cron and
+ * the voicemail notification hand-roll a multipart/mixed message: a body
+ * (text/plain, or multipart/alternative when an HTML rendering is supplied)
+ * plus one base64-encoded attachment. Pure (no I/O) so it unit-tests directly.
  */
 
 const CRLF = '\r\n'
@@ -22,6 +23,8 @@ export type MimeMessageInput = {
   to: string[]
   subject: string
   text: string
+  /** Optional HTML alternative; the body becomes multipart/alternative. */
+  html?: string
   attachment: MimeAttachment
 }
 
@@ -53,9 +56,36 @@ function headerValue(value: string): string {
     : `=?UTF-8?B?${Buffer.from(flat, 'utf-8').toString('base64')}?=`
 }
 
+const textPartLines = (text: string): string[] => [
+  'Content-Type: text/plain; charset=utf-8',
+  'Content-Transfer-Encoding: base64',
+  '',
+  toBase64Body(text),
+]
+
+/**
+ * The multipart/alternative body part (text first, html last, per RFC 2046
+ * order of increasing preference) used when an HTML rendering is supplied.
+ */
+function alternativeLines(text: string, html: string): string[] {
+  const boundary = `=_alt_${randomBytes(16).toString('hex')}`
+  return [
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    ...textPartLines(text),
+    `--${boundary}`,
+    'Content-Type: text/html; charset=utf-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    toBase64Body(html),
+    `--${boundary}--`,
+  ]
+}
+
 /**
  * Builds a complete multipart/mixed message as bytes for SESv2
- * `Content.Raw.Data`. Every line ends with CRLF. Both parts are
+ * `Content.Raw.Data`. Every line ends with CRLF. All parts are
  * base64-encoded so non-ASCII body text and arbitrary attachment bytes are
  * always 7-bit safe.
  */
@@ -64,6 +94,9 @@ export function buildMimeMessage(input: MimeMessageInput): Uint8Array {
   // the '=_' prefix cannot appear in base64 or quoted-printable output.
   const boundary = `=_bp_${randomBytes(16).toString('hex')}`
   const filename = headerValue(input.attachment.filename).replace(/"/g, "'")
+  const bodyLines = input.html
+    ? alternativeLines(input.text, input.html)
+    : textPartLines(input.text)
 
   const lines = [
     `From: ${headerValue(input.from)}`,
@@ -73,10 +106,7 @@ export function buildMimeMessage(input: MimeMessageInput): Uint8Array {
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
     '',
     `--${boundary}`,
-    'Content-Type: text/plain; charset=utf-8',
-    'Content-Transfer-Encoding: base64',
-    '',
-    toBase64Body(input.text),
+    ...bodyLines,
     `--${boundary}`,
     `Content-Type: ${headerValue(input.attachment.contentType)}`,
     `Content-Disposition: attachment; filename="${filename}"`,
