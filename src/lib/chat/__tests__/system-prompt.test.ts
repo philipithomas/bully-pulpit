@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 
 describe('getSystemPrompt page context', () => {
-  it('describes the site on the homepage', () => {
+  it('points fetchPage at the homepage path', () => {
     const prompt = getSystemPrompt({ pageContext: { path: '/' } })
-    expect(prompt).toContain('The user is on the homepage')
+    expect(prompt).toContain('The visitor is currently on /')
+    expect(prompt).toContain('fetchPage with path "/"')
     expect(prompt).not.toContain('<current-page-content>')
   })
 
@@ -40,11 +41,12 @@ describe('getSystemPrompt page context', () => {
     expect(prompt).toContain('use fetchPost with slug "some-post"')
   })
 
-  it('keeps the fetchPost instruction when no content is available', () => {
+  it('points fetchPage at the path when no content is available', () => {
     const prompt = getSystemPrompt({
       pageContext: { path: '/unknown-page', title: 'Unknown' },
     })
-    expect(prompt).toContain('use fetchPost with slug "unknown-page"')
+    expect(prompt).toContain('fetchPage with path "/unknown-page"')
+    expect(prompt).toContain('(page title: "Unknown")')
     expect(prompt).not.toContain('<current-page-content>')
   })
 

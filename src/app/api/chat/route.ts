@@ -8,6 +8,7 @@ import {
 import { checkBotId } from 'botid/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { fetchPage } from '@/lib/chat/fetch-page-tool'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
 import { getPageContextContent } from '@/lib/chat/page-context'
 import { sanitizeChatMessages } from '@/lib/chat/sanitize-messages'
@@ -46,15 +47,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
   // Narrow client-supplied fields at the trust boundary — they are
-  // interpolated into the system prompt.
+  // interpolated into the system prompt. The path must look like a site path
+  // (leading slash, then only letters, digits, hyphen, underscore, slash,
+  // length-bounded) and the title is capped; anything invalid is silently
+  // dropped so the chat never fails over page context.
+  const rawPath = body.pageContext?.path
   const path =
-    typeof body.pageContext?.path === 'string'
-      ? body.pageContext.path
+    typeof rawPath === 'string' &&
+    rawPath.length <= 200 &&
+    /^\/[a-zA-Z0-9/_-]*$/.test(rawPath)
+      ? rawPath
       : undefined
+  const rawTitle = body.pageContext?.title
   const title =
-    typeof body.pageContext?.title === 'string'
-      ? body.pageContext.title
-      : undefined
+    typeof rawTitle === 'string' ? rawTitle.slice(0, 200) : undefined
   const userName = typeof body.userName === 'string' ? body.userName : null
 
   // Sanitize before conversion: convertToModelMessages would turn a crafted
@@ -117,7 +123,7 @@ export async function POST(request: Request) {
     },
     system,
     messages,
-    tools: { searchPosts, fetchPost },
+    tools: { searchPosts, fetchPost, fetchPage },
     stopWhen: stepCountIs(7),
     // The last step runs without tools so the loop always ends in prose
     // instead of a dangling tool call.
