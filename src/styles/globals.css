@@ -202,11 +202,25 @@
 
 /* One site-wide keyboard focus indicator: a square gray-950 outline.
    Unlayered so it also restores an indicator where a utility set
-   outline-none. The OTP input is excluded: its invisible real input
-   sits over the slots, which carry their own active border. */
-:focus-visible:not([data-input-otp]) {
+   outline-none. Two opt-outs, both surfaces that already signal focus:
+   the OTP input (its invisible real input sits over the slots, which
+   carry their own active border) and [data-no-focus-ring] (the search
+   dialog and Bell composer inputs: command-palette-style fields inside
+   a frame that signals focus, where the ring is redundant noise). Opting
+   out via attribute beats fighting the cascade with a per-input utility:
+   focus-visible:outline-none has equal specificity and loses to this
+   later-authored rule, so the ring would paint anyway. */
+:focus-visible:not([data-input-otp]):not([data-no-focus-ring]) {
   outline: 2px solid var(--color-gray-950);
   outline-offset: 2px;
+}
+
+/* Opting out of the site ring must also kill the browser's native focus
+   outline, otherwise the UA default (a thin ring) paints in its place.
+   Suppress on any focus state so these fields show no outline box at all. */
+[data-no-focus-ring]:focus,
+[data-no-focus-ring]:focus-visible {
+  outline: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
