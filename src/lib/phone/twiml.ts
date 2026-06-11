@@ -46,6 +46,22 @@ export function emptyTwiml(): string {
 }
 
 /**
+ * Bridges a click-to-call: spoken once the owner's phone answers, it dials the
+ * destination presenting `callerId` (an owned Twilio number). Ported from
+ * junk-drawer's TwilioCallsController#connect, with both interpolated values
+ * XML-escaped (the Rails version interpolated raw strings).
+ */
+export function connectCallTwiml(input: {
+  target: string
+  callerId: string
+}): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial callerId="${escapeXml(input.callerId)}">${escapeXml(input.target)}</Dial>
+</Response>`
+}
+
+/**
  * Wraps TwiML in a Response with no-store cache headers so neither Vercel's
  * CDN nor any intermediary caches a per-call document.
  */

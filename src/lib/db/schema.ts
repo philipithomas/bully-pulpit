@@ -148,6 +148,36 @@ export const emailSuppressions = pgTable(
   (table) => [index('idx_email_suppressions_email').on(table.email)]
 )
 
+// Ported from junk-drawer's text_messages table: one row per inbound or
+// outbound SMS on the Twilio numbers. twilio_sid is unique so a webhook retry
+// cannot duplicate an inbound message.
+export const textMessages = pgTable(
+  'text_messages',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    fromNumber: text('from_number').notNull(),
+    toNumber: text('to_number').notNull(),
+    body: text('body').notNull().default(''),
+    direction: text('direction').notNull(),
+    twilioSid: text('twilio_sid').unique(),
+    status: text('status').notNull().default('received'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('idx_text_messages_from_created').on(
+      table.fromNumber,
+      table.createdAt
+    ),
+    index('idx_text_messages_to_created').on(table.toNumber, table.createdAt),
+    check(
+      'text_messages_direction_check',
+      sql`${table.direction} IN ('inbound', 'outbound')`
+    ),
+  ]
+)
+
 export type Subscriber = typeof subscribers.$inferSelect
 export type NewSubscriber = typeof subscribers.$inferInsert
 export type EmailSend = typeof emailSends.$inferSelect
@@ -157,3 +187,5 @@ export type NewLogin = typeof logins.$inferInsert
 export type EmailSuppression = typeof emailSuppressions.$inferSelect
 export type SendRun = typeof sendRuns.$inferSelect
 export type NewSendRun = typeof sendRuns.$inferInsert
+export type TextMessage = typeof textMessages.$inferSelect
+export type NewTextMessage = typeof textMessages.$inferInsert

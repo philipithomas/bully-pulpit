@@ -21,15 +21,13 @@ vi.mock('@/lib/phone/notifications', () => ({
   sendIncomingSmsNotification: vi.fn(async () => undefined),
 }))
 
+// The SMS webhook writes to Postgres, so it is covered by the colocated
+// sms.integration.test.ts instead of this unit file.
 import { start } from 'workflow/api'
 import { POST as recordingCompletePost } from '@/app/api/phone/recording-complete/route'
 import { POST as recordingStatusPost } from '@/app/api/phone/recording-status/route'
-import { POST as smsPost } from '@/app/api/phone/sms/route'
 import { POST as voicePost } from '@/app/api/phone/voice/route'
-import {
-  sendIncomingSmsNotification,
-  sendMissedCallNotification,
-} from '@/lib/phone/notifications'
+import { sendMissedCallNotification } from '@/lib/phone/notifications'
 
 const SECRET = 'test-webhook-secret'
 
@@ -142,40 +140,5 @@ describe('POST /api/phone/recording-complete', () => {
     const xml = await response.text()
     expect(xml).toContain('Thank you. Goodbye.')
     expect(xml).toContain('<Hangup/>')
-  })
-})
-
-describe('POST /api/phone/sms', () => {
-  it('emails the message and returns an empty response', async () => {
-    const response = await smsPost(
-      twilioPost('/api/phone/sms', {
-        From: '+15551234567',
-        To: '+12123473190',
-        Body: 'Running late',
-      })
-    )
-    expect(response.status).toBe(200)
-    expect(await response.text()).toContain('<Response></Response>')
-    expect(vi.mocked(sendIncomingSmsNotification)).toHaveBeenCalledWith({
-      from: '+15551234567',
-      to: '+12123473190',
-      body: 'Running late',
-    })
-  })
-
-  it('rejects a missing secret', async () => {
-    const url = new URL('https://philipithomas.com/api/phone/sms')
-    const response = await smsPost(
-      new Request(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          From: '+1',
-          To: '+2',
-          Body: 'x',
-        }).toString(),
-      })
-    )
-    expect(response.status).toBe(401)
   })
 })

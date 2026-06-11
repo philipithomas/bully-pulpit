@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  connectCallTwiml,
   emptyTwiml,
   escapeXml,
   goodbyeTwiml,
@@ -58,6 +59,26 @@ describe('goodbyeTwiml', () => {
 describe('emptyTwiml', () => {
   it('returns an empty response document', () => {
     expect(emptyTwiml()).toContain('<Response></Response>')
+  })
+})
+
+describe('connectCallTwiml', () => {
+  it('dials the target with the caller id', () => {
+    const xml = connectCallTwiml({
+      target: '+15551234567',
+      callerId: '+12123473190',
+    })
+    expect(xml).toContain('<Dial callerId="+12123473190">+15551234567</Dial>')
+  })
+
+  it('xml-escapes both values', () => {
+    const xml = connectCallTwiml({
+      target: '"><Hangup/>',
+      callerId: '&evil',
+    })
+    expect(xml).not.toContain('<Hangup/>')
+    expect(xml).toContain('callerId="&amp;evil"')
+    expect(xml).toContain('&quot;&gt;&lt;Hangup/&gt;')
   })
 })
 

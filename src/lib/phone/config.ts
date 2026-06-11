@@ -27,3 +27,25 @@ export function phoneWebhookSecret(): string | null {
 export function phoneNotificationEmail(): string {
   return process.env.PHONE_NOTIFICATION_EMAIL || 'philip@contraption.co'
 }
+
+/**
+ * True when `number` is one of the owned Twilio numbers. Used to allowlist a
+ * caller_id (you can only originate outbound calls or texts as a number you
+ * own) and to identify the Twilio side of a conversation.
+ */
+export function isOwnedTwilioNumber(number: string): boolean {
+  return Object.values(phoneNumbers).includes(number)
+}
+
+/**
+ * Owner's personal phone (the cell that rings first on a click-to-call
+ * bridge). Returns null when unset so the click-to-call route fails closed.
+ */
+export function ownerPhoneNumber(): string | null {
+  return process.env.OWNER_PHONE_NUMBER || null
+}
+
+/** Validates a string as an E.164 phone number ("+" then 7–15 digits). */
+export function isE164(value: string): boolean {
+  return /^\+[1-9]\d{6,14}$/.test(value)
+}
