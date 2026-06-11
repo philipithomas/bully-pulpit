@@ -9,7 +9,6 @@ import {
   createHeadingComponents,
   mdxComponents,
 } from '@/components/posts/mdx-components'
-import { accentHoverText } from '@/components/posts/newsletter-accent'
 import { PostNavigation } from '@/components/posts/post-navigation'
 import { RelatedPosts } from '@/components/posts/related-posts'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
@@ -124,14 +123,7 @@ export default async function SlugPage({ params }: Props) {
       <div className="container py-12 md:py-16">
         {/* Header */}
         <header className="flex flex-col items-center text-center mx-auto max-w-3xl mb-10">
-          {post &&
-            post.newsletter !== 'postcard' &&
-            post.frontmatter.publishedAt && (
-              <time className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500">
-                {post.frontmatter.publishedAt}
-              </time>
-            )}
-          <h1 className="font-sans font-semibold text-3xl leading-tight tracking-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl text-pretty mt-3">
+          <h1 className="font-sans font-semibold text-3xl leading-tight tracking-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl text-pretty">
             {item.frontmatter.title}
           </h1>
           {item.frontmatter.description && (
@@ -140,20 +132,12 @@ export default async function SlugPage({ params }: Props) {
             </p>
           )}
           {post && (
-            <a href="/" className="flex items-center gap-3 mt-6 group">
-              <Image
-                src="/images/author.jpg"
-                alt="Philip I. Thomas"
-                width={36}
-                height={36}
-                className="w-9 h-9 rounded-full"
-              />
-              <span
-                className={`font-sans text-sm font-medium text-gray-600 ${accentHoverText[post.newsletter]} transition-colors duration-300`}
-              >
-                Philip I. Thomas
-              </span>
-            </a>
+            <p className="font-sans text-sm text-gray-500 mt-6">
+              {siteConfig.author} ·{' '}
+              <time dateTime={post.frontmatter.publishedAt}>
+                {post.frontmatter.publishedAt}
+              </time>
+            </p>
           )}
         </header>
 
