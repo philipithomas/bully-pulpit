@@ -5,7 +5,7 @@ import {
   renderMissedCallEmail,
   renderMissedCallText,
 } from '@/lib/email/templates/phone'
-import { numberLabel, phoneNotificationEmail } from '@/lib/phone/config'
+import { numberLabel, phoneNotificationRecipients } from '@/lib/phone/config'
 
 /** Emails a heads-up that a call is ringing through to voicemail. */
 export async function sendMissedCallNotification(input: {
@@ -22,7 +22,7 @@ export async function sendMissedCallNotification(input: {
     receivedAt: new Date(),
   }
   await sendSimpleEmail({
-    to: phoneNotificationEmail(),
+    to: phoneNotificationRecipients(),
     subject: `Missed call from ${input.from} to ${toLabel}`,
     html: renderMissedCallEmail(payload),
     text: renderMissedCallText(payload),
@@ -44,7 +44,7 @@ export async function sendIncomingSmsNotification(input: {
     receivedAt: new Date(),
   }
   await sendSimpleEmail({
-    to: phoneNotificationEmail(),
+    to: phoneNotificationRecipients(),
     subject: `SMS from ${input.from} to ${toLabel}`,
     html: renderIncomingSmsEmail(payload),
     text: renderIncomingSmsText(payload),

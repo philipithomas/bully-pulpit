@@ -1,6 +1,9 @@
+import { siteConfig } from '@/lib/config'
+
 // Phone backend configuration. Ported from junk-drawer's TwilioClient: the
 // Twilio numbers stay in code (they are stable, public numbers), while the
-// webhook secret and notification recipient come from the environment.
+// webhook secret comes from the environment. Phone notifications go to the
+// ADMIN_EMAILS allowlist.
 
 /** Twilio numbers owned by the Contraption Company, keyed by label. */
 export const phoneNumbers: Record<string, string> = {
@@ -23,9 +26,16 @@ export function phoneWebhookSecret(): string | null {
   return process.env.PHONE_WEBHOOK_SECRET || null
 }
 
-/** Recipient for voicemail, missed call, and SMS notifications. */
-export function phoneNotificationEmail(): string {
-  return process.env.PHONE_NOTIFICATION_EMAIL || 'philip@contraption.co'
+/**
+ * Recipients for voicemail, missed call, and SMS notifications. Defaults to
+ * the ADMIN_EMAILS allowlist so the people who run the site get the heads-up.
+ * If the allowlist is somehow empty (ADMIN_EMAILS explicitly blanked), falls
+ * back to a single static address so a phone notification is never dropped on
+ * the floor.
+ */
+export function phoneNotificationRecipients(): string[] {
+  const admins = siteConfig.adminEmails
+  return admins.length > 0 ? admins : ['philip@contraption.co']
 }
 
 /**

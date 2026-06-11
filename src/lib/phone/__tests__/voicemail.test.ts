@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('ai', () => ({
   experimental_transcribe: vi.fn(),
@@ -33,12 +33,17 @@ function stubRecording(bytes: number, status = 200) {
 }
 
 describe('processVoicemail', () => {
+  beforeEach(() => {
+    process.env.ADMIN_EMAILS = 'one@example.com, two@example.com'
+  })
+
   afterEach(() => {
+    delete process.env.ADMIN_EMAILS
     vi.clearAllMocks()
     vi.unstubAllGlobals()
   })
 
-  it('downloads the mp3 rendition, transcribes, and emails with attachment', async () => {
+  it('downloads the mp3 rendition, transcribes, and emails the admins with attachment', async () => {
     stubRecording(5_000)
     // biome-ignore lint/suspicious/noExplicitAny: partial transcribe result
     mockedTranscribe.mockResolvedValueOnce({ text: 'Call me back.' } as any)
@@ -51,7 +56,7 @@ describe('processVoicemail', () => {
     )
     expect(mockedSend).toHaveBeenCalledTimes(1)
     const sent = mockedSend.mock.calls[0][0]
-    expect(sent.to).toEqual(['philip@contraption.co'])
+    expect(sent.to).toEqual(['one@example.com', 'two@example.com'])
     expect(sent.subject).toBe('Voicemail from +15551234567 to NYC (42s)')
     expect(sent.html).toContain('Call me back.')
     expect(sent.text).toContain('Call me back.')
@@ -61,6 +66,18 @@ describe('processVoicemail', () => {
         contentType: 'audio/mpeg',
       })
     )
+  })
+
+  it('falls back to the static address when the admin allowlist is empty', async () => {
+    process.env.ADMIN_EMAILS = ''
+    stubRecording(5_000)
+    // biome-ignore lint/suspicious/noExplicitAny: partial transcribe result
+    mockedTranscribe.mockResolvedValueOnce({ text: 'Call me back.' } as any)
+
+    await expect(processVoicemail(input)).resolves.toBe('sent')
+
+    const sent = mockedSend.mock.calls[0][0]
+    expect(sent.to).toEqual(['philip@contraption.co'])
   })
 
   it('skips tiny recordings without transcribing', async () => {

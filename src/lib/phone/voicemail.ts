@@ -5,7 +5,7 @@ import {
   renderVoicemailEmail,
   renderVoicemailText,
 } from '@/lib/email/templates/phone'
-import { numberLabel, phoneNotificationEmail } from '@/lib/phone/config'
+import { numberLabel, phoneNotificationRecipients } from '@/lib/phone/config'
 
 // Voicemail processing. Ported from junk-drawer's ProcessVoicemailJob:
 // download the recording from Twilio, transcribe it, and email the
@@ -92,7 +92,7 @@ export async function processVoicemail(
     receivedAt: new Date(),
   }
   await sendEmailWithAttachment({
-    to: [phoneNotificationEmail()],
+    to: phoneNotificationRecipients(),
     subject: `Voicemail from ${input.from} to ${toLabel} (${input.durationSeconds}s)`,
     html: renderVoicemailEmail(payload),
     text: renderVoicemailText(payload),

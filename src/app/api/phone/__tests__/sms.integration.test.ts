@@ -26,10 +26,12 @@ function smsRequest(form: Record<string, string>, secret = SECRET) {
 beforeEach(async () => {
   await resetDb()
   process.env.PHONE_WEBHOOK_SECRET = SECRET
+  process.env.ADMIN_EMAILS = 'one@example.com, two@example.com'
 })
 
 afterEach(() => {
   delete process.env.PHONE_WEBHOOK_SECRET
+  delete process.env.ADMIN_EMAILS
   vi.clearAllMocks()
 })
 
@@ -68,6 +70,7 @@ describe('POST /api/phone/sms', () => {
 
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
     const email = vi.mocked(sendSimpleEmail).mock.calls[0][0]
+    expect(email.to).toEqual(['one@example.com', 'two@example.com'])
     expect(email.subject).toBe('SMS from +15551234567 to NYC')
     expect(email.html).toContain('Running late')
   })

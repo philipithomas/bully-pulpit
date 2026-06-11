@@ -24,15 +24,16 @@ function getSesClient(): SESv2Client {
 
 /** A plain transactional email (sign-in code, admin notification). */
 export async function sendSimpleEmail(input: {
-  to: string
+  to: string | string[]
   subject: string
   html: string
   text?: string
 }): Promise<void> {
+  const toAddresses = Array.isArray(input.to) ? input.to : [input.to]
   await getSesClient().send(
     new SendEmailCommand({
       FromEmailAddress: siteConfig.sesFromEmail,
-      Destination: { ToAddresses: [input.to] },
+      Destination: { ToAddresses: toAddresses },
       Content: {
         Simple: {
           Subject: {
