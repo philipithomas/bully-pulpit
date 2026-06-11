@@ -150,7 +150,7 @@ export async function sendNewsletterEmail(input: {
   // the two parts). Appended at send time because the URL is per-recipient.
   // The address lines must match the footer in templates/newsletter-shell.ts.
   const year = new Date().getFullYear()
-  const text = `${body}\n\n--\nUnsubscribe: ${input.unsubscribeUrl}\n© ${year} The Contraption Company LLC\n169 Madison Ave. Suite 2174, New York, NY 10016 USA`
+  const text = `${body}\n\n--\nUnsubscribe: ${input.unsubscribeUrl}\n© ${year}\nThe Contraption Company LLC\n169 Madison Ave. Suite 2174\nNew York, NY 10016 USA`
 
   // RFC 2369 List-Unsubscribe. The RFC 8058 one-click POST target is only added
   // when a POST URL is supplied (real per-recipient sends). Test sends omit it —

@@ -71,8 +71,10 @@ export function renderNewSubscriberEmail(input: {
         <tr>
           <td class="email-divider" style="padding: 20px 40px 32px; border-top: 1px solid #E0DDD8;">
             <p class="email-muted" style="margin: 0; font-size: 11px; line-height: 1.5; color: #9E9A93; text-align: center;">
-              &copy; ${year} The Contraption Company LLC<br>
-              169 Madison Ave. Suite 2174, New York, NY 10016 USA
+              &copy; ${year}<br>
+              The Contraption Company LLC<br>
+              169 Madison Ave. Suite 2174<br>
+              New York, NY 10016 USA
             </p>
           </td>
         </tr>
