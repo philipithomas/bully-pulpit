@@ -140,10 +140,10 @@ export function SearchDialog({
       setActiveIndex(0)
       setSearchError(null)
       // Abort the previous in-flight request synchronously so a stale response
-      // can never paint over a newer query. Search is pure in-process BM25 over
-      // the committed local index (no network, no cost), so there is no debounce:
-      // we fire on every keystroke and rely on this abort + the per-query cache
-      // to keep the latest query authoritative.
+      // can never paint over a newer query. There is no debounce: the route
+      // falls back to fast BM25 locally when vector query embedding is
+      // unavailable, and this abort + per-query cache keep the latest query
+      // authoritative.
       abortRef.current?.abort()
       if (value.length < 2) {
         setResults([])

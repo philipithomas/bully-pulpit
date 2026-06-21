@@ -1,11 +1,11 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { getLexicalIndex } from '@/lib/search/lexical'
+import { hybridSearchPosts } from '@/lib/search/hybrid'
 
 /**
- * Typeahead search: BM25 over the local lexical index. No network calls, no
- * external services, no logging — pure in-process compute, so per-keystroke
- * latency is the function invocation itself.
+ * Typeahead search uses the same hybrid BM25/vector search as Bell. The UI
+ * still fires with zero debounce; if runtime query embedding is unavailable
+ * locally, the shared search path falls back to BM25-only.
  */
 
 interface SearchResult {
@@ -25,14 +25,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const index = await getLexicalIndex()
-    const results: SearchResult[] = index.search(q, 10).map((hit) => ({
-      slug: hit.slug,
-      title: hit.title,
-      url: hit.url,
-      newsletter: hit.newsletter,
-      coverImage: hit.coverImage,
-      excerpts: index.extractExcerpts(hit.slug, hit.terms, 3),
+    const search = await hybridSearchPosts(q)
+    const results: SearchResult[] = search.results.map((result) => ({
+      slug: result.slug,
+      title: result.title,
+      url: result.url,
+      newsletter: result.newsletter,
+      coverImage: result.coverImage,
+      excerpts: result.excerpts.map((excerpt) => excerpt.text),
     }))
 
     return NextResponse.json({ results })

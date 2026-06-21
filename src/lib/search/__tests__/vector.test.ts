@@ -62,6 +62,13 @@ describe('rrfFuse', () => {
     expect(fused[0].score).toBeCloseTo(2 / 61, 10)
   })
 
+  it('supports weighted rankings', () => {
+    const fused = rrfFuse([['lexical-top'], ['vector-top']], 60, [0.7, 0.3])
+    expect(fused.map((f) => f.id)).toEqual(['lexical-top', 'vector-top'])
+    expect(fused[0].score).toBeCloseTo(0.7 / 61, 10)
+    expect(fused[1].score).toBeCloseTo(0.3 / 61, 10)
+  })
+
   it('handles empty rankings', () => {
     expect(rrfFuse([[], []])).toEqual([])
     expect(rrfFuse([['a'], []])[0].id).toBe('a')
