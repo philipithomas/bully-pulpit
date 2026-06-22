@@ -15,8 +15,8 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com https://accounts.google.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.philipithomas.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com https://accounts.google.com https://unpkg.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.philipithomas.com https://unpkg.com",
       "font-src 'self' https://fonts.philipithomas.com",
       "img-src 'self' data: https:",
       "connect-src 'self' https://cloudflareinsights.com https://accounts.google.com https://oauth2.googleapis.com",

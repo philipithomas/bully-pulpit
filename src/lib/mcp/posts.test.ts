@@ -96,7 +96,7 @@ describe('MCP posts server', () => {
 
     expect(second.error).toMatchObject({
       code: -32602,
-      message: 'Cursor does not match these tool arguments',
+      message: 'Cursor does not match these request arguments',
     })
   })
 

@@ -5,6 +5,9 @@ import { feedDiscovery } from '@/lib/feeds/discovery'
 import { mcpTools } from '@/lib/mcp/posts'
 
 const endpoint = `${siteConfig.url}/mcp`
+const apiDocs = `${siteConfig.url}/api`
+const openApiSpec = `${siteConfig.url}/openapi.json`
+const wellKnownOpenApiSpec = `${siteConfig.url}/.well-known/openapi.json`
 
 export const metadata: Metadata = {
   title: 'MCP server',
@@ -31,6 +34,19 @@ export default function McpPage() {
   -H 'Content-Type: application/json' \\
   -H 'Accept: application/json, text/event-stream' \\
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`
+
+  const vercelAiSdkExample = `import { createMCPClient } from '@ai-sdk/mcp'
+
+const mcpClient = await createMCPClient({
+  transport: {
+    type: 'http',
+    url: '${endpoint}',
+  },
+})
+
+const tools = await mcpClient.tools()`
+
+  const apiExample = `curl -s '${siteConfig.url}/api/public/search?q=workshop&limit=5'`
 
   return (
     <div className="bg-gray-050" data-bg="gray-050">
@@ -86,6 +102,62 @@ export default function McpPage() {
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section className="border-t border-gray-200 py-8">
+            <h2 className="font-serif text-2xl text-gray-950 mb-4">
+              Vercel AI SDK
+            </h2>
+            <p className="text-gray-700 leading-snug mb-4">
+              Use the AI SDK HTTP transport when connecting from a Vercel app or
+              another production host. This server does not require auth
+              headers.
+            </p>
+            <pre className="overflow-x-auto bg-gray-900 text-white p-4 text-sm leading-relaxed">
+              <code>{vercelAiSdkExample}</code>
+            </pre>
+          </section>
+
+          <section className="border-t border-gray-200 py-8">
+            <h2 className="font-serif text-2xl text-gray-950 mb-4">
+              Public API
+            </h2>
+            <p className="text-gray-700 leading-snug mb-4">
+              The same read-only archive is exposed as a no-auth public REST API
+              with an OpenAPI spec and Swagger UI.
+            </p>
+            <div className="space-y-3 text-gray-700 leading-snug mb-4">
+              <p>
+                <Link
+                  href="/api"
+                  className="underline underline-offset-2 hover:text-gray-950 transition-colors"
+                >
+                  Swagger UI
+                </Link>
+                : <code className="font-mono">{apiDocs}</code>
+              </p>
+              <p>
+                <Link
+                  href="/openapi.json"
+                  className="underline underline-offset-2 hover:text-gray-950 transition-colors"
+                >
+                  OpenAPI spec
+                </Link>
+                : <code className="font-mono">{openApiSpec}</code>
+              </p>
+              <p>
+                <Link
+                  href="/.well-known/openapi.json"
+                  className="underline underline-offset-2 hover:text-gray-950 transition-colors"
+                >
+                  Well-known spec
+                </Link>
+                : <code className="font-mono">{wellKnownOpenApiSpec}</code>
+              </p>
+            </div>
+            <pre className="overflow-x-auto bg-gray-900 text-white p-4 text-sm leading-relaxed">
+              <code>{apiExample}</code>
+            </pre>
           </section>
 
           <section className="border-t border-gray-200 py-8">
