@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Spinner } from '@/components/ui/spinner'
+import { SEARCH_VISITOR_HEADER } from '@/lib/search/search-session'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -19,11 +20,43 @@ interface SearchResult {
   excerpts: string[]
 }
 
+interface SearchResponse {
+  results: SearchResult[]
+  strategy?: 'bm25' | 'hybrid'
+  mode?: 'hybrid' | 'lexical'
+  durationMs?: number
+}
+
 const NEWSLETTER_COLORS: Record<string, string> = {
   contraption: 'bg-forest',
   workshop: 'bg-walnut',
   postcard: 'bg-indigo',
   page: 'bg-gray-400',
+}
+
+const SEARCH_VISITOR_STORAGE_KEY = 'bp.searchVisitor'
+
+function randomVisitorId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function getSearchVisitorId() {
+  let visitorId: string | null = null
+
+  try {
+    visitorId = window.localStorage.getItem(SEARCH_VISITOR_STORAGE_KEY)
+    if (!visitorId) {
+      visitorId = randomVisitorId()
+      window.localStorage.setItem(SEARCH_VISITOR_STORAGE_KEY, visitorId)
+    }
+  } catch {
+    visitorId = randomVisitorId()
+  }
+
+  return visitorId
 }
 
 function highlightQuery(text: string, query: string) {
@@ -108,16 +141,28 @@ export function SearchDialog({
   const fetchResults = useCallback(async (q: string) => {
     const controller = new AbortController()
     abortRef.current = controller
+    const started = performance.now()
+    const visitorId = getSearchVisitorId()
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+        headers: { [SEARCH_VISITOR_HEADER]: visitorId },
         signal: controller.signal,
       })
       if (res.ok) {
-        const data = await res.json()
-        setResults(data.results ?? [])
+        const data = (await res.json()) as SearchResponse
+        const results = data.results ?? []
+        setResults(results)
         if (cacheRef.current.size > 100) cacheRef.current.clear()
-        cacheRef.current.set(q, data.results ?? [])
-        track('Search', { query: q, results: (data.results ?? []).length })
+        cacheRef.current.set(q, results)
+        track('Search', {
+          query: q,
+          query_length: q.length,
+          results: results.length,
+          search_strategy: data.strategy ?? 'unknown',
+          search_mode: data.mode ?? 'unknown',
+          server_duration_ms: data.durationMs,
+          client_duration_ms: Math.round(performance.now() - started),
+        })
       } else {
         // Surface definitive rejections instead of leaving the previous
         // query's results on screen with no feedback.

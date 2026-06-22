@@ -55,6 +55,17 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   const { embeddings } = await embedMany({
     model: gateway.embeddingModel(EMBEDDING_MODEL),
     values: texts,
+    experimental_telemetry: {
+      isEnabled: true,
+      recordInputs: false,
+      recordOutputs: false,
+      functionId: 'search-embedding',
+      metadata: {
+        model: EMBEDDING_MODEL,
+        dimensions: EMBEDDING_DIMS,
+        textCount: texts.length,
+      },
+    },
   })
   return embeddings.map((e) => truncateAndNormalize(e))
 }

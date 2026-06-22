@@ -31,6 +31,7 @@
     "@ai-sdk/openai": "^3.0.72",
     "@ai-sdk/react": "^3.0.209",
     "@aws-sdk/client-sesv2": "^3.1070.0",
+    "@flags-sdk/vercel": "^1.4.2",
     "@neondatabase/serverless": "^1.1.0",
     "@opentelemetry/api": "^1.9.1",
     "@radix-ui/react-dialog": "^1.1.17",
@@ -44,6 +45,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
+    "flags": "^4.2.0",
     "gray-matter": "^4.0.3",
     "input-otp": "^1.4.2",
     "jose": "^6.2.3",
@@ -83,6 +85,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
+    "vercel": "^54.14.5",
     "vitest": "^4.1.9"
   }
 }

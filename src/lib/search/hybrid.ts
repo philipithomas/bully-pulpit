@@ -29,6 +29,8 @@ export interface HybridSearchWeights {
   vector: number
 }
 
+export type SearchStrategy = 'bm25' | 'hybrid'
+
 export interface SearchExcerptSection {
   heading: string
   url: string
@@ -60,6 +62,7 @@ export interface HybridSearchOptions {
   maxExcerpts?: number
   vectorLimit?: number
   weights?: HybridSearchWeights
+  strategy?: SearchStrategy
 }
 
 interface VectorEntry {
@@ -85,24 +88,36 @@ const DEFAULT_MAX_EXCERPTS = 3
 const DEFAULT_VECTOR_LIMIT = 30
 
 let storePromise: Promise<VectorStore> | null = null
+let metaPromise: Promise<Map<string, PostMeta>> | null = null
 let hasLoggedEmbeddingFailure = false
+
+function buildPostMeta(corpus: CorpusPost[]): Map<string, PostMeta> {
+  return new Map<string, PostMeta>(
+    corpus.map((post) => [
+      post.slug,
+      {
+        title: post.title,
+        url: post.url,
+        newsletter: post.newsletter,
+        coverImage: post.coverImage,
+        chunks: post.chunks,
+      },
+    ])
+  )
+}
+
+function getPostMeta(): Promise<Map<string, PostMeta>> {
+  if (!metaPromise) {
+    metaPromise = Promise.resolve().then(() => buildPostMeta(buildCorpus()))
+  }
+  return metaPromise
+}
 
 function getVectorStore(): Promise<VectorStore> {
   if (!storePromise) {
     storePromise = Promise.resolve().then(() => {
       const corpus = buildCorpus()
-      const meta = new Map<string, PostMeta>(
-        corpus.map((post) => [
-          post.slug,
-          {
-            title: post.title,
-            url: post.url,
-            newsletter: post.newsletter,
-            coverImage: post.coverImage,
-            chunks: post.chunks,
-          },
-        ])
-      )
+      const meta = buildPostMeta(corpus)
 
       const entries: VectorEntry[] = []
       const index = loadSearchIndex()
@@ -147,10 +162,13 @@ export async function hybridSearchPosts(
   const maxExcerpts = options.maxExcerpts ?? DEFAULT_MAX_EXCERPTS
   const vectorLimit = options.vectorLimit ?? DEFAULT_VECTOR_LIMIT
   const weights = options.weights ?? HYBRID_SEARCH_WEIGHTS
+  const strategy = options.strategy ?? 'hybrid'
 
   const [lexical, store] = await Promise.all([
     getLexicalIndex(),
-    getVectorStore(),
+    strategy === 'hybrid'
+      ? getVectorStore()
+      : getPostMeta().then((meta) => ({ entries: [], meta })),
   ])
 
   const lexicalHits = lexical.search(query, limit)
@@ -161,7 +179,7 @@ export async function hybridSearchPosts(
   const vectorRanking: string[] = []
   let mode: HybridSearchResponse['mode'] = 'lexical'
 
-  if (store.entries.length > 0) {
+  if (strategy === 'hybrid' && store.entries.length > 0) {
     try {
       const queryVector = await embedQuery(query)
       const top = topKBySimilarity(
