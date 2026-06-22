@@ -51,9 +51,10 @@ const nextConfig: NextConfig = {
       },
       // Static pages — CDN caches 1 hour, browser caches 10 min, serve stale
       // while revalidating. Excludes sitemap.xml only, so the human sitemap
-      // page at /sitemap is cached like any other static page.
+      // page at /sitemap is cached like any other static page. /mcp is also
+      // excluded because non-GET requests to that path are protocol traffic.
       {
-        source: '/:path((?!api|_next|feed|sitemap\\.xml|robots|llms).*)',
+        source: '/:path((?!api|_next|feed|sitemap\\.xml|robots|llms|mcp).*)',
         headers: [
           {
             key: 'Cache-Control',

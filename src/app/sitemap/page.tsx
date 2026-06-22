@@ -36,6 +36,7 @@ const appPages: { href: string; title: string }[] = [
   { href: '/postcard', title: 'Postcard' },
   { href: '/tsundoku', title: 'Tsundoku' },
   { href: '/photography', title: 'Photography' },
+  { href: '/mcp', title: 'MCP server' },
   { href: '/print', title: 'Print edition' },
 ]
 

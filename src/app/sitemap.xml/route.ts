@@ -17,6 +17,7 @@ export async function GET() {
     '/sitemap',
     '/print',
     '/photography',
+    '/mcp',
   ]
 
   const urls = [
