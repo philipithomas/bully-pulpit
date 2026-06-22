@@ -57,6 +57,7 @@ describe('sitemap.xml route', () => {
       '/print',
       '/photography',
       '/mcp',
+      '/api',
     ]) {
       expect(xml).toContain(`<loc>${siteConfig.url}${path}</loc>`)
     }

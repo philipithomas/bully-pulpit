@@ -1,14 +1,18 @@
 import { z } from 'zod/v4'
-import { siteConfig } from '@/lib/config'
-import {
-  getAllPosts,
-  getPostBySlug,
-  getPostsByNewsletter,
-} from '@/lib/content/loader'
-import type { Post } from '@/lib/content/types'
 import { newsletterSchema } from '@/lib/content/types'
-import { extractHeadings } from '@/lib/search/corpus'
-import { getLexicalIndex } from '@/lib/search/lexical'
+import {
+  DEFAULT_LIST_LIMIT,
+  DEFAULT_SEARCH_LIMIT,
+  decodeCursor,
+  encodeCursor,
+  listPublicPosts,
+  MAX_LIST_LIMIT,
+  MAX_SEARCH_LIMIT,
+  PublicApiInputError,
+  PublicApiNotFoundError,
+  readPublicPost,
+  searchPublicPosts,
+} from '@/lib/public-api/posts'
 
 export const MCP_PROTOCOL_VERSION = '2025-06-18'
 
@@ -17,33 +21,6 @@ const SERVER_VERSION = '1.0.0'
 const LIST_POSTS_TOOL = 'list_posts'
 const SEARCH_POSTS_TOOL = 'search_posts'
 const READ_POST_TOOL = 'read_post'
-
-const DEFAULT_LIST_LIMIT = 10
-const MAX_LIST_LIMIT = 50
-const DEFAULT_SEARCH_LIMIT = 10
-const MAX_SEARCH_LIMIT = 20
-
-const cursorSchema = z.object({
-  v: z.literal(1),
-  offset: z.number().int().min(0),
-  scope: z.string(),
-})
-
-const listPostsInputSchema = z.object({
-  newsletter: newsletterSchema.optional(),
-  limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
-  cursor: z.string().optional(),
-})
-
-const searchPostsInputSchema = z.object({
-  query: z.string().trim().min(2),
-  limit: z.number().int().min(1).max(MAX_SEARCH_LIMIT).optional(),
-  cursor: z.string().optional(),
-})
-
-const readPostInputSchema = z.object({
-  slug: z.string().trim().min(1),
-})
 
 interface JsonRpcRequest {
   jsonrpc?: unknown
@@ -64,141 +41,11 @@ export class McpInputError extends Error {
   }
 }
 
-function toAbsoluteUrl(path: string): string {
-  return new URL(path, siteConfig.url).toString()
-}
-
-function postSummary(post: Post) {
-  return {
-    slug: post.slug,
-    url: toAbsoluteUrl(`/${post.slug}`),
-    newsletter: post.newsletter,
-    title: post.frontmatter.title,
-    subtitle: post.frontmatter.subtitle ?? null,
-    description: post.frontmatter.description ?? null,
-    publishedAt: post.frontmatter.publishedAt,
-    coverImage: post.frontmatter.coverImage
-      ? toAbsoluteUrl(post.frontmatter.coverImage)
-      : null,
-    coverImageAlt: post.frontmatter.coverImageAlt ?? null,
-    excerpt: post.excerpt,
-  }
-}
-
-function encodeCursor(offset: number, scope: string): string {
-  return Buffer.from(JSON.stringify({ v: 1, offset, scope }))
-    .toString('base64url')
-    .replace(/=+$/, '')
-}
-
-function decodeCursor(cursor: string | undefined, scope: string): number {
-  if (!cursor) return 0
-
-  try {
-    const decoded = cursorSchema.parse(
-      JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'))
-    )
-    if (decoded.scope !== scope) {
-      throw new McpInputError('Cursor does not match these tool arguments')
-    }
-    return decoded.offset
-  } catch (error) {
-    if (error instanceof McpInputError) throw error
-    throw new McpInputError('Cursor is invalid')
-  }
-}
-
-function paged<T>(
-  items: T[],
-  limit: number,
-  cursor: string | undefined,
-  scope: string
-) {
-  const offset = decodeCursor(cursor, scope)
-  const page = items.slice(offset, offset + limit)
-  const nextOffset = offset + page.length
-  return {
-    page,
-    pagination: {
-      limit,
-      total: items.length,
-      nextCursor:
-        nextOffset < items.length ? encodeCursor(nextOffset, scope) : null,
-    },
-  }
-}
-
 function asToolResult(data: unknown): ToolResult {
   return {
     content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
     structuredContent: data,
   }
-}
-
-function listPosts(args: unknown): ToolResult {
-  const input = listPostsInputSchema.parse(args ?? {})
-  const limit = input.limit ?? DEFAULT_LIST_LIMIT
-  const newsletter = input.newsletter
-
-  const posts = newsletter ? getPostsByNewsletter(newsletter) : getAllPosts()
-  const scope = `list:${newsletter ?? 'all'}`
-  const { page, pagination } = paged(posts, limit, input.cursor, scope)
-
-  return asToolResult({
-    posts: page.map(postSummary),
-    pagination,
-  })
-}
-
-async function searchPosts(args: unknown): Promise<ToolResult> {
-  const input = searchPostsInputSchema.parse(args ?? {})
-  const limit = input.limit ?? DEFAULT_SEARCH_LIMIT
-  const query = input.query.trim()
-  const scope = `search:${query.toLowerCase()}`
-
-  const [index, posts] = await Promise.all([
-    getLexicalIndex(),
-    Promise.resolve(getAllPosts()),
-  ])
-  const postBySlug = new Map(posts.map((post) => [post.slug, post]))
-  const hits = index.search(query, posts.length)
-  const { page, pagination } = paged(hits, limit, input.cursor, scope)
-
-  return asToolResult({
-    query,
-    results: page.map((hit) => {
-      const post = postBySlug.get(hit.slug)
-      return {
-        ...hit,
-        url: toAbsoluteUrl(hit.url),
-        coverImage: hit.coverImage ? toAbsoluteUrl(hit.coverImage) : null,
-        publishedAt: post?.frontmatter.publishedAt ?? null,
-        description: post?.frontmatter.description ?? null,
-        excerpts: index.extractExcerpts(hit.slug, hit.terms, 3),
-      }
-    }),
-    pagination,
-  })
-}
-
-function readPost(args: unknown): ToolResult {
-  const input = readPostInputSchema.parse(args ?? {})
-  const post = getPostBySlug(input.slug)
-  if (!post) {
-    throw new McpInputError(`No post found for slug "${input.slug}"`)
-  }
-
-  const outline = extractHeadings(post.content).map((heading) => ({
-    heading: heading.text,
-    anchor: heading.anchor,
-    url: toAbsoluteUrl(`/${post.slug}#${heading.anchor}`),
-  }))
-
-  return asToolResult({
-    ...postSummary(post),
-    outline,
-    content: post.content,
-  })
 }
 
 const newsletterEnum = newsletterSchema.options
@@ -283,9 +130,11 @@ export const mcpTools = [
 ] as const
 
 async function callTool(name: string, args: unknown): Promise<ToolResult> {
-  if (name === LIST_POSTS_TOOL) return listPosts(args)
-  if (name === SEARCH_POSTS_TOOL) return searchPosts(args)
-  if (name === READ_POST_TOOL) return readPost(args)
+  if (name === LIST_POSTS_TOOL) return asToolResult(listPublicPosts(args))
+  if (name === SEARCH_POSTS_TOOL) {
+    return asToolResult(await searchPublicPosts(args))
+  }
+  if (name === READ_POST_TOOL) return asToolResult(readPublicPost(args))
   throw new McpInputError(`Unknown tool "${name}"`)
 }
 
@@ -388,13 +237,20 @@ export async function handleMcpMessage(body: unknown) {
       body: jsonRpcError(id, -32601, `Method not found: ${method}`),
     }
   } catch (error) {
-    if (error instanceof z.ZodError || error instanceof McpInputError) {
+    if (
+      error instanceof z.ZodError ||
+      error instanceof McpInputError ||
+      error instanceof PublicApiInputError ||
+      error instanceof PublicApiNotFoundError
+    ) {
       return {
         status: 200,
         body: jsonRpcError(
           id,
           -32602,
-          error instanceof McpInputError
+          error instanceof McpInputError ||
+            error instanceof PublicApiInputError ||
+            error instanceof PublicApiNotFoundError
             ? error.message
             : z.prettifyError(error)
         ),
