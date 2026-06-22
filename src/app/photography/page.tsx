@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
+import { getPhotoExif, type PhotoExif } from '@/lib/content/exif'
 import { getAllPosts } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
 import { feedDiscovery } from '@/lib/feeds/discovery'
@@ -36,6 +37,7 @@ interface Photo {
   alt: string
   width: number
   height: number
+  exif?: PhotoExif
 }
 
 /**
@@ -51,12 +53,16 @@ function collectPhotos(): Photo[] {
     if (!coverImage || !post.coverDimensions) continue
     if (seen.has(coverImage)) continue
     seen.add(coverImage)
+    const exif =
+      getPhotoExif(post.fullCoverImage) ??
+      getPhotoExif(post.frontmatter.coverImage)
     photos.push({
       post,
       src: coverImage,
       alt: coverImageAlt ?? title,
       width: post.coverDimensions.width,
       height: post.coverDimensions.height,
+      ...(exif ? { exif } : {}),
     })
   }
   return photos
@@ -82,6 +88,19 @@ function tileSizes(ratio: number): string {
   return `(max-width: 640px) 100vw, (max-width: 1024px) ${tabletVw}vw, ${desktopPx}px`
 }
 
+function photoMetadata(photo: Photo): { label: string; detail: string } {
+  const detail =
+    photo.exif?.settings.length && photo.exif.settings.length > 0
+      ? photo.exif.settings.join(' / ')
+      : `${photo.width} x ${photo.height}`
+
+  return {
+    label:
+      photo.exif?.camera ?? photo.exif?.lens ?? photo.post.frontmatter.title,
+    detail,
+  }
+}
+
 export default function PhotographyPage() {
   const photos = collectPhotos()
 
@@ -92,7 +111,8 @@ export default function PhotographyPage() {
           Photography
         </h1>
         <p className="font-serif text-lg text-gray-600 mt-3">
-          I take and edit all photos on the site.
+          I take and edit all photos on the site. Camera settings appear when
+          the source file still includes them.
         </p>
       </div>
 
@@ -106,6 +126,7 @@ export default function PhotographyPage() {
       <div className="flex flex-wrap gap-2 [--row-h:150px] sm:[--row-h:240px]">
         {photos.map((photo, index) => {
           const ratio = photo.width / photo.height
+          const metadata = photoMetadata(photo)
           return (
             <button
               key={photo.src}
@@ -117,7 +138,7 @@ export default function PhotographyPage() {
               {...(photo.post.fullCoverImage
                 ? { 'data-full-src': photo.post.fullCoverImage }
                 : {})}
-              className="relative block cursor-zoom-in overflow-hidden bg-gray-100"
+              className="group relative block cursor-zoom-in overflow-hidden bg-gray-100"
               style={{
                 flexGrow: ratio * 100,
                 flexBasis: `calc(var(--row-h) * ${ratio.toFixed(4)})`,
@@ -132,6 +153,14 @@ export default function PhotographyPage() {
                 className="object-cover"
                 priority={index < 6}
               />
+              <span className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/75 via-black/45 to-transparent px-2.5 pb-2 pt-8 text-left opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-visible:opacity-100">
+                <span className="block truncate font-mono text-[11px] leading-tight text-white/90">
+                  {metadata.label}
+                </span>
+                <span className="block truncate font-mono text-[11px] leading-tight text-white/75">
+                  {metadata.detail}
+                </span>
+              </span>
             </button>
           )
         })}
