@@ -32,6 +32,7 @@ const appPages: { href: string; title: string }[] = [
   { href: '/contraption', title: 'Contraption' },
   { href: '/workshop', title: 'Workshop' },
   { href: '/postcard', title: 'Postcard' },
+  { href: '/contact', title: 'Contact' },
   { href: '/photography', title: 'Photography' },
   { href: '/print', title: 'Print edition' },
 ]
