@@ -35,6 +35,7 @@ const appPages: { href: string; title: string }[] = [
   { href: '/workshop', title: 'Workshop' },
   { href: '/postcard', title: 'Postcard' },
   { href: '/tsundoku', title: 'Tsundoku' },
+  { href: '/contact', title: 'Contact' },
   { href: '/photography', title: 'Photography' },
   { href: '/print', title: 'Print edition' },
 ]

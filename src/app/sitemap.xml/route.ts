@@ -14,6 +14,7 @@ export async function GET() {
     '/workshop',
     '/postcard',
     '/tsundoku',
+    '/contact',
     '/sitemap',
     '/print',
     '/photography',
