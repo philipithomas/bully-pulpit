@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { embedQuery } from '@/lib/search/embedding'
-import { HYBRID_SEARCH_WEIGHTS, hybridSearchPosts } from '@/lib/search/hybrid'
+import {
+  DEFAULT_QUERY_EMBEDDING_TIMEOUT_MS,
+  HYBRID_SEARCH_WEIGHTS,
+  hybridSearchPosts,
+} from '@/lib/search/hybrid'
 
 vi.mock('@/lib/search/embedding', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/search/embedding')>()
@@ -17,6 +21,10 @@ describe('hybridSearchPosts', () => {
     expect(HYBRID_SEARCH_WEIGHTS).toEqual({ lexical: 0.7, vector: 0.3 })
   })
 
+  it('uses an embedding timeout that keeps typeahead responsive', () => {
+    expect(DEFAULT_QUERY_EMBEDDING_TIMEOUT_MS).toBe(800)
+  })
+
   it('falls back to BM25 results when query embedding fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -30,17 +38,18 @@ describe('hybridSearchPosts', () => {
     expect(results[0].excerpts.length).toBeGreaterThan(0)
   })
 
-  it('skips query embedding for the BM25-only search strategy', async () => {
+  it('falls back to BM25 results when query embedding times out', async () => {
     const mockedEmbedQuery = vi.mocked(embedQuery)
     mockedEmbedQuery.mockClear()
+    mockedEmbedQuery.mockImplementationOnce(() => new Promise(() => {}))
 
     const { mode, results } = await hybridSearchPosts(
       'software engineering job search timeline',
-      { strategy: 'bm25' }
+      { embeddingTimeoutMs: 1 }
     )
 
     expect(mode).toBe('lexical')
     expect(results.length).toBeGreaterThan(0)
-    expect(mockedEmbedQuery).not.toHaveBeenCalled()
+    expect(mockedEmbedQuery).toHaveBeenCalledOnce()
   })
 })

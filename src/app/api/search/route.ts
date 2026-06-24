@@ -1,14 +1,11 @@
-import { evaluate } from 'flags/next'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { searchStrategyFlag } from '@/lib/search/flags'
 import { hybridSearchPosts } from '@/lib/search/hybrid'
 
 /**
- * Typeahead search uses the same search path as Bell, with a Vercel flag to
- * compare BM25-only against hybrid BM25/vector search. BM25 stays entirely
- * in-process; the hybrid arm adds one runtime query embedding plus local
- * vector scoring, then still falls back to BM25 if embedding is unavailable.
+ * Typeahead search uses the same hybrid BM25/vector path as Bell. The hybrid
+ * arm adds one runtime query embedding plus local vector scoring, then falls
+ * back to BM25 if embedding is unavailable or exceeds the shared timeout.
  * The UI keeps zero debounce, so this route returns timing and mode metadata
  * for analytics instead of adding client-side delay.
  */
@@ -31,11 +28,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const started = performance.now()
-    const { searchStrategy } = await evaluate(
-      { searchStrategy: searchStrategyFlag },
-      request
-    )
-    const search = await hybridSearchPosts(q, { strategy: searchStrategy })
+    const search = await hybridSearchPosts(q)
     const durationMs = Math.round(performance.now() - started)
     const results: SearchResult[] = search.results.map((result) => ({
       slug: result.slug,
@@ -48,7 +41,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       results,
-      strategy: searchStrategy,
       mode: search.mode,
       durationMs,
     })

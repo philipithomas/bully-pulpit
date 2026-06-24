@@ -16,7 +16,7 @@ import { rrfFuse, topKBySimilarity } from '@/lib/search/vector'
  * comes from the lexical index, including its title boost; the vector side is
  * brute-force cosine over the committed local vector index. Results are fused
  * with weighted reciprocal rank fusion and degrade to BM25-only if runtime
- * query embedding is unavailable locally.
+ * query embedding is unavailable or too slow.
  */
 
 export const HYBRID_SEARCH_WEIGHTS = {
@@ -24,12 +24,12 @@ export const HYBRID_SEARCH_WEIGHTS = {
   vector: 0.3,
 }
 
+export const DEFAULT_QUERY_EMBEDDING_TIMEOUT_MS = 800
+
 export interface HybridSearchWeights {
   lexical: number
   vector: number
 }
-
-export type SearchStrategy = 'bm25' | 'hybrid'
 
 export interface SearchExcerptSection {
   heading: string
@@ -62,7 +62,7 @@ export interface HybridSearchOptions {
   maxExcerpts?: number
   vectorLimit?: number
   weights?: HybridSearchWeights
-  strategy?: SearchStrategy
+  embeddingTimeoutMs?: number
 }
 
 interface VectorEntry {
@@ -88,7 +88,6 @@ const DEFAULT_MAX_EXCERPTS = 3
 const DEFAULT_VECTOR_LIMIT = 30
 
 let storePromise: Promise<VectorStore> | null = null
-let metaPromise: Promise<Map<string, PostMeta>> | null = null
 let hasLoggedEmbeddingFailure = false
 
 function buildPostMeta(corpus: CorpusPost[]): Map<string, PostMeta> {
@@ -104,13 +103,6 @@ function buildPostMeta(corpus: CorpusPost[]): Map<string, PostMeta> {
       },
     ])
   )
-}
-
-function getPostMeta(): Promise<Map<string, PostMeta>> {
-  if (!metaPromise) {
-    metaPromise = Promise.resolve().then(() => buildPostMeta(buildCorpus()))
-  }
-  return metaPromise
 }
 
 function getVectorStore(): Promise<VectorStore> {
@@ -154,6 +146,32 @@ function getVectorStore(): Promise<VectorStore> {
   return storePromise
 }
 
+async function embedQueryWithTimeout(
+  query: string,
+  timeoutMs: number
+): Promise<number[]> {
+  if (timeoutMs <= 0) return embedQuery(query)
+
+  const controller = new AbortController()
+  let timeout: ReturnType<typeof setTimeout> | undefined
+
+  try {
+    const timeoutPromise = new Promise<never>((_resolve, reject) => {
+      timeout = setTimeout(() => {
+        controller.abort()
+        reject(new Error(`Query embedding timed out after ${timeoutMs}ms`))
+      }, timeoutMs)
+    })
+
+    return await Promise.race([
+      embedQuery(query, { abortSignal: controller.signal }),
+      timeoutPromise,
+    ])
+  } finally {
+    if (timeout) clearTimeout(timeout)
+  }
+}
+
 export async function hybridSearchPosts(
   query: string,
   options: HybridSearchOptions = {}
@@ -162,13 +180,12 @@ export async function hybridSearchPosts(
   const maxExcerpts = options.maxExcerpts ?? DEFAULT_MAX_EXCERPTS
   const vectorLimit = options.vectorLimit ?? DEFAULT_VECTOR_LIMIT
   const weights = options.weights ?? HYBRID_SEARCH_WEIGHTS
-  const strategy = options.strategy ?? 'hybrid'
+  const embeddingTimeoutMs =
+    options.embeddingTimeoutMs ?? DEFAULT_QUERY_EMBEDDING_TIMEOUT_MS
 
   const [lexical, store] = await Promise.all([
     getLexicalIndex(),
-    strategy === 'hybrid'
-      ? getVectorStore()
-      : getPostMeta().then((meta) => ({ entries: [], meta })),
+    getVectorStore(),
   ])
 
   const lexicalHits = lexical.search(query, limit)
@@ -179,9 +196,9 @@ export async function hybridSearchPosts(
   const vectorRanking: string[] = []
   let mode: HybridSearchResponse['mode'] = 'lexical'
 
-  if (strategy === 'hybrid' && store.entries.length > 0) {
+  if (store.entries.length > 0) {
     try {
-      const queryVector = await embedQuery(query)
+      const queryVector = await embedQueryWithTimeout(query, embeddingTimeoutMs)
       const top = topKBySimilarity(
         queryVector,
         store.entries,
@@ -201,7 +218,9 @@ export async function hybridSearchPosts(
         hasLoggedEmbeddingFailure = true
         const message =
           err instanceof Error ? err.message.split('\n')[0] : String(err)
-        console.error(`Query embedding failed, using BM25 only: ${message}`)
+        console.error(
+          `Query embedding failed or timed out, using BM25 only: ${message}`
+        )
       }
     }
   }
