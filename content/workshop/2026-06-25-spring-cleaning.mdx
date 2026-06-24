@@ -1,0 +1,28 @@
+---
+title: "Spring cleaning"
+publishedAt: "2026-06-25"
+coverImage: "/images/covers/spring-cleaning.jpg"
+coverImageAlt: "Porsche on a tow truck in Tokyo"
+---
+
+I've had a busy month few months, and haven't written much. So, here's a bit of an update.
+
+In [Software in the AI Era](https://www.philipithomas.com/software-in-the-ai-era), I wrote about how software is moving from something you *buy* to something you *build*. In that spirit, I took some time in recent weeks to simplify the things I work on - because ongoing commitments can quickly become obligations.
+
+I enjoyed my [experiments with OpenClaw](https://www.philipithomas.com/openclaw-is-my-new-coworker), but have shut it down. I didn't have much need for a personal assistant beyond the capabilities of ChatGPT, and it's a scary piece of software. But, Bell lives on as a feature on [philipithomas.com](/) that can do deep research over my posts.
+
+
+I sht down Booklet, the community application I started building in 2023. It applied AI in multiple ways to encourage slow communication - specifically, turning conversation sinto a simple email newsletter that peopel could use to stay in touch. I launched the FRCTL community on Booklet to test it.
+
+In the recent years, FRCTNL continued to gain new members, but Booklet didn't have traction, and nobody paid for it. With AI agents, I foudn that operating the platform and the community became  a battle against AI spam. So, in an act of creative destruction - Booklet and FRCTNL have ended. I intend to open-source Booklet in the coming days, with some more details of how it worked.
+
+(I will continue to operate [Postcard](https://www.postcard.page) becase people pay for it, and I've pledged to operate [dependable software](todo).)
+
+
+I had a couple of old website on Webflow, such as my wedding website. I ended up using Claude to migrate these sites to Next.js, which I host for free on Vercel. I think a lot of people are claiming the end of Webflow, but I don't agree. For instance, take a look at the HTML for [anthropic.com](https://www.anthropic.com/) and you'll see that the leading AI lab seems to run on Webflow. Webflow is a good tool for living websites, but for "finished" pages, such as an old wedding site, its pricing structure does not make sense for boring hosting. This represents a gap in "value creation vs. value capture" - Webflow creates value as a website builder, but captures value as a hosting product - so if you no longer need the builder, then the hosting isn't worh the premium. With Claude's [Chrome plugin](https://code.claude.com/docs/en/chrome), it quickly generated a pixel-perfect copy of the Webflow sites, allowing me to entirely delete my Webflow accoun.
+
+I've decide to spend most of my creative building energy improving this website, [philipithomas.com](/). I recently [wrote about rebuilding it into a Next.js app with a custom Rust mailing server](https://www.philipithomas.com/software-in-the-ai-era). And, I've continued to improve on that stack. When I got access to Claude Fable for a few days (before access was paused), I went crazy improving the site - [shipping over 120 pull requests with Fable in a single day](https://github.com/philipithomas/bully-pulpit/graphs/contributors?from=5%2F23%2F2026). I ended up killing the Rust mailing server, and moving the entire site to Vercel. While most of my code runs on [my home Mac mini server](todo), I found that the developer experience of Vercel was worth the premium - for instance, pull request previews let me review agent work on my phone, and I rewrote my email newsletter sending on [Vercel Workflows](https://vercel.com/workflows). The site has gotten a lot better - from little improvements like [better email templates](https://github.com/philipithomas/bully-pulpit/pull/59) to a [local search index validated with a merkle tree](https://github.com/philipithomas/bully-pulpit/pull/49) - and I plan to continue to treat it as the outlet for my creative tinkering. If you want to follow along, check out the [bully-pulpit repo on GitHub](https://github.com/philipithomas/bully-pulpit), which is now the single repo that powering my website, subscriptions, and newsletter mailing.
+
+Finally, in a non-software world: after years of using Overcast as my podcast player, I migrated all of my podcast subscriptions to Spotify. I've long used Spotify for music, and have recently listened to multiple audiobooks on the app. It made sense to fully make it the home for audio. If you're on the fence, consider checkign it out.
+
+With mymidn mor eclear, I can now concentrate on some new adventures. More details soon.
