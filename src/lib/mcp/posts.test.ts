@@ -1,9 +1,19 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   handleMcpMessage,
   MCP_PROTOCOL_VERSION,
   type mcpTools,
 } from '@/lib/mcp/posts'
+
+vi.mock('@/lib/search/embedding', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/search/embedding')>()
+  return {
+    ...actual,
+    embedQuery: vi.fn(async () => {
+      throw new Error('no network in tests')
+    }),
+  }
+})
 
 interface RpcEnvelope {
   result?: {
@@ -98,6 +108,26 @@ describe('MCP posts server', () => {
       code: -32602,
       message: 'Cursor does not match these request arguments',
     })
+  })
+
+  it('searches posts through the shared public search path', async () => {
+    const response = await call('tools/call', {
+      name: 'search_posts',
+      arguments: { query: 'software engineering', limit: 3 },
+    })
+    const search = response.result?.structuredContent as {
+      results: Array<{ slug: string; score: number; excerpts: string[] }>
+      pagination: { limit: number; nextCursor: string | null }
+    }
+
+    expect(search.results.length).toBeGreaterThan(0)
+    expect(search.results.length).toBeLessThanOrEqual(3)
+    expect(search.results[0]).toMatchObject({
+      slug: expect.any(String),
+      score: expect.any(Number),
+      excerpts: expect.any(Array),
+    })
+    expect(search.pagination.limit).toBe(3)
   })
 
   it('returns full post content by slug', async () => {

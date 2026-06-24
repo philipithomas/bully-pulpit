@@ -84,7 +84,7 @@ export const mcpTools = [
     name: SEARCH_POSTS_TOOL,
     title: 'Search posts',
     description:
-      'Search published posts with the local BM25 index. Returns titles, URLs, metadata, excerpts, and opaque cursor pagination.',
+      'Search published posts with local hybrid BM25/vector search. Returns titles, URLs, metadata, excerpts, and opaque cursor pagination.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,

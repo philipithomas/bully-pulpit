@@ -8,12 +8,13 @@ import {
 import type { Post } from '@/lib/content/types'
 import { newsletterSchema } from '@/lib/content/types'
 import { extractHeadings } from '@/lib/search/corpus'
-import { getLexicalIndex } from '@/lib/search/lexical'
+import { hybridSearchPosts } from '@/lib/search/hybrid'
 
 export const DEFAULT_LIST_LIMIT = 10
 export const MAX_LIST_LIMIT = 50
 export const DEFAULT_SEARCH_LIMIT = 10
 export const MAX_SEARCH_LIMIT = 20
+const MAX_SEARCH_RESULT_POOL = 100
 
 const cursorSchema = z.object({
   v: z.literal(1),
@@ -195,28 +196,27 @@ export async function searchPublicPosts(args: unknown = {}): Promise<{
   const query = input.query
   const scope = `search:${query.toLowerCase()}`
 
-  const [index, posts] = await Promise.all([
-    getLexicalIndex(),
-    Promise.resolve(getAllPosts()),
-  ])
+  const posts = getAllPosts()
   const postBySlug = new Map(posts.map((post) => [post.slug, post]))
-  const hits = index.search(query, posts.length)
-  const { page, pagination } = paged(hits, limit, input.cursor, scope)
+  const search = await hybridSearchPosts(query, {
+    limit: Math.min(posts.length, MAX_SEARCH_RESULT_POOL),
+  })
+  const { page, pagination } = paged(search.results, limit, input.cursor, scope)
 
   return {
     query,
-    results: page.map((hit) => {
-      const post = postBySlug.get(hit.slug)
+    results: page.map((result) => {
+      const post = postBySlug.get(result.slug)
       return {
-        slug: hit.slug,
-        title: hit.title,
-        url: toAbsoluteUrl(hit.url),
-        newsletter: hit.newsletter,
-        coverImage: hit.coverImage ? toAbsoluteUrl(hit.coverImage) : null,
-        score: hit.score,
+        slug: result.slug,
+        title: result.title,
+        url: toAbsoluteUrl(result.url),
+        newsletter: result.newsletter,
+        coverImage: result.coverImage ? toAbsoluteUrl(result.coverImage) : null,
+        score: result.score,
         publishedAt: post?.frontmatter.publishedAt ?? null,
         description: post?.frontmatter.description ?? null,
-        excerpts: index.extractExcerpts(hit.slug, hit.terms, 3),
+        excerpts: result.excerpts.map((excerpt) => excerpt.text),
       }
     }),
     pagination,

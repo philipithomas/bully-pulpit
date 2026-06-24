@@ -93,7 +93,7 @@ export function openApiSpec() {
           operationId: 'searchPosts',
           summary: 'Search posts',
           description:
-            'Search published posts with the local BM25 index. Returns metadata, scores, and excerpts.',
+            'Search published posts with local hybrid BM25/vector search. Returns metadata, scores, and excerpts.',
           security: [],
           parameters: [
             {
