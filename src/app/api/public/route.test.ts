@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { GET as readPostGet } from '@/app/api/public/posts/[slug]/route'
 import { GET as listPostsGet } from '@/app/api/public/posts/route'
 import { GET as searchPostsGet } from '@/app/api/public/search/route'
@@ -7,12 +7,30 @@ import { GET as openApiGet } from '@/app/openapi.json/route'
 import { siteConfig } from '@/lib/config'
 import { getAllPosts } from '@/lib/content/loader'
 
+vi.mock('@/lib/search/embedding', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/search/embedding')>()
+  return {
+    ...actual,
+    embedQuery: vi.fn(async () => {
+      throw new Error('no network in tests')
+    }),
+  }
+})
+
 function request(url: string) {
   return new NextRequest(url)
 }
 
 function params(slug: string) {
   return { params: Promise.resolve({ slug }) }
+}
+
+function longReadablePost() {
+  const posts = getAllPosts()
+  const post =
+    posts.find((candidate) => candidate.content.length > 200) ?? posts[0]
+  if (!post) throw new Error('Expected at least one post')
+  return post
 }
 
 describe('public API routes', () => {
@@ -69,7 +87,7 @@ describe('public API routes', () => {
   })
 
   it('reads one post by slug', async () => {
-    const firstPost = getAllPosts()[0]
+    const firstPost = longReadablePost()
     const response = await readPostGet(
       request(`http://localhost:3000/api/public/posts/${firstPost.slug}`),
       params(firstPost.slug)

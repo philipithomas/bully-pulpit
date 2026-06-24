@@ -1,9 +1,20 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { getAllPosts } from '@/lib/content/loader'
 import {
   handleMcpMessage,
   MCP_PROTOCOL_VERSION,
   type mcpTools,
 } from '@/lib/mcp/posts'
+
+vi.mock('@/lib/search/embedding', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/search/embedding')>()
+  return {
+    ...actual,
+    embedQuery: vi.fn(async () => {
+      throw new Error('no network in tests')
+    }),
+  }
+})
 
 interface RpcEnvelope {
   result?: {
@@ -22,6 +33,14 @@ async function call(method: string, params?: unknown): Promise<RpcEnvelope> {
     ...(params === undefined ? {} : { params }),
   })
   return response.body as RpcEnvelope
+}
+
+function longReadablePost() {
+  const posts = getAllPosts()
+  const post =
+    posts.find((candidate) => candidate.content.length > 200) ?? posts[0]
+  if (!post) throw new Error('Expected at least one post')
+  return post
 }
 
 describe('MCP posts server', () => {
@@ -100,19 +119,32 @@ describe('MCP posts server', () => {
     })
   })
 
-  it('returns full post content by slug', async () => {
-    const list = await call('tools/call', {
-      name: 'list_posts',
-      arguments: { limit: 1 },
+  it('searches posts through the shared public search path', async () => {
+    const response = await call('tools/call', {
+      name: 'search_posts',
+      arguments: { query: 'software engineering', limit: 3 },
     })
-    const page = list.result?.structuredContent as {
-      posts: Array<{ slug: string; title: string }>
+    const search = response.result?.structuredContent as {
+      results: Array<{ slug: string; score: number; excerpts: string[] }>
+      pagination: { limit: number; nextCursor: string | null }
     }
-    const firstPost = page.posts[0]
+
+    expect(search.results.length).toBeGreaterThan(0)
+    expect(search.results.length).toBeLessThanOrEqual(3)
+    expect(search.results[0]).toMatchObject({
+      slug: expect.any(String),
+      score: expect.any(Number),
+      excerpts: expect.any(Array),
+    })
+    expect(search.pagination.limit).toBe(3)
+  })
+
+  it('returns full post content by slug', async () => {
+    const readablePost = longReadablePost()
 
     const read = await call('tools/call', {
       name: 'read_post',
-      arguments: { slug: firstPost.slug },
+      arguments: { slug: readablePost.slug },
     })
     const post = read.result?.structuredContent as {
       title: string
@@ -120,7 +152,7 @@ describe('MCP posts server', () => {
       outline: Array<{ url: string }>
     }
 
-    expect(post.title).toBe(firstPost.title)
+    expect(post.title).toBe(readablePost.frontmatter.title)
     expect(post.content.length).toBeGreaterThan(200)
     expect(
       post.outline.every((heading) => heading.url.startsWith('http'))
