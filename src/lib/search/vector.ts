@@ -35,17 +35,21 @@ export function topKBySimilarity<T>(
 
 /**
  * Reciprocal rank fusion over ranked id lists (best first). Score of id =
- * sum over lists of 1 / (k + rank), rank starting at 1. Equal weights.
+ * sum over lists of weight / (k + rank), rank starting at 1. Omitted weights
+ * default to 1, preserving equal-weight fusion.
  */
 export function rrfFuse(
   rankings: string[][],
-  k = 60
+  k = 60,
+  weights: number[] = []
 ): { id: string; score: number }[] {
   const scores = new Map<string, number>()
-  for (const ranking of rankings) {
+  for (let i = 0; i < rankings.length; i++) {
+    const ranking = rankings[i]
+    const weight = weights[i] ?? 1
     for (let rank = 0; rank < ranking.length; rank++) {
       const id = ranking[rank]
-      scores.set(id, (scores.get(id) ?? 0) + 1 / (k + rank + 1))
+      scores.set(id, (scores.get(id) ?? 0) + weight / (k + rank + 1))
     }
   }
   return [...scores.entries()]

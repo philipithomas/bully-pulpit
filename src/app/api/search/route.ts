@@ -1,11 +1,13 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { getLexicalIndex } from '@/lib/search/lexical'
+import { hybridSearchPosts } from '@/lib/search/hybrid'
 
 /**
- * Typeahead search: BM25 over the local lexical index. No network calls, no
- * external services, no logging — pure in-process compute, so per-keystroke
- * latency is the function invocation itself.
+ * Typeahead search uses the same hybrid BM25/vector path as Bell. The hybrid
+ * arm adds one runtime query embedding plus local vector scoring, then falls
+ * back to BM25 if embedding is unavailable or exceeds the shared timeout.
+ * The UI keeps zero debounce, so this route returns timing and mode metadata
+ * for analytics instead of adding client-side delay.
  */
 
 interface SearchResult {
@@ -25,17 +27,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const index = await getLexicalIndex()
-    const results: SearchResult[] = index.search(q, 10).map((hit) => ({
-      slug: hit.slug,
-      title: hit.title,
-      url: hit.url,
-      newsletter: hit.newsletter,
-      coverImage: hit.coverImage,
-      excerpts: index.extractExcerpts(hit.slug, hit.terms, 3),
+    const started = performance.now()
+    const search = await hybridSearchPosts(q)
+    const durationMs = Math.round(performance.now() - started)
+    const results: SearchResult[] = search.results.map((result) => ({
+      slug: result.slug,
+      title: result.title,
+      url: result.url,
+      newsletter: result.newsletter,
+      coverImage: result.coverImage,
+      excerpts: result.excerpts.map((excerpt) => excerpt.text),
     }))
 
-    return NextResponse.json({ results })
+    return NextResponse.json({
+      results,
+      mode: search.mode,
+      durationMs,
+    })
   } catch (err) {
     console.error('Search error:', err)
     return NextResponse.json({ error: 'Search failed' }, { status: 500 })

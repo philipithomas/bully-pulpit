@@ -51,16 +51,38 @@ export function decodeVector(encoded: string): Float32Array {
  * vectors. Locally the gateway authenticates via VERCEL_OIDC_TOKEN (from
  * `vercel env pull`) or AI_GATEWAY_API_KEY.
  */
-export async function embedTexts(texts: string[]): Promise<number[][]> {
+interface EmbedTextsOptions {
+  abortSignal?: AbortSignal
+}
+
+export async function embedTexts(
+  texts: string[],
+  options: EmbedTextsOptions = {}
+): Promise<number[][]> {
   const { embeddings } = await embedMany({
     model: gateway.embeddingModel(EMBEDDING_MODEL),
     values: texts,
+    abortSignal: options.abortSignal,
+    experimental_telemetry: {
+      isEnabled: true,
+      recordInputs: false,
+      recordOutputs: false,
+      functionId: 'search-embedding',
+      metadata: {
+        model: EMBEDDING_MODEL,
+        dimensions: EMBEDDING_DIMS,
+        textCount: texts.length,
+      },
+    },
   })
   return embeddings.map((e) => truncateAndNormalize(e))
 }
 
 /** Embeds a single query string. */
-export async function embedQuery(text: string): Promise<number[]> {
-  const [vector] = await embedTexts([text])
+export async function embedQuery(
+  text: string,
+  options: EmbedTextsOptions = {}
+): Promise<number[]> {
+  const [vector] = await embedTexts([text], options)
   return vector
 }

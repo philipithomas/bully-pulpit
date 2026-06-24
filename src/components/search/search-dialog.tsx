@@ -19,6 +19,12 @@ interface SearchResult {
   excerpts: string[]
 }
 
+interface SearchResponse {
+  results: SearchResult[]
+  mode?: 'hybrid' | 'lexical'
+  durationMs?: number
+}
+
 const NEWSLETTER_COLORS: Record<string, string> = {
   contraption: 'bg-forest',
   workshop: 'bg-walnut',
@@ -108,16 +114,25 @@ export function SearchDialog({
   const fetchResults = useCallback(async (q: string) => {
     const controller = new AbortController()
     abortRef.current = controller
+    const started = performance.now()
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
         signal: controller.signal,
       })
       if (res.ok) {
-        const data = await res.json()
-        setResults(data.results ?? [])
+        const data = (await res.json()) as SearchResponse
+        const results = data.results ?? []
+        setResults(results)
         if (cacheRef.current.size > 100) cacheRef.current.clear()
-        cacheRef.current.set(q, data.results ?? [])
-        track('Search', { query: q, results: (data.results ?? []).length })
+        cacheRef.current.set(q, results)
+        track('Search', {
+          query: q,
+          query_length: q.length,
+          results: results.length,
+          search_mode: data.mode ?? 'unknown',
+          server_duration_ms: data.durationMs,
+          client_duration_ms: Math.round(performance.now() - started),
+        })
       } else {
         // Surface definitive rejections instead of leaving the previous
         // query's results on screen with no feedback.
@@ -140,10 +155,10 @@ export function SearchDialog({
       setActiveIndex(0)
       setSearchError(null)
       // Abort the previous in-flight request synchronously so a stale response
-      // can never paint over a newer query. Search is pure in-process BM25 over
-      // the committed local index (no network, no cost), so there is no debounce:
-      // we fire on every keystroke and rely on this abort + the per-query cache
-      // to keep the latest query authoritative.
+      // can never paint over a newer query. There is no debounce: the route
+      // falls back to fast BM25 locally when vector query embedding is
+      // unavailable, and this abort + per-query cache keep the latest query
+      // authoritative.
       abortRef.current?.abort()
       if (value.length < 2) {
         setResults([])
