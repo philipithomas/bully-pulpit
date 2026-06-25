@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-06-24T05:23:12.300Z",
+  "generatedAt": "2026-06-25T06:10:15.220Z",
   "posts": {
     "spring-cleaning": {
       "related": [
         {
           "slug": "software-in-the-ai-era",
-          "score": 0.1947422
+          "score": 0.205364
         },
         {
           "slug": "2026-04",
-          "score": 0.2064144
+          "score": 0.2117326
         },
         {
           "slug": "2025-06",
-          "score": 0.2119208
+          "score": 0.2194504
         }
       ]
     },
@@ -100,16 +100,16 @@
     "software-in-the-ai-era": {
       "related": [
         {
-          "slug": "spring-cleaning",
-          "score": 0.1947422
-        },
-        {
           "slug": "rethinking-work-beyond-the-factory",
           "score": 0.1947775
         },
         {
           "slug": "one-year-of-dependable-software",
           "score": 0.2039394
+        },
+        {
+          "slug": "spring-cleaning",
+          "score": 0.205364
         }
       ]
     },
@@ -125,7 +125,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2379801
+          "score": 0.2363509
         }
       ]
     },
@@ -172,8 +172,8 @@
           "score": 0.2944584
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.2992323
+          "slug": "chat-with-my-dog",
+          "score": 0.3046343
         }
       ]
     },
@@ -329,7 +329,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2541542
+          "score": 0.2625968
         },
         {
           "slug": "maintenance",
@@ -365,7 +365,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2373418
+          "score": 0.2395985
         }
       ]
     },
@@ -445,7 +445,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.3983341
+          "score": 0.4017782
         }
       ]
     },
@@ -553,7 +553,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2444649
+          "score": 0.2505488
         },
         {
           "slug": "how-to-host-web-apps-on-a-mac-mini",
@@ -637,7 +637,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.3716712
+          "score": 0.3682193
         }
       ]
     },
@@ -685,7 +685,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.3127905
+          "score": 0.3056283
         }
       ]
     },
@@ -733,7 +733,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2631004
+          "score": 0.2678923
         }
       ]
     },
@@ -844,8 +844,8 @@
           "score": 0.3495882
         },
         {
-          "slug": "rethinking-work-beyond-the-factory",
-          "score": 0.3732261
+          "slug": "spring-cleaning",
+          "score": 0.3682581
         }
       ]
     },
