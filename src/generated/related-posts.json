@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-06-25T06:10:15.220Z",
+  "generatedAt": "2026-06-25T06:40:37.131Z",
   "posts": {
     "spring-cleaning": {
       "related": [
         {
           "slug": "software-in-the-ai-era",
-          "score": 0.205364
+          "score": 0.1549038
         },
         {
           "slug": "2026-04",
-          "score": 0.2117326
+          "score": 0.1934455
         },
         {
           "slug": "2025-06",
-          "score": 0.2194504
+          "score": 0.2101625
         }
       ]
     },
@@ -100,16 +100,16 @@
     "software-in-the-ai-era": {
       "related": [
         {
+          "slug": "spring-cleaning",
+          "score": 0.1549038
+        },
+        {
           "slug": "rethinking-work-beyond-the-factory",
           "score": 0.1947775
         },
         {
           "slug": "one-year-of-dependable-software",
           "score": 0.2039394
-        },
-        {
-          "slug": "spring-cleaning",
-          "score": 0.205364
         }
       ]
     },
@@ -124,8 +124,8 @@
           "score": 0.2325492
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.2363509
+          "slug": "git",
+          "score": 0.238594
         }
       ]
     },
@@ -148,16 +148,16 @@
     "fresh-coat-of-paint": {
       "related": [
         {
+          "slug": "spring-cleaning",
+          "score": 0.3055266
+        },
+        {
           "slug": "workshop-welcome",
           "score": 0.3113245
         },
         {
           "slug": "2026-02",
           "score": 0.3171628
-        },
-        {
-          "slug": "software-in-the-ai-era",
-          "score": 0.3214114
         }
       ]
     },
@@ -168,12 +168,12 @@
           "score": 0.2739375
         },
         {
-          "slug": "claude-launching-and-tools",
-          "score": 0.2944584
+          "slug": "spring-cleaning",
+          "score": 0.291415
         },
         {
-          "slug": "chat-with-my-dog",
-          "score": 0.3046343
+          "slug": "claude-launching-and-tools",
+          "score": 0.2944584
         }
       ]
     },
@@ -220,8 +220,8 @@
           "score": 0.2342482
         },
         {
-          "slug": "craft-in-the-digital-era",
-          "score": 0.2455197
+          "slug": "spring-cleaning",
+          "score": 0.2441883
         }
       ]
     },
@@ -276,21 +276,25 @@
     "tacit-knowledge-in-software": {
       "related": [
         {
+          "slug": "spring-cleaning",
+          "score": 0.2365305
+        },
+        {
           "slug": "build-and-tinker",
           "score": 0.2485592
         },
         {
           "slug": "code-as-content-and-digital-proprioception",
           "score": 0.2588804
-        },
-        {
-          "slug": "maintenance",
-          "score": 0.259692
         }
       ]
     },
     "digital-gardening": {
       "related": [
+        {
+          "slug": "spring-cleaning",
+          "score": 0.3084784
+        },
         {
           "slug": "tacit-knowledge-in-software",
           "score": 0.3221591
@@ -298,10 +302,6 @@
         {
           "slug": "build-and-tinker",
           "score": 0.3269201
-        },
-        {
-          "slug": "code-as-content-and-digital-proprioception",
-          "score": 0.3503515
         }
       ]
     },
@@ -324,12 +324,12 @@
     "build-and-tinker": {
       "related": [
         {
-          "slug": "tacit-knowledge-in-software",
-          "score": 0.2485592
+          "slug": "spring-cleaning",
+          "score": 0.217956
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.2625968
+          "slug": "tacit-knowledge-in-software",
+          "score": 0.2485592
         },
         {
           "slug": "maintenance",
@@ -360,12 +360,12 @@
           "score": 0.2285248
         },
         {
-          "slug": "joys-of-self-hosting",
-          "score": 0.2351082
+          "slug": "spring-cleaning",
+          "score": 0.2334684
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.2395985
+          "slug": "joys-of-self-hosting",
+          "score": 0.2351082
         }
       ]
     },
@@ -428,8 +428,8 @@
           "score": 0.2316444
         },
         {
-          "slug": "2025-06",
-          "score": 0.2348677
+          "slug": "spring-cleaning",
+          "score": 0.2344086
         }
       ]
     },
@@ -444,8 +444,8 @@
           "score": 0.3619162
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.4017782
+          "slug": "joys-of-self-hosting",
+          "score": 0.4049397
         }
       ]
     },
@@ -553,7 +553,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2505488
+          "score": 0.2538519
         },
         {
           "slug": "how-to-host-web-apps-on-a-mac-mini",
@@ -632,12 +632,12 @@
           "score": 0.3193903
         },
         {
-          "slug": "2026-04",
-          "score": 0.3601337
+          "slug": "spring-cleaning",
+          "score": 0.3496686
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.3682193
+          "slug": "2026-04",
+          "score": 0.3601337
         }
       ]
     },
@@ -685,7 +685,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.3056283
+          "score": 0.3110366
         }
       ]
     },
@@ -728,12 +728,12 @@
           "score": 0.2339325
         },
         {
-          "slug": "sync-phone-numbers-and-webhooks",
-          "score": 0.2592797
+          "slug": "spring-cleaning",
+          "score": 0.2413928
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.2678923
+          "slug": "sync-phone-numbers-and-webhooks",
+          "score": 0.2592797
         }
       ]
     },
@@ -845,7 +845,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.3682581
+          "score": 0.3666148
         }
       ]
     },
