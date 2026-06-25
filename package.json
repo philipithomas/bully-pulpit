@@ -15,6 +15,7 @@
     "images:optimize": "tsx scripts/optimize-images.ts",
     "content:check": "tsx scripts/check-content.ts",
     "links:check": "tsx scripts/check-links.ts",
+    "workflow:smoke": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/workflow-smoke.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/db-migrate.ts",
     "db:migrate:deploy": "if [ \"$VERCEL_ENV\" = production ]; then pnpm db:migrate; else echo 'Skipping migrations (VERCEL_ENV is not production)'; fi",
