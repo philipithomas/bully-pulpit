@@ -1,0 +1,30 @@
+---
+title: "Spring cleaning"
+publishedAt: "2026-06-25"
+coverImage: "/images/covers/spring-cleaning.jpg"
+coverImageAlt: "Porsche on a tow truck in Tokyo"
+---
+
+Cal Newport has a useful framing for knowledge work: every active project carries [administrative overhead](https://www.gq.com/story/cal-newport-slow-productivity-interview). A project includes the work itself, but also the emails, bugs, customer questions, alerts, and old decisions that create ongoing work and context shifts. As the number of active projects grows, the fixed overhead starts to crowd out the real work.
+
+I have been feeling that overhead in my own projects. When I started [Contraption Company](/introducing-contraption-co), I imagined a small studio building many calm, dependable software products. Over time, I launched [Postcard](/launching-postcard), [Booklet](/launching-booklet), [FRCTNL](/introducing-frctnl), and a handful of stranger experiments. With AI, that old product-studio vision suddenly became more plausible. I could build faster, maintain more, and revive ideas that would have previously stayed in a notebook.
+
+That period of exploration was useful. But lately, I have been moving from exploration to focus. Software is shifting from something you buy from others to something you [build for yourself](/app-of-ones-own). But the consequence of that shift, for me, is that I want fewer personal products with obligations to other people and more software that supports my own interests. Building software for yourself can now be a creative act.
+
+So, I spent the last few weeks pruning my digital life.
+
+I enjoyed my [experiments with OpenClaw](/openclaw-is-my-new-coworker), but I wiped the server. Bell was a fascinating glimpse at the capabilities of AI, but ChatGPT and Claude have closed the major featue gap - specifically, recurring actions. I also found the security model unsettling. A piece of software with broad access to email, calendars, code, and other tools creates its own ongoing anxiety. Bell lives on instead as a feature on [philipithomas.com](/), where it can do deep research over my posts without needing access to the rest of my life.
+
+I also shut down [Booklet](https://www.philipithomas.com/launching-booklet) and [FRCTNL](https://www.philipithomas.com/introducing-frctnl). In 2023, I started building Booklet as a community forum that used AI to turn discussions into a readable newsletter, a concept I described in [community-powered media companies](/community-media-companies). FRCTNL, the community for tech freelancers, was a test of that software. FRCTNL continued to grow, but Booklet never found traction or paying customers beyond the community I operated myself. As AI agents became more common, running both the product and the community also became a fight against AI spam. The product had become infrastructure for a community, the community had become the main customer of the product, and both added fixed overhead to my life. I plan to open-source Booklet in the coming days, along with more details about how it worked and what I learned from shutting it down.
+
+I had some old websites sitting in a Webflow account, too. Webflow remains a good tool for dynamic websites. For instance, [anthropic.com](https://anthropic.com) seems to use it. But for finished pages, such as an old wedding site, the pricing structure no longer made sense. With Claude's [Chrome plugin](https://code.claude.com/docs/en/chrome), I migrated the sites to pixel-perfect copies in Next.js, hosted for free on [Vercel](https://vercel.com). Then I deleted the Webflow account.
+
+The project I kept investing in was this website. I recently [wrote about rebuilding philipithomas.com into a custom app](/software-in-the-ai-era), and I have continued to improve that stack. When I got access to [Claude Fable](https://www.anthropic.com/news/claude-fable-5-mythos-5) for a few days, before Anthropic paused access, I went a bit wild and [shipped over 120 pull requests with Fable in a single day](https://github.com/philipithomas/bully-pulpit/graphs/contributors?from=5%2F23%2F2026). I consolidated newsletter mailing into the site, moved the whole system to Next.js on Vercel, and leveraged [Vercel Workflows](https://vercel.com/workflows) heavily. Pull request previews make it easier to review agent work, and the workflows API gave me a durable job system without operating another server.
+
+That consolidation matters more to me than the individual features. The [bully-pulpit repo](https://github.com/philipithomas/bully-pulpit) now powers my website, subscriptions, search, chat, and newsletter mailing. From [better email templates](https://github.com/philipithomas/bully-pulpit/pull/59) to a [local embeddings-based search index](https://github.com/philipithomas/bully-pulpit/pull/49), the site is the main software on which I want to keep tinkering.
+
+Finally, in a less technical area of my life, I migrated all of my podcast subscriptions from [Overcast](https://overcast.fm/) to Spotify. I already used Spotify for music, and its audiobook catalog pushed me to centralize all audio in one app.
+
+This cleanup also coincides with a bigger personal transition: I recently left [Chroma](/chroma), and I am starting a new role in August. More on that later. For now, I want my personal energy to go into [philipithomas.com](/) as a creative project, rather than into more utility software for other users.
+
+I spent years trying to build software products for other people. Now, I intend to build software mostly for myself, and treat that as part of the creative work itself.
