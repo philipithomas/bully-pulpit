@@ -1,5 +1,5 @@
 import { getRun } from 'workflow/api'
-import { latestRunIdBySlug } from '@/lib/db/queries/send-runs'
+import { allLatestRunIds, latestRunIdBySlug } from '@/lib/db/queries/send-runs'
 
 /**
  * Whether a workflow run for this post is genuinely still in flight.
@@ -19,6 +19,10 @@ import { latestRunIdBySlug } from '@/lib/db/queries/send-runs'
 export async function isSendRunActive(slug: string): Promise<boolean> {
   const runId = await latestRunIdBySlug(slug)
   if (!runId) return false
+  return isRunActive(runId)
+}
+
+async function isRunActive(runId: string): Promise<boolean> {
   try {
     const status = await getRun(runId).status
     return status === 'pending' || status === 'running'
@@ -28,4 +32,15 @@ export async function isSendRunActive(slug: string): Promise<boolean> {
     // enqueue index plus per-row sendable re-reads bound any duplicate risk.
     return false
   }
+}
+
+/** Post slugs whose latest recorded send run is still pending or running. */
+export async function activeSendRunSlugs(): Promise<Set<string>> {
+  const runs = await allLatestRunIds()
+  const active = await Promise.all(
+    Object.entries(runs).map(async ([slug, runId]) =>
+      (await isRunActive(runId)) ? slug : null
+    )
+  )
+  return new Set(active.filter((slug): slug is string => Boolean(slug)))
 }
