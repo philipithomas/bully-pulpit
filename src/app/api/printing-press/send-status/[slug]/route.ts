@@ -3,6 +3,7 @@ import { guardAdmin } from '@/lib/auth/admin'
 import { getPostBySlug } from '@/lib/content/loader'
 import { sendStatsBySlug } from '@/lib/db/queries/email-sends'
 import { countEligible, isNewsletter } from '@/lib/db/queries/subscribers'
+import { isSendRunActive } from '@/lib/email/send-guard'
 
 export async function GET(
   _request: NextRequest,
@@ -18,10 +19,11 @@ export async function GET(
   const newsletter =
     post && isNewsletter(post.newsletter) ? post.newsletter : null
 
-  const [stats, eligible] = await Promise.all([
+  const [stats, eligible, active] = await Promise.all([
     sendStatsBySlug(slug),
     newsletter ? countEligible(newsletter, slug) : Promise.resolve(0),
+    isSendRunActive(slug),
   ])
 
-  return NextResponse.json({ ...stats, eligible })
+  return NextResponse.json({ ...stats, eligible, active })
 }

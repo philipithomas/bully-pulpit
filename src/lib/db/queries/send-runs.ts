@@ -31,3 +31,11 @@ export async function latestRunIdBySlug(
     .limit(1)
   return rows[0]?.runId ?? null
 }
+
+/** Latest recorded send run ids, keyed by post slug. */
+export async function allLatestRunIds(): Promise<Record<string, string>> {
+  const rows = await getDb()
+    .select({ postSlug: sendRuns.postSlug, runId: sendRuns.runId })
+    .from(sendRuns)
+  return Object.fromEntries(rows.map((row) => [row.postSlug, row.runId]))
+}

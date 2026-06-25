@@ -5,6 +5,7 @@ import { getPostBySlug } from '@/lib/content/loader'
 import { sendStatsBySlug } from '@/lib/db/queries/email-sends'
 import { countEligible, isNewsletter } from '@/lib/db/queries/subscribers'
 import { renderNewsletterPreview } from '@/lib/email/send'
+import { isSendRunActive } from '@/lib/email/send-guard'
 
 export default async function SendPage({
   params,
@@ -24,9 +25,10 @@ export default async function SendPage({
     notFound()
   }
 
-  const [eligible, stats] = await Promise.all([
+  const [eligible, stats, active] = await Promise.all([
     countEligible(post.newsletter, slug),
     sendStatsBySlug(slug),
+    isSendRunActive(slug),
   ])
 
   return (
@@ -39,6 +41,7 @@ export default async function SendPage({
       previewHtml={preview.html}
       initialEligible={eligible}
       initialStats={stats}
+      initialActive={active}
     />
   )
 }

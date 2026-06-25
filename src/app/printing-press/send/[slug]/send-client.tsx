@@ -34,6 +34,7 @@ interface Props {
   previewHtml: string
   initialEligible: number
   initialStats: SendStats
+  initialActive: boolean
 }
 
 export function SendClient({
@@ -45,6 +46,7 @@ export function SendClient({
   previewHtml,
   initialEligible,
   initialStats,
+  initialActive,
 }: Props) {
   const [view, setView] = useState<'desktop' | 'mobile'>('desktop')
   const [scheme, setScheme] = useState<'light' | 'dark'>('light')
@@ -53,7 +55,7 @@ export function SendClient({
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [eligible, setEligible] = useState(initialEligible)
   const [stats, setStats] = useState<SendStats>(initialStats)
-  const [active, setActive] = useState(false)
+  const [active, setActive] = useState(initialActive)
 
   // Dark preview: the email's own dark-mode block with its media condition
   // rewritten to always apply (a sandboxed iframe cannot be forced into
@@ -90,6 +92,12 @@ export function SendClient({
           failed: data.failed,
         })
         setEligible(data.eligible)
+        const runActive = Boolean(data.active)
+        setActive(runActive)
+        if (runActive) {
+          if (data.pending > 0) sawPending = true
+          return
+        }
         if (data.pending > 0) sawPending = true
         if (data.pending === 0 && (sawPending || polls >= 6)) {
           setActive(false)
@@ -177,6 +185,10 @@ export function SendClient({
 
   const processed = stats.sent + stats.failed
   const progress = stats.total > 0 ? (processed / stats.total) * 100 : 0
+  const progressText =
+    active && stats.total === 0
+      ? 'Preparing send'
+      : `${processed} of ${stats.total} processed${active ? ' · sending' : ''}`
   const canSend = eligible > 0 && !active && !starting
   const canRetry =
     (stats.failed > 0 || stats.pending > 0) && !active && !starting
@@ -199,15 +211,15 @@ export function SendClient({
         {stats.failed > 0 && (
           <Badge variant="destructive">{stats.failed} failed</Badge>
         )}
+        {active ? <Badge variant="warning">Sending</Badge> : null}
       </div>
 
       {(active || stats.total > 0) && (
         <div className="mb-6">
           <Progress value={progress} />
           <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
-            {active && <Spinner className="h-3 w-3" />}
-            {processed} of {stats.total} processed
-            {active ? ' · sending…' : ''}
+            {active ? <Spinner className="h-3 w-3" /> : null}
+            {progressText}
           </p>
         </div>
       )}
@@ -224,11 +236,11 @@ export function SendClient({
             `Send to ${eligible} subscriber${eligible === 1 ? '' : 's'}`
           )}
         </Button>
-        {canRetry && (
+        {canRetry ? (
           <Button variant="ghost" onClick={retry}>
             Retry / resume
           </Button>
-        )}
+        ) : null}
       </div>
 
       {/* Preview */}
