@@ -27,6 +27,7 @@ vi.mock('@/lib/email/ses', () =>
 import { getRun, start } from 'workflow/api'
 import { POST as retryPost } from '@/app/api/printing-press/retry/route'
 import { POST as sendPost } from '@/app/api/printing-press/send/route'
+import { GET as statusGet } from '@/app/api/printing-press/send-status/[slug]/route'
 import { signSession } from '@/lib/auth/jwt'
 import { getPostBySlug } from '@/lib/content/loader'
 import {
@@ -77,6 +78,12 @@ function request(path: 'send' | 'retry', body: unknown) {
     method: 'POST',
     body: typeof body === 'string' ? body : JSON.stringify(body),
   })
+}
+
+function statusRequest() {
+  return new NextRequest(
+    `http://localhost/api/printing-press/send-status/${SLUG}`
+  )
 }
 
 async function signInAs(email: string) {
@@ -346,6 +353,41 @@ describe('POST retry', () => {
     }
     // The delivered row is untouched.
     expect(rows.find((r) => r.id === sentRow.id)?.sentAt).not.toBeNull()
+  })
+})
+
+describe('GET send status', () => {
+  it('reports a pending workflow as active before recipient rows exist', async () => {
+    await signInAsAdmin()
+    await recordSendRun(SLUG, 'run-1')
+    stubRunStatus('pending')
+
+    const res = await statusGet(statusRequest(), {
+      params: Promise.resolve({ slug: SLUG }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      total: 0,
+      sent: 0,
+      pending: 0,
+      failed: 0,
+      eligible: 0,
+      active: true,
+    })
+  })
+
+  it('does not report a cancelled workflow as active', async () => {
+    await signInAsAdmin()
+    await recordSendRun(SLUG, 'run-1')
+    stubRunStatus('cancelled')
+
+    const res = await statusGet(statusRequest(), {
+      params: Promise.resolve({ slug: SLUG }),
+    })
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).active).toBe(false)
   })
 })
 
