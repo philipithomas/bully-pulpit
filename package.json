@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "postbuild": "pnpm canonical:check",
+    "postbuild": "pnpm canonical:check && pnpm workflow:check",
     "canonical:check": "tsx scripts/check-canonical.ts",
     "start": "next start",
     "check": "biome check .",
@@ -15,6 +15,7 @@
     "images:optimize": "tsx scripts/optimize-images.ts",
     "content:check": "tsx scripts/check-content.ts",
     "links:check": "tsx scripts/check-links.ts",
+    "workflow:check": "tsx scripts/check-workflow.ts",
     "workflow:smoke": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/workflow-smoke.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/db-migrate.ts",
@@ -65,7 +66,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "unified": "^11.0.5",
-    "workflow": "4.3.1",
+    "workflow": "4.5.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
@@ -84,7 +85,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vercel": "^54.14.5",
+    "vercel": "^54.17.3",
     "vitest": "^4.1.9"
   }
 }
