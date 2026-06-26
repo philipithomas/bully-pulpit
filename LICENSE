@@ -1,6 +1,11 @@
-MIT License
+This repository uses a split license.
 
-Copyright (c) 2026 Philip I. Thomas
+## Source code
+
+Except for the content and media listed below, the source code in this
+repository is licensed under the MIT License.
+
+Copyright (c) 2026 The Contraption Company LLC
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +24,21 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Content and media
+
+The MIT License above does not apply to essays, newsletters, pages,
+photographs, images, downloads, generated content artifacts, or other creative
+assets in this repository, including files under:
+
+- `content/`
+- `public/images/`
+- `public/downloads/`
+- `src/generated/`
+- root-level public icons and social images under `public/`
+
+Copyright (c) 2020-2026 The Contraption Company LLC. All rights reserved.
+
+You may not copy, redistribute, modify, publish, or create derivative works from
+that content or media without prior written permission, except as permitted by
+applicable law.

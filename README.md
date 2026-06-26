@@ -47,4 +47,9 @@ coverImage: "/images/covers/slug.jpg"  # optional
 
 ## License
 
-MIT - Philip I. Thomas
+Source code is licensed under the MIT License.
+
+Essays, newsletters, pages, photographs, images, downloads, generated content
+artifacts, and other creative assets are not included in the MIT License.
+Copyright (c) 2020-2026 The Contraption Company LLC. All rights reserved. See
+[LICENSE](LICENSE).
