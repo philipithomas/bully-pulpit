@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type {
+  ZoomCaptionLink,
   ZoomedImage,
   ZoomGalleryItem,
 } from '@/components/ui/image-zoom-overlay'
@@ -81,6 +82,33 @@ function fullUrlForPath(path: string): string {
   return new URL(path, window.location.href).href
 }
 
+function zoomCaptionLinksFromDataset(value: string | undefined) {
+  if (!value) return []
+
+  try {
+    const parsed = JSON.parse(value)
+    if (!Array.isArray(parsed)) return []
+
+    return parsed.flatMap((item): ZoomCaptionLink[] => {
+      if (!item || typeof item !== 'object') return []
+      const href = (item as Record<string, unknown>).href
+      const title = (item as Record<string, unknown>).title
+      const meta = (item as Record<string, unknown>).meta
+      if (typeof href !== 'string' || typeof title !== 'string') return []
+
+      return [
+        {
+          href,
+          title,
+          meta: typeof meta === 'string' ? meta : null,
+        },
+      ]
+    })
+  } catch {
+    return []
+  }
+}
+
 function warmFullSrc(e: Event) {
   const target = (e.target as Partial<HTMLElement>).closest?.(
     '[data-full-src]'
@@ -108,6 +136,12 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
     img.dataset.zoomCaptionLocationName
   const locationUrl =
     element.dataset.zoomCaptionLocationUrl ?? img.dataset.zoomCaptionLocationUrl
+  const footerHeading =
+    element.dataset.zoomCaptionFooterHeading ??
+    img.dataset.zoomCaptionFooterHeading
+  const footerLinks = zoomCaptionLinksFromDataset(
+    element.dataset.zoomCaptionLinks ?? img.dataset.zoomCaptionLinks
+  )
   const rect = img.getBoundingClientRect()
   const width =
     img.naturalWidth > 0 ? img.naturalWidth : rect.width > 0 ? rect.width : null
@@ -124,8 +158,22 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
     width,
     height,
     caption:
-      href && title
-        ? { href, title, description, date, locationName, locationUrl }
+      title || href || footerLinks.length > 0
+        ? {
+            href: href ?? null,
+            title: title ?? img.alt ?? '',
+            description,
+            date,
+            locationName,
+            locationUrl,
+            footer:
+              footerLinks.length > 0
+                ? {
+                    heading: footerHeading ?? 'Featured on',
+                    links: footerLinks,
+                  }
+                : null,
+          }
         : null,
   }
 }

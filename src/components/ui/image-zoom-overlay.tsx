@@ -13,12 +13,24 @@ import {
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 
 export interface ZoomCaption {
-  href: string
+  href?: string | null
   title: string
   description?: string | null
   date?: string | null
   locationName?: string | null
   locationUrl?: string | null
+  footer?: ZoomCaptionFooter | null
+}
+
+export interface ZoomCaptionFooter {
+  heading: string
+  links: ZoomCaptionLink[]
+}
+
+export interface ZoomCaptionLink {
+  href: string
+  title: string
+  meta?: string | null
 }
 
 export interface ZoomGalleryItem {
@@ -540,30 +552,60 @@ export function ImageZoomOverlay({
                   </p>
                 ) : null}
               </div>
-              <footer className="flex shrink-0 items-center justify-end gap-4 border-gray-200 border-t px-5 py-4 sm:justify-between md:px-7 md:py-5">
-                <NextImage
-                  src="/images/tsundoku.svg"
-                  alt="Tsundoku"
-                  width={92}
-                  height={14}
-                  className="hidden h-[14px] w-auto opacity-70 sm:block"
-                />
-                <Link
-                  href={caption.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group inline-flex items-center gap-2 font-sans text-sm font-semibold text-gray-900 transition-colors hover:text-sun"
-                  onClick={handleCaptionClick}
-                >
-                  Open post
-                  <span
-                    aria-hidden="true"
-                    className="transition-transform group-hover:translate-x-0.5"
+              {caption.footer && caption.footer.links.length > 0 ? (
+                <footer className="shrink-0 border-gray-200 border-t px-5 py-4 md:px-7 md:py-5">
+                  <h3 className="font-sans text-xs font-semibold text-gray-500">
+                    {caption.footer.heading}
+                  </h3>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 md:grid-cols-1">
+                    {caption.footer.links.map((link) => (
+                      <Link
+                        key={`${link.href}-${link.title}`}
+                        href={link.href}
+                        className="group flex min-w-0 items-start justify-between gap-3 border border-gray-200 bg-white/45 py-2.5 pr-3 pl-12 transition-colors hover:border-gray-300 hover:bg-white sm:px-3"
+                        onClick={handleCaptionClick}
+                      >
+                        <span className="min-w-0">
+                          {link.meta ? (
+                            <span className="block font-mono text-[10px] leading-4 text-gray-500">
+                              {link.meta}
+                            </span>
+                          ) : null}
+                          <span className="mt-0.5 block break-words font-sans text-sm font-semibold leading-snug text-gray-900">
+                            {link.title}
+                          </span>
+                        </span>
+                        <ArrowIcon className="mt-1 h-3.5 w-3.5 shrink-0 text-gray-400 transition-colors group-hover:text-gray-900" />
+                      </Link>
+                    ))}
+                  </div>
+                </footer>
+              ) : caption.href ? (
+                <footer className="flex shrink-0 items-center justify-end gap-4 border-gray-200 border-t px-5 py-4 sm:justify-between md:px-7 md:py-5">
+                  <NextImage
+                    src="/images/tsundoku.svg"
+                    alt="Tsundoku"
+                    width={92}
+                    height={14}
+                    className="hidden h-[14px] w-auto opacity-70 sm:block"
+                  />
+                  <Link
+                    href={caption.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group inline-flex items-center gap-2 font-sans text-sm font-semibold text-gray-900 transition-colors hover:text-sun"
+                    onClick={handleCaptionClick}
                   >
-                    <ArrowIcon className="h-3.5 w-3.5" />
-                  </span>
-                </Link>
-              </footer>
+                    Open post
+                    <span
+                      aria-hidden="true"
+                      className="transition-transform group-hover:translate-x-0.5"
+                    >
+                      <ArrowIcon className="h-3.5 w-3.5" />
+                    </span>
+                  </Link>
+                </footer>
+              ) : null}
             </div>
           </aside>
         ) : null}
