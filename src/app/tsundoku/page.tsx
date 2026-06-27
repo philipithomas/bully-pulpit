@@ -31,9 +31,9 @@ const PHOTO_VIEWER_DESCRIPTION_MAX = 900
 const TRIP_START = '2026-06-24'
 const TRIP_END = '2026-07-08'
 const INTRO = [
-  'In Summer 2026, I found myself with unexpected downtime between jobs. I flew to Japan, bought a camera, and started practicing photography.',
+  'In Summer 2026, I found myself with unexpected downtime between jobs. I flew to Japan, bought a camera, and practiced photography.',
   'My photos usually live inside essays, so I quickly built up a stack of unpublished images.',
-  'This pop-up newsletter collects my favorite photos from the trip.',
+  'This pop-up newsletter shares my favorite photos from the trip.',
 ]
 
 function photoViewerDescription(post: Post): string {
