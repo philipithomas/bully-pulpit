@@ -23,6 +23,63 @@ const ImageZoomOverlay = dynamic(
 // touch, so the overlay upgrade is usually instant by the time the visitor
 // clicks. Deduped per URL for the life of the tab.
 const warmed = new Set<string>()
+const IMAGE_ZOOM_HISTORY_KEY = '__bpImageZoom'
+
+interface ImageZoomHistoryValue {
+  sourceUrl: string
+  image: ZoomedImage
+}
+
+interface ViewerHistory {
+  sourceUrl: string
+  targetUrl: string
+}
+
+function imageWithoutAnimationRect(image: ZoomedImage): ZoomedImage {
+  return {
+    ...image,
+    rect: null,
+    gallery: image.gallery
+      ? {
+          index: image.gallery.index,
+          items: image.gallery.items,
+        }
+      : undefined,
+  }
+}
+
+function imageZoomHistoryValue(state: unknown): ImageZoomHistoryValue | null {
+  if (!state || typeof state !== 'object') return null
+  const value = (state as Record<string, unknown>)[IMAGE_ZOOM_HISTORY_KEY]
+  if (!value || typeof value !== 'object') return null
+
+  const sourceUrl = (value as Record<string, unknown>).sourceUrl
+  const image = (value as Record<string, unknown>).image
+  if (typeof sourceUrl !== 'string') return null
+  if (!image || typeof image !== 'object') return null
+
+  return { sourceUrl, image: image as ZoomedImage }
+}
+
+function imageZoomHistoryState(image: ZoomedImage, sourceUrl: string) {
+  return {
+    [IMAGE_ZOOM_HISTORY_KEY]: {
+      sourceUrl,
+      image: imageWithoutAnimationRect(image),
+    },
+  }
+}
+
+function internalPathForHref(href: string | null | undefined): string | null {
+  if (!href) return null
+  const target = new URL(href, window.location.href)
+  if (target.origin !== window.location.origin) return null
+  return `${target.pathname}${target.search}${target.hash}`
+}
+
+function fullUrlForPath(path: string): string {
+  return new URL(path, window.location.href).href
+}
 
 function warmFullSrc(e: Event) {
   const target = (e.target as Partial<HTMLElement>).closest?.(
@@ -79,24 +136,95 @@ export function ImageZoom() {
   const [mounted, setMounted] = useState(false)
   // Element focused before the overlay opened; focus returns to it on close
   const triggerRef = useRef<HTMLElement | null>(null)
-  const handleNavigate = useCallback((direction: -1 | 1) => {
-    setZoomedImage((current) => {
-      const gallery = current?.gallery
-      if (!gallery) return current
-      const index = gallery.index + direction
-      if (index < 0 || index >= gallery.items.length) return current
-      return {
-        ...gallery.items[index],
-        rect: null,
-        gallery: { ...gallery, index },
-      }
-    })
-  }, [])
-  const handleClose = useCallback(() => {
+  const zoomedImageRef = useRef<ZoomedImage | null>(null)
+  const viewerHistoryRef = useRef<ViewerHistory | null>(null)
+  const pathnameRef = useRef(pathname)
+
+  const clearZoom = useCallback(() => {
+    zoomedImageRef.current = null
+    viewerHistoryRef.current = null
     setZoomedImage(null)
     triggerRef.current?.focus()
     triggerRef.current = null
   }, [])
+
+  const pushViewerUrl = useCallback((image: ZoomedImage) => {
+    const targetPath = internalPathForHref(image.caption?.href)
+    if (!targetPath) return
+
+    const sourceUrl = window.location.href
+    const targetUrl = fullUrlForPath(targetPath)
+    if (sourceUrl === targetUrl) return
+
+    viewerHistoryRef.current = { sourceUrl, targetUrl }
+    window.history.pushState(
+      imageZoomHistoryState(image, sourceUrl),
+      '',
+      targetPath
+    )
+  }, [])
+
+  const replaceViewerUrl = useCallback((image: ZoomedImage) => {
+    const history = viewerHistoryRef.current
+    const targetPath = internalPathForHref(image.caption?.href)
+    if (!history || !targetPath) return
+
+    const targetUrl = fullUrlForPath(targetPath)
+    if (history.targetUrl === targetUrl) return
+
+    viewerHistoryRef.current = { ...history, targetUrl }
+    window.history.replaceState(
+      imageZoomHistoryState(image, history.sourceUrl),
+      '',
+      targetPath
+    )
+  }, [])
+
+  const openZoom = useCallback(
+    (image: ZoomedImage) => {
+      zoomedImageRef.current = image
+      pushViewerUrl(image)
+      setZoomedImage(image)
+    },
+    [pushViewerUrl]
+  )
+
+  const handleNavigate = useCallback(
+    (direction: -1 | 1) => {
+      const gallery = zoomedImageRef.current?.gallery
+      if (!gallery) return
+      const index = gallery.index + direction
+      if (index < 0 || index >= gallery.items.length) return
+
+      const nextImage: ZoomedImage = {
+        ...gallery.items[index],
+        rect: null,
+        gallery: { ...gallery, index },
+      }
+      zoomedImageRef.current = nextImage
+      replaceViewerUrl(nextImage)
+      setZoomedImage(nextImage)
+    },
+    [replaceViewerUrl]
+  )
+
+  const handleClose = useCallback(() => {
+    const history = viewerHistoryRef.current
+    if (history && window.location.href !== history.sourceUrl) {
+      window.history.back()
+      window.setTimeout(() => {
+        if (
+          viewerHistoryRef.current === history &&
+          window.location.href === history.sourceUrl
+        ) {
+          clearZoom()
+        }
+      }, 120)
+      return
+    }
+
+    clearZoom()
+  }, [clearZoom])
 
   useEffect(() => setMounted(true), [])
 
@@ -109,10 +237,37 @@ export function ImageZoom() {
     }
   }, [])
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-attach on route change
   useEffect(() => {
-    setZoomedImage(null)
+    const handlePopState = (event: PopStateEvent) => {
+      const value = imageZoomHistoryValue(event.state)
+      if (value) {
+        const image = imageWithoutAnimationRect(value.image)
+        zoomedImageRef.current = image
+        viewerHistoryRef.current = {
+          sourceUrl: value.sourceUrl,
+          targetUrl: window.location.href,
+        }
+        setZoomedImage(image)
+        return
+      }
 
+      if (viewerHistoryRef.current || zoomedImageRef.current) {
+        clearZoom()
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [clearZoom])
+
+  useEffect(() => {
+    if (pathnameRef.current === pathname) return
+    pathnameRef.current = pathname
+    if (imageZoomHistoryValue(window.history.state)) return
+    if (viewerHistoryRef.current || zoomedImageRef.current) clearZoom()
+  }, [pathname, clearZoom])
+
+  useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const matched = (e.target as HTMLElement).closest(
         '.prose img, [data-zoomable]'
@@ -149,7 +304,7 @@ export function ImageZoom() {
         .filter((i): i is ZoomGalleryItem => i !== null)
       const groupIndex = groupElements.indexOf(matched)
       const rect = img.getBoundingClientRect()
-      setZoomedImage({
+      openZoom({
         ...item,
         // Plain object copy: the overlay animates from and back to this box.
         rect:
@@ -169,7 +324,7 @@ export function ImageZoom() {
 
     document.addEventListener('click', handleClick)
     return () => document.removeEventListener('click', handleClick)
-  }, [pathname])
+  }, [openZoom])
 
   if (!mounted || !zoomedImage) return null
 

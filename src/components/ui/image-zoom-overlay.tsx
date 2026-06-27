@@ -466,7 +466,7 @@ export function ImageZoomOverlay({
                 disabled={!canPrevious}
                 className={`-translate-y-1/2 absolute top-1/2 left-3 flex h-12 w-12 items-center justify-center rounded-full transition-[background-color,color,opacity] md:left-4 ${
                   canPrevious
-                    ? 'cursor-pointer bg-black/0 text-white/75 opacity-100 hover:bg-white/15 hover:text-white focus-visible:bg-white/15 focus-visible:text-white md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100'
+                    ? 'cursor-pointer bg-black/35 text-white opacity-100 hover:bg-black/50 focus-visible:bg-black/50 md:bg-black/0 md:opacity-0 md:group-focus-within:bg-black/35 md:group-focus-within:opacity-100 md:group-hover:bg-black/35 md:group-hover:opacity-100'
                     : 'pointer-events-none text-white/15 opacity-0'
                 }`}
               >
@@ -479,7 +479,7 @@ export function ImageZoomOverlay({
                 disabled={!canNext}
                 className={`-translate-y-1/2 absolute top-1/2 right-3 flex h-12 w-12 items-center justify-center rounded-full transition-[background-color,color,opacity] md:right-4 ${
                   canNext
-                    ? 'cursor-pointer bg-black/0 text-white/75 opacity-100 hover:bg-white/15 hover:text-white focus-visible:bg-white/15 focus-visible:text-white md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100'
+                    ? 'cursor-pointer bg-black/35 text-white opacity-100 hover:bg-black/50 focus-visible:bg-black/50 md:bg-black/0 md:opacity-0 md:group-focus-within:bg-black/35 md:group-focus-within:opacity-100 md:group-hover:bg-black/35 md:group-hover:opacity-100'
                     : 'pointer-events-none text-white/15 opacity-0'
                 }`}
               >
