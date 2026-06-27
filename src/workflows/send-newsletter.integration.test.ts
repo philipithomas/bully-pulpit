@@ -23,8 +23,8 @@ vi.mock('workflow', async (importActual) => {
 })
 
 // The content loader reads MDX from disk; pin a synthetic post instead.
-vi.mock('@/lib/content/loader', () => ({
-  getPostBySlug: vi.fn(),
+vi.mock('@/lib/content/loader-without-images', () => ({
+  getPostBySlugWithoutImages: vi.fn(),
 }))
 
 // Rendering pulls in related-posts artifacts; pin a synthetic body instead.
@@ -42,7 +42,7 @@ vi.mock('@/lib/email/ses', () =>
 
 import { FatalError, RetryableError } from 'workflow'
 import { siteConfig } from '@/lib/config'
-import { getPostBySlug } from '@/lib/content/loader'
+import { getPostBySlugWithoutImages } from '@/lib/content/loader-without-images'
 import {
   markSent,
   pendingRowIdsBySlug,
@@ -63,7 +63,7 @@ import {
   sendNewsletterWorkflow,
 } from '@/workflows/send-newsletter'
 
-const mockedGetPost = vi.mocked(getPostBySlug)
+const mockedGetPost = vi.mocked(getPostBySlugWithoutImages)
 const mockedBuildBody = vi.mocked(buildEmailBodyHtml)
 const mockedSes = vi.mocked(sendNewsletterEmail)
 

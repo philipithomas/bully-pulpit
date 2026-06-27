@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-27T23:06:15.454Z",
+  "generatedAt": "2026-06-27T23:10:09.174Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
@@ -33,8 +33,28 @@
         }
       ]
     },
+    "roastery": {
+      "related": [
+        {
+          "slug": "slow-travel",
+          "score": 0.3594002
+        },
+        {
+          "slug": "geisha",
+          "score": 0.3681953
+        },
+        {
+          "slug": "introducing-workshop",
+          "score": 0.4426088
+        }
+      ]
+    },
     "geisha": {
       "related": [
+        {
+          "slug": "roastery",
+          "score": 0.3681953
+        },
         {
           "slug": "slow-travel",
           "score": 0.4287654
@@ -42,10 +62,6 @@
         {
           "slug": "digital-product-studios",
           "score": 0.4569263
-        },
-        {
-          "slug": "nakameguro",
-          "score": 0.4629743
         }
       ]
     },
@@ -1732,16 +1748,16 @@
     "slow-travel": {
       "related": [
         {
+          "slug": "roastery",
+          "score": 0.3594002
+        },
+        {
           "slug": "introducing-workshop",
           "score": 0.3907798
         },
         {
           "slug": "geisha",
           "score": 0.4287654
-        },
-        {
-          "slug": "introducing-frctnl",
-          "score": 0.4394316
         }
       ]
     },

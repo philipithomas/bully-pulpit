@@ -13,8 +13,8 @@ vi.mock('workflow', async (importActual) => {
   }
 })
 
-vi.mock('@/lib/content/loader', () => ({
-  getPostBySlug: vi.fn(),
+vi.mock('@/lib/content/loader-without-images', () => ({
+  getPostBySlugWithoutImages: vi.fn(),
 }))
 
 vi.mock('@/lib/db/queries/email-sends', () => ({
@@ -42,21 +42,21 @@ vi.mock('@/lib/email/render-body', () => ({
   buildEmailBodyHtml: vi.fn(),
 }))
 
-vi.mock('@/lib/email/send', () => ({
+vi.mock('@/lib/email/queued-send', () => ({
   sendQueuedEmail: vi.fn(),
 }))
 
 import { getStepMetadata, RetryableError } from 'workflow'
-import { getPostBySlug } from '@/lib/content/loader'
+import { getPostBySlugWithoutImages } from '@/lib/content/loader-without-images'
 import * as emailSends from '@/lib/db/queries/email-sends'
 import { findEligibleIds } from '@/lib/db/queries/subscribers'
 import { isSuppressed } from '@/lib/db/queries/suppressions'
+import { sendQueuedEmail } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
-import { sendQueuedEmail } from '@/lib/email/send'
 import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
 
 const mockedSends = vi.mocked(emailSends)
-const mockedGetPost = vi.mocked(getPostBySlug)
+const mockedGetPost = vi.mocked(getPostBySlugWithoutImages)
 const mockedEligible = vi.mocked(findEligibleIds)
 const mockedSuppressed = vi.mocked(isSuppressed)
 const mockedBuildBody = vi.mocked(buildEmailBodyHtml)
