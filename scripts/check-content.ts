@@ -18,11 +18,11 @@ import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
  *
  *   1. Cover images referenced by frontmatter exist on disk.
  *   2. Web/email/social image sources stay within Vercel Image Optimization's
- *      source dimension limit.
+ *      source dimension limit and local source file-size budget.
  *   3. The committed search index matches the recomputed merkle tree over the
  *      post corpus, and related-posts.json covers every post (pnpm search:index).
  *   4. In-article images stay within Vercel Image Optimization's source
- *      dimension limit.
+ *      dimension limit and local source file-size budget.
  *   5. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
  *      with non-empty alt text — a missing or empty alt fails the build.
  *   6. The rendered email HTML for every non-exempt post stays under Gmail's
@@ -37,6 +37,9 @@ const RELATED_JSON = path.join(
 
 // Vercel Image Optimization rejects source images above this edge limit.
 const MAX_VERCEL_SOURCE_EDGE = 8192
+// Vercel's optimized response must fit its 10MB cacheable response limit.
+// Keeping sources below that line is a conservative pre-optimization guard.
+const MAX_VERCEL_SOURCE_BYTES = 10 * 1024 * 1024
 // Gmail clips messages near 102KB of HTML; warn close to the line, fail over it.
 const MAX_EMAIL_HTML_BYTES = 100 * 1024
 const WARN_EMAIL_HTML_BYTES = 95 * 1024
@@ -49,6 +52,13 @@ const errors: string[] = []
 const warnings: string[] = []
 
 async function checkVercelSourceImage(filePath: string) {
+  const bytes = fs.statSync(filePath).size
+  if (bytes > MAX_VERCEL_SOURCE_BYTES) {
+    errors.push(
+      `${path.relative(process.cwd(), filePath)} is ${(bytes / 1024 / 1024).toFixed(1)}MB (budget ${MAX_VERCEL_SOURCE_BYTES / 1024 / 1024}MB for Vercel Image Optimization sources)`
+    )
+  }
+
   const meta = await sharp(filePath).metadata()
   const longest = Math.max(meta.width ?? 0, meta.height ?? 0)
   if (longest > MAX_VERCEL_SOURCE_EDGE) {
