@@ -44,7 +44,7 @@ export default function HomePage() {
   })
 
   return (
-    <div className="container py-16 md:py-20 lg:py-28">
+    <div className="container pt-6 pb-12 sm:pt-8 sm:pb-14 md:pt-10 md:pb-16 lg:pt-12 lg:pb-20">
       <JsonLd type="website" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
         {/* Left: Portrait (desktop only) */}
@@ -168,7 +168,7 @@ export default function HomePage() {
                       alt={nl.name}
                       width={100}
                       height={nl.logo.height}
-                      style={{ height: nl.logo.height }}
+                      style={{ height: nl.logo.height, width: 'auto' }}
                       className="w-auto shrink-0"
                     />
                   </span>
