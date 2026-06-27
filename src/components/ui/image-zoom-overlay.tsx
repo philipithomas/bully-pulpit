@@ -11,6 +11,7 @@ import {
   useState,
 } from 'react'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
+import { preloadZoomGalleryNeighbors } from '@/components/ui/image-zoom-preload'
 
 export interface ZoomCaption {
   href?: string | null
@@ -280,6 +281,12 @@ export function ImageZoomOverlay({
       document.body.style.overflow = ''
     }
   }, [])
+
+  // Keep adjacent gallery items warm while the viewer is open. This removes
+  // the blank/loading flash when moving through photo-heavy galleries.
+  useEffect(() => {
+    preloadZoomGalleryNeighbors(gallery)
+  }, [gallery])
 
   // Preload the full-resolution image.
   useEffect(() => {

@@ -9,6 +9,7 @@ import type {
   ZoomedImage,
   ZoomGalleryItem,
 } from '@/components/ui/image-zoom-overlay'
+import { preloadZoomItemSources } from '@/components/ui/image-zoom-preload'
 
 // Keeps the overlay out of the shared first-load bundle;
 // the chunk loads only when an image is actually zoomed.
@@ -20,10 +21,6 @@ const ImageZoomOverlay = dynamic(
   { ssr: false }
 )
 
-// Warm the browser cache for full-resolution variants on first hover or
-// touch, so the overlay upgrade is usually instant by the time the visitor
-// clicks. Deduped per URL for the life of the tab.
-const warmed = new Set<string>()
 const IMAGE_ZOOM_HISTORY_KEY = '__bpImageZoom'
 
 interface ImageZoomHistoryValue {
@@ -109,16 +106,6 @@ function zoomCaptionLinksFromDataset(value: string | undefined) {
   }
 }
 
-function warmFullSrc(e: Event) {
-  const target = (e.target as Partial<HTMLElement>).closest?.(
-    '[data-full-src]'
-  ) as HTMLElement | null
-  const fullSrc = target?.dataset.fullSrc
-  if (!fullSrc || warmed.has(fullSrc)) return
-  warmed.add(fullSrc)
-  new Image().src = fullSrc
-}
-
 function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
   const img =
     element instanceof HTMLImageElement ? element : element.querySelector('img')
@@ -176,6 +163,16 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
           }
         : null,
   }
+}
+
+function warmZoomTargetSources(e: Event) {
+  const target = e.target
+  if (!(target instanceof Element)) return
+
+  const matched = target.closest(
+    '.prose img, [data-zoomable], [data-full-src]'
+  ) as HTMLElement | null
+  preloadZoomItemSources(matched ? zoomItemFromElement(matched) : null)
 }
 
 export function ImageZoom() {
@@ -277,11 +274,15 @@ export function ImageZoom() {
   useEffect(() => setMounted(true), [])
 
   useEffect(() => {
-    document.addEventListener('pointerover', warmFullSrc, { passive: true })
-    document.addEventListener('touchstart', warmFullSrc, { passive: true })
+    document.addEventListener('pointerover', warmZoomTargetSources, {
+      passive: true,
+    })
+    document.addEventListener('touchstart', warmZoomTargetSources, {
+      passive: true,
+    })
     return () => {
-      document.removeEventListener('pointerover', warmFullSrc)
-      document.removeEventListener('touchstart', warmFullSrc)
+      document.removeEventListener('pointerover', warmZoomTargetSources)
+      document.removeEventListener('touchstart', warmZoomTargetSources)
     }
   }, [])
 
