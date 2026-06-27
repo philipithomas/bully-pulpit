@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Share2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import Link from 'next/link'
 import {
   type MouseEvent,
@@ -134,7 +134,6 @@ export function ImageZoomOverlay({
     height: number
   } | null>(null)
   const [upgrade, setUpgrade] = useState<Upgrade | null>(null)
-  const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const [immediateLoaded, setImmediateLoaded] = useState(false)
   const overlayRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -283,12 +282,6 @@ export function ImageZoomOverlay({
     }
   }, [image.fullSrc])
 
-  useEffect(() => {
-    if (!copiedUrl) return
-    const timer = window.setTimeout(() => setCopiedUrl(null), 2000)
-    return () => window.clearTimeout(timer)
-  }, [copiedUrl])
-
   const imageResetKey = `${image.src}\n${image.fullSrc ?? ''}`
   useEffect(() => {
     if (!imageResetKey) return
@@ -338,38 +331,7 @@ export function ImageZoomOverlay({
   const handleCaptionClick = useCallback((e: MouseEvent<HTMLElement>) => {
     e.stopPropagation()
   }, [])
-  const copyShareUrl = useCallback(async (url: string) => {
-    if (!navigator.clipboard?.writeText) return
-    await navigator.clipboard.writeText(url)
-    setCopiedUrl(url)
-  }, [])
   const handleImmediateLoad = useCallback(() => setImmediateLoaded(true), [])
-  const handleShare = useCallback(
-    async (e: MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation()
-      if (!caption) return
-
-      const url = new URL(caption.href, window.location.origin).toString()
-
-      try {
-        if (navigator.share) {
-          await navigator.share({ title: caption.title, url })
-          return
-        }
-        await copyShareUrl(url)
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          return
-        }
-        try {
-          await copyShareUrl(url)
-        } catch {
-          setCopiedUrl(null)
-        }
-      }
-    },
-    [caption, copyShareUrl]
-  )
   const handleCaptionPanelClick = useCallback(
     (e: MouseEvent<HTMLElement>) => e.stopPropagation(),
     []
@@ -397,9 +359,6 @@ export function ImageZoomOverlay({
     },
     [canNext, onNavigate]
   )
-  const captionShareUrl = caption
-    ? new URL(caption.href, window.location.origin).toString()
-    : null
 
   return (
     <div
@@ -419,7 +378,7 @@ export function ImageZoomOverlay({
           type="button"
           onClick={handleCloseButton}
           aria-label="Close image viewer"
-          className="absolute top-3 right-3 z-20 flex h-10 w-10 items-center justify-center text-white/70 transition-colors hover:text-white sm:top-4 sm:right-4"
+          className="absolute top-3 right-3 z-20 flex h-10 w-10 cursor-pointer items-center justify-center text-white/70 transition-colors hover:text-white sm:top-4 sm:right-4"
         >
           <X aria-hidden="true" className="h-5 w-5" />
         </button>
@@ -434,8 +393,8 @@ export function ImageZoomOverlay({
         <div
           className={
             hasCaption
-              ? 'relative flex min-h-0 items-center justify-center overflow-hidden bg-[#0A0A0A] p-2 sm:p-3 md:h-screen md:p-0'
-              : 'relative flex h-full w-full items-center justify-center'
+              ? 'group relative flex min-h-0 items-center justify-center overflow-hidden bg-[#0A0A0A] p-2 sm:p-3 md:h-screen md:p-0'
+              : 'group relative flex h-full w-full items-center justify-center'
           }
         >
           {/* The full image defines the layout once it has loaded; the
@@ -503,26 +462,26 @@ export function ImageZoomOverlay({
                 onClick={handlePrevious}
                 aria-label="Previous image"
                 disabled={!canPrevious}
-                className={`-translate-y-1/2 absolute top-1/2 left-3 p-3 transition-colors md:left-4 ${
+                className={`-translate-y-1/2 absolute top-1/2 left-3 flex h-12 w-12 items-center justify-center rounded-full transition-[background-color,color,opacity] md:left-4 ${
                   canPrevious
-                    ? 'text-white/75 hover:text-white'
-                    : 'cursor-default text-white/20'
+                    ? 'cursor-pointer bg-black/0 text-white/75 opacity-100 hover:bg-white/15 hover:text-white focus-visible:bg-white/15 focus-visible:text-white md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100'
+                    : 'pointer-events-none text-white/15 opacity-0'
                 }`}
               >
-                <ChevronLeft aria-hidden="true" className="h-8 w-8" />
+                <ChevronLeft aria-hidden="true" className="h-7 w-7" />
               </button>
               <button
                 type="button"
                 onClick={handleNext}
                 aria-label="Next image"
                 disabled={!canNext}
-                className={`-translate-y-1/2 absolute top-1/2 right-3 p-3 transition-colors md:right-4 ${
+                className={`-translate-y-1/2 absolute top-1/2 right-3 flex h-12 w-12 items-center justify-center rounded-full transition-[background-color,color,opacity] md:right-4 ${
                   canNext
-                    ? 'text-white/75 hover:text-white'
-                    : 'cursor-default text-white/20'
+                    ? 'cursor-pointer bg-black/0 text-white/75 opacity-100 hover:bg-white/15 hover:text-white focus-visible:bg-white/15 focus-visible:text-white md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100'
+                    : 'pointer-events-none text-white/15 opacity-0'
                 }`}
               >
-                <ChevronRight aria-hidden="true" className="h-8 w-8" />
+                <ChevronRight aria-hidden="true" className="h-7 w-7" />
               </button>
             </>
           )}
@@ -530,70 +489,70 @@ export function ImageZoomOverlay({
         {caption ? (
           <aside
             data-zoom-caption-panel=""
-            className="max-h-[42vh] w-full cursor-auto overflow-y-auto overscroll-contain border-gray-200 border-t bg-[#f4f4f2] px-5 py-5 text-gray-900 md:h-screen md:max-h-none md:border-t-0 md:border-l md:px-7 md:py-7"
+            className="max-h-[42vh] w-full cursor-auto overflow-hidden overscroll-contain border-gray-200 border-t bg-[#f4f4f2] text-gray-900 md:h-screen md:max-h-none md:border-t-0 md:border-l"
             onClick={handleCaptionPanelClick}
           >
-            <div className="sticky top-0 z-10 -mx-5 -mt-5 flex items-start justify-between gap-4 bg-[#f4f4f2] px-5 pt-5 pb-2 md:-mx-7 md:-mt-7 md:px-7 md:pt-7">
-              <div className="min-w-0">
-                {hasCaptionMetadata ? (
-                  <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-gray-500">
-                    {caption.date ? <time>{caption.date}</time> : null}
-                    {caption.date && caption.locationName ? (
-                      <span aria-hidden="true">@</span>
-                    ) : null}
-                    {caption.locationName ? (
-                      caption.locationUrl ? (
-                        <a
-                          href={caption.locationUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-sun"
-                          onClick={handleCaptionClick}
-                        >
-                          {caption.locationName}
-                        </a>
-                      ) : (
-                        <span>{caption.locationName}</span>
-                      )
-                    ) : null}
-                  </div>
-                ) : null}
-                <h2 className="font-sans text-xl font-semibold leading-tight text-gray-950 md:text-2xl">
-                  {caption.title}
-                </h2>
+            <div className="flex h-full max-h-[42vh] flex-col md:max-h-none">
+              <div className="flex shrink-0 items-start justify-between gap-4 px-5 pt-5 pb-2 md:px-7 md:pt-7">
+                <div className="min-w-0">
+                  {hasCaptionMetadata ? (
+                    <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-gray-500">
+                      {caption.date ? <time>{caption.date}</time> : null}
+                      {caption.date && caption.locationName ? (
+                        <span aria-hidden="true">@</span>
+                      ) : null}
+                      {caption.locationName ? (
+                        caption.locationUrl ? (
+                          <a
+                            href={caption.locationUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-sun"
+                            onClick={handleCaptionClick}
+                          >
+                            {caption.locationName}
+                          </a>
+                        ) : (
+                          <span>{caption.locationName}</span>
+                        )
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <h2 className="font-sans text-xl font-semibold leading-tight text-gray-950 md:text-2xl">
+                    {caption.title}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseButton}
+                  aria-label="Close image viewer"
+                  className="-mt-2 -mr-2 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-gray-500 transition-colors hover:text-gray-950"
+                >
+                  <X aria-hidden="true" className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleCloseButton}
-                aria-label="Close image viewer"
-                className="-mt-2 -mr-2 flex h-10 w-10 shrink-0 items-center justify-center text-gray-500 transition-colors hover:text-gray-950"
-              >
-                <X aria-hidden="true" className="h-5 w-5" />
-              </button>
-            </div>
-            {caption.description ? (
-              <p className="mt-5 font-serif text-base leading-relaxed text-gray-700">
-                {caption.description}
-              </p>
-            ) : null}
-            <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
-              <button
-                type="button"
-                onClick={handleShare}
-                className="inline-flex h-9 items-center gap-2 border border-gray-300 px-3 font-sans text-xs font-semibold text-gray-800 transition-colors hover:border-gray-950 hover:text-gray-950"
-              >
-                <Share2 aria-hidden="true" className="h-3.5 w-3.5" />
-                {copiedUrl === captionShareUrl ? 'Copied' : 'Share'}
-              </button>
-              <Link
-                href={caption.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-sans text-xs text-gray-500 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-sun"
-                onClick={handleCaptionClick}
-              >
-                Open post
-              </Link>
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 md:px-7">
+                {caption.description ? (
+                  <p className="mt-3 font-serif text-base leading-relaxed text-gray-700 md:mt-5">
+                    {caption.description}
+                  </p>
+                ) : null}
+              </div>
+              <footer className="flex shrink-0 items-center justify-end gap-4 border-gray-200 border-t px-5 py-4 sm:justify-between md:px-7 md:py-5">
+                <span className="hidden font-sans text-xs text-gray-400 sm:inline">
+                  Tsundoku
+                </span>
+                <Link
+                  href={caption.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 font-sans text-sm font-semibold text-gray-900 transition-colors hover:text-sun"
+                  onClick={handleCaptionClick}
+                >
+                  Open post
+                  <span aria-hidden="true">-&gt;</span>
+                </Link>
+              </footer>
             </div>
           </aside>
         ) : null}
