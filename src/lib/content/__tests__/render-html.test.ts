@@ -1,5 +1,3 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { getAllPosts } from '@/lib/content/loader'
 import {
@@ -39,7 +37,7 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).not.toContain('A subtitle')
   })
 
-  it('renders cover image with email-optimized URL for relative path', () => {
+  it('renders cover image with Vercel-optimized URL for relative path', () => {
     const html = renderEmailHeaderHtml(
       'My Post',
       siteUrl,
@@ -49,8 +47,10 @@ describe('renderEmailHeaderHtml', () => {
       'Cover alt'
     )
     expect(html).toContain(
-      'src="https://www.philipithomas.com/images/email/covers/cover.jpg"'
+      'src="https://www.philipithomas.com/_next/image?url=%2Fimages%2Fcovers%2Fcover.jpg'
     )
+    expect(html).toContain('w=640')
+    expect(html).toContain('q=100')
     expect(html).toContain('alt="Cover alt"')
     expect(html).toContain('width="600"')
     expect(html).toContain('max-width: 600px')
@@ -168,81 +168,24 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('The subtitle</p>')
     expect(html).toContain('Philip I. Thomas</a>')
     expect(html).toContain(
-      'src="https://www.philipithomas.com/images/email/covers/hero.jpg"'
+      'src="https://www.philipithomas.com/_next/image?url=%2Fimages%2Fcovers%2Fhero.jpg'
     )
     expect(html).toContain('alt="Hero image"')
-  })
-})
-
-const EMAIL_COVERS_DIR = path.join(process.cwd(), 'public/images/email/covers')
-const EMAIL_THUMBS_DIR = path.join(
-  process.cwd(),
-  'public/images/email/thumbnails'
-)
-const MAX_EMAIL_COVER_SIZE = 110 * 1024 // 110KB
-const MAX_EMAIL_THUMB_SIZE = 15 * 1024 // 15KB
-
-describe('email image variants', () => {
-  const posts = getAllPosts()
-  const postsWithCovers = posts.filter((p) => p.frontmatter.coverImage)
-
-  it('every cover image has an email cover variant', () => {
-    for (const post of postsWithCovers) {
-      const basename = path.basename(post.frontmatter.coverImage!)
-      const emailPath = path.join(EMAIL_COVERS_DIR, basename)
-      expect(
-        fs.existsSync(emailPath),
-        `Missing email cover for ${post.slug}: ${emailPath}`
-      ).toBe(true)
-    }
-  })
-
-  it('every cover image has an email thumbnail variant', () => {
-    for (const post of postsWithCovers) {
-      const basename = path.basename(post.frontmatter.coverImage!)
-      const thumbPath = path.join(EMAIL_THUMBS_DIR, basename)
-      expect(
-        fs.existsSync(thumbPath),
-        `Missing email thumbnail for ${post.slug}: ${thumbPath}`
-      ).toBe(true)
-    }
-  })
-
-  it(`email cover variants are under ${MAX_EMAIL_COVER_SIZE / 1024}KB`, () => {
-    for (const post of postsWithCovers) {
-      const basename = path.basename(post.frontmatter.coverImage!)
-      const emailPath = path.join(EMAIL_COVERS_DIR, basename)
-      if (!fs.existsSync(emailPath)) continue
-      const size = fs.statSync(emailPath).size
-      expect(
-        size,
-        `Email cover too large for ${post.slug}: ${(size / 1024).toFixed(0)}KB > ${MAX_EMAIL_COVER_SIZE / 1024}KB`
-      ).toBeLessThanOrEqual(MAX_EMAIL_COVER_SIZE)
-    }
-  })
-
-  it(`email thumbnail variants are under ${MAX_EMAIL_THUMB_SIZE / 1024}KB`, () => {
-    for (const post of postsWithCovers) {
-      const basename = path.basename(post.frontmatter.coverImage!)
-      const thumbPath = path.join(EMAIL_THUMBS_DIR, basename)
-      if (!fs.existsSync(thumbPath)) continue
-      const size = fs.statSync(thumbPath).size
-      expect(
-        size,
-        `Email thumbnail too large for ${post.slug}: ${(size / 1024).toFixed(0)}KB > ${MAX_EMAIL_THUMB_SIZE / 1024}KB`
-      ).toBeLessThanOrEqual(MAX_EMAIL_THUMB_SIZE)
-    }
   })
 })
 
 describe('renderRelatedPostsHtml', () => {
   const siteUrl = 'https://www.philipithomas.com'
 
-  it('uses email thumbnail paths for cover images', () => {
+  it('uses Vercel-optimized thumbnail URLs for cover images', () => {
     const posts = getAllPosts().filter((p) => p.frontmatter.coverImage)
     if (posts.length === 0) return
     const html = renderRelatedPostsHtml(posts.slice(0, 3), siteUrl)
-    expect(html).toContain('/images/email/thumbnails/')
+    expect(html).toContain(
+      'src="https://www.philipithomas.com/_next/image?url=%2Fimages%2Fcovers%2F'
+    )
+    expect(html).toContain('w=256')
+    expect(html).toContain('q=100')
     expect(html).not.toMatch(
       /src="https:\/\/www\.philipithomas\.com\/images\/covers\//
     )
@@ -305,13 +248,15 @@ describe('renderMarkdownToHtml', () => {
     expect(html).toMatch(/<a[^>]*style="[^"]*text-decoration: underline/)
   })
 
-  it('rewrites in-article post images to their email variants', async () => {
+  it('rewrites in-article post images to Vercel-optimized URLs', async () => {
     const html = await renderMarkdownToHtml(
       '![A photo](/images/posts/october-2023/IMG_9933.JPG)'
     )
     expect(html).toContain(
-      'src="/images/email/posts/october-2023/IMG_9933.JPG"'
+      'src="/_next/image?url=%2Fimages%2Fposts%2Foctober-2023%2FIMG_9933.JPG'
     )
+    expect(html).toContain('w=640')
+    expect(html).toContain('q=100')
     expect(html).not.toContain('src="/images/posts/')
   })
 

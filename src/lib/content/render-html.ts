@@ -1,4 +1,3 @@
-import path from 'node:path'
 import rehypeSanitize from 'rehype-sanitize'
 import rehypeStringify from 'rehype-stringify'
 import remarkGfm from 'remark-gfm'
@@ -12,6 +11,9 @@ import { escapeHtml } from '@/lib/email/escape'
 const SANS_STACK = `'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`
 const SERIF_STACK = `'Tiempos Text', Georgia, 'Times New Roman', serif`
 const MONO_STACK = `'Sohne Mono', 'SF Mono', 'Fira Code', monospace`
+const EMAIL_IMAGE_WIDTH = 640
+const EMAIL_THUMBNAIL_WIDTH = 256
+const EMAIL_IMAGE_QUALITY = 100
 
 const tagStyles: Record<string, string> = {
   h1: `font-family: ${SANS_STACK}; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; margin: 32px 0 12px;`,
@@ -75,29 +77,36 @@ function applyInlineStyles() {
   }
 }
 
-function toEmailImagePath(imagePath: string): string {
-  const basename = path.basename(imagePath)
-  return `/images/email/covers/${basename}`
+function toVercelImagePath(
+  imagePath: string,
+  width: number,
+  quality = EMAIL_IMAGE_QUALITY
+): string {
+  const params = new URLSearchParams({
+    url: imagePath,
+    w: String(width),
+    q: String(quality),
+  })
+  return `/_next/image?${params.toString()}`
 }
 
-// In-article images the optimize pipeline mirrors under email/posts/ (same
-// relative path, 600px wide). GIFs and external URLs have no variant and pass
-// through untouched.
+function toVercelImageUrl(siteUrl: string, imagePath: string, width: number) {
+  if (!imagePath.startsWith('/') || imagePath.startsWith('//')) return imagePath
+  return `${siteUrl}${toVercelImagePath(imagePath, width)}`
+}
+
+// In-article images render through Vercel Image Optimization in email too.
+// GIFs and external URLs pass through untouched.
 const POST_IMAGE_SRC = /^\/images\/posts\/.+\.(jpe?g|png)$/i
 
-// Email counterpart to covers' toEmailImagePath: swaps in-article image srcs
-// for their 600px variants so emails never ship multi-megabyte camera files.
-function useEmailPostImageVariants() {
+function useVercelEmailPostImages() {
   return (tree: HastNode) => {
     const visit = (node: HastNode) => {
       if (node.type === 'element' && node.tagName === 'img') {
         const src = node.properties?.src
         if (typeof src === 'string' && POST_IMAGE_SRC.test(src)) {
           node.properties = node.properties ?? {}
-          node.properties.src = src.replace(
-            /^\/images\/posts\//,
-            '/images/email/posts/'
-          )
+          node.properties.src = toVercelImagePath(src, EMAIL_IMAGE_WIDTH)
         }
       }
       if (node.children) {
@@ -106,11 +115,6 @@ function useEmailPostImageVariants() {
     }
     visit(tree)
   }
-}
-
-function toEmailThumbPath(imagePath: string): string {
-  const basename = path.basename(imagePath)
-  return `/images/email/thumbnails/${basename}`
 }
 
 /**
@@ -131,9 +135,9 @@ export async function renderMarkdownToHtml(
     .use(rehypeSanitize)
   if (inlineStyles) {
     // Email mode: bake in typography and swap in-article images for their
-    // 600px email variants. Feeds keep clean semantic HTML and full-resolution
-    // images, absolutized later via resolveRelativeUrls.
-    processor.use(applyInlineStyles).use(useEmailPostImageVariants)
+    // Vercel-optimized variants. Feeds keep clean semantic HTML and
+    // full-resolution images, absolutized later via resolveRelativeUrls.
+    processor.use(applyInlineStyles).use(useVercelEmailPostImages)
   }
   const result = await processor.use(rehypeStringify).process(content)
 
@@ -168,9 +172,9 @@ export function renderEmailHeaderHtml(
   if (coverImage) {
     const emailPath = coverImage.startsWith('http')
       ? coverImage
-      : `${siteUrl}${toEmailImagePath(coverImage)}`
+      : toVercelImageUrl(siteUrl, coverImage, EMAIL_IMAGE_WIDTH)
     const alt = escapeHtml(coverImageAlt ?? title)
-    html += `<img src="${emailPath}" alt="${alt}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; margin: 0 0 24px;">`
+    html += `<img src="${escapeHtml(emailPath)}" alt="${alt}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; margin: 0 0 24px;">`
   }
 
   html += `<div style="font-size: 1px; line-height: 24px; height: 24px;">&nbsp;</div>`
@@ -276,7 +280,7 @@ export function renderRelatedPostsHtml(posts: Post[], siteUrl: string): string {
       const thumbnail = post.frontmatter.coverImage
         ? `<td width="100" style="padding-left: 16px; vertical-align: top;">
             <a href="${url}">
-              <img src="${siteUrl}${toEmailThumbPath(post.frontmatter.coverImage)}" alt="${escapeHtml(post.frontmatter.coverImageAlt ?? post.frontmatter.title)}" width="100" height="56" style="display: block; width: 100px; height: 56px;" />
+              <img src="${escapeHtml(toVercelImageUrl(siteUrl, post.frontmatter.coverImage, EMAIL_THUMBNAIL_WIDTH))}" alt="${escapeHtml(post.frontmatter.coverImageAlt ?? post.frontmatter.title)}" width="100" height="56" style="display: block; width: 100px; height: 56px;" />
             </a>
           </td>`
         : `<td width="100" style="padding-left: 16px; vertical-align: top;">

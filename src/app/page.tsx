@@ -56,7 +56,7 @@ export default function HomePage() {
               {...desktopPortrait}
               className="w-full max-w-md h-auto cursor-zoom-in"
               data-zoomable=""
-              data-full-src="/images/full/portrait.jpg"
+              data-full-src="/images/portrait.jpg"
             />
           </picture>
         </div>
@@ -137,7 +137,7 @@ export default function HomePage() {
                 {...mobilePortrait}
                 className="w-full h-auto cursor-zoom-in"
                 data-zoomable=""
-                data-full-src="/images/full/portrait.jpg"
+                data-full-src="/images/portrait.jpg"
               />
             </picture>
           </div>

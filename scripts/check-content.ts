@@ -17,60 +17,53 @@ import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
  * repo, no network or API keys), and fails loudly with the command to run.
  *
  *   1. Cover images referenced by frontmatter exist on disk.
- *   2. Every cover has email variants within size budget (pnpm images:optimize).
- *   3. No source image is wider than the web maximum (pnpm images:optimize).
- *   4. The committed search index matches the recomputed merkle tree over the
+ *   2. Web/email/social image sources stay within Vercel Image Optimization's
+ *      source dimension limit and local source file-size budget.
+ *   3. The committed search index matches the recomputed merkle tree over the
  *      post corpus, and related-posts.json covers every post (pnpm search:index).
- *   5. In-article images are within the long-edge cap and have an email
- *      variant within budget (pnpm images:optimize).
- *   6. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
+ *   4. In-article images stay within Vercel Image Optimization's source
+ *      dimension limit and local source file-size budget.
+ *   5. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
  *      with non-empty alt text — a missing or empty alt fails the build.
- *   7. The rendered email HTML for every post stays under Gmail's clipping
- *      threshold (warn near the line, fail over it).
+ *   6. The rendered email HTML for every non-exempt post stays under Gmail's
+ *      clipping threshold (warn near the line, fail over it).
  */
 
 const IMAGES = path.join(process.cwd(), 'public/images')
-const EMAIL_COVERS = path.join(IMAGES, 'email/covers')
-const EMAIL_THUMBS = path.join(IMAGES, 'email/thumbnails')
 const RELATED_JSON = path.join(
   process.cwd(),
   'src/generated/related-posts.json'
 )
 
-// Budgets mirror scripts/optimize-images.ts output and the render-html tests.
-const MAX_WEB_WIDTH = 2560
-const MAX_EMAIL_COVER_BYTES = 110 * 1024
-const MAX_EMAIL_THUMB_BYTES = 15 * 1024
-// In-article images: web sources are capped on the long edge (also keeps them
-// far under the 8192px Vercel image optimizer source limit), and the email
-// variants share the cover budget (both are 600px wide JPEGs).
-const MAX_POST_LONG_EDGE = 1600
-const MAX_EMAIL_POST_BYTES = MAX_EMAIL_COVER_BYTES
+// Vercel Image Optimization rejects source images above this edge limit.
+const MAX_VERCEL_SOURCE_EDGE = 8192
+// Next's default image optimizer fetch cap is 50 MB. Keep committed source
+// images under that line so Vercel can attempt runtime resizing.
+const MAX_VERCEL_SOURCE_BYTES = 50_000_000
 // Gmail clips messages near 102KB of HTML; warn close to the line, fail over it.
 const MAX_EMAIL_HTML_BYTES = 100 * 1024
 const WARN_EMAIL_HTML_BYTES = 95 * 1024
+const EMAIL_HTML_BUDGET_EXEMPT_SLUGS = new Set([
+  // Old archive post, not sent as a newsletter from this site.
+  'rethinking-work-beyond-the-factory',
+])
 
 const errors: string[] = []
 const warnings: string[] = []
 
-function checkEmailVariant(
-  dir: string,
-  basename: string,
-  budget: number,
-  kind: string,
-  slug: string
-) {
-  const variant = path.join(dir, basename)
-  if (!fs.existsSync(variant)) {
+async function checkVercelSourceImage(filePath: string) {
+  const bytes = fs.statSync(filePath).size
+  if (bytes > MAX_VERCEL_SOURCE_BYTES) {
     errors.push(
-      `${slug}: missing email ${kind} ${path.relative(process.cwd(), variant)} — run \`pnpm images:optimize\``
+      `${path.relative(process.cwd(), filePath)} is ${(bytes / 1024 / 1024).toFixed(1)}MB (budget ${MAX_VERCEL_SOURCE_BYTES / 1024 / 1024}MB for Vercel Image Optimization sources)`
     )
-    return
   }
-  const size = fs.statSync(variant).size
-  if (size > budget) {
+
+  const meta = await sharp(filePath).metadata()
+  const longest = Math.max(meta.width ?? 0, meta.height ?? 0)
+  if (longest > MAX_VERCEL_SOURCE_EDGE) {
     errors.push(
-      `${slug}: email ${kind} ${basename} is ${(size / 1024).toFixed(0)}KB (budget ${budget / 1024}KB) — run \`pnpm images:optimize\``
+      `${path.relative(process.cwd(), filePath)} is ${longest}px on its longest side (max ${MAX_VERCEL_SOURCE_EDGE} for Vercel Image Optimization)`
     )
   }
 }
@@ -78,7 +71,7 @@ function checkEmailVariant(
 async function main() {
   const posts = getAllPosts()
 
-  // 1 + 2: cover images and their email variants
+  // 1 + 2: cover images and their Vercel Image Optimization source limits
   for (const post of posts) {
     const cover = post.frontmatter.coverImage
     if (!cover || cover.startsWith('http')) continue
@@ -87,46 +80,18 @@ async function main() {
       errors.push(`${post.slug}: coverImage ${cover} does not exist on disk`)
       continue
     }
-    const basename = path.basename(cover)
-    checkEmailVariant(
-      EMAIL_COVERS,
-      basename,
-      MAX_EMAIL_COVER_BYTES,
-      'cover',
-      post.slug
-    )
-    checkEmailVariant(
-      EMAIL_THUMBS,
-      basename,
-      MAX_EMAIL_THUMB_BYTES,
-      'thumbnail',
-      post.slug
-    )
+    await checkVercelSourceImage(source)
   }
 
-  // 3: unresized source images (covers + heroes, same set images:optimize handles)
+  // 2: hero sources must be valid Vercel Image Optimization inputs
   const sources = ['portrait.jpg', 'philip-horizontal.jpg']
     .map((name) => path.join(IMAGES, name))
     .filter((p) => fs.existsSync(p))
-  const coversDir = path.join(IMAGES, 'covers')
-  if (fs.existsSync(coversDir)) {
-    for (const file of fs.readdirSync(coversDir)) {
-      if (/\.(jpe?g|png)$/i.test(file)) sources.push(path.join(coversDir, file))
-    }
-  }
   for (const src of sources) {
-    const meta = await sharp(src).metadata()
-    if ((meta.width ?? 0) > MAX_WEB_WIDTH) {
-      errors.push(
-        `${path.relative(process.cwd(), src)} is ${meta.width}px wide (max ${MAX_WEB_WIDTH}) — run \`pnpm images:optimize\``
-      )
-    }
+    await checkVercelSourceImage(src)
   }
 
-  // 5: in-article images go through the same pipeline as covers — the web
-  // source is capped at MAX_POST_LONG_EDGE and a 600px email variant exists
-  // under email/posts/ within budget. Emails reference those variants, so a
-  // missing or oversized one ships a degraded newsletter with no local signal.
+  // 4: in-article image sources must be valid Vercel Image Optimization inputs.
   const postsDir = path.join(IMAGES, 'posts')
   if (fs.existsSync(postsDir)) {
     const stack = [postsDir]
@@ -139,32 +104,12 @@ async function main() {
           continue
         }
         if (!/\.(jpe?g|png)$/i.test(entry.name)) continue
-        const meta = await sharp(full).metadata()
-        const longest = Math.max(meta.width ?? 0, meta.height ?? 0)
-        if (longest > MAX_POST_LONG_EDGE) {
-          errors.push(
-            `${path.relative(process.cwd(), full)} is ${longest}px on its longest side (max ${MAX_POST_LONG_EDGE}) — run \`pnpm images:optimize\``
-          )
-        }
-        const rel = path.relative(IMAGES, full)
-        const variant = path.join(IMAGES, 'email', rel)
-        if (!fs.existsSync(variant)) {
-          errors.push(
-            `${rel}: missing email variant ${path.relative(process.cwd(), variant)} — run \`pnpm images:optimize\``
-          )
-          continue
-        }
-        const size = fs.statSync(variant).size
-        if (size > MAX_EMAIL_POST_BYTES) {
-          errors.push(
-            `${rel}: email variant is ${(size / 1024).toFixed(0)}KB (budget ${MAX_EMAIL_POST_BYTES / 1024}KB) — run \`pnpm images:optimize\``
-          )
-        }
+        await checkVercelSourceImage(full)
       }
     }
   }
 
-  // 4a: the committed search index matches the recomputed merkle tree
+  // 3a: the committed search index matches the recomputed merkle tree
   // (offline — recomputes chunk hashes from content/, no embedding calls)
   const index = loadSearchIndex()
   if (!index) {
@@ -260,6 +205,8 @@ async function main() {
   // the unsubscribe link.
   const unsubscribeUrl = `${siteConfig.url}/unsubscribe?token=00000000-0000-0000-0000-000000000000`
   for (const post of posts) {
+    if (EMAIL_HTML_BUDGET_EXEMPT_SLUGS.has(post.slug)) continue
+
     const body = await buildEmailBodyHtml(post)
     const html = renderFullNewsletter({
       bodyHtml: body.html,

@@ -31,6 +31,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
+    qualities: [100],
     minimumCacheTTL: 2678400,
     // 1920 stays: the post hero renders 1280px CSS (100vw under 1312px), so
     // 1x desktops need 1280 and 2x prose images need 1344 — both select 1920.
