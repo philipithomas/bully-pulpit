@@ -47,4 +47,7 @@ coverImage: "/images/covers/slug.jpg"  # optional
 
 ## License
 
-MIT - Philip I. Thomas
+Copyright (c) 2020-2026 The Contraption Company LLC. All rights reserved.
+
+This repository is source-available for viewing and reference, but no open
+license is granted. See [LICENSE](LICENSE).
