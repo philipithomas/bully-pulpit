@@ -11,6 +11,7 @@
     "start": "next start",
     "check": "biome check .",
     "test": "vitest run",
+    "search:posts": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/search-posts.ts",
     "search:index": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/generate-search-index.ts",
     "content:check": "tsx scripts/check-content.ts",
     "links:check": "tsx scripts/check-links.ts",

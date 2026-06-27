@@ -63,6 +63,7 @@ export interface HybridSearchOptions {
   vectorLimit?: number
   weights?: HybridSearchWeights
   embeddingTimeoutMs?: number
+  useVector?: boolean
 }
 
 interface VectorEntry {
@@ -180,6 +181,7 @@ export async function hybridSearchPosts(
   const maxExcerpts = options.maxExcerpts ?? DEFAULT_MAX_EXCERPTS
   const vectorLimit = options.vectorLimit ?? DEFAULT_VECTOR_LIMIT
   const weights = options.weights ?? HYBRID_SEARCH_WEIGHTS
+  const useVector = options.useVector ?? true
   const embeddingTimeoutMs =
     options.embeddingTimeoutMs ?? DEFAULT_QUERY_EMBEDDING_TIMEOUT_MS
 
@@ -196,7 +198,7 @@ export async function hybridSearchPosts(
   const vectorRanking: string[] = []
   let mode: HybridSearchResponse['mode'] = 'lexical'
 
-  if (store.entries.length > 0) {
+  if (useVector && store.entries.length > 0) {
     try {
       const queryVector = await embedQueryWithTimeout(query, embeddingTimeoutMs)
       const top = topKBySimilarity(
