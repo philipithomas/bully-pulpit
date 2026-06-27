@@ -14,16 +14,23 @@ export interface ZoomGalleryItem {
   src: string
   fullSrc: string | null
   alt: string
-  caption?: { href: string; title: string } | null
+  caption?: {
+    href: string
+    title: string
+    description?: string | null
+  } | null
 }
 
 export interface ZoomedImage {
   src: string
   fullSrc: string | null
   alt: string
-  /** Post attribution shown as an overlay caption (the photography grid);
-   *  null for prose images, which render no caption at all. */
-  caption?: { href: string; title: string } | null
+  /** Optional post caption shown in the overlay; omitted for plain galleries. */
+  caption?: {
+    href: string
+    title: string
+    description?: string | null
+  } | null
   /** Viewport rect of the clicked image: where the zoom starts and ends. */
   rect: { top: number; left: number; width: number; height: number } | null
   gallery?: {
@@ -91,7 +98,10 @@ export function ImageZoomOverlay({
   const immediateRef = useRef<HTMLImageElement>(null)
   const captionLinkRef = useRef<HTMLAnchorElement>(null)
   const closingRef = useRef(false)
-  const hasGallery = Boolean(image.gallery && image.gallery.items.length > 1)
+  const gallery = image.gallery ?? null
+  const hasGallery = Boolean(gallery && gallery.items.length > 1)
+  const canPrevious = Boolean(gallery && gallery.index > 0)
+  const canNext = Boolean(gallery && gallery.index < gallery.items.length - 1)
 
   // Open: animate the image from its on-page rect to the centered layout
   // position. Reduced motion, a missing rect, or a not-yet-measurable layout
@@ -151,11 +161,11 @@ export function ImageZoomOverlay({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose()
-      if (hasGallery && e.key === 'ArrowLeft') {
+      if (hasGallery && canPrevious && e.key === 'ArrowLeft') {
         e.preventDefault()
         onNavigate?.(-1)
       }
-      if (hasGallery && e.key === 'ArrowRight') {
+      if (hasGallery && canNext && e.key === 'ArrowRight') {
         e.preventDefault()
         onNavigate?.(1)
       }
@@ -171,7 +181,7 @@ export function ImageZoomOverlay({
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [handleClose, hasGallery, onNavigate])
+  }, [canNext, canPrevious, handleClose, hasGallery, onNavigate])
 
   // Scrolling closes, like medium-zoom: the reader is leaving, get out of
   // the way.
@@ -256,16 +266,18 @@ export function ImageZoomOverlay({
   const handlePrevious = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation()
+      if (!canPrevious) return
       onNavigate?.(-1)
     },
-    [onNavigate]
+    [canPrevious, onNavigate]
   )
   const handleNext = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation()
+      if (!canNext) return
       onNavigate?.(1)
     },
-    [onNavigate]
+    [canNext, onNavigate]
   )
 
   return (
@@ -326,25 +338,28 @@ export function ImageZoomOverlay({
           />
         ) : null}
       </div>
-      {/* Post attribution for gallery photos. A sibling of the FLIP
-          container so it fades with the backdrop instead of animating with
-          the image. Clicks on the surrounding text still bubble up and
-          close; only the link itself stops propagation so it can navigate
-          (the opener clears the zoom on pathname change, and the body
-          scroll lock releases when the overlay unmounts). */}
+      {/* Optional post caption. A sibling of the FLIP container so it fades
+          with the backdrop instead of animating with the image. Clicks on
+          surrounding text still bubble up and close; the More link itself
+          stops propagation so it can navigate. */}
       {caption ? (
-        <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-1.5 px-6 text-center">
-          {image.alt ? (
-            <p className="font-serif text-sm text-white/90">{image.alt}</p>
-          ) : null}
-          <Link
-            ref={captionLinkRef}
-            href={caption.href}
-            className="text-xs text-gray-300 underline decoration-gray-500 underline-offset-4 hover:text-white"
-            onClick={handleCaptionClick}
-          >
-            Featured on {caption.title}
-          </Link>
+        <div className="absolute inset-x-0 bottom-6 flex justify-center px-6 text-center">
+          <div className="max-w-xl text-white">
+            <p className="font-sans text-sm font-semibold">{caption.title}</p>
+            {caption.description ? (
+              <p className="mt-2 overflow-hidden font-serif text-sm leading-relaxed text-white/85 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+                {caption.description}
+              </p>
+            ) : null}
+            <Link
+              ref={captionLinkRef}
+              href={caption.href}
+              className="mt-3 inline-flex font-sans text-xs font-medium text-gray-300 underline decoration-gray-500 underline-offset-4 transition-colors hover:text-white"
+              onClick={handleCaptionClick}
+            >
+              More
+            </Link>
+          </div>
         </div>
       ) : null}
       {hasGallery && (
@@ -353,7 +368,12 @@ export function ImageZoomOverlay({
             type="button"
             onClick={handlePrevious}
             aria-label="Previous image"
-            className="-translate-y-1/2 absolute top-1/2 left-4 p-3 text-white/75 transition-colors hover:text-white"
+            disabled={!canPrevious}
+            className={`-translate-y-1/2 absolute top-1/2 left-4 p-3 transition-colors ${
+              canPrevious
+                ? 'text-white/75 hover:text-white'
+                : 'cursor-default text-white/20'
+            }`}
           >
             <ChevronLeft aria-hidden="true" className="h-8 w-8" />
           </button>
@@ -361,7 +381,12 @@ export function ImageZoomOverlay({
             type="button"
             onClick={handleNext}
             aria-label="Next image"
-            className="-translate-y-1/2 absolute top-1/2 right-4 p-3 text-white/75 transition-colors hover:text-white"
+            disabled={!canNext}
+            className={`-translate-y-1/2 absolute top-1/2 right-4 p-3 transition-colors ${
+              canNext
+                ? 'text-white/75 hover:text-white'
+                : 'cursor-default text-white/20'
+            }`}
           >
             <ChevronRight aria-hidden="true" className="h-8 w-8" />
           </button>

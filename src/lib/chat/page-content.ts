@@ -21,7 +21,7 @@ He publishes four newsletters:
 - Contraption (/contraption): Projects and essays.
 - Workshop (/workshop): Journal about work in progress.
 - Postcard (/postcard): What I'm up to.
-- Tsundoku (/tsundoku): Pop-up newsletter of Japan photos.
+- Tsundoku (/tsundoku): Pop-up photography newsletter.
 
 The newsletters are available by email, RSS, or snail mail, and the homepage has a signup form.`
 

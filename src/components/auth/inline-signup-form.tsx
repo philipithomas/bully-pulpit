@@ -22,6 +22,7 @@ interface Props {
   className?: string
   headerText?: string
   newsletters?: Newsletter[]
+  align?: 'start' | 'center'
   /**
    * When true, fetches the live subscriber count client-side and uses it as the
    * header text ("Join N other subscribers:"). Lets the host page stay static.
@@ -37,6 +38,7 @@ export function InlineSignupForm({
   className,
   headerText,
   newsletters = [...defaultSignupNewsletters],
+  align = 'start',
   showSubscriberCount = false,
 }: Props) {
   const { user } = useAuthContext()
@@ -175,14 +177,16 @@ export function InlineSignupForm({
   return (
     <form
       onSubmit={handleEmailSubmit}
-      className={`flex flex-col items-start ${className ?? ''}`}
+      className={`flex flex-col ${
+        align === 'center' ? 'items-center' : 'items-start'
+      } ${className ?? ''}`}
     >
       {resolvedHeaderText && (
         <p className="font-sans text-lg font-medium mb-3 text-gray-800">
           {resolvedHeaderText}
         </p>
       )}
-      <div className="flex items-center w-full sm:w-2/3">
+      <div className="flex items-center w-full max-w-md">
         <input
           type="email"
           name="email"

@@ -18,6 +18,7 @@ export default function HomePage() {
     siteConfig.newsletters.contraption,
     siteConfig.newsletters.workshop,
     siteConfig.newsletters.postcard,
+    siteConfig.newsletters.tsundoku,
   ]
 
   // Art-directed portraits: each layout slot renders a <picture> carrying
@@ -152,7 +153,7 @@ export default function HomePage() {
           {/* Newsletter directory */}
           <div className="mt-8">
             <p className="font-serif text-sm text-gray-600 mb-6">
-              I publish three standing newsletters:
+              I publish these newsletters:
             </p>
             <div className="space-y-4">
               {newsletters.map((nl) => (
@@ -161,7 +162,7 @@ export default function HomePage() {
                   href={`/${nl.slug}`}
                   className="flex items-center gap-3 group"
                 >
-                  <span className="w-[76px] shrink-0 flex items-center">
+                  <span className="w-[104px] shrink-0 flex items-center">
                     <Image
                       src={nl.logo.src}
                       alt={nl.name}
@@ -177,15 +178,6 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
-            <p className="font-serif text-sm text-gray-500 mt-6">
-              <Link
-                href="/tsundoku"
-                className="underline decoration-rising-sun underline-offset-2 hover:text-rising-sun transition-colors duration-300"
-              >
-                Tsundoku
-              </Link>{' '}
-              is a pop-up newsletter of Japan photos.
-            </p>
             <p className="font-serif text-sm text-gray-500 mt-3">
               Available by email or{' '}
               <Link

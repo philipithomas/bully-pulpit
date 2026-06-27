@@ -158,18 +158,24 @@ export function renderEmailHeaderHtml(
 
   let html = ''
 
-  if (publishedAt) {
-    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: #7E7A73; text-align: center; margin: 0 0 12px;">${publishedAt}</p>`
+  if (publishedAt || location) {
+    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0; color: #7E7A73; text-align: center; margin: 0 0 12px;">`
+    if (publishedAt) {
+      html += escapeHtml(publishedAt)
+    }
+    if (publishedAt && location) {
+      html += ` <span aria-hidden="true">@</span> `
+    }
+    if (location) {
+      html += `<a href="${escapeHtml(location.url)}" style="color: #7E7A73; text-decoration: underline; text-decoration-color: #B1ADA6;">${escapeHtml(location.name)}</a>`
+    }
+    html += `</p>`
   }
 
   html += `<h1 style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; text-align: center; margin: 0 0 4px;"><a href="${postUrl}" style="text-decoration: none; color: #111110;">${escapeHtml(title)}</a></h1>`
 
   if (subtitle) {
     html += `<p style="font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 400; color: #625e58; line-height: 1.75; text-align: center; margin: 0 0 4px;">${escapeHtml(subtitle)}</p>`
-  }
-
-  if (location) {
-    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #7E7A73; text-align: center; margin: 8px 0 16px;"><a href="${escapeHtml(location.url)}" style="color: #7E7A73; text-decoration: underline; text-decoration-color: #B1ADA6;">${escapeHtml(location.name)}</a></p>`
   }
 
   html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: #625e58; text-align: center; margin: 0 0 24px;"><a href="${siteUrl}" style="color: #625e58; text-decoration: none;">Philip I. Thomas</a></p>`

@@ -39,13 +39,17 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
     element instanceof HTMLImageElement ? element : element.querySelector('img')
   if (!img) return null
   const fullSrc = element.dataset.fullSrc ?? img.dataset.fullSrc ?? null
-  const href = element.dataset.zoomLinkHref ?? img.dataset.zoomLinkHref
-  const title = element.dataset.zoomLinkTitle ?? img.dataset.zoomLinkTitle
+  const href = element.dataset.zoomCaptionHref ?? img.dataset.zoomCaptionHref
+  const title = element.dataset.zoomCaptionTitle ?? img.dataset.zoomCaptionTitle
+  const description =
+    element.dataset.zoomCaptionDescription ??
+    img.dataset.zoomCaptionDescription ??
+    null
   return {
     src: img.currentSrc || img.src,
     fullSrc,
     alt: img.alt ?? '',
-    caption: href && title ? { href, title } : null,
+    caption: href && title ? { href, title, description } : null,
   }
 }
 
@@ -59,9 +63,8 @@ export function ImageZoom() {
     setZoomedImage((current) => {
       const gallery = current?.gallery
       if (!gallery) return current
-      const index =
-        (gallery.index + direction + gallery.items.length) %
-        gallery.items.length
+      const index = gallery.index + direction
+      if (index < 0 || index >= gallery.items.length) return current
       return {
         ...gallery.items[index],
         rect: null,

@@ -200,6 +200,18 @@ export default async function SlugPage({ params }: Props) {
   const bg = post?.newsletter ? bgMap[post.newsletter] : undefined
   const location = post?.frontmatter.location ?? null
   const locationHoverText = post ? accentHoverText[post.newsletter] : ''
+  const postDate =
+    post && post.newsletter !== 'postcard' ? post.frontmatter.publishedAt : null
+  const showPostMetadata = Boolean(postDate || location)
+  const coverZoomCaption =
+    post?.newsletter === 'tsundoku'
+      ? {
+          'data-zoom-caption-href': `/${post.slug}`,
+          'data-zoom-caption-title': post.frontmatter.title,
+          'data-zoom-caption-description':
+            post.frontmatter.description ?? post.excerpt,
+        }
+      : {}
 
   return (
     <article className={bg?.className} data-bg={bg?.dataBg}>
@@ -212,13 +224,22 @@ export default async function SlugPage({ params }: Props) {
       <div className="container py-12 md:py-16">
         {/* Header */}
         <header className="flex flex-col items-center text-center mx-auto max-w-3xl mb-10">
-          {post &&
-            post.newsletter !== 'postcard' &&
-            post.frontmatter.publishedAt && (
-              <time className="font-mono text-xs text-gray-500">
-                {post.frontmatter.publishedAt}
-              </time>
-            )}
+          {showPostMetadata ? (
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-xs text-gray-500">
+              {postDate ? <time>{postDate}</time> : null}
+              {postDate && location ? <span aria-hidden="true">@</span> : null}
+              {location ? (
+                <a
+                  href={location.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`underline decoration-gray-300 underline-offset-2 ${locationHoverText} transition-colors duration-300`}
+                >
+                  {location.name}
+                </a>
+              ) : null}
+            </div>
+          ) : null}
           <h1 className="font-sans font-semibold text-3xl leading-tight tracking-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl text-pretty mt-3">
             {item.frontmatter.title}
           </h1>
@@ -227,16 +248,6 @@ export default async function SlugPage({ params }: Props) {
               {item.frontmatter.description}
             </p>
           )}
-          {location ? (
-            <a
-              href={location.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`mt-4 font-mono text-xs text-gray-500 underline decoration-gray-300 underline-offset-2 ${locationHoverText} transition-colors duration-300`}
-            >
-              {location.name}
-            </a>
-          ) : null}
           {post && (
             <a href="/" className="flex items-center gap-3 mt-6 group">
               <Image
@@ -265,6 +276,7 @@ export default async function SlugPage({ params }: Props) {
               height={post?.coverDimensions?.height ?? 640}
               data-zoomable=""
               data-full-src={item.frontmatter.coverImage}
+              {...coverZoomCaption}
               className="w-full cursor-zoom-in"
               priority
               sizes={POST_COVER_SIZES}

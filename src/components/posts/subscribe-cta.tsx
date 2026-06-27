@@ -93,7 +93,7 @@ export function SubscribeCta({
   if (user && subscribed) return null
 
   return (
-    <div className={`mx-auto max-w-2xl ${className}`}>
+    <div className={`mx-auto w-full max-w-2xl ${className}`}>
       <p className="font-serif text-gray-600 text-lg mb-5">
         Get new {newsletterNoun[newsletter]} by email.
       </p>
@@ -113,7 +113,7 @@ export function SubscribeCta({
           </span>
         </button>
       ) : (
-        <InlineSignupForm newsletters={[newsletter]} />
+        <InlineSignupForm align="center" newsletters={[newsletter]} />
       )}
     </div>
   )

@@ -35,7 +35,7 @@ const staticConfig = {
     },
     tsundoku: {
       name: 'Tsundoku',
-      tagline: 'Pop-up newsletter of Japan photos.',
+      tagline: 'Pop-up photography newsletter.',
       slug: 'tsundoku',
       color: 'rising-sun',
       logo: { src: '/images/tsundoku.svg', height: 14 },

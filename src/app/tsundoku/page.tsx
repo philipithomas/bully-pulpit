@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { SetNewsletter } from '@/components/layout/newsletter-context'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
@@ -26,6 +25,8 @@ export const metadata: Metadata = {
 const ROW_HEIGHT = 260
 const MAX_ROW_WIDTH = 1216
 const STRETCH = 1.25
+const INTRO =
+  'Starting 2026-06-26, I got a new camera and embarked on a two-week solo trip around Japan. I decided to make it photography-focused, and this pop-up newsletter documents my photography during these two weeks.'
 
 function tileSizes(ratio: number): string {
   const tabletVw = Math.min(
@@ -58,8 +59,11 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
         aria-label={coverImageAlt ?? title}
         data-zoomable=""
         data-zoom-group="tsundoku"
-        data-zoom-link-href={`/${post.slug}`}
-        data-zoom-link-title={title}
+        data-zoom-caption-href={`/${post.slug}`}
+        data-zoom-caption-title={title}
+        data-zoom-caption-description={
+          post.frontmatter.description ?? post.excerpt
+        }
         data-full-src={coverImage}
         className="relative block w-full cursor-zoom-in overflow-hidden bg-gray-100"
         style={{
@@ -107,7 +111,6 @@ export default function TsundokuPage() {
 
   return (
     <div className="bg-[#f4f4f2]" data-bg="tsundoku">
-      <SetNewsletter newsletter="tsundoku" />
       <div className="container py-12 md:py-16">
         <div className="mb-10 md:mb-12 flex flex-col items-center text-center">
           <Image
@@ -119,8 +122,8 @@ export default function TsundokuPage() {
             priority
           />
           <h1 className="sr-only">Tsundoku</h1>
-          <p className="mt-3 font-serif text-lg text-gray-600">
-            {siteConfig.newsletters.tsundoku.tagline}
+          <p className="mt-4 max-w-2xl font-serif text-lg leading-relaxed text-gray-600">
+            {INTRO}
           </p>
           <SubscribeCta newsletter="tsundoku" className="mt-8" />
         </div>

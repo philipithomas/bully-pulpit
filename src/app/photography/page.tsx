@@ -113,8 +113,6 @@ export default function PhotographyPage() {
               aria-label={photo.alt}
               data-zoomable=""
               data-zoom-group="photography"
-              data-zoom-link-href={`/${photo.post.slug}`}
-              data-zoom-link-title={photo.post.frontmatter.title}
               data-full-src={photo.src}
               className="relative block cursor-zoom-in overflow-hidden bg-gray-100"
               style={{

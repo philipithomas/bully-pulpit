@@ -130,8 +130,44 @@ describe('renderEmailHeaderHtml', () => {
     )
     expect(html).toContain('2025-01-15')
     expect(html).toContain('Sohne Mono')
-    expect(html).toContain('text-transform: uppercase')
-    expect(html).toContain('letter-spacing: 0.12em')
+    expect(html).toContain('letter-spacing: 0')
+    expect(html).not.toContain('text-transform: uppercase')
+    expect(html).not.toContain('@')
+  })
+
+  it('renders date and location in one metadata line', () => {
+    const html = renderEmailHeaderHtml(
+      'My Post',
+      siteUrl,
+      'my-post',
+      null,
+      null,
+      null,
+      '2025-01-15',
+      { name: 'Naka Bridge', url: 'https://maps.example/naka' }
+    )
+    expect(html).toContain('2025-01-15 <span aria-hidden="true">@</span> ')
+    expect(html).toContain(
+      '<a href="https://maps.example/naka" style="color: #7E7A73; text-decoration: underline; text-decoration-color: #B1ADA6;">Naka Bridge</a>'
+    )
+    expect(html.indexOf('2025-01-15')).toBeLessThan(
+      html.indexOf('My Post</a></h1>')
+    )
+  })
+
+  it('renders location without an at sign when date is absent', () => {
+    const html = renderEmailHeaderHtml(
+      'My Post',
+      siteUrl,
+      'my-post',
+      null,
+      null,
+      null,
+      null,
+      { name: 'Naka Bridge', url: 'https://maps.example/naka' }
+    )
+    expect(html).not.toContain('@')
+    expect(html).toContain('Naka Bridge</a>')
   })
 
   it('omits date when publishedAt is null', () => {
