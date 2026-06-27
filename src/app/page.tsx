@@ -15,9 +15,9 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   const newsletters = [
+    siteConfig.newsletters.postcard,
     siteConfig.newsletters.contraption,
     siteConfig.newsletters.workshop,
-    siteConfig.newsletters.postcard,
     siteConfig.newsletters.tsundoku,
   ]
 
