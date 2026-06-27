@@ -27,8 +27,11 @@ const ROW_HEIGHT = 260
 const MAX_ROW_WIDTH = 1216
 const STRETCH = 1.25
 const PHOTO_VIEWER_DESCRIPTION_MAX = 900
-const INTRO =
-  'On 26 June 2026, I got a new camera and embarked on a two-week solo trip around Japan. I decided to build the trip around taking pictures, and this pop-up newsletter documents what I saw during those two weeks.'
+const INTRO = [
+  'In Summer 2026, I found myself with unexpected downtime between jobs. I flew to Japan, bought a camera, and decided to practice photography.',
+  'My photos usually live inside essays, not social media, so I quickly accumulated a stack of unpublished photos.',
+  'This newsletter documents my favorite images from the trip.',
+]
 
 function photoViewerDescription(post: Post): string {
   const text =
@@ -129,16 +132,18 @@ export default function TsundokuPage() {
           <Image
             src="/images/tsundoku.svg"
             alt="Tsundoku"
-            width={360}
-            height={55}
-            sizes="(max-width: 640px) 78vw, 360px"
-            className="h-auto w-full max-w-[78vw] sm:max-w-[320px] md:max-w-[360px]"
+            width={300}
+            height={46}
+            sizes="(max-width: 640px) 68vw, 300px"
+            className="h-auto w-full max-w-[68vw] sm:max-w-[280px] md:max-w-[300px]"
             priority
           />
           <h1 className="sr-only">Tsundoku</h1>
-          <p className="mt-3 max-w-[42rem] text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
-            {INTRO}
-          </p>
+          <div className="mt-5 max-w-[41rem] space-y-2 text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
+            {INTRO.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </div>
           <SubscribeCta newsletter="tsundoku" className="mt-5" />
         </div>
 
