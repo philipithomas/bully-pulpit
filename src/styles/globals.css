@@ -598,6 +598,60 @@ body:has(> * [data-bg="gray-050"]) {
   cursor: zoom-in;
 }
 
+/* Slow optimized image responses should still read as intentional layout:
+   reserve the real image box and animate a quiet surface behind it. */
+.image-loading-surface,
+.image-zoom-loading-surface {
+  position: relative;
+  background-color: var(--color-gray-075);
+}
+
+.image-loading-surface::before,
+.image-zoom-loading-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 42%,
+    transparent 78%
+  );
+  transform: translateX(-100%);
+  animation: image-loading-shimmer 1.4s ease-in-out infinite;
+}
+
+.image-zoom-loading-surface {
+  overflow: hidden;
+  background-color: #151515;
+}
+
+.image-zoom-loading-surface::before {
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 42%,
+    transparent 78%
+  );
+}
+
+@keyframes image-loading-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image-loading-surface::before,
+  .image-zoom-loading-surface::before {
+    animation: none;
+    transform: none;
+    background: transparent;
+  }
+}
+
 /* ============================
    Dark viewport (404, check-email)
    ============================ */

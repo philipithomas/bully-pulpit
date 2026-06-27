@@ -23,6 +23,8 @@ export interface ZoomGalleryItem {
   src: string
   fullSrc: string | null
   alt: string
+  width: number | null
+  height: number | null
   caption?: ZoomCaption | null
 }
 
@@ -30,6 +32,8 @@ export interface ZoomedImage {
   src: string
   fullSrc: string | null
   alt: string
+  width: number | null
+  height: number | null
   /** Optional post caption shown in the overlay; omitted for plain galleries. */
   caption?: ZoomCaption | null
   /** Viewport rect of the clicked image: where the zoom starts and ends. */
@@ -87,6 +91,34 @@ function focusableOverlayItems(container: HTMLElement | null): HTMLElement[] {
   ).filter((el) => el.getClientRects().length > 0)
 }
 
+function containedLoadingDimensions(
+  image: ZoomedImage,
+  hasCaption: boolean
+): { width: number; height: number } | null {
+  const sourceWidth = image.width ?? image.rect?.width ?? null
+  const sourceHeight = image.height ?? image.rect?.height ?? null
+  if (!sourceWidth || !sourceHeight) return null
+
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  const maxWidth = hasCaption
+    ? viewportWidth >= 768
+      ? Math.max(viewportWidth - 26 * 16, 1)
+      : Math.max(viewportWidth - 16, 1)
+    : viewportWidth * 0.9
+  const maxHeight = hasCaption
+    ? viewportWidth >= 768
+      ? viewportHeight
+      : viewportHeight * (viewportWidth >= 640 ? 0.62 : 0.58)
+    : viewportHeight * 0.9
+  const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight, 1)
+
+  return {
+    width: Math.round(sourceWidth * scale),
+    height: Math.round(sourceHeight * scale),
+  }
+}
+
 export function ImageZoomOverlay({
   image,
   onClose,
@@ -103,6 +135,7 @@ export function ImageZoomOverlay({
   } | null>(null)
   const [upgrade, setUpgrade] = useState<Upgrade | null>(null)
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
+  const [immediateLoaded, setImmediateLoaded] = useState(false)
   const overlayRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const immediateRef = useRef<HTMLImageElement>(null)
@@ -261,6 +294,7 @@ export function ImageZoomOverlay({
     if (!imageResetKey) return
     setHdSize(null)
     setUpgrade(null)
+    setImmediateLoaded(Boolean(immediateRef.current?.complete))
   }, [imageResetKey])
 
   // Apply the upgrade once the open animation has settled, so the layout
@@ -286,11 +320,15 @@ export function ImageZoomOverlay({
     return () => clearTimeout(timer)
   }, [upgrade])
 
+  const fullSrc = image.fullSrc
   const caption = image.caption ?? null
   const hasCaption = caption !== null
-  const fullSrc = image.fullSrc
   const showFull = upgrade !== null && fullSrc !== null
   const showImmediate = upgrade === null || upgrade.fading
+  const showLoadingSurface = showImmediate && !showFull && !immediateLoaded
+  const loadingDimensions = showLoadingSurface
+    ? containedLoadingDimensions(image, hasCaption)
+    : null
   const holdOutgoing =
     upgrade !== null && upgrade.outgoingWidth > 0 && upgrade.outgoingHeight > 0
   const imageBounds = hasCaption
@@ -305,6 +343,7 @@ export function ImageZoomOverlay({
     await navigator.clipboard.writeText(url)
     setCopiedUrl(url)
   }, [])
+  const handleImmediateLoad = useCallback(() => setImmediateLoaded(true), [])
   const handleShare = useCallback(
     async (e: MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation()
@@ -402,7 +441,18 @@ export function ImageZoomOverlay({
           {/* The full image defines the layout once it has loaded; the
               outgoing image is pinned over it at its captured size so the
               crossfade never moves pixels. */}
-          <div ref={containerRef} className="relative">
+          <div
+            ref={containerRef}
+            className={`relative ${showLoadingSurface ? 'image-zoom-loading-surface' : ''}`}
+            style={
+              loadingDimensions
+                ? {
+                    width: loadingDimensions.width,
+                    height: loadingDimensions.height,
+                  }
+                : undefined
+            }
+          >
             {showFull ? (
               // biome-ignore lint/performance/noImgElement: the overlay renders the raw full-resolution asset at runtime
               <img
@@ -425,6 +475,8 @@ export function ImageZoomOverlay({
                 src={image.src}
                 alt={showFull ? '' : image.alt}
                 aria-hidden={showFull || undefined}
+                onLoad={handleImmediateLoad}
+                onError={handleImmediateLoad}
                 className={
                   showFull
                     ? holdOutgoing

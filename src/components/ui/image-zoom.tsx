@@ -51,10 +51,21 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
     img.dataset.zoomCaptionLocationName
   const locationUrl =
     element.dataset.zoomCaptionLocationUrl ?? img.dataset.zoomCaptionLocationUrl
+  const rect = img.getBoundingClientRect()
+  const width =
+    img.naturalWidth > 0 ? img.naturalWidth : rect.width > 0 ? rect.width : null
+  const height =
+    img.naturalHeight > 0
+      ? img.naturalHeight
+      : rect.height > 0
+        ? rect.height
+        : null
   return {
     src: img.currentSrc || img.src,
     fullSrc,
     alt: img.alt ?? '',
+    width,
+    height,
     caption:
       href && title
         ? { href, title, description, date, locationName, locationUrl }

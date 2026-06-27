@@ -78,7 +78,7 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
         data-zoom-caption-location-name={location?.name}
         data-zoom-caption-location-url={location?.url}
         data-full-src={coverImage}
-        className="relative block w-full cursor-zoom-in overflow-hidden bg-gray-100"
+        className="image-loading-surface relative block w-full cursor-zoom-in overflow-hidden bg-gray-100"
         style={{
           aspectRatio: `${post.coverDimensions.width} / ${post.coverDimensions.height}`,
         }}
@@ -88,7 +88,7 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
           alt={coverImageAlt ?? title}
           fill
           sizes={tileSizes(ratio)}
-          className="object-cover transition-transform duration-700 group-hover:scale-[1.01]"
+          className="z-10 object-cover transition-transform duration-700 group-hover:scale-[1.01]"
           priority={index < 3}
         />
       </button>

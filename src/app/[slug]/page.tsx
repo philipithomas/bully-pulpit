@@ -272,11 +272,11 @@ export default async function SlugPage({ params }: Props) {
           >
             {item.frontmatter.title}
           </h1>
-          {item.frontmatter.description && (
+          {item.frontmatter.description ? (
             <p className="font-serif text-gray-600 text-lg sm:text-xl max-w-prose leading-relaxed mt-4">
               {item.frontmatter.description}
             </p>
-          )}
+          ) : null}
           {post && !isTsundokuPost && (
             <a href="/" className="flex items-center gap-3 mt-6 group">
               <Image
@@ -296,9 +296,9 @@ export default async function SlugPage({ params }: Props) {
         </header>
 
         {/* Cover image */}
-        {item.frontmatter.coverImage && (
+        {item.frontmatter.coverImage ? (
           <div
-            className={`w-full overflow-hidden ${isTsundokuPost ? 'mb-8' : 'mb-10'}`}
+            className={`image-loading-surface w-full overflow-hidden ${isTsundokuPost ? 'mb-8' : 'mb-10'}`}
           >
             <Image
               src={item.frontmatter.coverImage}
@@ -308,12 +308,12 @@ export default async function SlugPage({ params }: Props) {
               data-zoomable=""
               data-full-src={item.frontmatter.coverImage}
               {...coverZoomCaption}
-              className="w-full cursor-zoom-in"
+              className="relative z-10 block w-full cursor-zoom-in"
               priority
               sizes={POST_COVER_SIZES}
             />
           </div>
-        )}
+        ) : null}
 
         {/* Content */}
         <div className="prose prose-xl font-serif mx-auto max-w-2xl">
