@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-06-27T13:54:08.295Z",
+  "generatedAt": "2026-06-27T13:59:06.365Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
         {
           "slug": "2024-02",
-          "score": 0.2920246
+          "score": 0.2992385
         },
         {
           "slug": "2025-12",
-          "score": 0.311636
+          "score": 0.3178388
         },
         {
-          "slug": "2026-01",
-          "score": 0.3173297
+          "slug": "2024-01",
+          "score": 0.320716
         }
       ]
     },
@@ -41,7 +41,7 @@
         },
         {
           "slug": "introducing-tsundoku",
-          "score": 0.4883621
+          "score": 0.4916603
         },
         {
           "slug": "digital-product-studios",
@@ -53,7 +53,7 @@
       "related": [
         {
           "slug": "introducing-tsundoku",
-          "score": 0.4621309
+          "score": 0.4577713
         },
         {
           "slug": "2023-09",
@@ -1241,7 +1241,7 @@
         },
         {
           "slug": "introducing-tsundoku",
-          "score": 0.3881194
+          "score": 0.3859904
         },
         {
           "slug": "2024-02",
