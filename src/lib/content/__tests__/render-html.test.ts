@@ -56,6 +56,21 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('max-width: 600px')
   })
 
+  it('links cover image to the post', () => {
+    const html = renderEmailHeaderHtml(
+      'My Post',
+      siteUrl,
+      'my-post',
+      null,
+      '/images/covers/cover.jpg',
+      'Cover alt'
+    )
+    expect(html).toContain(
+      '<a href="https://www.philipithomas.com/my-post" style="display: block; text-decoration: none; margin: 0 0 24px;"><img'
+    )
+    expect(html).toContain('border: 0;"></a>')
+  })
+
   it('renders cover image with absolute URL as-is', () => {
     const html = renderEmailHeaderHtml(
       'My Post',

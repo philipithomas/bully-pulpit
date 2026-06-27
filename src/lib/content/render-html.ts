@@ -174,7 +174,7 @@ export function renderEmailHeaderHtml(
       ? coverImage
       : toVercelImageUrl(siteUrl, coverImage, EMAIL_IMAGE_WIDTH)
     const alt = escapeHtml(coverImageAlt ?? title)
-    html += `<img src="${escapeHtml(emailPath)}" alt="${alt}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; margin: 0 0 24px;">`
+    html += `<a href="${postUrl}" style="display: block; text-decoration: none; margin: 0 0 24px;"><img src="${escapeHtml(emailPath)}" alt="${alt}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;"></a>`
   }
 
   html += `<div style="font-size: 1px; line-height: 24px; height: 24px;">&nbsp;</div>`
