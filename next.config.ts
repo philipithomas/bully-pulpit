@@ -15,8 +15,8 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com https://accounts.google.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.philipithomas.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com https://accounts.google.com https://unpkg.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.philipithomas.com https://unpkg.com",
       "font-src 'self' https://fonts.philipithomas.com",
       "img-src 'self' data: https:",
       "connect-src 'self' https://cloudflareinsights.com https://accounts.google.com https://oauth2.googleapis.com",
@@ -48,9 +48,10 @@ const nextConfig: NextConfig = {
       },
       // Static pages — CDN caches 1 hour, browser caches 10 min, serve stale
       // while revalidating. Excludes sitemap.xml only, so the human sitemap
-      // page at /sitemap is cached like any other static page.
+      // page at /sitemap is cached like any other static page. /mcp is also
+      // excluded because non-GET requests to that path are protocol traffic.
       {
-        source: '/:path((?!api|_next|feed|sitemap\\.xml|robots|llms).*)',
+        source: '/:path((?!api|_next|feed|sitemap\\.xml|robots|llms|mcp).*)',
         headers: [
           {
             key: 'Cache-Control',
