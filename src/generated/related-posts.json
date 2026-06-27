@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-06-27T07:29:42.786Z",
+  "generatedAt": "2026-06-27T07:40:49.836Z",
   "posts": {
     "spring-cleaning": {
       "related": [
         {
           "slug": "software-in-the-ai-era",
-          "score": 0.1549038
+          "score": 0.1546742
         },
         {
           "slug": "2026-04",
-          "score": 0.1934455
+          "score": 0.1934162
         },
         {
           "slug": "2025-06",
-          "score": 0.2101625
+          "score": 0.2101079
         }
       ]
     },
@@ -101,7 +101,7 @@
       "related": [
         {
           "slug": "spring-cleaning",
-          "score": 0.1549038
+          "score": 0.1546742
         },
         {
           "slug": "rethinking-work-beyond-the-factory",
@@ -149,7 +149,7 @@
       "related": [
         {
           "slug": "spring-cleaning",
-          "score": 0.3055266
+          "score": 0.3055951
         },
         {
           "slug": "workshop-welcome",
@@ -169,7 +169,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.291415
+          "score": 0.2911571
         },
         {
           "slug": "claude-launching-and-tools",
@@ -221,7 +221,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2441883
+          "score": 0.2439402
         }
       ]
     },
@@ -277,7 +277,7 @@
       "related": [
         {
           "slug": "spring-cleaning",
-          "score": 0.2365305
+          "score": 0.2364357
         },
         {
           "slug": "build-and-tinker",
@@ -293,7 +293,7 @@
       "related": [
         {
           "slug": "spring-cleaning",
-          "score": 0.3084784
+          "score": 0.3085212
         },
         {
           "slug": "tacit-knowledge-in-software",
@@ -325,7 +325,7 @@
       "related": [
         {
           "slug": "spring-cleaning",
-          "score": 0.217956
+          "score": 0.2178553
         },
         {
           "slug": "tacit-knowledge-in-software",
@@ -361,7 +361,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2334684
+          "score": 0.2335289
         },
         {
           "slug": "joys-of-self-hosting",
@@ -429,7 +429,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2344086
+          "score": 0.2345604
         }
       ]
     },
@@ -553,7 +553,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2538519
+          "score": 0.2539408
         },
         {
           "slug": "how-to-host-web-apps-on-a-mac-mini",
@@ -633,7 +633,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.3496686
+          "score": 0.3498314
         },
         {
           "slug": "2026-04",
@@ -729,7 +729,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2413928
+          "score": 0.2413777
         },
         {
           "slug": "sync-phone-numbers-and-webhooks",
@@ -845,7 +845,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.3666148
+          "score": 0.3666756
         }
       ]
     },
