@@ -35,7 +35,14 @@ export function PressContent() {
                     >
                       launch essay
                     </Link>{' '}
-                    tells the full story.
+                    and{' '}
+                    <Link
+                      href="/spring-cleaning"
+                      className="underline underline-offset-4 decoration-indigo hover:text-indigo transition-colors duration-300"
+                    >
+                      Spring cleaning
+                    </Link>{' '}
+                    explain the full story.
                   </p>
                 </div>
 
