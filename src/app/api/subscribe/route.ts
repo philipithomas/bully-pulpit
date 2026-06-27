@@ -34,18 +34,16 @@ export async function POST(request: Request) {
   try {
     // For a new email this creates the row (applying name, source, and the
     // requested newsletters) and sends a confirmation code. For an existing
-    // subscriber it is a pure sign-in: the caller is unauthenticated, so the
-    // stored name, source, and newsletter preferences stay untouched.
-    await createOrRetrieve({
+    // confirmed subscriber with an explicit newsletter request, the preference
+    // update is enough: do not send an unnecessary sign-in code.
+    const result = await createOrRetrieve({
       email,
       name,
       source: source || undefined,
       newsletters: Array.isArray(newsletters) ? newsletters : undefined,
     })
 
-    // Same minimal body whether the email was new or already subscribed: the
-    // response must not leak subscriber data or act as an enumeration oracle.
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, status: result.nextStep })
   } catch (err) {
     if (err instanceof InvalidEmailError) {
       return NextResponse.json(

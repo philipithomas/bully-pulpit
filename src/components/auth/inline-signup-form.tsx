@@ -31,7 +31,7 @@ interface Props {
   showSubscriberCount?: boolean
 }
 
-type Step = 'email' | 'code'
+type Step = 'email' | 'code' | 'confirmed'
 
 export function InlineSignupForm({
   hideWhenLoggedIn = false,
@@ -65,33 +65,51 @@ export function InlineSignupForm({
       ? `Join ${formatMemberCount(subscriberCount)} other subscribers:`
       : undefined)
 
-  async function handleEmailSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!email) return
+  const handleEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value),
+    []
+  )
 
-    setLoading(true)
-    try {
-      const res = await fetch('/api/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          source: getExternalReferrer(),
-          newsletters,
-        }),
-      })
-      if (!res.ok) {
+  const handleDifferentEmail = useCallback(() => {
+    setStep('email')
+    setCode('')
+  }, [])
+
+  const handleEmailSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      if (!email) return
+
+      setLoading(true)
+      try {
+        const res = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            source: getExternalReferrer(),
+            newsletters,
+          }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          toast.error(data.error ?? 'Could not subscribe. Try again.')
+          return
+        }
         const data = await res.json()
-        toast.error(data.error ?? 'Could not subscribe. Try again.')
-        return
+        if (data.status === 'confirmed') {
+          setStep('confirmed')
+          return
+        }
+        setStep('code')
+      } catch {
+        toast.error('Could not subscribe. Try again.')
+      } finally {
+        setLoading(false)
       }
-      setStep('code')
-    } catch {
-      toast.error('Could not subscribe. Try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    [email, newsletters]
+  )
 
   const verifyCode = useCallback(
     async (value: string) => {
@@ -128,14 +146,42 @@ export function InlineSignupForm({
   // visitors; signed-in members get a brief flash before it collapses.
   if (hideWhenLoggedIn && user) return null
 
+  if (step === 'confirmed') {
+    return (
+      <div
+        className={`flex flex-col ${
+          align === 'center' ? 'items-center text-center' : 'items-start'
+        } ${className ?? ''}`}
+      >
+        <p className="font-sans text-sm font-semibold text-gray-800">
+          Confirmed
+        </p>
+        <p className="mt-1 max-w-md font-serif text-sm leading-relaxed text-gray-600">
+          You are subscribed to new photos by email.
+        </p>
+      </div>
+    )
+  }
+
   if (step === 'code') {
     return (
-      <div className={className}>
-        <p className="font-serif text-sm text-gray-600 mb-3">
-          Check {email} for a 6-digit code. If you already have an account, your
-          preferences are updated.
+      <div
+        className={`flex flex-col ${
+          align === 'center' ? 'items-center text-center' : 'items-start'
+        } ${className ?? ''}`}
+      >
+        <p className="font-sans text-sm font-semibold text-gray-800">
+          Check your email
         </p>
-        <div className="flex flex-col items-start">
+        <p className="mt-1 max-w-md font-serif text-sm leading-relaxed text-gray-600">
+          Enter the 6-digit code sent to{' '}
+          <span className="font-sans text-gray-800">{email}</span>.
+        </p>
+        <div
+          className={`mt-4 flex flex-col ${
+            align === 'center' ? 'items-center' : 'items-start'
+          }`}
+        >
           <InputOTP
             maxLength={6}
             value={code}
@@ -154,23 +200,22 @@ export function InlineSignupForm({
               <InputOTPSlot index={5} />
             </InputOTPGroup>
           </InputOTP>
-          {loading && (
-            <div className="flex items-center gap-2 mt-2">
+          {loading ? (
+            <div className="mt-3 flex items-center gap-2">
               <Spinner className="h-3 w-3 text-gray-500" />
               <p className="text-xs text-gray-500 font-sans">Verifying</p>
             </div>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setStep('email')
-              setCode('')
-            }}
-            className="text-xs text-gray-500 underline underline-offset-2 decoration-gray-300 hover:text-gray-700 cursor-pointer transition-colors mt-2 font-sans"
-          >
-            Use a different email
-          </button>
-          <GoogleSignInLink className="mt-2" />
+          ) : null}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <button
+              type="button"
+              onClick={handleDifferentEmail}
+              className="text-xs text-gray-500 underline underline-offset-2 decoration-gray-300 hover:text-gray-700 cursor-pointer transition-colors font-sans"
+            >
+              Use a different email
+            </button>
+            <GoogleSignInLink />
+          </div>
         </div>
       </div>
     )
@@ -183,18 +228,18 @@ export function InlineSignupForm({
         align === 'center' ? 'items-center' : 'items-start'
       } ${className ?? ''}`}
     >
-      {resolvedHeaderText && (
+      {resolvedHeaderText ? (
         <p className="font-sans text-lg font-medium mb-3 text-gray-800">
           {resolvedHeaderText}
         </p>
-      )}
+      ) : null}
       <div className="flex items-center w-full max-w-md">
         <input
           type="email"
           name="email"
           autoComplete="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={handleEmailChange}
           placeholder="Your email"
           aria-label="Email address"
           required

@@ -61,7 +61,10 @@ describe('POST /api/subscribe', () => {
 
     expect(res.status).toBe(200)
     // The unauthenticated response carries no subscriber data.
-    expect(await res.json()).toEqual({ ok: true })
+    expect(await res.json()).toEqual({
+      ok: true,
+      status: 'verification_sent',
+    })
 
     // Subscriber row exists with the normalized email, name, and source
     const rows = await db.select().from(subscribers)
@@ -122,7 +125,10 @@ describe('POST /api/subscribe', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true })
+    expect(await res.json()).toEqual({
+      ok: true,
+      status: 'verification_sent',
+    })
 
     const [row] = await db
       .select()
@@ -164,9 +170,12 @@ describe('POST /api/subscribe', () => {
       })
     )
     expect(res.status).toBe(200)
-    // Identical minimal body for new and existing emails: the endpoint must
-    // not become an account-enumeration oracle or leak PII.
-    expect(await res.json()).toEqual({ ok: true })
+    // The unconfirmed row still needs verification, and the response carries
+    // no subscriber data.
+    expect(await res.json()).toEqual({
+      ok: true,
+      status: 'verification_sent',
+    })
 
     const rows = await db
       .select()
@@ -214,7 +223,10 @@ describe('POST /api/subscribe', () => {
     expect(res.status).toBe(200)
     // No subscriber data in the response: nothing distinguishes this from a
     // brand-new email, and nothing leaks the stored row.
-    expect(await res.json()).toEqual({ ok: true })
+    expect(await res.json()).toEqual({
+      ok: true,
+      status: 'verification_sent',
+    })
 
     const [row] = await db
       .select()
@@ -240,7 +252,7 @@ describe('POST /api/subscribe', () => {
     expect(message.text).toContain('Your sign-in code for philipithomas.com')
   })
 
-  it('opts an existing confirmed subscriber into Tsundoku and sends the admin notification', async () => {
+  it('opts an existing confirmed subscriber into Tsundoku without sending a sign-in code', async () => {
     await db.insert(subscribers).values({
       email: 'japan@example.com',
       name: 'Japan Reader',
@@ -262,7 +274,7 @@ describe('POST /api/subscribe', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true })
+    expect(await res.json()).toEqual({ ok: true, status: 'confirmed' })
 
     const [row] = await db
       .select()
@@ -275,14 +287,9 @@ describe('POST /api/subscribe', () => {
     expect(row.name).toBe('Japan Reader')
     expect(row.source).toBe('https://original.example')
 
-    expect(sendSimpleEmail).toHaveBeenCalledTimes(2)
-    const subjects = vi
-      .mocked(sendSimpleEmail)
-      .mock.calls.map(([m]) => m.subject)
-    expect(subjects).toEqual([
-      'Tsundoku opt-in: japan@example.com',
-      'Your sign-in code for philipithomas.com',
-    ])
+    expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
+    const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
+    expect(message.subject).toBe('Tsundoku opt-in: japan@example.com')
   })
 
   it('rejects a suppressed address with 422 and sends no email', async () => {
@@ -337,7 +344,10 @@ describe('POST /api/subscribe', () => {
     const res = await POST(subscribeRequest({ email: 'person@flaky.test' }))
 
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true })
+    expect(await res.json()).toEqual({
+      ok: true,
+      status: 'verification_sent',
+    })
     expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
 
     const rows = await db.select().from(subscribers)

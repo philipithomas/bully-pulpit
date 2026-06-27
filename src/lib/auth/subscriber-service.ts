@@ -56,7 +56,11 @@ function isValidEmail(email: string): boolean {
   return !email.includes(' ')
 }
 
-export type CreateResult = { subscriber: Subscriber; isNew: boolean }
+export type CreateResult = {
+  subscriber: Subscriber
+  isNew: boolean
+  nextStep: 'confirmed' | 'verification_sent'
+}
 
 function normalizedNewsletters(
   newsletters: string[] | undefined
@@ -146,9 +150,9 @@ async function sendLoginOrRejectSuppressed(
 
 /**
  * Creates or retrieves a subscriber, branching exactly like printing-press's
- * create_or_retrieve: Google sign-in confirms immediately; otherwise an OTP /
- * magic-link email is sent (confirmation resend for unconfirmed, sign-in code
- * for confirmed).
+ * create_or_retrieve: Google sign-in confirms immediately; unconfirmed rows
+ * receive an OTP / magic-link email; confirmed rows only receive a sign-in code
+ * when the call is actually a sign-in.
  *
  * `name` and `source` apply only when the row is created. New public signups
  * start on every newsletter. For existing subscribers, an explicit
@@ -169,22 +173,24 @@ export async function createOrRetrieve(input: {
   }
   const googleVerified = input.googleVerified ?? false
 
-  // Every non-Google branch below sends a confirmation or sign-in email, so
-  // check DNS deliverability first: before any DB row is created and before
-  // SES can hard-bounce on a typo domain. Google sign-in sends no email and
-  // skips the check. canReceiveMail fails open on resolver trouble.
+  // Non-Google subscribe/sign-in starts from an email address and may need to
+  // send mail, so check DNS deliverability before any DB row is created and
+  // before SES can hard-bounce on a typo domain. Google sign-in sends no email
+  // and skips the check. canReceiveMail fails open on resolver trouble.
   if (!googleVerified && !(await canReceiveMail(email))) {
     throw new UndeliverableEmailError()
   }
 
   const newsletters = normalizedNewsletters(input.newsletters)
   const hasExplicitNewsletterOptIn = input.newsletters !== undefined
+  const hasRequestedNewsletterOptIn =
+    hasExplicitNewsletterOptIn && newsletters.length > 0
 
   const existing = await findByEmail(email)
   if (existing) {
     let subscriber = existing
 
-    if (hasExplicitNewsletterOptIn && newsletters.length > 0) {
+    if (hasRequestedNewsletterOptIn) {
       const updated = await updateSubscriber(
         existing.uuid,
         prefsForNewsletters(newsletters)
@@ -198,16 +204,21 @@ export async function createOrRetrieve(input: {
     if (googleVerified && existing.confirmedAt == null) {
       const confirmed = await confirmSubscriber(existing.id)
       await notifyNewSubscriber(confirmed)
-      return { subscriber: confirmed, isNew: false }
+      return { subscriber: confirmed, isNew: false, nextStep: 'confirmed' }
     }
 
     if (subscriber.confirmedAt == null) {
       await sendLoginOrRejectSuppressed(subscriber, 'confirm')
+      return { subscriber, isNew: false, nextStep: 'verification_sent' }
     } else if (!googleVerified) {
+      if (hasRequestedNewsletterOptIn) {
+        return { subscriber, isNew: false, nextStep: 'confirmed' }
+      }
       await sendLoginOrRejectSuppressed(subscriber, 'sign-in')
+      return { subscriber, isNew: false, nextStep: 'verification_sent' }
     }
 
-    return { subscriber, isNew: false }
+    return { subscriber, isNew: false, nextStep: 'confirmed' }
   }
 
   const subscriber = await createSubscriber({
@@ -220,9 +231,9 @@ export async function createOrRetrieve(input: {
   if (googleVerified) {
     const confirmed = await confirmSubscriber(subscriber.id)
     await notifyNewSubscriber(confirmed)
-    return { subscriber: confirmed, isNew: true }
+    return { subscriber: confirmed, isNew: true, nextStep: 'confirmed' }
   }
 
   await sendLoginOrRejectSuppressed(subscriber, 'confirm')
-  return { subscriber, isNew: true }
+  return { subscriber, isNew: true, nextStep: 'verification_sent' }
 }

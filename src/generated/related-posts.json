@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-06-27T12:52:56.005Z",
+  "generatedAt": "2026-06-27T13:26:21.488Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
         {
           "slug": "2024-02",
-          "score": 0.3004889
+          "score": 0.3181381
         },
         {
           "slug": "2025-12",
-          "score": 0.3153141
+          "score": 0.3369223
         },
         {
-          "slug": "2026-02",
-          "score": 0.3161871
+          "slug": "2024-01",
+          "score": 0.3420878
         }
       ]
     },
@@ -41,7 +41,7 @@
         },
         {
           "slug": "introducing-tsundoku",
-          "score": 0.5032589
+          "score": 0.5313675
         },
         {
           "slug": "digital-product-studios",
@@ -57,7 +57,7 @@
         },
         {
           "slug": "introducing-tsundoku",
-          "score": 0.5165523
+          "score": 0.4958161
         },
         {
           "slug": "2023-10",
@@ -1244,8 +1244,8 @@
           "score": 0.4080813
         },
         {
-          "slug": "introducing-tsundoku",
-          "score": 0.4155709
+          "slug": "creator-vs-software-businesses",
+          "score": 0.438204
         }
       ]
     },
