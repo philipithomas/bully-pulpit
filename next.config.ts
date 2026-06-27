@@ -33,6 +33,10 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
     qualities: [100],
     minimumCacheTTL: 2678400,
+    // Camera-original Tsundoku covers can sit just above Next's 50 MB
+    // default optimizer input limit in local dev. Vercel still resizes the
+    // served variants; this only allows the source file to be read.
+    maximumResponseBody: 100_000_000,
     // 1920 stays: the post hero renders 1280px CSS (100vw under 1312px), so
     // 1x desktops need 1280 and 2x prose images need 1344 — both select 1920.
     // 2048 dropped: it only served as the ceiling for >=2x heroes (2560 px
