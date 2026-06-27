@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-07T17:56:38.763Z",
+  "generatedAt": "2026-07-07T18:09:06.569Z",
   "posts": {
     "farewell": {
       "related": [
@@ -437,15 +437,15 @@
       "related": [
         {
           "slug": "software-in-the-ai-era",
-          "score": 0.0982365
+          "score": 0.0982147
         },
         {
           "slug": "maintenance",
-          "score": 0.1031068
+          "score": 0.1028626
         },
         {
           "slug": "build-and-tinker",
-          "score": 0.1072707
+          "score": 0.1072394
         }
       ]
     },
@@ -493,7 +493,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.2627897
+          "score": 0.2629683
         }
       ]
     },
@@ -653,7 +653,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.0982365
+          "score": 0.0982147
         }
       ]
     },
@@ -661,7 +661,7 @@
       "related": [
         {
           "slug": "spring-cleaning",
-          "score": 0.1105006
+          "score": 0.1102305
         },
         {
           "slug": "tacit-knowledge-in-software",
@@ -701,7 +701,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.1426191
+          "score": 0.1423766
         }
       ]
     },
@@ -713,7 +713,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.129327
+          "score": 0.1286955
         },
         {
           "slug": "tacit-knowledge-in-software",
@@ -845,7 +845,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.1485978
+          "score": 0.1480246
         }
       ]
     },
@@ -877,7 +877,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.1072707
+          "score": 0.1072394
         }
       ]
     },
@@ -965,7 +965,7 @@
       "related": [
         {
           "slug": "spring-cleaning",
-          "score": 0.1031068
+          "score": 0.1028626
         },
         {
           "slug": "introducing-workshop",
