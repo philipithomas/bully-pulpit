@@ -1,0 +1,4 @@
+interface:
+  display_name: "Copyedit"
+  short_description: "Copyedit MDX posts for house style"
+  default_prompt: "Use $copyedit to copyedit an MDX post for house style and internal links."

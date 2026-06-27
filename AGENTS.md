@@ -44,7 +44,8 @@ pnpm db:studio    # Open Drizzle Studio against the DB
 - Single quotes, no semicolons (biome config)
 - Integration tests are `*.integration.test.ts`, colocated, and run real SQL against an in-memory PGlite Postgres (no Docker/network) in the same `pnpm test` run. Harness at `src/test/integration/`: swap the Neon client with `vi.mock('@/lib/db/client', () => import('@/test/integration/db'))` (applies the real migrations, fresh DB per file, `resetDb()` per test), `session.ts` replaces `next/headers` for real-JWT sessions, `mocks.ts` has SES/BotID factories. Mock only external I/O — never `@/lib/db/queries/*`
 - Fonts loaded from fonts.philipithomas.com CDN
-- GitHub workflows (`.github/workflows/`): `check.yml` is CI (every push/PR to main: Biome, tsc, tests, `content:check`, `links:check`, build); `search-index.yml` regenerates and commits `src/generated/search-index.json` + `related-posts.json` on push to main (paths-filtered to `content/**`, the generator, and `src/lib/search/**`) so main self-heals after a content PR (needs the `AI_GATEWAY_API_KEY` secret and `contents: write`); `links.yml` checks external links weekly via lychee and files an issue instead of failing CI; `postcard-draft.yml` opens a draft postcard PR monthly. `claude.yml` and `claude-code-review.yml` run Claude automation
+- GitHub workflows (`.github/workflows/`): `check.yml` is CI (every push/PR to main: Biome, tsc, tests, `content:check`, `links:check`, build); `search-index.yml` regenerates and commits `src/generated/search-index.json` + `related-posts.json` on push to main (paths-filtered to `content/**`, the generator, and `src/lib/search/**`) so main self-heals after a content PR (needs the `AI_GATEWAY_API_KEY` secret and `contents: write`); `links.yml` checks external links weekly via lychee and files an issue instead of failing CI; `postcard-draft.yml` opens a draft postcard PR monthly. There are no Claude automation workflows
+- Repo-local Codex skills live in `.codex/skills/`. `copyedit` and `critique` replace the old Claude skills for MDX editorial workflows
 - Pre-commit hook runs lint-staged, `pnpm content:check`, and `pnpm build` — no need to build manually before pushing
 
 ## Next.js docs
@@ -65,6 +66,7 @@ For up-to-date Next.js documentation refer to `node_modules/next/dist/docs/`. Yo
 - `src/lib/auth/` - JWT/session, login + subscriber services, admin allowlist guard
 - `src/lib/phone/` - Twilio webhook auth, TwiML builders, greeting, voicemail processing
 - `src/workflows/` - Vercel Workflow definitions (durable newsletter send, voicemail processing, no-op smoke test)
+- `.codex/skills/` - Repo-local Codex skills for editorial workflows
 - `src/styles/globals.css` - Tailwind theme + component styles
 - `public/images/` - Static images (portraits, covers, post assets); photos and cover assets are Git LFS-tracked
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Critique"
+  short_description: "Critique MDX posts without editing"
+  default_prompt: "Use $critique to give critical editorial feedback on an MDX post."
