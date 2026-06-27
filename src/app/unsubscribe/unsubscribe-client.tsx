@@ -12,12 +12,9 @@ import {
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { siteConfig } from '@/lib/config'
+import { newsletterRows } from '@/lib/newsletters'
 
-const newsletterInfo = [
-  { key: 'subscribed_contraption', ...siteConfig.newsletters.contraption },
-  { key: 'subscribed_workshop', ...siteConfig.newsletters.workshop },
-  { key: 'subscribed_postcard', ...siteConfig.newsletters.postcard },
-] as const
+const newsletterInfo = newsletterRows()
 
 interface Preferences {
   email: string
@@ -25,6 +22,7 @@ interface Preferences {
   subscribed_postcard: boolean
   subscribed_contraption: boolean
   subscribed_workshop: boolean
+  subscribed_tsundoku: boolean
 }
 
 function UnsubscribeContent() {

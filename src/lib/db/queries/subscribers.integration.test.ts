@@ -43,10 +43,11 @@ describe('createSubscriber / findByEmail / updateSubscriber', () => {
     expect(created.name).toBe('Ada Lovelace')
     expect(created.source).toBe('test')
     expect(created.confirmedAt).toBeNull()
-    // newsletter flags default to opted-in
+    // Standing newsletter flags default to opted-in. Tsundoku is opt-in only.
     expect(created.subscribedPostcard).toBe(true)
     expect(created.subscribedContraption).toBe(true)
     expect(created.subscribedWorkshop).toBe(true)
+    expect(created.subscribedTsundoku).toBe(false)
   })
 
   it('findByEmail lowercases its argument and round-trips', async () => {
@@ -87,8 +88,8 @@ describe('createSubscriber / findByEmail / updateSubscriber', () => {
 describe('subscriberStats / countActive', () => {
   it('aggregates the FILTER counts against mixed data', async () => {
     const confirmedAt = new Date()
-    // confirmed, all three newsletters
-    await seed({ confirmedAt })
+    // confirmed, all standing newsletters plus Tsundoku
+    await seed({ confirmedAt, subscribedTsundoku: true })
     // confirmed, contraption only
     await seed({
       confirmedAt,
@@ -111,6 +112,7 @@ describe('subscriberStats / countActive', () => {
       postcard: 1,
       contraption: 2,
       workshop: 1,
+      tsundoku: 1,
     })
     // active = confirmed AND at least one newsletter
     expect(await countActive()).toBe(2)
@@ -123,6 +125,7 @@ describe('subscriberStats / countActive', () => {
       postcard: 0,
       contraption: 0,
       workshop: 0,
+      tsundoku: 0,
     })
     expect(await countActive()).toBe(0)
   })
@@ -219,6 +222,7 @@ describe('importSubscribers', () => {
     postcard: true,
     contraption: true,
     workshop: true,
+    tsundoku: true,
     confirmed: true,
     source: null,
     ...overrides,
@@ -227,12 +231,14 @@ describe('importSubscribers', () => {
     postcard: true,
     contraption: true,
     workshop: true,
+    tsundoku: true,
     confirmed: true,
   }
   const nonePresent = {
     postcard: false,
     contraption: false,
     workshop: false,
+    tsundoku: false,
     confirmed: false,
   }
 
@@ -272,12 +278,14 @@ describe('importSubscribers', () => {
     const veteran = await findByEmail('veteran@example.com')
     expect(veteran?.subscribedContraption).toBe(false) // NOT re-subscribed
     expect(veteran?.subscribedPostcard).toBe(true)
+    expect(veteran?.subscribedTsundoku).toBe(false)
     expect(veteran?.confirmedAt).toBeNull() // absent confirmed column can't confirm
 
     const fresh = await findByEmail('fresh@example.com')
     expect(fresh?.subscribedPostcard).toBe(true)
     expect(fresh?.subscribedContraption).toBe(true)
     expect(fresh?.subscribedWorkshop).toBe(true)
+    expect(fresh?.subscribedTsundoku).toBe(true)
     expect(fresh?.confirmedAt).not.toBeNull()
     expect(fresh?.source).toBe('csv_import')
   })
@@ -297,6 +305,7 @@ describe('importSubscribers', () => {
     const flipped = await findByEmail('flip@example.com')
     expect(flipped?.subscribedContraption).toBe(true)
     expect(flipped?.subscribedWorkshop).toBe(false)
+    expect(flipped?.subscribedTsundoku).toBe(true)
   })
 
   it('confirmed is monotonic: an import can confirm but never un-confirm', async () => {
@@ -422,6 +431,7 @@ describe('importSubscribers', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
+      subscribedTsundoku: true,
       source: 'csv_import',
     })
 
@@ -438,6 +448,7 @@ describe('importSubscribers', () => {
     expect(optout?.subscribedPostcard).toBe(false) // opt-outs survive
     expect(optout?.subscribedContraption).toBe(false)
     expect(optout?.subscribedWorkshop).toBe(false)
+    expect(optout?.subscribedTsundoku).toBe(true)
     expect(optout?.confirmedAt).toBeNull() // absent confirmed column can't confirm
   })
 })

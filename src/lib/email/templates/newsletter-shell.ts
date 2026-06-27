@@ -14,8 +14,15 @@ const darkAccentColors: Record<NewsletterSlug, string> = {
   contraption: '#8FB8A5',
   workshop: '#C29B7E',
   postcard: '#97A8D9',
+  tsundoku: '#FF7A82',
 }
 const DEFAULT_DARK_ACCENT = '#A8A49D'
+const backgroundColors: Record<NewsletterSlug, string> = {
+  contraption: '#ffffff',
+  workshop: '#ffffff',
+  postcard: '#ffffff',
+  tsundoku: '#f4f4f2',
+}
 
 // Each newsletter wordmark is a solid-ink PNG on transparency. The light-mode
 // asset is the dark accent ink (forest/walnut/indigo); the *-email-dark.png is
@@ -35,6 +42,7 @@ const wordmarks: Record<
   },
   workshop: { name: 'Workshop', file: 'workshop-brand', width: 87, height: 24 },
   postcard: { name: 'Postcard', file: 'postcard', width: 79, height: 18 },
+  tsundoku: { name: 'Tsundoku', file: 'tsundoku', width: 157, height: 24 },
 }
 
 function brandHeader(newsletter: NewsletterSlug | '', siteUrl: string): string {
@@ -62,7 +70,9 @@ export function renderNewsletterShell(input: {
   siteUrl?: string
 }): string {
   const siteUrl = input.siteUrl ?? siteConfig.url
-  const bgColor = '#ffffff'
+  const bgColor = input.newsletter
+    ? backgroundColors[input.newsletter]
+    : '#ffffff'
   const darkAccent = input.newsletter
     ? darkAccentColors[input.newsletter]
     : DEFAULT_DARK_ACCENT

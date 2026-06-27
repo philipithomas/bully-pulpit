@@ -14,7 +14,12 @@ export const metadata: Metadata = {
 }
 
 export default function HomePage() {
-  const newsletters = Object.values(siteConfig.newsletters)
+  const newsletters = [
+    siteConfig.newsletters.postcard,
+    siteConfig.newsletters.contraption,
+    siteConfig.newsletters.workshop,
+    siteConfig.newsletters.tsundoku,
+  ]
 
   // Art-directed portraits: each layout slot renders a <picture> carrying
   // both srcSets, so the hidden slot resolves to the same URL as the visible
@@ -39,7 +44,7 @@ export default function HomePage() {
   })
 
   return (
-    <div className="container py-16 md:py-20 lg:py-28">
+    <div className="container pt-6 pb-12 sm:pt-8 sm:pb-14 md:pt-10 md:pb-16 lg:pt-12 lg:pb-20">
       <JsonLd type="website" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
         {/* Left: Portrait (desktop only) */}
@@ -148,7 +153,7 @@ export default function HomePage() {
           {/* Newsletter directory */}
           <div className="mt-8">
             <p className="font-serif text-sm text-gray-600 mb-6">
-              I publish three newsletters:
+              I publish these newsletters:
             </p>
             <div className="space-y-4">
               {newsletters.map((nl) => (
@@ -157,13 +162,13 @@ export default function HomePage() {
                   href={`/${nl.slug}`}
                   className="flex items-center gap-3 group"
                 >
-                  <span className="w-[76px] shrink-0 flex items-center">
+                  <span className="w-[100px] shrink-0 flex items-center">
                     <Image
                       src={nl.logo.src}
                       alt={nl.name}
                       width={100}
                       height={nl.logo.height}
-                      style={{ height: nl.logo.height }}
+                      style={{ height: nl.logo.height, width: 'auto' }}
                       className="w-auto shrink-0"
                     />
                   </span>
@@ -173,7 +178,7 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
-            <p className="font-serif text-sm text-gray-500 mt-6">
+            <p className="font-serif text-sm text-gray-500 mt-3">
               Available by email or{' '}
               <Link
                 href="/feed/rss.xml"

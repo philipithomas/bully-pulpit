@@ -67,6 +67,7 @@ describe('GET /api/unsubscribe/[token]', () => {
       subscribed_postcard: true,
       subscribed_contraption: true,
       subscribed_workshop: true,
+      subscribed_tsundoku: false,
     })
   })
 })
@@ -84,6 +85,7 @@ describe('POST /api/unsubscribe/[token] (RFC 8058 one-click)', () => {
     expect(after.subscribedWorkshop).toBe(false)
     expect(after.subscribedPostcard).toBe(true)
     expect(after.subscribedContraption).toBe(true)
+    expect(after.subscribedTsundoku).toBe(false)
 
     const stamped = await sendRow(send.id)
     expect(stamped.triggeredUnsubscribeAt).toBeInstanceOf(Date)
@@ -91,7 +93,7 @@ describe('POST /api/unsubscribe/[token] (RFC 8058 one-click)', () => {
 })
 
 describe('DELETE /api/unsubscribe/[token]', () => {
-  it('clears all three flags but retains the subscriber row', async () => {
+  it('clears all newsletter flags but retains the subscriber row', async () => {
     const { subscriber, send, token } = await seed()
 
     const res = await DELETE(
@@ -108,6 +110,7 @@ describe('DELETE /api/unsubscribe/[token]', () => {
     expect(after.subscribedPostcard).toBe(false)
     expect(after.subscribedContraption).toBe(false)
     expect(after.subscribedWorkshop).toBe(false)
+    expect(after.subscribedTsundoku).toBe(false)
 
     const stamped = await sendRow(send.id)
     expect(stamped.triggeredUnsubscribeAt).toBeInstanceOf(Date)
@@ -134,6 +137,7 @@ describe('PATCH /api/unsubscribe/[token]', () => {
     expect(after.subscribedPostcard).toBe(false)
     expect(after.subscribedContraption).toBe(true)
     expect(after.subscribedWorkshop).toBe(true)
+    expect(after.subscribedTsundoku).toBe(false)
     expect(after.name).toBe('Janet')
   })
 
@@ -158,6 +162,7 @@ describe('PATCH /api/unsubscribe/[token]', () => {
     expect(after.subscribedPostcard).toBe(true)
     expect(after.subscribedContraption).toBe(true)
     expect(after.subscribedWorkshop).toBe(true)
+    expect(after.subscribedTsundoku).toBe(false)
   })
 })
 
@@ -202,6 +207,7 @@ describe('unknown token', () => {
     expect(after.subscribedPostcard).toBe(true)
     expect(after.subscribedContraption).toBe(true)
     expect(after.subscribedWorkshop).toBe(true)
+    expect(after.subscribedTsundoku).toBe(false)
   })
 
   it('returns 404 (not 500) for a malformed non-UUID token', async () => {

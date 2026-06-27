@@ -116,6 +116,7 @@ describe('backup send', () => {
       'postcard',
       'contraption',
       'workshop',
+      'tsundoku',
       'confirmed',
       'source',
       'created_at',
@@ -127,15 +128,15 @@ describe('backup send', () => {
     expect(data[0][0]).toBe('plain@example.com')
     expect(data[0][1]).toBe('Plain Name')
     expect(data[0][2]).toBe('false')
-    expect(data[0][5]).toBe('false')
-    expect(data[0][6]).toBe('https://example.org/')
+    expect(data[0][6]).toBe('false')
+    expect(data[0][7]).toBe('https://example.org/')
 
     // Formula-leading name and source cells are neutralized with a leading
     // apostrophe.
     expect(data[1][0]).toBe('evil@example.com')
     expect(data[1][1]).toBe("'=SUM(A1)")
-    expect(data[1][5]).toBe('true')
-    expect(data[1][6]).toBe("'=2+5")
+    expect(data[1][6]).toBe('true')
+    expect(data[1][7]).toBe("'=2+5")
   })
 
   it('states the subscriber count in the plain-text body', async () => {

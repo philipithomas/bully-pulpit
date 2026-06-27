@@ -1,6 +1,12 @@
 import { z } from 'zod/v4'
 
-export const newsletterSchema = z.enum(['contraption', 'workshop', 'postcard'])
+export const NEWSLETTERS = [
+  'contraption',
+  'workshop',
+  'postcard',
+  'tsundoku',
+] as const
+export const newsletterSchema = z.enum(NEWSLETTERS)
 export type Newsletter = z.infer<typeof newsletterSchema>
 
 export const frontmatterSchema = z
@@ -13,6 +19,13 @@ export const frontmatterSchema = z
     subtitle: z.string().optional(),
     featured: z.boolean().optional().default(false),
     draft: z.boolean().optional().default(false),
+    sequence: z.number().int().optional(),
+    location: z
+      .object({
+        name: z.string(),
+        url: z.string().url(),
+      })
+      .optional(),
   })
   .refine((data) => !data.coverImage || !!data.coverImageAlt, {
     message: 'coverImageAlt is required when coverImage is set',

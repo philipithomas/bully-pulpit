@@ -13,6 +13,12 @@ export const metadata: Metadata = {
     canonical: '/postcard',
     types: feedDiscovery('postcard'),
   },
+  icons: {
+    icon: [
+      { url: siteConfig.newsletters.postcard.icon, type: 'image/svg+xml' },
+    ],
+    apple: siteConfig.newsletters.postcard.icon,
+  },
 }
 
 const MONTH_LABELS = [

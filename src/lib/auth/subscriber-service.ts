@@ -1,13 +1,20 @@
 import { createAndSendLogin } from '@/lib/auth/login-service'
+import { siteConfig } from '@/lib/config'
+import { type Newsletter, newsletterSchema } from '@/lib/content/types'
 import {
   confirmSubscriber,
   createSubscriber,
   findByEmail,
+  type SubscriberPrefs,
+  updateSubscriber,
 } from '@/lib/db/queries/subscribers'
 import { isSuppressed } from '@/lib/db/queries/suppressions'
 import type { Subscriber } from '@/lib/db/schema'
 import { canReceiveMail } from '@/lib/email/deliverability'
-import { sendNewSubscriberNotification } from '@/lib/email/send'
+import {
+  sendNewSubscriberNotification,
+  sendNewsletterOptInNotification,
+} from '@/lib/email/send'
 import type { ConfirmationPurpose } from '@/lib/email/templates/confirmation'
 
 /** Thrown for a malformed email address (maps to HTTP 400). */
@@ -51,6 +58,38 @@ function isValidEmail(email: string): boolean {
 
 export type CreateResult = { subscriber: Subscriber; isNew: boolean }
 
+function normalizedNewsletters(
+  newsletters: string[] | undefined
+): Newsletter[] {
+  if (!newsletters) return []
+  const seen = new Set<Newsletter>()
+  for (const newsletter of newsletters) {
+    const parsed = newsletterSchema.safeParse(newsletter)
+    if (parsed.success) seen.add(parsed.data)
+  }
+  return [...seen]
+}
+
+function prefsForNewsletters(newsletters: Newsletter[]): SubscriberPrefs {
+  return {
+    ...(newsletters.includes('contraption')
+      ? { subscribedContraption: true }
+      : {}),
+    ...(newsletters.includes('workshop') ? { subscribedWorkshop: true } : {}),
+    ...(newsletters.includes('postcard') ? { subscribedPostcard: true } : {}),
+    ...(newsletters.includes('tsundoku') ? { subscribedTsundoku: true } : {}),
+  }
+}
+
+function creationPrefsForNewSubscriber() {
+  return {
+    subscribedContraption: true,
+    subscribedWorkshop: true,
+    subscribedPostcard: true,
+    subscribedTsundoku: true,
+  }
+}
+
 async function notifyNewSubscriber(subscriber: Subscriber): Promise<void> {
   try {
     await sendNewSubscriberNotification(
@@ -60,6 +99,21 @@ async function notifyNewSubscriber(subscriber: Subscriber): Promise<void> {
     )
   } catch (err) {
     console.error('[subscriber] new subscriber notification failed:', err)
+  }
+}
+
+async function notifyTsundokuOptInBestEffort(
+  before: Subscriber,
+  after: Subscriber
+): Promise<void> {
+  if (before.subscribedTsundoku || !after.subscribedTsundoku) return
+  try {
+    await sendNewsletterOptInNotification(
+      after.email,
+      siteConfig.newsletters.tsundoku.name
+    )
+  } catch (err) {
+    console.error('[subscriber] newsletter opt-in notification failed:', err)
   }
 }
 
@@ -96,16 +150,16 @@ async function sendLoginOrRejectSuppressed(
  * magic-link email is sent (confirmation resend for unconfirmed, sign-in code
  * for confirmed).
  *
- * `name`, `source`, and `newsletters` apply only when the row is CREATED. For
- * an existing subscriber the call is a pure sign-in: the caller is
- * unauthenticated and unverified, so it must not be able to rewrite stored
- * preferences (for example re-subscribing someone who opted down).
+ * `name` and `source` apply only when the row is created. New public signups
+ * start on every newsletter. For existing subscribers, an explicit
+ * `newsletters` list only opts them into those newsletters; no list means the
+ * call is a pure sign-in and leaves preferences untouched.
  */
 export async function createOrRetrieve(input: {
   email: string
   name?: string | null
   source?: string | null
-  /** Newsletter slugs the new row opts into; omitted means all (column defaults). */
+  /** Newsletter slugs to opt an existing row into; new rows receive all newsletters. */
   newsletters?: string[]
   googleVerified?: boolean
 }): Promise<CreateResult> {
@@ -123,34 +177,44 @@ export async function createOrRetrieve(input: {
     throw new UndeliverableEmailError()
   }
 
+  const newsletters = normalizedNewsletters(input.newsletters)
+  const hasExplicitNewsletterOptIn = input.newsletters !== undefined
+
   const existing = await findByEmail(email)
   if (existing) {
+    let subscriber = existing
+
+    if (hasExplicitNewsletterOptIn && newsletters.length > 0) {
+      const updated = await updateSubscriber(
+        existing.uuid,
+        prefsForNewsletters(newsletters)
+      )
+      if (updated) {
+        await notifyTsundokuOptInBestEffort(existing, updated)
+        subscriber = updated
+      }
+    }
+
     if (googleVerified && existing.confirmedAt == null) {
       const confirmed = await confirmSubscriber(existing.id)
       await notifyNewSubscriber(confirmed)
       return { subscriber: confirmed, isNew: false }
     }
 
-    if (existing.confirmedAt == null) {
-      await sendLoginOrRejectSuppressed(existing, 'confirm')
+    if (subscriber.confirmedAt == null) {
+      await sendLoginOrRejectSuppressed(subscriber, 'confirm')
     } else if (!googleVerified) {
-      await sendLoginOrRejectSuppressed(existing, 'sign-in')
+      await sendLoginOrRejectSuppressed(subscriber, 'sign-in')
     }
 
-    return { subscriber: existing, isNew: false }
+    return { subscriber, isNew: false }
   }
 
   const subscriber = await createSubscriber({
     email,
     name: input.name,
     source: input.source,
-    ...(input.newsletters
-      ? {
-          subscribedContraption: input.newsletters.includes('contraption'),
-          subscribedWorkshop: input.newsletters.includes('workshop'),
-          subscribedPostcard: input.newsletters.includes('postcard'),
-        }
-      : {}),
+    ...creationPrefsForNewSubscriber(),
   })
 
   if (googleVerified) {

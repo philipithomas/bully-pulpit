@@ -282,7 +282,7 @@ export function buildCorpusFromPosts(posts: Post[]): CorpusPost[] {
   }))
 }
 
-/** Builds the corpus for all published posts across the three newsletters. */
+/** Builds the corpus for all published posts across configured newsletters. */
 export function buildCorpus(): CorpusPost[] {
   return buildCorpusFromPosts(getAllPosts())
 }

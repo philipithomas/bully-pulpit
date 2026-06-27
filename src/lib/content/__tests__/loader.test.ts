@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getAdjacentPosts, getPostsByNewsletter } from '@/lib/content/loader'
-import type { Newsletter } from '@/lib/content/types'
-
-const NEWSLETTERS: Newsletter[] = ['contraption', 'workshop', 'postcard']
+import { NEWSLETTERS } from '@/lib/content/types'
 
 describe('getAdjacentPosts', () => {
   // Posts from getPostsByNewsletter sort newest first.

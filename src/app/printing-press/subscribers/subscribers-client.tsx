@@ -23,15 +23,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
+import { siteConfig } from '@/lib/config'
 import type { SubscriberListItem } from '@/lib/db/queries/subscribers'
+import { newsletterAccentDots, newsletterList } from '@/lib/newsletters'
 import { suppressionSentence } from '@/lib/printing-press'
 import { cn } from '@/lib/utils'
 
-const NEWSLETTERS = [
-  { key: 'subscribedPostcard', name: 'Postcard', dot: 'bg-indigo' },
-  { key: 'subscribedContraption', name: 'Contraption', dot: 'bg-forest' },
-  { key: 'subscribedWorkshop', name: 'Workshop', dot: 'bg-walnut' },
-] as const
+const NEWSLETTERS = newsletterList.map((newsletter) => ({
+  key: `subscribed${newsletter[0].toUpperCase()}${newsletter.slice(1)}` as keyof SubscriberListItem,
+  name: siteConfig.newsletters[newsletter].name,
+  dot: newsletterAccentDots[newsletter],
+}))
 
 function joinedLabel(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10)
@@ -272,7 +274,7 @@ export function SubscribersClient({
             size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={importing}
-            title="CSV columns: email, name, postcard, contraption, workshop, confirmed, source"
+            title="CSV columns: email, name, postcard, contraption, workshop, tsundoku, confirmed, source"
           >
             {importing ? (
               <Spinner className="h-4 w-4" />

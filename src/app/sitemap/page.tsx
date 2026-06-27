@@ -16,14 +16,16 @@ const newsletterLabel: Record<Newsletter, string> = {
   contraption: 'Contraption',
   workshop: 'Workshop',
   postcard: 'Postcard',
+  tsundoku: 'Tsundoku',
 }
 
 // Tailwind utility classes for each newsletter accent. Uses the site color
-// tokens (forest / walnut / indigo) defined in globals.css — no hex values.
+// tokens (forest / walnut / indigo / sun) defined in globals.css, no hex values.
 const newsletterColor: Record<Newsletter, string> = {
   contraption: 'text-forest',
   workshop: 'text-walnut',
   postcard: 'text-indigo',
+  tsundoku: 'text-sun',
 }
 
 // App Router pages that do not come from content/pages.
@@ -32,6 +34,7 @@ const appPages: { href: string; title: string }[] = [
   { href: '/contraption', title: 'Contraption' },
   { href: '/workshop', title: 'Workshop' },
   { href: '/postcard', title: 'Postcard' },
+  { href: '/tsundoku', title: 'Tsundoku' },
   { href: '/photography', title: 'Photography' },
   { href: '/print', title: 'Print edition' },
 ]

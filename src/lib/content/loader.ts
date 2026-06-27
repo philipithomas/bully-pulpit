@@ -7,7 +7,7 @@ import type {
   Page,
   Post,
 } from '@/lib/content/types'
-import { frontmatterSchema } from '@/lib/content/types'
+import { frontmatterSchema, NEWSLETTERS } from '@/lib/content/types'
 
 const CONTENT_DIR = path.join(process.cwd(), 'content')
 const PUBLIC_DIR = path.join(process.cwd(), 'public')
@@ -121,22 +121,26 @@ export function getPostsByNewsletter(newsletter: Newsletter): Post[] {
     })
     .filter((p): p is Post => p !== null)
 
-  return posts.sort(
-    (a, b) =>
-      new Date(b.frontmatter.publishedAt).getTime() -
-      new Date(a.frontmatter.publishedAt).getTime()
-  )
+  return posts.sort(comparePosts)
 }
 
 export function getAllPosts(): Post[] {
-  const newsletters: Newsletter[] = ['contraption', 'workshop', 'postcard']
-  return newsletters
-    .flatMap((n) => getPostsByNewsletter(n))
-    .sort(
-      (a, b) =>
-        new Date(b.frontmatter.publishedAt).getTime() -
-        new Date(a.frontmatter.publishedAt).getTime()
-    )
+  return newsletters.flatMap((n) => getPostsByNewsletter(n)).sort(comparePosts)
+}
+
+const newsletters: readonly Newsletter[] = NEWSLETTERS
+
+function comparePosts(a: Post, b: Post): number {
+  const dateDiff =
+    new Date(b.frontmatter.publishedAt).getTime() -
+    new Date(a.frontmatter.publishedAt).getTime()
+  if (dateDiff !== 0) return dateDiff
+
+  const sequenceDiff =
+    (b.frontmatter.sequence ?? 0) - (a.frontmatter.sequence ?? 0)
+  if (sequenceDiff !== 0) return sequenceDiff
+
+  return a.slug.localeCompare(b.slug)
 }
 
 export function getPostBySlug(slug: string): Post | null {

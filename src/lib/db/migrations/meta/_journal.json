@@ -43,6 +43,13 @@
       "when": 1781135569765,
       "tag": "0005_fuzzy_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782543691772,
+      "tag": "0006_free_maddog",
+      "breakpoints": true
     }
   ]
 }

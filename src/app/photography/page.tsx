@@ -31,11 +31,32 @@ const MAX_ROW_WIDTH = 1216
 const STRETCH = 1.25
 
 interface Photo {
-  post: Post
   src: string
   alt: string
   width: number
   height: number
+  mentions: PhotoMention[]
+}
+
+interface PhotoMention {
+  href: string
+  title: string
+  meta: string
+}
+
+const NEWSLETTER_LABELS = {
+  contraption: 'Contraption',
+  workshop: 'Workshop',
+  postcard: 'Postcard',
+  tsundoku: 'Tsundoku',
+} satisfies Record<Post['newsletter'], string>
+
+function photoMention(post: Post): PhotoMention {
+  return {
+    href: `/${post.slug}`,
+    title: post.frontmatter.title,
+    meta: `${post.frontmatter.publishedAt} / ${NEWSLETTER_LABELS[post.newsletter]}`,
+  }
 }
 
 /**
@@ -44,20 +65,25 @@ interface Photo {
  * them from the files under public/ at build time.
  */
 function collectPhotos(): Photo[] {
-  const seen = new Set<string>()
   const photos: Photo[] = []
+  const bySrc = new Map<string, Photo>()
   for (const post of getAllPosts()) {
     const { coverImage, coverImageAlt, title } = post.frontmatter
     if (!coverImage || !post.coverDimensions) continue
-    if (seen.has(coverImage)) continue
-    seen.add(coverImage)
-    photos.push({
-      post,
+    const existing = bySrc.get(coverImage)
+    if (existing) {
+      existing.mentions.push(photoMention(post))
+      continue
+    }
+    const photo = {
       src: coverImage,
       alt: coverImageAlt ?? title,
       width: post.coverDimensions.width,
       height: post.coverDimensions.height,
-    })
+      mentions: [photoMention(post)],
+    }
+    photos.push(photo)
+    bySrc.set(coverImage, photo)
   }
   return photos
 }
@@ -112,8 +138,10 @@ export default function PhotographyPage() {
               type="button"
               aria-label={photo.alt}
               data-zoomable=""
-              data-zoom-link-href={`/${photo.post.slug}`}
-              data-zoom-link-title={photo.post.frontmatter.title}
+              data-zoom-group="photography"
+              data-zoom-caption-title={photo.alt}
+              data-zoom-caption-footer-heading="Featured on"
+              data-zoom-caption-links={JSON.stringify(photo.mentions)}
               data-full-src={photo.src}
               className="relative block cursor-zoom-in overflow-hidden bg-gray-100"
               style={{

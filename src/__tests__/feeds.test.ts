@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPostsByNewsletter } from '@/lib/content/loader'
-import type { Post } from '@/lib/content/types'
+import { NEWSLETTERS, type Post } from '@/lib/content/types'
 import { generateJsonFeed } from '@/lib/feeds/json-feed'
 import { COMBINED_FEED_ITEM_LIMIT } from '@/lib/feeds/render'
 import { generateRss } from '@/lib/feeds/rss'
-
-const NEWSLETTERS = ['contraption', 'workshop', 'postcard'] as const
 
 // Rendering the full post corpus to HTML is several seconds of work, which can
 // cross the default 5s per-test timeout when the suite runs files in parallel.

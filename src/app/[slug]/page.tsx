@@ -28,6 +28,8 @@ import {
   getPostBySlug,
 } from '@/lib/content/loader'
 import { getRelatedPosts } from '@/lib/content/related'
+import { markdownToPlaintext } from '@/lib/content/render-html'
+import type { Post } from '@/lib/content/types'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 
 interface Props {
@@ -37,6 +39,17 @@ interface Props {
 const SOCIAL_IMAGE_WIDTH = 1200
 const SOCIAL_IMAGE_QUALITY = 100
 const FALLBACK_SOCIAL_IMAGE_SIZE = { width: 1200, height: 630 } as const
+const PHOTO_VIEWER_DESCRIPTION_MAX = 900
+
+function photoViewerDescription(post: Post): string {
+  const text =
+    post.frontmatter.description ??
+    markdownToPlaintext(post.content, PHOTO_VIEWER_DESCRIPTION_MAX + 1)
+
+  return text.length > PHOTO_VIEWER_DESCRIPTION_MAX
+    ? `${text.slice(0, PHOTO_VIEWER_DESCRIPTION_MAX).trimEnd()}...`
+    : text
+}
 
 function toVercelImagePath(
   imagePath: string,
@@ -160,6 +173,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       // the openGraph image fallback here as well.
       images: [socialImage],
     },
+    ...(post
+      ? {
+          icons: {
+            icon: [
+              {
+                url: siteConfig.newsletters[post.newsletter].icon,
+                type: 'image/svg+xml',
+              },
+            ],
+            apple: siteConfig.newsletters[post.newsletter].icon,
+          },
+        }
+      : {}),
   }
 }
 
@@ -182,8 +208,25 @@ export default async function SlugPage({ params }: Props) {
     workshop: { className: 'bg-offwhite-warm', dataBg: 'offwhite-warm' },
     contraption: { className: 'bg-gray-050', dataBg: 'gray-050' },
     postcard: { className: 'bg-offwhite-cool', dataBg: 'offwhite-cool' },
+    tsundoku: { className: 'bg-[#f4f4f2]', dataBg: 'tsundoku' },
   }
   const bg = post?.newsletter ? bgMap[post.newsletter] : undefined
+  const location = post?.frontmatter.location ?? null
+  const locationHoverText = post ? accentHoverText[post.newsletter] : ''
+  const postDate =
+    post && post.newsletter !== 'postcard' ? post.frontmatter.publishedAt : null
+  const showPostMetadata = Boolean(postDate || location)
+  const isTsundokuPost = post?.newsletter === 'tsundoku'
+  const coverZoomCaption = isTsundokuPost
+    ? {
+        'data-zoom-caption-href': `/${post.slug}`,
+        'data-zoom-caption-title': post.frontmatter.title,
+        'data-zoom-caption-description': photoViewerDescription(post),
+        'data-zoom-caption-date': post.frontmatter.publishedAt,
+        'data-zoom-caption-location-name': location?.name,
+        'data-zoom-caption-location-url': location?.url,
+      }
+    : {}
 
   return (
     <article className={bg?.className} data-bg={bg?.dataBg}>
@@ -193,25 +236,48 @@ export default async function SlugPage({ params }: Props) {
         post={post ?? undefined}
         page={page ?? undefined}
       />
-      <div className="container py-12 md:py-16">
+      <div
+        className={
+          isTsundokuPost
+            ? 'container pt-8 pb-12 md:pt-10 md:pb-16'
+            : 'container py-12 md:py-16'
+        }
+      >
         {/* Header */}
-        <header className="flex flex-col items-center text-center mx-auto max-w-3xl mb-10">
-          {post &&
-            post.newsletter !== 'postcard' &&
-            post.frontmatter.publishedAt && (
-              <time className="font-mono text-xs text-gray-500">
-                {post.frontmatter.publishedAt}
-              </time>
-            )}
-          <h1 className="font-sans font-semibold text-3xl leading-tight tracking-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl text-pretty mt-3">
+        <header
+          className={`mx-auto flex max-w-3xl flex-col items-center text-center ${isTsundokuPost ? 'mb-6' : 'mb-10'}`}
+        >
+          {showPostMetadata ? (
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-xs text-gray-500">
+              {postDate ? <time>{postDate}</time> : null}
+              {postDate && location ? <span aria-hidden="true">@</span> : null}
+              {location ? (
+                <a
+                  href={location.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`underline decoration-gray-300 underline-offset-2 ${locationHoverText} transition-colors duration-300`}
+                >
+                  {location.name}
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+          <h1
+            className={`mt-3 font-sans font-semibold leading-tight tracking-tight text-pretty text-gray-950 ${
+              isTsundokuPost
+                ? 'text-3xl sm:text-4xl md:text-5xl'
+                : 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl'
+            }`}
+          >
             {item.frontmatter.title}
           </h1>
-          {item.frontmatter.description && (
+          {item.frontmatter.description ? (
             <p className="font-serif text-gray-600 text-lg sm:text-xl max-w-prose leading-relaxed mt-4">
               {item.frontmatter.description}
             </p>
-          )}
-          {post && (
+          ) : null}
+          {post && !isTsundokuPost && (
             <a href="/" className="flex items-center gap-3 mt-6 group">
               <Image
                 src="/images/author.jpg"
@@ -230,8 +296,10 @@ export default async function SlugPage({ params }: Props) {
         </header>
 
         {/* Cover image */}
-        {item.frontmatter.coverImage && (
-          <div className="w-full overflow-hidden mb-10">
+        {item.frontmatter.coverImage ? (
+          <div
+            className={`image-loading-surface w-full overflow-hidden ${isTsundokuPost ? 'mb-8' : 'mb-10'}`}
+          >
             <Image
               src={item.frontmatter.coverImage}
               alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}
@@ -239,12 +307,13 @@ export default async function SlugPage({ params }: Props) {
               height={post?.coverDimensions?.height ?? 640}
               data-zoomable=""
               data-full-src={item.frontmatter.coverImage}
-              className="w-full cursor-zoom-in"
+              {...coverZoomCaption}
+              className="relative z-10 block w-full cursor-zoom-in"
               priority
               sizes={POST_COVER_SIZES}
             />
           </div>
-        )}
+        ) : null}
 
         {/* Content */}
         <div className="prose prose-xl font-serif mx-auto max-w-2xl">

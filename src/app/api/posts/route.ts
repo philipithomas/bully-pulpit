@@ -30,6 +30,8 @@ export async function GET(request: NextRequest) {
       coverImage: p.frontmatter.coverImage,
       coverImageAlt: p.frontmatter.coverImageAlt,
       coverDimensions: p.coverDimensions,
+      location: p.frontmatter.location,
+      sequence: p.frontmatter.sequence,
       excerpt: p.excerpt,
     })),
     meta: {

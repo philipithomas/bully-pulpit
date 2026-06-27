@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 export function NewsletterRowsSkeleton() {
   return (
     <div className="space-y-3">
-      {['contraption', 'workshop', 'postcard'].map((key) => (
+      {['contraption', 'workshop', 'postcard', 'tsundoku'].map((key) => (
         <div
           key={key}
           className="flex items-center justify-between border border-gray-200 bg-white px-4 py-3"

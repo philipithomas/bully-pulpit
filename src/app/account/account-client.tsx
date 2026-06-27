@@ -18,20 +18,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
-import { siteConfig } from '@/lib/config'
+import { newsletterRows } from '@/lib/newsletters'
 import { useAuthModal } from '@/stores/auth-store'
 
-const newsletterInfo = [
-  { key: 'subscribed_contraption', ...siteConfig.newsletters.contraption },
-  { key: 'subscribed_workshop', ...siteConfig.newsletters.workshop },
-  { key: 'subscribed_postcard', ...siteConfig.newsletters.postcard },
-] as const
+const newsletterInfo = newsletterRows()
 
 interface Preferences {
   email: string
   subscribed_contraption: boolean
   subscribed_workshop: boolean
   subscribed_postcard: boolean
+  subscribed_tsundoku: boolean
 }
 
 export function AccountClient() {
@@ -191,7 +188,7 @@ export function AccountClient() {
                   className="flex items-center justify-between py-3 px-4 bg-white border border-gray-200"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-[76px] shrink-0 flex items-center">
+                    <span className="w-[100px] shrink-0 flex items-center">
                       <Image
                         src={nl.logo.src}
                         alt={nl.name}
