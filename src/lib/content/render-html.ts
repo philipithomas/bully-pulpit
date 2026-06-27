@@ -10,7 +10,7 @@ import { escapeHtml } from '@/lib/email/escape'
 
 const SANS_STACK = `'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`
 const SERIF_STACK = `'Tiempos Text', Georgia, 'Times New Roman', serif`
-const MONO_STACK = `'Sohne Mono', 'SF Mono', 'Fira Code', monospace`
+const MONO_STACK = `'Sohne Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace`
 const EMAIL_IMAGE_WIDTH = 640
 const EMAIL_THUMBNAIL_WIDTH = 256
 const EMAIL_IMAGE_QUALITY = 100
@@ -159,7 +159,7 @@ export function renderEmailHeaderHtml(
   let html = ''
 
   if (publishedAt || location) {
-    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0; color: #7E7A73; text-align: center; margin: 0 0 12px;">`
+    html += `<p style="font-family: ${MONO_STACK}; font-size: 12px; font-weight: 400; letter-spacing: 0; color: #7E7A73; text-align: center; margin: 0 0 12px;">`
     if (publishedAt) {
       html += escapeHtml(publishedAt)
     }

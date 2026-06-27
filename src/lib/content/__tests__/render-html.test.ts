@@ -130,6 +130,8 @@ describe('renderEmailHeaderHtml', () => {
     )
     expect(html).toContain('2025-01-15')
     expect(html).toContain('Sohne Mono')
+    expect(html).toContain('SFMono-Regular')
+    expect(html).toContain('font-weight: 400')
     expect(html).toContain('letter-spacing: 0')
     expect(html).not.toContain('text-transform: uppercase')
     expect(html).not.toContain('@')
