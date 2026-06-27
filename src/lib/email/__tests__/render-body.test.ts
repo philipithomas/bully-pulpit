@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { getPostsByNewsletter } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 
@@ -84,5 +85,16 @@ describe('buildEmailBodyHtml with YouTube embeds', () => {
     expect(body.bodyText).toBe(
       'Just a paragraph with a link (https://example.com).'
     )
+  })
+})
+
+describe('buildEmailBodyHtml newsletter-specific blocks', () => {
+  it('omits related posts from Tsundoku photo emails', async () => {
+    const post = getPostsByNewsletter('tsundoku')[0]
+    expect(post).toBeDefined()
+
+    const body = await buildEmailBodyHtml(post)
+
+    expect(body.html).not.toContain('Keep reading')
   })
 })

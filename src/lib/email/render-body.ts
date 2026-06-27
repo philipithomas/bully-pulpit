@@ -28,7 +28,8 @@ export type EmailBody = {
  * posts API route and the newsletter send pipeline.
  */
 export async function buildEmailBodyHtml(post: Post): Promise<EmailBody> {
-  const relatedPosts = getRelatedPosts(post.slug)
+  const relatedPosts =
+    post.newsletter === 'tsundoku' ? [] : getRelatedPosts(post.slug)
   // Emails cannot play iframes: each YouTube embed becomes a clickable
   // thumbnail in the HTML part and a watch link in the text part.
   const { markdown: emailSource, embeds } = extractYouTubeEmbeds(post.content)

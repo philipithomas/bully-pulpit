@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
+import { markdownToPlaintext } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 
@@ -25,8 +26,19 @@ export const metadata: Metadata = {
 const ROW_HEIGHT = 260
 const MAX_ROW_WIDTH = 1216
 const STRETCH = 1.25
+const PHOTO_VIEWER_DESCRIPTION_MAX = 900
 const INTRO =
   'On 26 June 2026, I got a new camera and embarked on a two-week solo trip around Japan. I decided to build the trip around taking pictures, and this pop-up newsletter documents what I saw during those two weeks.'
+
+function photoViewerDescription(post: Post): string {
+  const text =
+    post.frontmatter.description ??
+    markdownToPlaintext(post.content, PHOTO_VIEWER_DESCRIPTION_MAX + 1)
+
+  return text.length > PHOTO_VIEWER_DESCRIPTION_MAX
+    ? `${text.slice(0, PHOTO_VIEWER_DESCRIPTION_MAX).trimEnd()}...`
+    : text
+}
 
 function tileSizes(ratio: number): string {
   const tabletVw = Math.min(
@@ -61,9 +73,10 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
         data-zoom-group="tsundoku"
         data-zoom-caption-href={`/${post.slug}`}
         data-zoom-caption-title={title}
-        data-zoom-caption-description={
-          post.frontmatter.description ?? post.excerpt
-        }
+        data-zoom-caption-description={photoViewerDescription(post)}
+        data-zoom-caption-date={post.frontmatter.publishedAt}
+        data-zoom-caption-location-name={location?.name}
+        data-zoom-caption-location-url={location?.url}
         data-full-src={coverImage}
         className="relative block w-full cursor-zoom-in overflow-hidden bg-gray-100"
         style={{

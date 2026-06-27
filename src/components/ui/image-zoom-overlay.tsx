@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Share2, X } from 'lucide-react'
 import Link from 'next/link'
 import {
   type MouseEvent,
@@ -10,15 +10,20 @@ import {
   useState,
 } from 'react'
 
+export interface ZoomCaption {
+  href: string
+  title: string
+  description?: string | null
+  date?: string | null
+  locationName?: string | null
+  locationUrl?: string | null
+}
+
 export interface ZoomGalleryItem {
   src: string
   fullSrc: string | null
   alt: string
-  caption?: {
-    href: string
-    title: string
-    description?: string | null
-  } | null
+  caption?: ZoomCaption | null
 }
 
 export interface ZoomedImage {
@@ -26,11 +31,7 @@ export interface ZoomedImage {
   fullSrc: string | null
   alt: string
   /** Optional post caption shown in the overlay; omitted for plain galleries. */
-  caption?: {
-    href: string
-    title: string
-    description?: string | null
-  } | null
+  caption?: ZoomCaption | null
   /** Viewport rect of the clicked image: where the zoom starts and ends. */
   rect: { top: number; left: number; width: number; height: number } | null
   gallery?: {
@@ -78,6 +79,14 @@ function flipTransform(
   return `translate(${dx}px, ${dy}px) scale(${scale})`
 }
 
+function focusableOverlayItems(container: HTMLElement | null): HTMLElement[] {
+  if (!container) return []
+
+  return Array.from(
+    container.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')
+  ).filter((el) => el.getClientRects().length > 0)
+}
+
 export function ImageZoomOverlay({
   image,
   onClose,
@@ -93,10 +102,10 @@ export function ImageZoomOverlay({
     height: number
   } | null>(null)
   const [upgrade, setUpgrade] = useState<Upgrade | null>(null)
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const immediateRef = useRef<HTMLImageElement>(null)
-  const captionLinkRef = useRef<HTMLAnchorElement>(null)
   const closingRef = useRef(false)
   const gallery = image.gallery ?? null
   const hasGallery = Boolean(gallery && gallery.items.length > 1)
@@ -154,10 +163,7 @@ export function ImageZoomOverlay({
     }
   }, [image.rect, onClose, phase])
 
-  // Escape closes; Tab is trapped. Without a caption the overlay has no
-  // focusable children, so holding focus on the container is a sufficient
-  // trap. With a caption link there are exactly two stops, so cycling in
-  // either direction is a toggle between the container and the link.
+  // Escape closes; Tab is trapped among the visible overlay controls.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose()
@@ -171,22 +177,43 @@ export function ImageZoomOverlay({
       }
       if (e.key === 'Tab') {
         e.preventDefault()
-        const link = captionLinkRef.current
-        if (link && document.activeElement !== link) {
-          link.focus()
-        } else {
+        const focusables = focusableOverlayItems(overlayRef.current)
+        if (focusables.length === 0) {
           overlayRef.current?.focus()
+          return
         }
+
+        const currentIndex = focusables.indexOf(
+          document.activeElement as HTMLElement
+        )
+        const nextIndex = e.shiftKey
+          ? currentIndex <= 0
+            ? focusables.length - 1
+            : currentIndex - 1
+          : currentIndex === -1 || currentIndex === focusables.length - 1
+            ? 0
+            : currentIndex + 1
+
+        focusables[nextIndex]?.focus()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [canNext, canPrevious, handleClose, hasGallery, onNavigate])
 
-  // Scrolling closes, like medium-zoom: the reader is leaving, get out of
-  // the way.
+  // Scrolling outside the details rail closes, like medium-zoom: the reader is
+  // leaving, get out of the way.
   useEffect(() => {
-    const close = () => handleClose()
+    const close = (e: Event) => {
+      const target = e.target
+      if (
+        target instanceof Element &&
+        target.closest('[data-zoom-caption-panel]')
+      ) {
+        return
+      }
+      handleClose()
+    }
     window.addEventListener('wheel', close, { passive: true })
     window.addEventListener('touchmove', close, { passive: true })
     return () => {
@@ -222,6 +249,12 @@ export function ImageZoomOverlay({
       cancelled = true
     }
   }, [image.fullSrc])
+
+  useEffect(() => {
+    if (!copiedUrl) return
+    const timer = window.setTimeout(() => setCopiedUrl(null), 2000)
+    return () => window.clearTimeout(timer)
+  }, [copiedUrl])
 
   const imageResetKey = `${image.src}\n${image.fullSrc ?? ''}`
   useEffect(() => {
@@ -261,15 +294,53 @@ export function ImageZoomOverlay({
   const holdOutgoing =
     upgrade !== null && upgrade.outgoingWidth > 0 && upgrade.outgoingHeight > 0
   const imageBounds = hasCaption
-    ? 'max-h-[62vh] max-w-[calc(100vw-2rem)] object-contain md:max-h-[calc(100vh-2rem)] md:max-w-[calc(100vw-24rem)]'
+    ? 'max-h-[58vh] max-w-[calc(100vw-1rem)] object-contain sm:max-h-[62vh] md:max-h-screen md:max-w-full'
     : 'max-h-[90vh] max-w-[90vw] object-contain'
-  const handleCaptionClick = useCallback(
-    (e: MouseEvent<HTMLAnchorElement>) => e.stopPropagation(),
-    []
+  const hasCaptionMetadata = Boolean(caption?.date || caption?.locationName)
+  const handleCaptionClick = useCallback((e: MouseEvent<HTMLElement>) => {
+    e.stopPropagation()
+  }, [])
+  const copyShareUrl = useCallback(async (url: string) => {
+    if (!navigator.clipboard?.writeText) return
+    await navigator.clipboard.writeText(url)
+    setCopiedUrl(url)
+  }, [])
+  const handleShare = useCallback(
+    async (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation()
+      if (!caption) return
+
+      const url = new URL(caption.href, window.location.origin).toString()
+
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: caption.title, url })
+          return
+        }
+        await copyShareUrl(url)
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return
+        }
+        try {
+          await copyShareUrl(url)
+        } catch {
+          setCopiedUrl(null)
+        }
+      }
+    },
+    [caption, copyShareUrl]
   )
   const handleCaptionPanelClick = useCallback(
     (e: MouseEvent<HTMLElement>) => e.stopPropagation(),
     []
+  )
+  const handleCloseButton = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation()
+      handleClose()
+    },
+    [handleClose]
   )
   const handlePrevious = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
@@ -287,6 +358,9 @@ export function ImageZoomOverlay({
     },
     [canNext, onNavigate]
   )
+  const captionShareUrl = caption
+    ? new URL(caption.href, window.location.origin).toString()
+    : null
 
   return (
     <div
@@ -295,23 +369,33 @@ export function ImageZoomOverlay({
       aria-modal="true"
       aria-label={image.alt || 'Image viewer'}
       tabIndex={-1}
-      className={`fixed inset-0 z-60 cursor-zoom-out bg-[#0A0A0A]/95 ${
+      className={`fixed inset-0 z-60 cursor-zoom-out bg-[#0A0A0A] ${
         phase === 'closing' ? 'image-zoom-closing' : 'image-zoom-opening'
       }`}
-      style={{ touchAction: 'none' }}
+      style={{ touchAction: hasCaption ? 'auto' : 'none' }}
       onClick={handleClose}
     >
+      {!caption ? (
+        <button
+          type="button"
+          onClick={handleCloseButton}
+          aria-label="Close image viewer"
+          className="absolute top-3 right-3 z-20 flex h-10 w-10 items-center justify-center text-white/70 transition-colors hover:text-white sm:top-4 sm:right-4"
+        >
+          <X aria-hidden="true" className="h-5 w-5" />
+        </button>
+      ) : null}
       <div
         className={
           hasCaption
-            ? 'flex h-full w-full flex-col md:flex-row'
+            ? 'grid h-full w-full grid-rows-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_26rem] md:grid-rows-1'
             : 'flex h-full w-full items-center justify-center'
         }
       >
         <div
           className={
             hasCaption
-              ? 'relative flex min-h-0 flex-1 items-center justify-center p-4 md:p-6'
+              ? 'relative flex min-h-0 items-center justify-center overflow-hidden bg-[#0A0A0A] p-2 sm:p-3 md:h-screen md:p-0'
               : 'relative flex h-full w-full items-center justify-center'
           }
         >
@@ -393,27 +477,72 @@ export function ImageZoomOverlay({
         </div>
         {caption ? (
           <aside
-            className="max-h-[38vh] w-full shrink-0 cursor-auto overflow-y-auto bg-[#f4f4f2] px-5 py-5 text-gray-900 md:max-h-none md:h-full md:w-96 md:px-6 md:py-8"
+            data-zoom-caption-panel=""
+            className="max-h-[42vh] w-full cursor-auto overflow-y-auto overscroll-contain border-gray-200 border-t bg-[#f4f4f2] px-5 py-5 text-gray-900 md:h-screen md:max-h-none md:border-t-0 md:border-l md:px-7 md:py-7"
             onClick={handleCaptionPanelClick}
           >
-            <p className="font-sans text-base font-semibold leading-tight">
-              {caption.title}
-            </p>
+            <div className="sticky top-0 z-10 -mx-5 -mt-5 flex items-start justify-between gap-4 bg-[#f4f4f2] px-5 pt-5 pb-2 md:-mx-7 md:-mt-7 md:px-7 md:pt-7">
+              <div className="min-w-0">
+                {hasCaptionMetadata ? (
+                  <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-gray-500">
+                    {caption.date ? <time>{caption.date}</time> : null}
+                    {caption.date && caption.locationName ? (
+                      <span aria-hidden="true">@</span>
+                    ) : null}
+                    {caption.locationName ? (
+                      caption.locationUrl ? (
+                        <a
+                          href={caption.locationUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-sun"
+                          onClick={handleCaptionClick}
+                        >
+                          {caption.locationName}
+                        </a>
+                      ) : (
+                        <span>{caption.locationName}</span>
+                      )
+                    ) : null}
+                  </div>
+                ) : null}
+                <h2 className="font-sans text-xl font-semibold leading-tight text-gray-950 md:text-2xl">
+                  {caption.title}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseButton}
+                aria-label="Close image viewer"
+                className="-mt-2 -mr-2 flex h-10 w-10 shrink-0 items-center justify-center text-gray-500 transition-colors hover:text-gray-950"
+              >
+                <X aria-hidden="true" className="h-5 w-5" />
+              </button>
+            </div>
             {caption.description ? (
-              <p className="mt-4 font-serif text-sm leading-relaxed text-gray-700">
+              <p className="mt-5 font-serif text-base leading-relaxed text-gray-700">
                 {caption.description}
               </p>
             ) : null}
-            <Link
-              ref={captionLinkRef}
-              href={caption.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-5 inline-flex h-9 items-center bg-gray-950 px-3 font-sans text-xs font-medium text-white transition-colors hover:bg-sun"
-              onClick={handleCaptionClick}
-            >
-              More
-            </Link>
+            <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+              <button
+                type="button"
+                onClick={handleShare}
+                className="inline-flex h-9 items-center gap-2 border border-gray-300 px-3 font-sans text-xs font-semibold text-gray-800 transition-colors hover:border-gray-950 hover:text-gray-950"
+              >
+                <Share2 aria-hidden="true" className="h-3.5 w-3.5" />
+                {copiedUrl === captionShareUrl ? 'Copied' : 'Share'}
+              </button>
+              <Link
+                href={caption.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-sans text-xs text-gray-500 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-sun"
+                onClick={handleCaptionClick}
+              >
+                Open post
+              </Link>
+            </div>
           </aside>
         ) : null}
       </div>

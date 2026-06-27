@@ -28,6 +28,8 @@ import {
   getPostBySlug,
 } from '@/lib/content/loader'
 import { getRelatedPosts } from '@/lib/content/related'
+import { markdownToPlaintext } from '@/lib/content/render-html'
+import type { Post } from '@/lib/content/types'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 
 interface Props {
@@ -37,6 +39,17 @@ interface Props {
 const SOCIAL_IMAGE_WIDTH = 1200
 const SOCIAL_IMAGE_QUALITY = 100
 const FALLBACK_SOCIAL_IMAGE_SIZE = { width: 1200, height: 630 } as const
+const PHOTO_VIEWER_DESCRIPTION_MAX = 900
+
+function photoViewerDescription(post: Post): string {
+  const text =
+    post.frontmatter.description ??
+    markdownToPlaintext(post.content, PHOTO_VIEWER_DESCRIPTION_MAX + 1)
+
+  return text.length > PHOTO_VIEWER_DESCRIPTION_MAX
+    ? `${text.slice(0, PHOTO_VIEWER_DESCRIPTION_MAX).trimEnd()}...`
+    : text
+}
 
 function toVercelImagePath(
   imagePath: string,
@@ -203,15 +216,17 @@ export default async function SlugPage({ params }: Props) {
   const postDate =
     post && post.newsletter !== 'postcard' ? post.frontmatter.publishedAt : null
   const showPostMetadata = Boolean(postDate || location)
-  const coverZoomCaption =
-    post?.newsletter === 'tsundoku'
-      ? {
-          'data-zoom-caption-href': `/${post.slug}`,
-          'data-zoom-caption-title': post.frontmatter.title,
-          'data-zoom-caption-description':
-            post.frontmatter.description ?? post.excerpt,
-        }
-      : {}
+  const isTsundokuPost = post?.newsletter === 'tsundoku'
+  const coverZoomCaption = isTsundokuPost
+    ? {
+        'data-zoom-caption-href': `/${post.slug}`,
+        'data-zoom-caption-title': post.frontmatter.title,
+        'data-zoom-caption-description': photoViewerDescription(post),
+        'data-zoom-caption-date': post.frontmatter.publishedAt,
+        'data-zoom-caption-location-name': location?.name,
+        'data-zoom-caption-location-url': location?.url,
+      }
+    : {}
 
   return (
     <article className={bg?.className} data-bg={bg?.dataBg}>
@@ -221,9 +236,17 @@ export default async function SlugPage({ params }: Props) {
         post={post ?? undefined}
         page={page ?? undefined}
       />
-      <div className="container py-12 md:py-16">
+      <div
+        className={
+          isTsundokuPost
+            ? 'container pt-8 pb-12 md:pt-10 md:pb-16'
+            : 'container py-12 md:py-16'
+        }
+      >
         {/* Header */}
-        <header className="flex flex-col items-center text-center mx-auto max-w-3xl mb-10">
+        <header
+          className={`mx-auto flex max-w-3xl flex-col items-center text-center ${isTsundokuPost ? 'mb-6' : 'mb-10'}`}
+        >
           {showPostMetadata ? (
             <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-xs text-gray-500">
               {postDate ? <time>{postDate}</time> : null}
@@ -240,7 +263,13 @@ export default async function SlugPage({ params }: Props) {
               ) : null}
             </div>
           ) : null}
-          <h1 className="font-sans font-semibold text-3xl leading-tight tracking-tight text-gray-950 sm:text-4xl md:text-5xl lg:text-6xl text-pretty mt-3">
+          <h1
+            className={`mt-3 font-sans font-semibold leading-tight tracking-tight text-pretty text-gray-950 ${
+              isTsundokuPost
+                ? 'text-3xl sm:text-4xl md:text-5xl'
+                : 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl'
+            }`}
+          >
             {item.frontmatter.title}
           </h1>
           {item.frontmatter.description && (
@@ -248,7 +277,7 @@ export default async function SlugPage({ params }: Props) {
               {item.frontmatter.description}
             </p>
           )}
-          {post && (
+          {post && !isTsundokuPost && (
             <a href="/" className="flex items-center gap-3 mt-6 group">
               <Image
                 src="/images/author.jpg"
@@ -268,7 +297,9 @@ export default async function SlugPage({ params }: Props) {
 
         {/* Cover image */}
         {item.frontmatter.coverImage && (
-          <div className="w-full overflow-hidden mb-10">
+          <div
+            className={`w-full overflow-hidden ${isTsundokuPost ? 'mb-8' : 'mb-10'}`}
+          >
             <Image
               src={item.frontmatter.coverImage}
               alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}

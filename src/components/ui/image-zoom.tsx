@@ -45,11 +45,20 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
     element.dataset.zoomCaptionDescription ??
     img.dataset.zoomCaptionDescription ??
     null
+  const date = element.dataset.zoomCaptionDate ?? img.dataset.zoomCaptionDate
+  const locationName =
+    element.dataset.zoomCaptionLocationName ??
+    img.dataset.zoomCaptionLocationName
+  const locationUrl =
+    element.dataset.zoomCaptionLocationUrl ?? img.dataset.zoomCaptionLocationUrl
   return {
     src: img.currentSrc || img.src,
     fullSrc,
     alt: img.alt ?? '',
-    caption: href && title ? { href, title, description } : null,
+    caption:
+      href && title
+        ? { href, title, description, date, locationName, locationUrl }
+        : null,
   }
 }
 
