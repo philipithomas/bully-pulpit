@@ -86,6 +86,7 @@ export interface HybridSearchOptions {
   weights?: HybridSearchWeights
   embeddingTimeoutMs?: number
   scope?: SearchScope
+  useVector?: boolean
 }
 
 interface TextVectorEntry {
@@ -286,6 +287,7 @@ export async function hybridSearchPosts(
   const maxImages = options.maxImages ?? DEFAULT_MAX_IMAGES
   const vectorLimit = options.vectorLimit ?? DEFAULT_VECTOR_LIMIT
   const weights = options.weights ?? HYBRID_SEARCH_WEIGHTS
+  const useVector = options.useVector ?? true
   const embeddingTimeoutMs =
     options.embeddingTimeoutMs ?? DEFAULT_QUERY_EMBEDDING_TIMEOUT_MS
   const scope = options.scope ?? 'posts'
@@ -302,7 +304,7 @@ export async function hybridSearchPosts(
     const vectorRanking: string[] = []
     let mode: HybridSearchResponse['mode'] = 'lexical'
 
-    if (store.images.size > 0) {
+    if (useVector && store.images.size > 0) {
       try {
         const queryVector = await embedQueryWithTimeout(
           query,
@@ -372,7 +374,7 @@ export async function hybridSearchPosts(
     imagesBySlug.get(entry.slug)!.push(entry)
   }
 
-  if (store.entries.length > 0) {
+  if (useVector && store.entries.length > 0) {
     try {
       const queryVector = await embedQueryWithTimeout(query, embeddingTimeoutMs)
       const top = topKBySimilarity(
