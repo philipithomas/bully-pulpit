@@ -34,6 +34,50 @@ interface Props {
   params: Promise<{ slug: string }>
 }
 
+const SOCIAL_IMAGE_SIZE = { width: 1200, height: 630 } as const
+
+function getOgCoverImagePath(coverImage: string): string {
+  const basename = coverImage
+    .split('/')
+    .pop()
+    ?.replace(/\.[^.]+$/, '.jpg')
+  return `/images/og/covers/${basename ?? 'cover.jpg'}`
+}
+
+function getSocialImage({
+  title,
+  coverImage,
+  coverImageAlt,
+  coverDimensions,
+}: {
+  title: string
+  coverImage?: string
+  coverImageAlt?: string
+  coverDimensions?: { width: number; height: number }
+}) {
+  if (coverImage?.startsWith('/images/covers/')) {
+    return {
+      url: getOgCoverImagePath(coverImage),
+      ...SOCIAL_IMAGE_SIZE,
+      alt: coverImageAlt ?? title,
+    }
+  }
+
+  if (coverImage) {
+    return {
+      url: coverImage,
+      ...(coverDimensions ?? {}),
+      alt: coverImageAlt ?? title,
+    }
+  }
+
+  return {
+    url: siteConfig.image,
+    ...SOCIAL_IMAGE_SIZE,
+    alt: siteConfig.title,
+  }
+}
+
 export async function generateStaticParams() {
   const posts = getAllPosts()
   const pages = getPages()
@@ -53,6 +97,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const description =
     item.frontmatter.description ?? extractExcerpt(item.content, 160)
+  const socialImage = getSocialImage({
+    title: item.frontmatter.title,
+    coverImage: item.frontmatter.coverImage,
+    coverImageAlt: item.frontmatter.coverImageAlt,
+    coverDimensions: post?.coverDimensions,
+  })
 
   return {
     title: item.frontmatter.title,
@@ -77,8 +127,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             authors: [siteConfig.author],
           }
         : { type: 'website' }),
-      // Fall back to the site image when the item has no cover.
-      images: [{ url: item.frontmatter.coverImage ?? siteConfig.image }],
+      images: [socialImage],
     },
     twitter: {
       card: 'summary_large_image',
@@ -86,7 +135,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       // Page-level twitter metadata replaces the root layout's, so mirror
       // the openGraph image fallback here as well.
-      images: [{ url: item.frontmatter.coverImage ?? siteConfig.image }],
+      images: [socialImage],
     },
   }
 }
