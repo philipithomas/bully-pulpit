@@ -111,8 +111,8 @@ export default function TsundokuPage() {
 
   return (
     <div className="bg-[#f4f4f2]" data-bg="tsundoku">
-      <div className="container pt-8 pb-10 sm:pt-10 sm:pb-12 md:pt-12 md:pb-16">
-        <div className="mb-8 flex flex-col items-center text-center md:mb-10">
+      <div className="container pt-4 pb-10 sm:pt-6 sm:pb-12 md:pt-6 md:pb-14">
+        <div className="mb-5 flex flex-col items-center text-center md:mb-7">
           <Image
             src="/images/tsundoku.svg"
             alt="Tsundoku"
@@ -123,10 +123,10 @@ export default function TsundokuPage() {
             priority
           />
           <h1 className="sr-only">Tsundoku</h1>
-          <p className="mt-4 max-w-[42rem] text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
+          <p className="mt-3 max-w-[42rem] text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
             {INTRO}
           </p>
-          <SubscribeCta newsletter="tsundoku" className="mt-6" />
+          <SubscribeCta newsletter="tsundoku" className="mt-5" />
         </div>
 
         <div className="flex flex-wrap gap-x-2 gap-y-5 [--row-h:160px] sm:gap-y-6 sm:[--row-h:220px] lg:[--row-h:260px]">
