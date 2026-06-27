@@ -51,6 +51,11 @@ function brandHeader(newsletter: NewsletterSlug | '', siteUrl: string): string {
   }
   const mark = wordmarks[newsletter]
   const dims = `height: ${mark.height}px; width: ${mark.width}px;`
+  if (newsletter === 'tsundoku') {
+    return `<a href="${siteUrl}/${newsletter}" style="text-decoration: none;">
+              <img class="email-brand-tsundoku" src="${siteUrl}/images/${mark.file}-email.png" alt="${mark.name}" width="${mark.width}" height="${mark.height}" style="${dims}">
+            </a>`
+  }
   return `<a href="${siteUrl}/${newsletter}" style="text-decoration: none;">
               <img class="email-brand-light" src="${siteUrl}/images/${mark.file}-email.png" alt="${mark.name}" width="${mark.width}" height="${mark.height}" style="${dims}">
               <img class="email-brand-dark" src="${siteUrl}/images/${mark.file}-email-dark.png" alt="${mark.name}" width="${mark.width}" height="${mark.height}" style="${dims} display: none;">
@@ -70,9 +75,24 @@ export function renderNewsletterShell(input: {
   siteUrl?: string
 }): string {
   const siteUrl = input.siteUrl ?? siteConfig.url
+  const isTsundoku = input.newsletter === 'tsundoku'
   const bgColor = input.newsletter
     ? backgroundColors[input.newsletter]
     : '#ffffff'
+  const cardBgColor = isTsundoku ? bgColor : '#ffffff'
+  const brandPadding = isTsundoku ? '36px 20px 28px' : '40px 20px 0'
+  const contentPadding = isTsundoku ? '0 32px 32px' : '32px'
+  const mobileContentPadding = isTsundoku ? '0 20px 24px' : '24px 20px'
+  const footerPadding = isTsundoku ? '12px 20px 28px' : '20px'
+  const contentCellClass = isTsundoku
+    ? 'content-cell content-cell-tsundoku'
+    : 'content-cell'
+  const cardClass = isTsundoku ? 'email-card email-card-tsundoku' : 'email-card'
+  const tsundokuDarkOverrides = isTsundoku
+    ? `
+    .email-card-tsundoku { background-color: #121110 !important; }
+    img.email-brand-tsundoku { display: inline-block !important; opacity: 1 !important; }`
+    : ''
   const darkAccent = input.newsletter
     ? darkAccentColors[input.newsletter]
     : DEFAULT_DARK_ACCENT
@@ -104,7 +124,7 @@ export function renderNewsletterShell(input: {
   .content-cell { overflow-wrap: anywhere; word-break: break-word; }
   .content-cell img { max-width: 100% !important; height: auto !important; }
   @media (max-width: 620px) {
-    .content-cell { padding: 24px 20px !important; }
+    .content-cell { padding: ${mobileContentPadding} !important; }
   }
   /* Dark mode: inline styles stay the light-mode source of truth; these
      overrides re-skin clients that honor prefers-color-scheme (Apple Mail,
@@ -127,7 +147,7 @@ export function renderNewsletterShell(input: {
     .email-footer p, .email-footer a { color: #A8A49D !important; }
     img.email-brand-light { display: none !important; }
     img.email-brand-dark { display: inline-block !important; }
-    a.email-brand-text { color: #ECE9E4 !important; }
+    a.email-brand-text { color: #ECE9E4 !important; }${tsundokuDarkOverrides}
   }
 </style>
 </head>
@@ -135,7 +155,7 @@ export function renderNewsletterShell(input: {
 ${preheader}
 <table class="email-bg" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: ${bgColor};">
   <tr>
-    <td align="center" style="padding: 40px 20px 0;">
+    <td align="center" style="padding: ${brandPadding};">
       <!--[if mso]>
       <table border="0" cellpadding="0" cellspacing="0" width="600" align="center"><tr><td>
       <![endif]-->
@@ -156,9 +176,9 @@ ${preheader}
       <!--[if mso]>
       <table border="0" cellpadding="0" cellspacing="0" width="600" align="center"><tr><td>
       <![endif]-->
-      <table class="email-card" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff;">
+      <table class="${cardClass}" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: ${cardBgColor};">
         <tr>
-          <td class="content-cell" style="padding: 32px; font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 17px; line-height: 1.6; color: #3B3834; overflow: hidden; word-break: break-word;">
+          <td class="${contentCellClass}" style="padding: ${contentPadding}; font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 17px; line-height: 1.6; color: #3B3834; overflow: hidden; word-break: break-word;">
             ${input.content}
           </td>
         </tr>
@@ -169,7 +189,7 @@ ${preheader}
     </td>
   </tr>
   <tr>
-    <td align="center" style="padding: 20px;">
+    <td align="center" style="padding: ${footerPadding};">
       <!--[if mso]>
       <table border="0" cellpadding="0" cellspacing="0" width="600" align="center"><tr><td>
       <![endif]-->

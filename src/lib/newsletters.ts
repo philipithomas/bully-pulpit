@@ -3,11 +3,7 @@ import { NEWSLETTERS, type Newsletter } from '@/lib/content/types'
 
 export const newsletterList: readonly Newsletter[] = NEWSLETTERS
 
-export const defaultSignupNewsletters: readonly Newsletter[] = [
-  'contraption',
-  'workshop',
-  'postcard',
-]
+export const defaultSignupNewsletters: readonly Newsletter[] = newsletterList
 
 export const newsletterPreferenceKeys: Record<Newsletter, string> = {
   contraption: 'subscribed_contraption',

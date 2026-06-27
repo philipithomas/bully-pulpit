@@ -71,6 +71,38 @@ describe('newsletter shell dark mode', () => {
     )
   })
 
+  it('renders Tsundoku on a single light surface with the colored wordmark', () => {
+    const html = renderNewsletterShell({
+      ...baseInput,
+      newsletter: 'tsundoku',
+    })
+    expect(html).toContain(
+      '<body class="email-body" style="margin: 0; padding: 0; background-color: #f4f4f2;">'
+    )
+    expect(html).toContain(
+      'class="email-card email-card-tsundoku" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #f4f4f2;"'
+    )
+    expect(html).toContain(
+      '<td class="content-cell content-cell-tsundoku" style="padding: 0 32px 32px;'
+    )
+    expect(html).toContain('class="email-brand-tsundoku"')
+    expect(html).toContain('/images/tsundoku-email.png')
+    expect(html).not.toContain('/images/tsundoku-email-dark.png')
+  })
+
+  it('keeps the Tsundoku wordmark colored in dark mode', () => {
+    const html = renderNewsletterShell({
+      ...baseInput,
+      newsletter: 'tsundoku',
+    })
+    expect(extractDarkBlock(html)).toContain(
+      'img.email-brand-tsundoku { display: inline-block !important; opacity: 1 !important; }'
+    )
+    expect(extractDarkBlock(html)).toContain(
+      '.email-card-tsundoku { background-color: #121110 !important; }'
+    )
+  })
+
   it('snapshots the dark-mode style block', () => {
     const html = renderNewsletterShell({
       ...baseInput,

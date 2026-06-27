@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-06-27T12:41:41.725Z",
+  "generatedAt": "2026-06-27T14:19:36.803Z",
   "posts": {
+    "introducing-tsundoku": {
+      "related": [
+        {
+          "slug": "2024-02",
+          "score": 0.2874749
+        },
+        {
+          "slug": "2025-12",
+          "score": 0.3052075
+        },
+        {
+          "slug": "2026-01",
+          "score": 0.3170654
+        }
+      ]
+    },
     "spring-cleaning": {
       "related": [
         {
@@ -24,12 +40,12 @@
           "score": 0.4416485
         },
         {
-          "slug": "digital-product-studios",
-          "score": 0.5837267
+          "slug": "introducing-tsundoku",
+          "score": 0.4982554
         },
         {
-          "slug": "slow-travel",
-          "score": 0.5956344
+          "slug": "digital-product-studios",
+          "score": 0.5837267
         }
       ]
     },
@@ -40,12 +56,12 @@
           "score": 0.47483
         },
         {
-          "slug": "2023-10",
-          "score": 0.5173529
+          "slug": "introducing-tsundoku",
+          "score": 0.4887693
         },
         {
-          "slug": "2026-03",
-          "score": 0.5201318
+          "slug": "2023-10",
+          "score": 0.5173529
         }
       ]
     },
@@ -1224,12 +1240,12 @@
           "score": 0.3851792
         },
         {
-          "slug": "2024-02",
-          "score": 0.4080813
+          "slug": "introducing-tsundoku",
+          "score": 0.3958381
         },
         {
-          "slug": "creator-vs-software-businesses",
-          "score": 0.438204
+          "slug": "2024-02",
+          "score": 0.4080813
         }
       ]
     },

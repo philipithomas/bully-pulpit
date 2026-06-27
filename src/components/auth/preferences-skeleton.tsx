@@ -1,7 +1,7 @@
 import { Skeleton } from '@/components/ui/skeleton'
 
 /**
- * Placeholder for the three newsletter toggle rows on the account and
+ * Placeholder for the newsletter toggle rows on the account and
  * unsubscribe pages, mirroring the real row layout (logo or name, tagline,
  * checkbox) so the page does not shift when preferences arrive.
  */
