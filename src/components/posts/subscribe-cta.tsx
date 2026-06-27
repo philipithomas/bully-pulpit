@@ -38,6 +38,8 @@ export function SubscribeCta({
   const [saving, setSaving] = useState(false)
   const key = preferenceKeys[newsletter]
   const config = siteConfig.newsletters[newsletter]
+  const buttonClassName =
+    newsletter === 'tsundoku' ? 'btn btn-sun' : 'btn btn-primary'
 
   useEffect(() => {
     if (!user) {
@@ -102,7 +104,7 @@ export function SubscribeCta({
           type="button"
           onClick={subscribeSignedIn}
           disabled={saving}
-          className="btn btn-primary"
+          className={buttonClassName}
         >
           <span className="btn-text">
             {saving ? (
@@ -113,7 +115,11 @@ export function SubscribeCta({
           </span>
         </button>
       ) : (
-        <InlineSignupForm align="center" newsletters={[newsletter]} />
+        <InlineSignupForm
+          align="center"
+          buttonClassName={buttonClassName}
+          newsletters={[newsletter]}
+        />
       )}
     </div>
   )

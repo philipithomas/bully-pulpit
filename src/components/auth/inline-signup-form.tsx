@@ -23,6 +23,7 @@ interface Props {
   headerText?: string
   newsletters?: Newsletter[]
   align?: 'start' | 'center'
+  buttonClassName?: string
   /**
    * When true, fetches the live subscriber count client-side and uses it as the
    * header text ("Join N other subscribers:"). Lets the host page stay static.
@@ -39,6 +40,7 @@ export function InlineSignupForm({
   headerText,
   newsletters = [...defaultSignupNewsletters],
   align = 'start',
+  buttonClassName = 'btn btn-primary',
   showSubscriberCount = false,
 }: Props) {
   const { user } = useAuthContext()
@@ -202,7 +204,7 @@ export function InlineSignupForm({
         <button
           type="submit"
           disabled={loading}
-          className="btn btn-primary h-10 shrink-0"
+          className={`${buttonClassName} h-10 shrink-0`}
         >
           <span className="btn-text">
             {loading ? <Spinner className="h-4 w-4" /> : 'Subscribe'}

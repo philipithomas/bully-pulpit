@@ -32,7 +32,7 @@ const TRIP_START = '2026-06-24'
 const TRIP_END = '2026-07-08'
 const INTRO = [
   'In Summer 2026, I found myself with unexpected downtime between jobs. I flew to Japan, bought a camera, and started practicing photography.',
-  'My photos usually live inside essays, not social media, so I quickly built up a stack of unpublished images.',
+  'My photos usually live inside essays, so I quickly built up a stack of unpublished images.',
   'This pop-up newsletter collects my favorite photos from the trip.',
 ]
 
@@ -131,7 +131,17 @@ export default function TsundokuPage() {
   return (
     <div className="bg-[#f4f4f2]" data-bg="tsundoku">
       <div className="container pt-4 pb-10 sm:pt-6 sm:pb-12 md:pt-6 md:pb-14">
-        <div className="mb-5 flex flex-col items-center text-center md:mb-7">
+        <div className="mb-10 flex flex-col items-center text-center md:mb-14">
+          <div
+            className="mb-4 flex items-center justify-center gap-2 font-mono text-xs text-gray-500"
+            aria-label={`Trip dates: ${TRIP_START} to ${TRIP_END}`}
+          >
+            <time dateTime={TRIP_START}>{TRIP_START}</time>
+            <span aria-hidden="true">
+              <ArrowIcon className="h-3.5 w-3.5 text-sun" />
+            </span>
+            <time dateTime={TRIP_END}>{TRIP_END}</time>
+          </div>
           <Link
             href="/tsundoku"
             aria-label="Tsundoku"
@@ -148,16 +158,6 @@ export default function TsundokuPage() {
             />
           </Link>
           <h1 className="sr-only">Tsundoku</h1>
-          <div
-            className="mt-4 flex items-center justify-center gap-2 font-mono text-xs text-gray-500"
-            aria-label={`Trip dates: ${TRIP_START} to ${TRIP_END}`}
-          >
-            <time dateTime={TRIP_START}>{TRIP_START}</time>
-            <span aria-hidden="true">
-              <ArrowIcon className="h-3.5 w-3.5 text-sun" />
-            </span>
-            <time dateTime={TRIP_END}>{TRIP_END}</time>
-          </div>
           <div className="mt-4 max-w-[41rem] space-y-2 text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
             {INTRO.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
