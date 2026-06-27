@@ -53,6 +53,7 @@ describe('sitemap.xml route', () => {
       '/contraption',
       '/workshop',
       '/postcard',
+      '/contact',
       '/sitemap',
       '/print',
     ]) {
