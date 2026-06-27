@@ -489,14 +489,14 @@ export function ImageZoomOverlay({
         {caption ? (
           <aside
             data-zoom-caption-panel=""
-            className="max-h-[42vh] w-full cursor-auto overflow-hidden overscroll-contain border-gray-200 border-t bg-[#f4f4f2] text-gray-900 md:h-screen md:max-h-none md:border-t-0 md:border-l"
+            className="min-w-0 max-h-[42vh] w-full cursor-auto overflow-hidden overscroll-contain border-gray-200 border-t bg-[#f4f4f2] text-gray-900 md:h-screen md:max-h-none md:border-t-0 md:border-l"
             onClick={handleCaptionPanelClick}
           >
             <div className="flex h-full max-h-[42vh] flex-col md:max-h-none">
               <div className="flex shrink-0 items-start justify-between gap-4 px-5 pt-5 pb-2 md:px-7 md:pt-7">
                 <div className="min-w-0">
                   {hasCaptionMetadata ? (
-                    <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-gray-500">
+                    <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] leading-5 text-gray-500">
                       {caption.date ? <time>{caption.date}</time> : null}
                       {caption.date && caption.locationName ? (
                         <span aria-hidden="true">@</span>
@@ -507,7 +507,7 @@ export function ImageZoomOverlay({
                             href={caption.locationUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-sun"
+                            className="break-words underline decoration-gray-300 underline-offset-2 transition-colors hover:text-sun"
                             onClick={handleCaptionClick}
                           >
                             {caption.locationName}
@@ -518,7 +518,7 @@ export function ImageZoomOverlay({
                       ) : null}
                     </div>
                   ) : null}
-                  <h2 className="font-sans text-xl font-semibold leading-tight text-gray-950 md:text-2xl">
+                  <h2 className="break-words font-sans text-xl font-semibold leading-snug text-gray-950 md:text-2xl">
                     {caption.title}
                   </h2>
                 </div>
@@ -531,9 +531,9 @@ export function ImageZoomOverlay({
                   <X aria-hidden="true" className="h-5 w-5" />
                 </button>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 md:px-7">
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-1 pb-6 md:px-7 md:pt-2 md:pb-7">
                 {caption.description ? (
-                  <p className="mt-3 font-serif text-base leading-relaxed text-gray-700 md:mt-5">
+                  <p className="mt-2 break-words font-serif text-base leading-7 text-gray-700 md:mt-4">
                     {caption.description}
                   </p>
                 ) : null}
