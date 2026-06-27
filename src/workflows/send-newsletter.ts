@@ -1,5 +1,5 @@
 import { FatalError, getStepMetadata, RetryableError } from 'workflow'
-import { getPostBySlug } from '@/lib/content/loader'
+import { getPostBySlugWithoutImages as getPostBySlug } from '@/lib/content/loader-without-images'
 import {
   bulkCreateQueued,
   findSendableByIds,
@@ -10,8 +10,8 @@ import {
 import { findEligibleIds, isNewsletter } from '@/lib/db/queries/subscribers'
 import { isSuppressed } from '@/lib/db/queries/suppressions'
 import { isPermanentSesError } from '@/lib/email/errors'
+import { sendQueuedEmail } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
-import { sendQueuedEmail } from '@/lib/email/send'
 
 // ~12-13/sec, comfortably under SES's default 14/sec. Paced inside the step
 // (steps have full Node.js access, so setTimeout is fine).
