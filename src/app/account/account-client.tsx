@@ -188,7 +188,7 @@ export function AccountClient() {
                   className="flex items-center justify-between py-3 px-4 bg-white border border-gray-200"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-[76px] shrink-0 flex items-center">
+                    <span className="w-[100px] shrink-0 flex items-center">
                       <Image
                         src={nl.logo.src}
                         alt={nl.name}

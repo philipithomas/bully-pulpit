@@ -40,7 +40,7 @@ const newsletterLogos: Record<string, { src: string; className: string }> = {
   },
   tsundoku: {
     src: '/images/tsundoku.svg',
-    className: 'h-[19px] w-auto',
+    className: 'h-[18px] w-auto',
   },
 }
 

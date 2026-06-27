@@ -254,13 +254,21 @@ export function ImageZoomOverlay({
   }, [upgrade])
 
   const caption = image.caption ?? null
+  const hasCaption = caption !== null
   const fullSrc = image.fullSrc
   const showFull = upgrade !== null && fullSrc !== null
   const showImmediate = upgrade === null || upgrade.fading
   const holdOutgoing =
     upgrade !== null && upgrade.outgoingWidth > 0 && upgrade.outgoingHeight > 0
+  const imageBounds = hasCaption
+    ? 'max-h-[62vh] max-w-[calc(100vw-2rem)] object-contain md:max-h-[calc(100vh-2rem)] md:max-w-[calc(100vw-24rem)]'
+    : 'max-h-[90vh] max-w-[90vw] object-contain'
   const handleCaptionClick = useCallback(
     (e: MouseEvent<HTMLAnchorElement>) => e.stopPropagation(),
+    []
+  )
+  const handleCaptionPanelClick = useCallback(
+    (e: MouseEvent<HTMLElement>) => e.stopPropagation(),
     []
   )
   const handlePrevious = useCallback(
@@ -287,111 +295,128 @@ export function ImageZoomOverlay({
       aria-modal="true"
       aria-label={image.alt || 'Image viewer'}
       tabIndex={-1}
-      className={`fixed inset-0 z-60 flex cursor-zoom-out items-center justify-center bg-[#0A0A0A]/95 ${
+      className={`fixed inset-0 z-60 cursor-zoom-out bg-[#0A0A0A]/95 ${
         phase === 'closing' ? 'image-zoom-closing' : 'image-zoom-opening'
       }`}
       style={{ touchAction: 'none' }}
       onClick={handleClose}
     >
-      {/* The full image defines the layout once it has loaded; the outgoing
-          image is pinned over it at its captured size so the crossfade never
-          moves pixels. */}
-      <div ref={containerRef} className="relative">
-        {showFull ? (
-          // biome-ignore lint/performance/noImgElement: the overlay renders the raw full-resolution asset at runtime
-          <img
-            key="full"
-            src={fullSrc}
-            alt={image.alt}
-            width={upgrade.width}
-            height={upgrade.height}
-            className={`max-h-[90vh] max-w-[90vw] object-contain${
-              upgrade.fading ? ' image-zoom-hd-in' : ''
-            }`}
-            draggable={false}
-          />
-        ) : null}
-        {showImmediate ? (
-          // biome-ignore lint/performance/noImgElement: mirrors the clicked image's already-loaded source
-          <img
-            key="immediate"
-            ref={immediateRef}
-            src={image.src}
-            alt={showFull ? '' : image.alt}
-            aria-hidden={showFull || undefined}
-            className={
-              showFull
-                ? holdOutgoing
-                  ? 'image-zoom-hd-out -translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 max-h-none max-w-none'
-                  : 'image-zoom-hd-out absolute inset-0 h-full w-full object-contain'
-                : 'max-h-[90vh] max-w-[90vw] object-contain'
-            }
-            style={
-              showFull && holdOutgoing
-                ? {
-                    width: upgrade.outgoingWidth,
-                    height: upgrade.outgoingHeight,
-                  }
-                : undefined
-            }
-            draggable={false}
-          />
-        ) : null}
-      </div>
-      {/* Optional post caption. A sibling of the FLIP container so it fades
-          with the backdrop instead of animating with the image. Clicks on
-          surrounding text still bubble up and close; the More link itself
-          stops propagation so it can navigate. */}
-      {caption ? (
-        <div className="absolute inset-x-0 bottom-6 flex justify-center px-6 text-center">
-          <div className="max-w-xl text-white">
-            <p className="font-sans text-sm font-semibold">{caption.title}</p>
+      <div
+        className={
+          hasCaption
+            ? 'flex h-full w-full flex-col md:flex-row'
+            : 'flex h-full w-full items-center justify-center'
+        }
+      >
+        <div
+          className={
+            hasCaption
+              ? 'relative flex min-h-0 flex-1 items-center justify-center p-4 md:p-6'
+              : 'relative flex h-full w-full items-center justify-center'
+          }
+        >
+          {/* The full image defines the layout once it has loaded; the
+              outgoing image is pinned over it at its captured size so the
+              crossfade never moves pixels. */}
+          <div ref={containerRef} className="relative">
+            {showFull ? (
+              // biome-ignore lint/performance/noImgElement: the overlay renders the raw full-resolution asset at runtime
+              <img
+                key="full"
+                src={fullSrc}
+                alt={image.alt}
+                width={upgrade.width}
+                height={upgrade.height}
+                className={`${imageBounds}${
+                  upgrade.fading ? ' image-zoom-hd-in' : ''
+                }`}
+                draggable={false}
+              />
+            ) : null}
+            {showImmediate ? (
+              // biome-ignore lint/performance/noImgElement: mirrors the clicked image's already-loaded source
+              <img
+                key="immediate"
+                ref={immediateRef}
+                src={image.src}
+                alt={showFull ? '' : image.alt}
+                aria-hidden={showFull || undefined}
+                className={
+                  showFull
+                    ? holdOutgoing
+                      ? 'image-zoom-hd-out -translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 max-h-none max-w-none'
+                      : 'image-zoom-hd-out absolute inset-0 h-full w-full object-contain'
+                    : imageBounds
+                }
+                style={
+                  showFull && holdOutgoing
+                    ? {
+                        width: upgrade.outgoingWidth,
+                        height: upgrade.outgoingHeight,
+                      }
+                    : undefined
+                }
+                draggable={false}
+              />
+            ) : null}
+          </div>
+          {hasGallery && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrevious}
+                aria-label="Previous image"
+                disabled={!canPrevious}
+                className={`-translate-y-1/2 absolute top-1/2 left-3 p-3 transition-colors md:left-4 ${
+                  canPrevious
+                    ? 'text-white/75 hover:text-white'
+                    : 'cursor-default text-white/20'
+                }`}
+              >
+                <ChevronLeft aria-hidden="true" className="h-8 w-8" />
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                aria-label="Next image"
+                disabled={!canNext}
+                className={`-translate-y-1/2 absolute top-1/2 right-3 p-3 transition-colors md:right-4 ${
+                  canNext
+                    ? 'text-white/75 hover:text-white'
+                    : 'cursor-default text-white/20'
+                }`}
+              >
+                <ChevronRight aria-hidden="true" className="h-8 w-8" />
+              </button>
+            </>
+          )}
+        </div>
+        {caption ? (
+          <aside
+            className="max-h-[38vh] w-full shrink-0 cursor-auto overflow-y-auto bg-[#f4f4f2] px-5 py-5 text-gray-900 md:max-h-none md:h-full md:w-96 md:px-6 md:py-8"
+            onClick={handleCaptionPanelClick}
+          >
+            <p className="font-sans text-base font-semibold leading-tight">
+              {caption.title}
+            </p>
             {caption.description ? (
-              <p className="mt-2 overflow-hidden font-serif text-sm leading-relaxed text-white/85 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+              <p className="mt-4 font-serif text-sm leading-relaxed text-gray-700">
                 {caption.description}
               </p>
             ) : null}
             <Link
               ref={captionLinkRef}
               href={caption.href}
-              className="mt-3 inline-flex font-sans text-xs font-medium text-gray-300 underline decoration-gray-500 underline-offset-4 transition-colors hover:text-white"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex h-9 items-center bg-gray-950 px-3 font-sans text-xs font-medium text-white transition-colors hover:bg-sun"
               onClick={handleCaptionClick}
             >
               More
             </Link>
-          </div>
-        </div>
-      ) : null}
-      {hasGallery && (
-        <>
-          <button
-            type="button"
-            onClick={handlePrevious}
-            aria-label="Previous image"
-            disabled={!canPrevious}
-            className={`-translate-y-1/2 absolute top-1/2 left-4 p-3 transition-colors ${
-              canPrevious
-                ? 'text-white/75 hover:text-white'
-                : 'cursor-default text-white/20'
-            }`}
-          >
-            <ChevronLeft aria-hidden="true" className="h-8 w-8" />
-          </button>
-          <button
-            type="button"
-            onClick={handleNext}
-            aria-label="Next image"
-            disabled={!canNext}
-            className={`-translate-y-1/2 absolute top-1/2 right-4 p-3 transition-colors ${
-              canNext
-                ? 'text-white/75 hover:text-white'
-                : 'cursor-default text-white/20'
-            }`}
-          >
-            <ChevronRight aria-hidden="true" className="h-8 w-8" />
-          </button>
-        </>
-      )}
+          </aside>
+        ) : null}
+      </div>
     </div>
   )
 }

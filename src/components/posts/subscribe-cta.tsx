@@ -95,7 +95,7 @@ export function SubscribeCta({
   return (
     <div className={`mx-auto w-full max-w-2xl ${className}`}>
       <p className="font-serif text-gray-600 text-lg mb-5">
-        Get new {newsletterNoun[newsletter]} by email.
+        Get new {newsletterNoun[newsletter]} by email:
       </p>
       {user ? (
         <button

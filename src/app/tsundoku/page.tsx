@@ -26,7 +26,7 @@ const ROW_HEIGHT = 260
 const MAX_ROW_WIDTH = 1216
 const STRETCH = 1.25
 const INTRO =
-  'Starting 2026-06-26, I got a new camera and embarked on a two-week solo trip around Japan. I decided to make it photography-focused, and this pop-up newsletter documents my photography during these two weeks.'
+  'On 26 June 2026, I got a new camera and embarked on a two-week solo trip around Japan. I decided to build the trip around taking pictures, and this pop-up newsletter documents what I saw during those two weeks.'
 
 function tileSizes(ratio: number): string {
   const tabletVw = Math.min(
@@ -88,7 +88,7 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
               href={location.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-rising-sun"
+              className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-sun"
             >
               {location.name}
             </a>
@@ -97,7 +97,7 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
         <span aria-hidden="true">/</span>
         <Link
           href={`/${post.slug}`}
-          className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-rising-sun"
+          className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-sun"
         >
           {title}
         </Link>
@@ -111,24 +111,25 @@ export default function TsundokuPage() {
 
   return (
     <div className="bg-[#f4f4f2]" data-bg="tsundoku">
-      <div className="container py-12 md:py-16">
-        <div className="mb-10 md:mb-12 flex flex-col items-center text-center">
+      <div className="container pt-8 pb-10 sm:pt-10 sm:pb-12 md:pt-12 md:pb-16">
+        <div className="mb-8 flex flex-col items-center text-center md:mb-10">
           <Image
             src="/images/tsundoku.svg"
             alt="Tsundoku"
-            width={280}
-            height={40}
-            className="h-9 w-auto md:h-11"
+            width={360}
+            height={55}
+            sizes="(max-width: 640px) 78vw, 360px"
+            className="h-auto w-full max-w-[78vw] sm:max-w-[320px] md:max-w-[360px]"
             priority
           />
           <h1 className="sr-only">Tsundoku</h1>
-          <p className="mt-4 max-w-2xl font-serif text-lg leading-relaxed text-gray-600">
+          <p className="mt-4 max-w-[42rem] text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
             {INTRO}
           </p>
-          <SubscribeCta newsletter="tsundoku" className="mt-8" />
+          <SubscribeCta newsletter="tsundoku" className="mt-6" />
         </div>
 
-        <div className="flex flex-wrap gap-x-2 gap-y-6 [--row-h:180px] sm:[--row-h:260px]">
+        <div className="flex flex-wrap gap-x-2 gap-y-5 [--row-h:160px] sm:gap-y-6 sm:[--row-h:220px] lg:[--row-h:260px]">
           {posts.map((post, index) => (
             <PhotoTile key={post.slug} post={post} index={index} />
           ))}

@@ -29,7 +29,7 @@ const NEWSLETTER_COLORS: Record<string, string> = {
   contraption: 'bg-forest',
   workshop: 'bg-walnut',
   postcard: 'bg-indigo',
-  tsundoku: 'bg-rising-sun',
+  tsundoku: 'bg-sun',
   page: 'bg-gray-400',
 }
 

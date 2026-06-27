@@ -49,8 +49,8 @@ export default async function OverviewPage() {
               <span className="text-forest">Contraption</span>{' '}
               {n(stats.contraption)},{' '}
               <span className="text-walnut">Workshop</span> {n(stats.workshop)},
-              and <span className="text-rising-sun">Tsundoku</span>{' '}
-              {n(stats.tsundoku)}.
+              and <span className="text-sun">Tsundoku</span>{' '}
+              <span>{n(stats.tsundoku)}.</span>
             </>
           )}
         </p>

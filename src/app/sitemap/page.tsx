@@ -20,12 +20,12 @@ const newsletterLabel: Record<Newsletter, string> = {
 }
 
 // Tailwind utility classes for each newsletter accent. Uses the site color
-// tokens (forest / walnut / indigo) defined in globals.css — no hex values.
+// tokens (forest / walnut / indigo / sun) defined in globals.css, no hex values.
 const newsletterColor: Record<Newsletter, string> = {
   contraption: 'text-forest',
   workshop: 'text-walnut',
   postcard: 'text-indigo',
-  tsundoku: 'text-rising-sun',
+  tsundoku: 'text-sun',
 }
 
 // App Router pages that do not come from content/pages.

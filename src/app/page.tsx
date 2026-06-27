@@ -162,7 +162,7 @@ export default function HomePage() {
                   href={`/${nl.slug}`}
                   className="flex items-center gap-3 group"
                 >
-                  <span className="w-[104px] shrink-0 flex items-center">
+                  <span className="w-[100px] shrink-0 flex items-center">
                     <Image
                       src={nl.logo.src}
                       alt={nl.name}
