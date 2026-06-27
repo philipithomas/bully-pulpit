@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-27T22:55:48.133Z",
+  "generatedAt": "2026-06-27T23:03:21.375Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
@@ -37,15 +37,15 @@
       "related": [
         {
           "slug": "slow-travel",
-          "score": 0.42775
+          "score": 0.4287654
         },
         {
           "slug": "digital-product-studios",
-          "score": 0.4569774
+          "score": 0.4569263
         },
         {
           "slug": "nakameguro",
-          "score": 0.462509
+          "score": 0.4629743
         }
       ]
     },
@@ -57,7 +57,7 @@
         },
         {
           "slug": "geisha",
-          "score": 0.462509
+          "score": 0.4629743
         },
         {
           "slug": "introducing-tsundoku",
@@ -1737,7 +1737,7 @@
         },
         {
           "slug": "geisha",
-          "score": 0.42775
+          "score": 0.4287654
         },
         {
           "slug": "introducing-frctnl",
