@@ -199,6 +199,10 @@ describe('redirects', () => {
       expect(findRedirect('/rss')?.destination).toBe('/feed/rss.xml')
     })
 
+    it('/feed.xml -> /feed/rss.xml', () => {
+      expect(findRedirect('/feed.xml')?.destination).toBe('/feed/rss.xml')
+    })
+
     it('/posts.rss -> /feed/rss.xml', () => {
       expect(findRedirect('/posts.rss')?.destination).toBe('/feed/rss.xml')
     })

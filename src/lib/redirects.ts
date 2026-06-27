@@ -143,6 +143,7 @@ export function getRedirects(): Redirect[] {
     { source: '/live-analytics', destination: '/', permanent: true },
     // Legacy RSS feed paths (contraption.co: /rss/, philipithomas.com: /posts.rss)
     { source: '/rss', destination: '/feed/rss.xml', permanent: true },
+    { source: '/feed.xml', destination: '/feed/rss.xml', permanent: true },
     { source: '/posts.rss', destination: '/feed/rss.xml', permanent: true },
     // Deprecated policy pages -> /policies
     { source: '/security', destination: '/policies', permanent: true },
