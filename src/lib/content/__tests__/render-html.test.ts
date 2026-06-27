@@ -50,7 +50,7 @@ describe('renderEmailHeaderHtml', () => {
       'src="https://www.philipithomas.com/_next/image?url=%2Fimages%2Fcovers%2Fcover.jpg'
     )
     expect(html).toContain('w=640')
-    expect(html).toContain('q=80')
+    expect(html).toContain('q=100')
     expect(html).toContain('alt="Cover alt"')
     expect(html).toContain('width="600"')
     expect(html).toContain('max-width: 600px')
@@ -185,7 +185,7 @@ describe('renderRelatedPostsHtml', () => {
       'src="https://www.philipithomas.com/_next/image?url=%2Fimages%2Fcovers%2F'
     )
     expect(html).toContain('w=256')
-    expect(html).toContain('q=80')
+    expect(html).toContain('q=100')
     expect(html).not.toMatch(
       /src="https:\/\/www\.philipithomas\.com\/images\/covers\//
     )
@@ -256,7 +256,7 @@ describe('renderMarkdownToHtml', () => {
       'src="/_next/image?url=%2Fimages%2Fposts%2Foctober-2023%2FIMG_9933.JPG'
     )
     expect(html).toContain('w=640')
-    expect(html).toContain('q=80')
+    expect(html).toContain('q=100')
     expect(html).not.toContain('src="/images/posts/')
   })
 

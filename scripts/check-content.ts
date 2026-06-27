@@ -37,9 +37,9 @@ const RELATED_JSON = path.join(
 
 // Vercel Image Optimization rejects source images above this edge limit.
 const MAX_VERCEL_SOURCE_EDGE = 8192
-// Vercel's optimized response must fit its 10MB cacheable response limit.
-// Keeping sources below that line is a conservative pre-optimization guard.
-const MAX_VERCEL_SOURCE_BYTES = 10 * 1024 * 1024
+// Next's default image optimizer fetch cap is 50 MB. Keep committed source
+// images under that line so Vercel can attempt runtime resizing.
+const MAX_VERCEL_SOURCE_BYTES = 50_000_000
 // Gmail clips messages near 102KB of HTML; warn close to the line, fail over it.
 const MAX_EMAIL_HTML_BYTES = 100 * 1024
 const WARN_EMAIL_HTML_BYTES = 95 * 1024

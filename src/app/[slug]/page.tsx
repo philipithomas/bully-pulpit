@@ -35,7 +35,7 @@ interface Props {
 }
 
 const SOCIAL_IMAGE_WIDTH = 1200
-const SOCIAL_IMAGE_QUALITY = 80
+const SOCIAL_IMAGE_QUALITY = 100
 const FALLBACK_SOCIAL_IMAGE_SIZE = { width: 1200, height: 630 } as const
 
 function toVercelImagePath(

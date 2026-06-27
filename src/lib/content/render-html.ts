@@ -13,7 +13,7 @@ const SERIF_STACK = `'Tiempos Text', Georgia, 'Times New Roman', serif`
 const MONO_STACK = `'Sohne Mono', 'SF Mono', 'Fira Code', monospace`
 const EMAIL_IMAGE_WIDTH = 640
 const EMAIL_THUMBNAIL_WIDTH = 256
-const EMAIL_IMAGE_QUALITY = 80
+const EMAIL_IMAGE_QUALITY = 100
 
 const tagStyles: Record<string, string> = {
   h1: `font-family: ${SANS_STACK}; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; margin: 32px 0 12px;`,
