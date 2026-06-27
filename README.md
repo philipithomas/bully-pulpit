@@ -47,9 +47,7 @@ coverImage: "/images/covers/slug.jpg"  # optional
 
 ## License
 
-Source code is licensed under the MIT License.
+Copyright (c) 2020-2026 The Contraption Company LLC. All rights reserved.
 
-Essays, newsletters, pages, photographs, images, downloads, generated content
-artifacts, and other creative assets are not included in the MIT License.
-Copyright (c) 2020-2026 The Contraption Company LLC. All rights reserved. See
-[LICENSE](LICENSE).
+This repository is source-available for viewing and reference, but no open
+license is granted. See [LICENSE](LICENSE).
