@@ -47,8 +47,10 @@ export default async function OverviewPage() {
               <span className="text-indigo">Postcard</span> reaches{' '}
               {n(stats.postcard)} of them,{' '}
               <span className="text-forest">Contraption</span>{' '}
-              {n(stats.contraption)}, and{' '}
-              <span className="text-walnut">Workshop</span> {n(stats.workshop)}.
+              {n(stats.contraption)},{' '}
+              <span className="text-walnut">Workshop</span> {n(stats.workshop)},
+              and <span className="text-rising-sun">Tsundoku</span>{' '}
+              {n(stats.tsundoku)}.
             </>
           )}
         </p>

@@ -16,6 +16,12 @@ export const metadata: Metadata = {
     canonical: '/contraption',
     types: feedDiscovery('contraption'),
   },
+  icons: {
+    icon: [
+      { url: siteConfig.newsletters.contraption.icon, type: 'image/svg+xml' },
+    ],
+    apple: siteConfig.newsletters.contraption.icon,
+  },
 }
 
 function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {

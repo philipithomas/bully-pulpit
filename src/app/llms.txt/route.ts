@@ -1,5 +1,6 @@
 import { siteConfig } from '@/lib/config'
 import { getAllPosts } from '@/lib/content/loader'
+import { NEWSLETTERS } from '@/lib/content/types'
 
 export const dynamic = 'force-static'
 
@@ -15,12 +16,10 @@ export async function GET() {
 
   // Taglines come from siteConfig so llms.txt and the signup picker cannot
   // drift.
-  const newsletterList = (['contraption', 'workshop', 'postcard'] as const)
-    .map((id) => {
-      const newsletter = siteConfig.newsletters[id]
-      return `- ${newsletter.name}: ${newsletter.tagline}`
-    })
-    .join('\n')
+  const newsletterList = NEWSLETTERS.map((id) => {
+    const newsletter = siteConfig.newsletters[id]
+    return `- ${newsletter.name}: ${newsletter.tagline}`
+  }).join('\n')
 
   const body = `# ${siteConfig.title}
 

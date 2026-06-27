@@ -112,6 +112,7 @@ export default function PhotographyPage() {
               type="button"
               aria-label={photo.alt}
               data-zoomable=""
+              data-zoom-group="photography"
               data-zoom-link-href={`/${photo.post.slug}`}
               data-zoom-link-title={photo.post.frontmatter.title}
               data-full-src={photo.src}

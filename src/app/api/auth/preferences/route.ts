@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod/v4'
 import { clearSessionCookies, getSession } from '@/lib/auth/jwt'
+import { siteConfig } from '@/lib/config'
 import {
   deleteWithData,
   findByUuid,
@@ -8,6 +9,7 @@ import {
   serializeSubscriber,
   updateSubscriber,
 } from '@/lib/db/queries/subscribers'
+import { sendNewsletterOptInNotification } from '@/lib/email/send'
 
 // Mirrors the shape prefsFromBody/updateSubscriber consume: booleans for the
 // newsletter flags, an optional name, and no unknown keys.
@@ -16,6 +18,7 @@ const preferencesSchema = z.strictObject({
   subscribed_postcard: z.boolean().optional(),
   subscribed_contraption: z.boolean().optional(),
   subscribed_workshop: z.boolean().optional(),
+  subscribed_tsundoku: z.boolean().optional(),
 })
 
 export async function GET() {
@@ -37,6 +40,7 @@ export async function GET() {
     subscribed_contraption: subscriber.subscribedContraption,
     subscribed_workshop: subscriber.subscribedWorkshop,
     subscribed_postcard: subscriber.subscribedPostcard,
+    subscribed_tsundoku: subscriber.subscribedTsundoku,
   })
 }
 
@@ -57,12 +61,28 @@ export async function PATCH(request: Request) {
       { status: 400 }
     )
   }
+  const before = await findByUuid(session.uuid)
+  if (!before) {
+    return NextResponse.json({ error: 'Update failed' }, { status: 404 })
+  }
+
   const subscriber = await updateSubscriber(
     session.uuid,
     prefsFromBody(parsed.data)
   )
   if (!subscriber) {
     return NextResponse.json({ error: 'Update failed' }, { status: 404 })
+  }
+
+  if (!before.subscribedTsundoku && subscriber.subscribedTsundoku) {
+    try {
+      await sendNewsletterOptInNotification(
+        subscriber.email,
+        siteConfig.newsletters.tsundoku.name
+      )
+    } catch (err) {
+      console.error('[auth/preferences] opt-in notification failed:', err)
+    }
   }
 
   return NextResponse.json({ subscriber: serializeSubscriber(subscriber) })

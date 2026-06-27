@@ -12,6 +12,12 @@ export const metadata: Metadata = {
     canonical: '/workshop',
     types: feedDiscovery('workshop'),
   },
+  icons: {
+    icon: [
+      { url: siteConfig.newsletters.workshop.icon, type: 'image/svg+xml' },
+    ],
+    apple: siteConfig.newsletters.workshop.icon,
+  },
 }
 
 export default function WorkshopPage() {

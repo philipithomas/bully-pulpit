@@ -160,6 +160,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       // the openGraph image fallback here as well.
       images: [socialImage],
     },
+    ...(post
+      ? {
+          icons: {
+            icon: [
+              {
+                url: siteConfig.newsletters[post.newsletter].icon,
+                type: 'image/svg+xml',
+              },
+            ],
+            apple: siteConfig.newsletters[post.newsletter].icon,
+          },
+        }
+      : {}),
   }
 }
 
@@ -182,8 +195,11 @@ export default async function SlugPage({ params }: Props) {
     workshop: { className: 'bg-offwhite-warm', dataBg: 'offwhite-warm' },
     contraption: { className: 'bg-gray-050', dataBg: 'gray-050' },
     postcard: { className: 'bg-offwhite-cool', dataBg: 'offwhite-cool' },
+    tsundoku: { className: 'bg-[#f4f4f2]', dataBg: 'tsundoku' },
   }
   const bg = post?.newsletter ? bgMap[post.newsletter] : undefined
+  const location = post?.frontmatter.location ?? null
+  const locationHoverText = post ? accentHoverText[post.newsletter] : ''
 
   return (
     <article className={bg?.className} data-bg={bg?.dataBg}>
@@ -211,6 +227,16 @@ export default async function SlugPage({ params }: Props) {
               {item.frontmatter.description}
             </p>
           )}
+          {location ? (
+            <a
+              href={location.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`mt-4 font-mono text-xs text-gray-500 underline decoration-gray-300 underline-offset-2 ${locationHoverText} transition-colors duration-300`}
+            >
+              {location.name}
+            </a>
+          ) : null}
           {post && (
             <a href="/" className="flex items-center gap-3 mt-6 group">
               <Image

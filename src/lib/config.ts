@@ -15,6 +15,7 @@ const staticConfig = {
       slug: 'postcard',
       color: 'indigo',
       logo: { src: '/images/postcard.svg', height: 14 },
+      icon: '/images/postcard-icon.svg',
     },
     contraption: {
       name: 'Contraption',
@@ -22,6 +23,7 @@ const staticConfig = {
       slug: 'contraption',
       color: 'forest',
       logo: { src: '/images/contraption.svg', height: 13 },
+      icon: '/images/contraption-icon.svg',
     },
     workshop: {
       name: 'Workshop',
@@ -29,6 +31,15 @@ const staticConfig = {
       slug: 'workshop',
       color: 'walnut',
       logo: { src: '/images/workshop-brand.svg', height: 16 },
+      icon: '/images/workshop-icon.svg',
+    },
+    tsundoku: {
+      name: 'Tsundoku',
+      tagline: 'Pop-up newsletter of Japan photos.',
+      slug: 'tsundoku',
+      color: 'rising-sun',
+      logo: { src: '/images/tsundoku.svg', height: 14 },
+      icon: '/images/tsundoku-icon.svg',
     },
   },
 } as const

@@ -11,7 +11,9 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
+import type { Newsletter } from '@/lib/content/types'
 import { formatMemberCount } from '@/lib/format-member-count'
+import { defaultSignupNewsletters } from '@/lib/newsletters'
 import { getExternalReferrer } from '@/lib/referrer'
 
 interface Props {
@@ -19,6 +21,7 @@ interface Props {
   autoFocus?: boolean
   className?: string
   headerText?: string
+  newsletters?: Newsletter[]
   /**
    * When true, fetches the live subscriber count client-side and uses it as the
    * header text ("Join N other subscribers:"). Lets the host page stay static.
@@ -33,6 +36,7 @@ export function InlineSignupForm({
   autoFocus = false,
   className,
   headerText,
+  newsletters = [...defaultSignupNewsletters],
   showSubscriberCount = false,
 }: Props) {
   const { user } = useAuthContext()
@@ -69,7 +73,7 @@ export function InlineSignupForm({
         body: JSON.stringify({
           email,
           source: getExternalReferrer(),
-          newsletters: ['contraption', 'workshop', 'postcard'],
+          newsletters,
         }),
       })
       if (!res.ok) {
@@ -124,7 +128,8 @@ export function InlineSignupForm({
     return (
       <div className={className}>
         <p className="font-serif text-sm text-gray-600 mb-3">
-          Check {email} for a 6-digit code.
+          Check {email} for a 6-digit code. If you already have an account, your
+          preferences are updated.
         </p>
         <div className="flex flex-col items-start">
           <InputOTP

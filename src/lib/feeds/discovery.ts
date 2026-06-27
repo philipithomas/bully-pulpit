@@ -1,8 +1,6 @@
 import type { Metadata } from 'next'
 import { siteConfig } from '@/lib/config'
-import type { Newsletter } from '@/lib/content/types'
-
-const NEWSLETTERS: Newsletter[] = ['contraption', 'workshop', 'postcard']
+import { NEWSLETTERS, type Newsletter } from '@/lib/content/types'
 
 type FeedFile = 'rss.xml' | 'feed.json'
 

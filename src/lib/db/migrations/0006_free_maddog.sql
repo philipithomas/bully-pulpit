@@ -1,0 +1,1 @@
+ALTER TABLE "subscribers" ADD COLUMN "subscribed_tsundoku" boolean DEFAULT false NOT NULL;

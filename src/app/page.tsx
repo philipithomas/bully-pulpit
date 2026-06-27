@@ -14,7 +14,11 @@ export const metadata: Metadata = {
 }
 
 export default function HomePage() {
-  const newsletters = Object.values(siteConfig.newsletters)
+  const newsletters = [
+    siteConfig.newsletters.contraption,
+    siteConfig.newsletters.workshop,
+    siteConfig.newsletters.postcard,
+  ]
 
   // Art-directed portraits: each layout slot renders a <picture> carrying
   // both srcSets, so the hidden slot resolves to the same URL as the visible
@@ -148,7 +152,7 @@ export default function HomePage() {
           {/* Newsletter directory */}
           <div className="mt-8">
             <p className="font-serif text-sm text-gray-600 mb-6">
-              I publish three newsletters:
+              I publish three standing newsletters:
             </p>
             <div className="space-y-4">
               {newsletters.map((nl) => (
@@ -174,6 +178,15 @@ export default function HomePage() {
               ))}
             </div>
             <p className="font-serif text-sm text-gray-500 mt-6">
+              <Link
+                href="/tsundoku"
+                className="underline decoration-rising-sun underline-offset-2 hover:text-rising-sun transition-colors duration-300"
+              >
+                Tsundoku
+              </Link>{' '}
+              is a pop-up newsletter of Japan photos.
+            </p>
+            <p className="font-serif text-sm text-gray-500 mt-3">
               Available by email or{' '}
               <Link
                 href="/feed/rss.xml"

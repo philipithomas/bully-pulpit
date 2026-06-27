@@ -3,16 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('next/headers', () => import('@/test/integration/session'))
+vi.mock('@/lib/email/ses', () =>
+  import('@/test/integration/mocks').then((m) => m.sesMock())
+)
 
 import { DELETE, GET, PATCH } from '@/app/api/auth/preferences/route'
 import { signSession } from '@/lib/auth/jwt'
 import { emailSends, logins, subscribers } from '@/lib/db/schema'
+import { sendSimpleEmail } from '@/lib/email/ses'
 import { db, resetDb } from '@/test/integration/db'
 import { clearSessionStore, setSessionCookie } from '@/test/integration/session'
 
 beforeEach(async () => {
   clearSessionStore()
   await resetDb()
+  vi.mocked(sendSimpleEmail).mockClear()
 })
 
 async function seedSubscriber(
@@ -84,6 +89,7 @@ describe('GET', () => {
       subscribed_contraption: true,
       subscribed_workshop: false,
       subscribed_postcard: true,
+      subscribed_tsundoku: false,
     })
   })
 
@@ -117,6 +123,7 @@ describe('PATCH', () => {
       subscribed_workshop: false,
       subscribed_contraption: true,
       subscribed_postcard: true,
+      subscribed_tsundoku: false,
     })
 
     const [row] = await db
@@ -126,7 +133,28 @@ describe('PATCH', () => {
     expect(row.subscribedWorkshop).toBe(false)
     expect(row.subscribedContraption).toBe(true)
     expect(row.subscribedPostcard).toBe(true)
+    expect(row.subscribedTsundoku).toBe(false)
     expect(row.name).toBe('Reader')
+  })
+
+  it('notifies the admin when a signed-in subscriber opts into Tsundoku', async () => {
+    const subscriber = await seedSubscriber({ subscribedTsundoku: false })
+    await signIn(subscriber)
+
+    const response = await PATCH(patchRequest({ subscribed_tsundoku: true }))
+    expect(response.status).toBe(200)
+
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.uuid, subscriber.uuid))
+    expect(row.subscribedTsundoku).toBe(true)
+
+    expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
+    const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
+    expect(message.subject).toBe('Tsundoku opt-in: reader@example.com')
+    expect(message.html).toContain('Tsundoku opt-in')
+    expect(message.html).toContain('reader@example.com')
   })
 
   it('returns 400 (not 500) for a malformed JSON body', async () => {

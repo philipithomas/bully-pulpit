@@ -9,6 +9,7 @@ const accentHoverBg: Record<Newsletter, string> = {
   contraption: 'hover:bg-forest/10',
   workshop: 'hover:bg-walnut/10',
   postcard: 'hover:bg-indigo/10',
+  tsundoku: 'hover:bg-rising-sun/10',
 }
 
 export function LatestPostPill() {

@@ -70,10 +70,11 @@ describe('POST /api/subscribe', () => {
     expect(rows[0].name).toBe('New Person')
     expect(rows[0].source).toBe('footer')
     expect(rows[0].confirmedAt).toBeNull()
-    // No newsletters array: the column defaults opt into all three.
+    // Every new public signup starts on all newsletters.
     expect(rows[0].subscribedContraption).toBe(true)
     expect(rows[0].subscribedWorkshop).toBe(true)
     expect(rows[0].subscribedPostcard).toBe(true)
+    expect(rows[0].subscribedTsundoku).toBe(true)
 
     // Both login rows: a 6-digit code and a magic link, both marked emailed
     const loginRows = await db
@@ -100,10 +101,10 @@ describe('POST /api/subscribe', () => {
       'Confirm your subscription to philipithomas.com'
     )
     expect(message.html).toContain(
-      'Thanks for subscribing to Contraption, Workshop, and Postcard at'
+      'Thanks for subscribing to Contraption, Workshop, Postcard, and Tsundoku at'
     )
     expect(message.text).toContain(
-      'Thanks for subscribing to Contraption, Workshop, and Postcard at philipithomas.com.'
+      'Thanks for subscribing to Contraption, Workshop, Postcard, and Tsundoku at philipithomas.com.'
     )
     expect(message.html).toContain(codeLogin?.token)
     expect(message.text).toContain(codeLogin?.token)
@@ -112,11 +113,11 @@ describe('POST /api/subscribe', () => {
     )
   })
 
-  it('applies the newsletters array to a NEW subscriber and names the picks in the email', async () => {
+  it('subscribes a NEW subscriber to every newsletter even from a focused form', async () => {
     const res = await POST(
       subscribeRequest({
         email: 'picky@example.com',
-        newsletters: ['contraption', 'postcard'],
+        newsletters: ['tsundoku'],
       })
     )
 
@@ -129,34 +130,32 @@ describe('POST /api/subscribe', () => {
       .where(eq(subscribers.email, 'picky@example.com'))
     expect(row.subscribedContraption).toBe(true)
     expect(row.subscribedPostcard).toBe(true)
-    expect(row.subscribedWorkshop).toBe(false)
+    expect(row.subscribedWorkshop).toBe(true)
+    expect(row.subscribedTsundoku).toBe(true)
 
-    // The confirmation email names exactly the chosen newsletters.
+    // New subscribers get the full list in their confirmation email.
     const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
     expect(message.subject).toBe(
       'Confirm your subscription to philipithomas.com'
     )
     expect(message.text).toContain(
-      'Thanks for subscribing to Contraption and Postcard at philipithomas.com.'
+      'Thanks for subscribing to Contraption, Workshop, Postcard, and Tsundoku at philipithomas.com.'
     )
-    expect(message.text).not.toContain('Workshop')
   })
 
-  it('treats an existing subscriber as pure sign-in: preferences, name, and source stay untouched', async () => {
-    const first = await POST(
-      subscribeRequest({
-        email: 'returning@example.com',
-        name: 'Original Name',
-        source: 'https://news.ycombinator.com',
-        newsletters: ['contraption'],
-      })
-    )
-    expect(first.status).toBe(200)
+  it('opts an existing subscriber into explicitly requested newsletters without rewriting identity fields', async () => {
+    await db.insert(subscribers).values({
+      email: 'returning@example.com',
+      name: 'Original Name',
+      source: 'https://news.ycombinator.com',
+      subscribedContraption: true,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+    })
 
-    // The same person submits the homepage form again. It always posts all
-    // three newsletters, so the existing-row branch must not apply them: an
-    // unauthenticated form post may not rewrite stored preferences.
-    const second = await POST(
+    // Requested newsletter flags opt in, while name and source remain untouched.
+    const res = await POST(
       subscribeRequest({
         email: 'returning@example.com',
         name: 'Imposter Name',
@@ -164,10 +163,10 @@ describe('POST /api/subscribe', () => {
         newsletters: ['contraption', 'workshop', 'postcard'],
       })
     )
-    expect(second.status).toBe(200)
+    expect(res.status).toBe(200)
     // Identical minimal body for new and existing emails: the endpoint must
     // not become an account-enumeration oracle or leak PII.
-    expect(await second.json()).toEqual({ ok: true })
+    expect(await res.json()).toEqual({ ok: true })
 
     const rows = await db
       .select()
@@ -175,25 +174,25 @@ describe('POST /api/subscribe', () => {
       .where(eq(subscribers.email, 'returning@example.com'))
     expect(rows).toHaveLength(1)
     expect(rows[0].subscribedContraption).toBe(true)
-    expect(rows[0].subscribedWorkshop).toBe(false)
-    expect(rows[0].subscribedPostcard).toBe(false)
+    expect(rows[0].subscribedWorkshop).toBe(true)
+    expect(rows[0].subscribedPostcard).toBe(true)
+    expect(rows[0].subscribedTsundoku).toBe(false)
     expect(rows[0].name).toBe('Original Name')
     expect(rows[0].source).toBe('https://news.ycombinator.com')
 
-    // The login email still went out both times. The subscriber is still
-    // unconfirmed, so the resend keeps the confirmation copy and names only
-    // the newsletters the stored row opts into.
-    expect(sendSimpleEmail).toHaveBeenCalledTimes(2)
-    const [resend] = vi.mocked(sendSimpleEmail).mock.calls[1]
+    // The subscriber is still unconfirmed, so the email keeps the confirmation
+    // copy and names only the newsletters the stored row opts into.
+    expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
+    const [resend] = vi.mocked(sendSimpleEmail).mock.calls[0]
     expect(resend.subject).toBe(
       'Confirm your subscription to philipithomas.com'
     )
     expect(resend.text).toContain(
-      'Thanks for subscribing to Contraption at philipithomas.com.'
+      'Thanks for subscribing to Contraption, Workshop, and Postcard at philipithomas.com.'
     )
   })
 
-  it('signs in an existing confirmed subscriber without re-subscribing them', async () => {
+  it('signs in an existing confirmed subscriber without re-subscribing them when no newsletters are requested', async () => {
     await db.insert(subscribers).values({
       email: 'opteddown@example.com',
       name: 'Opted Down',
@@ -209,7 +208,6 @@ describe('POST /api/subscribe', () => {
         email: 'opteddown@example.com',
         name: 'Overwrite Attempt',
         source: 'https://www.google.com',
-        newsletters: ['contraption', 'workshop', 'postcard'],
       })
     )
 
@@ -225,6 +223,7 @@ describe('POST /api/subscribe', () => {
     expect(row.subscribedContraption).toBe(false)
     expect(row.subscribedWorkshop).toBe(false)
     expect(row.subscribedPostcard).toBe(false)
+    expect(row.subscribedTsundoku).toBe(false)
     expect(row.name).toBe('Opted Down')
     expect(row.source).toBe('https://original.example')
 
@@ -239,6 +238,51 @@ describe('POST /api/subscribe', () => {
     const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
     expect(message.subject).toBe('Your sign-in code for philipithomas.com')
     expect(message.text).toContain('Your sign-in code for philipithomas.com')
+  })
+
+  it('opts an existing confirmed subscriber into Tsundoku and sends the admin notification', async () => {
+    await db.insert(subscribers).values({
+      email: 'japan@example.com',
+      name: 'Japan Reader',
+      source: 'https://original.example',
+      confirmedAt: new Date(),
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+    })
+
+    const res = await POST(
+      subscribeRequest({
+        email: 'japan@example.com',
+        name: 'Overwrite Attempt',
+        source: 'https://www.google.com',
+        newsletters: ['tsundoku'],
+      })
+    )
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true })
+
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.email, 'japan@example.com'))
+    expect(row.subscribedContraption).toBe(false)
+    expect(row.subscribedWorkshop).toBe(false)
+    expect(row.subscribedPostcard).toBe(false)
+    expect(row.subscribedTsundoku).toBe(true)
+    expect(row.name).toBe('Japan Reader')
+    expect(row.source).toBe('https://original.example')
+
+    expect(sendSimpleEmail).toHaveBeenCalledTimes(2)
+    const subjects = vi
+      .mocked(sendSimpleEmail)
+      .mock.calls.map(([m]) => m.subject)
+    expect(subjects).toEqual([
+      'Tsundoku opt-in: japan@example.com',
+      'Your sign-in code for philipithomas.com',
+    ])
   })
 
   it('rejects a suppressed address with 422 and sends no email', async () => {

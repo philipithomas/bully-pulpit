@@ -5,7 +5,7 @@ import {
   getPostBySlug,
   getPostsByNewsletter,
 } from '@/lib/content/loader'
-import type { Newsletter } from '@/lib/content/types'
+import { NEWSLETTERS, type Newsletter } from '@/lib/content/types'
 
 /** Character budget for a fetchPage response. Roughly 1k tokens. */
 export const PAGE_TEXT_MAX_CHARS = 4000
@@ -17,18 +17,13 @@ const NOT_FOUND =
 // in src/lib/config.ts. Update this summary alongside that copy.
 const HOMEPAGE_SUMMARY = `The homepage of philipithomas.com, the personal website and blog of Philip I. Thomas. Philip crafts digital tools. He lives in San Francisco and is interested in coffee, fermentation, and urbanism. In the past, he made Find AI, Moonlight, and Staffjoy.
 
-He publishes three newsletters:
+He publishes four newsletters:
 - Contraption (/contraption): Projects and essays.
 - Workshop (/workshop): Journal about work in progress.
 - Postcard (/postcard): What I'm up to.
+- Tsundoku (/tsundoku): Pop-up newsletter of Japan photos.
 
 The newsletters are available by email, RSS, or snail mail, and the homepage has a signup form.`
-
-const NEWSLETTERS: readonly Newsletter[] = [
-  'contraption',
-  'workshop',
-  'postcard',
-]
 
 function newsletterIndexText(newsletter: Newsletter): string {
   const config = siteConfig.newsletters[newsletter]

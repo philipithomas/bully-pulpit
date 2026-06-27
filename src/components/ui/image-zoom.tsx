@@ -2,9 +2,12 @@
 
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { ZoomedImage } from '@/components/ui/image-zoom-overlay'
+import type {
+  ZoomedImage,
+  ZoomGalleryItem,
+} from '@/components/ui/image-zoom-overlay'
 
 // Keeps the overlay out of the shared first-load bundle;
 // the chunk loads only when an image is actually zoomed.
@@ -31,12 +34,46 @@ function warmFullSrc(e: Event) {
   new Image().src = fullSrc
 }
 
+function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
+  const img =
+    element instanceof HTMLImageElement ? element : element.querySelector('img')
+  if (!img) return null
+  const fullSrc = element.dataset.fullSrc ?? img.dataset.fullSrc ?? null
+  const href = element.dataset.zoomLinkHref ?? img.dataset.zoomLinkHref
+  const title = element.dataset.zoomLinkTitle ?? img.dataset.zoomLinkTitle
+  return {
+    src: img.currentSrc || img.src,
+    fullSrc,
+    alt: img.alt ?? '',
+    caption: href && title ? { href, title } : null,
+  }
+}
+
 export function ImageZoom() {
   const pathname = usePathname()
   const [zoomedImage, setZoomedImage] = useState<ZoomedImage | null>(null)
   const [mounted, setMounted] = useState(false)
   // Element focused before the overlay opened; focus returns to it on close
   const triggerRef = useRef<HTMLElement | null>(null)
+  const handleNavigate = useCallback((direction: -1 | 1) => {
+    setZoomedImage((current) => {
+      const gallery = current?.gallery
+      if (!gallery) return current
+      const index =
+        (gallery.index + direction + gallery.items.length) %
+        gallery.items.length
+      return {
+        ...gallery.items[index],
+        rect: null,
+        gallery: { ...gallery, index },
+      }
+    })
+  }, [])
+  const handleClose = useCallback(() => {
+    setZoomedImage(null)
+    triggerRef.current?.focus()
+    triggerRef.current = null
+  }, [])
 
   useEffect(() => setMounted(true), [])
 
@@ -73,16 +110,24 @@ export function ImageZoom() {
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null
-      // Data attributes may sit on the wrapper or on the img itself.
-      const fullSrc = matched.dataset.fullSrc ?? img.dataset.fullSrc ?? null
-      const href = matched.dataset.zoomLinkHref ?? img.dataset.zoomLinkHref
-      const title = matched.dataset.zoomLinkTitle ?? img.dataset.zoomLinkTitle
+      const item = zoomItemFromElement(matched)
+      if (!item) return
+
+      const group = matched.dataset.zoomGroup
+      const groupElements = group
+        ? Array.from(
+            document.querySelectorAll<HTMLElement>('[data-zoom-group]')
+          )
+            .filter((el) => el.dataset.zoomGroup === group)
+            .filter((el) => zoomItemFromElement(el) !== null)
+        : []
+      const groupItems = groupElements
+        .map(zoomItemFromElement)
+        .filter((i): i is ZoomGalleryItem => i !== null)
+      const groupIndex = groupElements.indexOf(matched)
       const rect = img.getBoundingClientRect()
       setZoomedImage({
-        src: img.currentSrc || img.src,
-        fullSrc,
-        alt: img.alt ?? '',
-        caption: href && title ? { href, title } : null,
+        ...item,
         // Plain object copy: the overlay animates from and back to this box.
         rect:
           rect.width > 0 && rect.height > 0
@@ -93,6 +138,9 @@ export function ImageZoom() {
                 height: rect.height,
               }
             : null,
+        ...(groupItems.length > 1 && groupIndex >= 0
+          ? { gallery: { items: groupItems, index: groupIndex } }
+          : {}),
       })
     }
 
@@ -105,11 +153,8 @@ export function ImageZoom() {
   return createPortal(
     <ImageZoomOverlay
       image={zoomedImage}
-      onClose={() => {
-        setZoomedImage(null)
-        triggerRef.current?.focus()
-        triggerRef.current = null
-      }}
+      onNavigate={handleNavigate}
+      onClose={handleClose}
     />,
     document.body
   ) as ReactNode

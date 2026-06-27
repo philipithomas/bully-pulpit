@@ -9,7 +9,10 @@ import {
   renderConfirmationEmail,
   renderConfirmationText,
 } from '@/lib/email/templates/confirmation'
-import { renderNewSubscriberEmail } from '@/lib/email/templates/new-subscriber'
+import {
+  renderNewSubscriberEmail,
+  renderNewsletterOptInEmail,
+} from '@/lib/email/templates/new-subscriber'
 import { renderNewsletterShell } from '@/lib/email/templates/newsletter-shell'
 
 // --- Transactional emails (sent synchronously in the request path) ---
@@ -42,6 +45,18 @@ export async function sendNewSubscriberNotification(
   await sendSimpleEmail({
     to: siteConfig.sesFromEmail,
     subject: `New subscriber: ${email}`,
+    html,
+  })
+}
+
+export async function sendNewsletterOptInNotification(
+  email: string,
+  newsletter: string
+): Promise<void> {
+  const html = renderNewsletterOptInEmail({ email, newsletter })
+  await sendSimpleEmail({
+    to: siteConfig.sesFromEmail,
+    subject: `${newsletter} opt-in: ${email}`,
     html,
   })
 }

@@ -46,7 +46,8 @@ export async function buildEmailBodyHtml(post: Post): Promise<EmailBody> {
     subtitle,
     post.frontmatter.coverImage,
     post.frontmatter.coverImageAlt,
-    post.newsletter === 'postcard' ? null : post.frontmatter.publishedAt
+    post.newsletter === 'postcard' ? null : post.frontmatter.publishedAt,
+    post.frontmatter.location
   )
   const html = emailHeader + markdownHtml + relatedPostsHtml
   // Short snippet for the preheader/preview; full text for the text/plain

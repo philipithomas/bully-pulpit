@@ -12,6 +12,7 @@ const newsletterColumns = {
   postcard: subscribers.subscribedPostcard,
   contraption: subscribers.subscribedContraption,
   workshop: subscribers.subscribedWorkshop,
+  tsundoku: subscribers.subscribedTsundoku,
 } as const
 
 export type NewsletterSlug = keyof typeof newsletterColumns
@@ -54,6 +55,7 @@ export async function createSubscriber(input: {
   subscribedPostcard?: boolean
   subscribedContraption?: boolean
   subscribedWorkshop?: boolean
+  subscribedTsundoku?: boolean
 }): Promise<Subscriber> {
   const rows = await getDb()
     .insert(subscribers)
@@ -61,7 +63,8 @@ export async function createSubscriber(input: {
       email: input.email.toLowerCase(),
       name: input.name ?? null,
       source: input.source ?? null,
-      // Omitted flags fall back to the column defaults (all true).
+      // Omitted flags fall back to the column defaults. Standing newsletters
+      // default on; Tsundoku stays off unless the service layer opts in.
       ...(input.subscribedPostcard !== undefined
         ? { subscribedPostcard: input.subscribedPostcard }
         : {}),
@@ -70,6 +73,9 @@ export async function createSubscriber(input: {
         : {}),
       ...(input.subscribedWorkshop !== undefined
         ? { subscribedWorkshop: input.subscribedWorkshop }
+        : {}),
+      ...(input.subscribedTsundoku !== undefined
+        ? { subscribedTsundoku: input.subscribedTsundoku }
         : {}),
     })
     .returning()
@@ -90,6 +96,7 @@ export type SubscriberPrefs = {
   subscribedPostcard?: boolean
   subscribedContraption?: boolean
   subscribedWorkshop?: boolean
+  subscribedTsundoku?: boolean
 }
 
 /**
@@ -113,6 +120,9 @@ export async function updateSubscriber(
       ...(prefs.subscribedWorkshop !== undefined
         ? { subscribedWorkshop: prefs.subscribedWorkshop }
         : {}),
+      ...(prefs.subscribedTsundoku !== undefined
+        ? { subscribedTsundoku: prefs.subscribedTsundoku }
+        : {}),
       updatedAt: sql`NOW()`,
     })
     .where(eq(subscribers.uuid, uuid))
@@ -130,7 +140,8 @@ export async function countActive(): Promise<number> {
         or(
           eq(subscribers.subscribedPostcard, true),
           eq(subscribers.subscribedContraption, true),
-          eq(subscribers.subscribedWorkshop, true)
+          eq(subscribers.subscribedWorkshop, true),
+          eq(subscribers.subscribedTsundoku, true)
         )
       )
     )
@@ -203,6 +214,7 @@ export type SerializedSubscriber = {
   subscribed_postcard: boolean
   subscribed_contraption: boolean
   subscribed_workshop: boolean
+  subscribed_tsundoku: boolean
   source: string | null
   created_at: string
   updated_at: string
@@ -218,6 +230,7 @@ export function serializeSubscriber(s: Subscriber): SerializedSubscriber {
     subscribed_postcard: s.subscribedPostcard,
     subscribed_contraption: s.subscribedContraption,
     subscribed_workshop: s.subscribedWorkshop,
+    subscribed_tsundoku: s.subscribedTsundoku,
     source: s.source,
     created_at: s.createdAt.toISOString(),
     updated_at: s.updatedAt.toISOString(),
@@ -234,6 +247,8 @@ export function prefsFromBody(body: Record<string, unknown>): SubscriberPrefs {
     prefs.subscribedContraption = body.subscribed_contraption
   if (typeof body.subscribed_workshop === 'boolean')
     prefs.subscribedWorkshop = body.subscribed_workshop
+  if (typeof body.subscribed_tsundoku === 'boolean')
+    prefs.subscribedTsundoku = body.subscribed_tsundoku
   return prefs
 }
 
@@ -243,6 +258,7 @@ export type SubscriberStats = {
   postcard: number
   contraption: number
   workshop: number
+  tsundoku: number
 }
 
 /** Aggregate counts for the Printing Press overview (one query). */
@@ -255,6 +271,7 @@ export async function subscriberStats(): Promise<SubscriberStats> {
       postcard: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedPostcard}))::int`,
       contraption: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedContraption}))::int`,
       workshop: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedWorkshop}))::int`,
+      tsundoku: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedTsundoku}))::int`,
     })
     .from(subscribers)
   return (
@@ -264,6 +281,7 @@ export async function subscriberStats(): Promise<SubscriberStats> {
       postcard: 0,
       contraption: 0,
       workshop: 0,
+      tsundoku: 0,
     }
   )
 }
@@ -276,6 +294,7 @@ export type SubscriberListItem = {
   subscribedPostcard: boolean
   subscribedContraption: boolean
   subscribedWorkshop: boolean
+  subscribedTsundoku: boolean
   /** Where the signup came from (external referrer origin, or a placeholder like csv_import). */
   source: string | null
   createdAt: string
@@ -333,6 +352,7 @@ export async function listSubscribers(opts: {
       subscribedPostcard: s.subscribedPostcard,
       subscribedContraption: s.subscribedContraption,
       subscribedWorkshop: s.subscribedWorkshop,
+      subscribedTsundoku: s.subscribedTsundoku,
       source: s.source,
       createdAt: s.createdAt.toISOString(),
       suppressedAt: suppressedAt ? suppressedAt.toISOString() : null,
@@ -348,6 +368,7 @@ export type ExportRow = {
   postcard: boolean
   contraption: boolean
   workshop: boolean
+  tsundoku: boolean
   confirmed: boolean
   source: string | null
   createdAt: string
@@ -365,6 +386,7 @@ export async function allSubscribersForExport(): Promise<ExportRow[]> {
     postcard: s.subscribedPostcard,
     contraption: s.subscribedContraption,
     workshop: s.subscribedWorkshop,
+    tsundoku: s.subscribedTsundoku,
     confirmed: s.confirmedAt != null,
     source: s.source,
     createdAt: s.createdAt.toISOString(),
@@ -377,6 +399,7 @@ export type ImportRow = {
   postcard: boolean
   contraption: boolean
   workshop: boolean
+  tsundoku: boolean
   confirmed: boolean
   source: string | null
 }
@@ -388,6 +411,7 @@ export type ImportColumnsPresent = {
   postcard: boolean
   contraption: boolean
   workshop: boolean
+  tsundoku: boolean
   confirmed: boolean
 }
 
@@ -422,6 +446,7 @@ export async function importSubscribers(
           subscribedPostcard: r.postcard,
           subscribedContraption: r.contraption,
           subscribedWorkshop: r.workshop,
+          subscribedTsundoku: r.tsundoku,
           confirmedAt: r.confirmed ? new Date() : null,
           source: r.source ?? 'csv_import',
         }))
@@ -439,6 +464,9 @@ export async function importSubscribers(
             : {}),
           ...(present.workshop
             ? { subscribedWorkshop: sql`excluded.subscribed_workshop` }
+            : {}),
+          ...(present.tsundoku
+            ? { subscribedTsundoku: sql`excluded.subscribed_tsundoku` }
             : {}),
           ...(present.confirmed
             ? {

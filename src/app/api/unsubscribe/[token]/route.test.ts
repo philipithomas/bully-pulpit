@@ -35,6 +35,7 @@ function makeSubscriber(overrides: Partial<Subscriber> = {}): Subscriber {
     subscribedPostcard: true,
     subscribedContraption: true,
     subscribedWorkshop: true,
+    subscribedTsundoku: false,
     source: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -90,6 +91,7 @@ describe('GET /api/unsubscribe/[token]', () => {
       subscribed_postcard: true,
       subscribed_contraption: true,
       subscribed_workshop: false,
+      subscribed_tsundoku: false,
     })
   })
 
@@ -134,6 +136,7 @@ describe('DELETE /api/unsubscribe/[token]', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
+      subscribedTsundoku: false,
     })
     expect(mockedSends.markUnsubscribed).toHaveBeenCalledWith(10)
     expect(mockedSubs.deleteWithData).not.toHaveBeenCalled()
@@ -177,6 +180,7 @@ describe('POST /api/unsubscribe/[token] (one-click)', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
+      subscribedTsundoku: false,
     })
   })
 })

@@ -41,6 +41,12 @@ export function Footer() {
             >
               Postcard
             </Link>
+            <Link
+              href="/tsundoku"
+              className="hover:text-white transition-colors"
+            >
+              Tsundoku
+            </Link>
             <Link href="/terms" className="hover:text-white transition-colors">
               Terms
             </Link>

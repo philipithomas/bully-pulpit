@@ -48,6 +48,7 @@ export async function GET(
     subscribed_postcard: resolved.subscriber.subscribedPostcard,
     subscribed_contraption: resolved.subscriber.subscribedContraption,
     subscribed_workshop: resolved.subscriber.subscribedWorkshop,
+    subscribed_tsundoku: resolved.subscriber.subscribedTsundoku,
   })
 }
 
@@ -86,6 +87,7 @@ export async function DELETE(
     subscribedPostcard: false,
     subscribedContraption: false,
     subscribedWorkshop: false,
+    subscribedTsundoku: false,
   })
   await markUnsubscribed(resolved.emailSend.id)
   return NextResponse.json({ success: true })
@@ -100,11 +102,14 @@ function unsubscribeUpdate(newsletter: string | null): SubscriberPrefs {
       return { subscribedContraption: false }
     case 'workshop':
       return { subscribedWorkshop: false }
+    case 'tsundoku':
+      return { subscribedTsundoku: false }
     default:
       return {
         subscribedPostcard: false,
         subscribedContraption: false,
         subscribedWorkshop: false,
+        subscribedTsundoku: false,
       }
   }
 }

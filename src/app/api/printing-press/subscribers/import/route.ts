@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
   const pIdx = col('postcard')
   const cIdx = col('contraption')
   const wIdx = col('workshop')
+  const tIdx = col('tsundoku')
   const confIdx = col('confirmed')
   const srcIdx = col('source')
 
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
       postcard: pIdx < 0 ? true : truthy(r[pIdx]),
       contraption: cIdx < 0 ? true : truthy(r[cIdx]),
       workshop: wIdx < 0 ? true : truthy(r[wIdx]),
+      tsundoku: tIdx < 0 ? true : truthy(r[tIdx]),
       confirmed: confIdx < 0 ? true : truthy(r[confIdx]),
       source: srcIdx >= 0 ? r[srcIdx]?.trim() || null : null,
     })
@@ -76,6 +78,7 @@ export async function POST(request: NextRequest) {
     postcard: pIdx >= 0,
     contraption: cIdx >= 0,
     workshop: wIdx >= 0,
+    tsundoku: tIdx >= 0,
     confirmed: confIdx >= 0,
   })
   return NextResponse.json({ created, updated, skipped, total: list.length })

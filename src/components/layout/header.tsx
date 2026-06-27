@@ -38,6 +38,10 @@ const newsletterLogos: Record<string, { src: string; className: string }> = {
     src: '/images/postcard.svg',
     className: 'h-[18px] w-auto',
   },
+  tsundoku: {
+    src: '/images/tsundoku.svg',
+    className: 'h-[19px] w-auto',
+  },
 }
 
 export function Header() {

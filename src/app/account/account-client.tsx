@@ -18,20 +18,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
-import { siteConfig } from '@/lib/config'
+import { newsletterRows } from '@/lib/newsletters'
 import { useAuthModal } from '@/stores/auth-store'
 
-const newsletterInfo = [
-  { key: 'subscribed_contraption', ...siteConfig.newsletters.contraption },
-  { key: 'subscribed_workshop', ...siteConfig.newsletters.workshop },
-  { key: 'subscribed_postcard', ...siteConfig.newsletters.postcard },
-] as const
+const newsletterInfo = newsletterRows()
 
 interface Preferences {
   email: string
   subscribed_contraption: boolean
   subscribed_workshop: boolean
   subscribed_postcard: boolean
+  subscribed_tsundoku: boolean
 }
 
 export function AccountClient() {

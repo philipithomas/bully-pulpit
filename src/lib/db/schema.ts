@@ -29,6 +29,7 @@ export const subscribers = pgTable(
       .notNull()
       .default(true),
     subscribedWorkshop: boolean('subscribed_workshop').notNull().default(true),
+    subscribedTsundoku: boolean('subscribed_tsundoku').notNull().default(false),
     source: text('source'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

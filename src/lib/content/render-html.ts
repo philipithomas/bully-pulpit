@@ -151,7 +151,8 @@ export function renderEmailHeaderHtml(
   subtitle?: string | null,
   coverImage?: string | null,
   coverImageAlt?: string | null,
-  publishedAt?: string | null
+  publishedAt?: string | null,
+  location?: { name: string; url: string } | null
 ): string {
   const postUrl = `${siteUrl}/${slug}`
 
@@ -165,6 +166,10 @@ export function renderEmailHeaderHtml(
 
   if (subtitle) {
     html += `<p style="font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 400; color: #625e58; line-height: 1.75; text-align: center; margin: 0 0 4px;">${escapeHtml(subtitle)}</p>`
+  }
+
+  if (location) {
+    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #7E7A73; text-align: center; margin: 8px 0 16px;"><a href="${escapeHtml(location.url)}" style="color: #7E7A73; text-decoration: underline; text-decoration-color: #B1ADA6;">${escapeHtml(location.name)}</a></p>`
   }
 
   html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: #625e58; text-align: center; margin: 0 0 24px;"><a href="${siteUrl}" style="color: #625e58; text-decoration: none;">Philip I. Thomas</a></p>`

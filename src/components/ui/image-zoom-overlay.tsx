@@ -1,7 +1,21 @@
 'use client'
 
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+
+export interface ZoomGalleryItem {
+  src: string
+  fullSrc: string | null
+  alt: string
+  caption?: { href: string; title: string } | null
+}
 
 export interface ZoomedImage {
   src: string
@@ -12,6 +26,10 @@ export interface ZoomedImage {
   caption?: { href: string; title: string } | null
   /** Viewport rect of the clicked image: where the zoom starts and ends. */
   rect: { top: number; left: number; width: number; height: number } | null
+  gallery?: {
+    items: ZoomGalleryItem[]
+    index: number
+  }
 }
 
 // Medium-style zoom: one click opens, one click anywhere (or Escape, or a
@@ -56,9 +74,11 @@ function flipTransform(
 export function ImageZoomOverlay({
   image,
   onClose,
+  onNavigate,
 }: {
   image: ZoomedImage
   onClose: () => void
+  onNavigate?: (direction: -1 | 1) => void
 }) {
   const [phase, setPhase] = useState<'opening' | 'open' | 'closing'>('opening')
   const [hdSize, setHdSize] = useState<{
@@ -71,6 +91,7 @@ export function ImageZoomOverlay({
   const immediateRef = useRef<HTMLImageElement>(null)
   const captionLinkRef = useRef<HTMLAnchorElement>(null)
   const closingRef = useRef(false)
+  const hasGallery = Boolean(image.gallery && image.gallery.items.length > 1)
 
   // Open: animate the image from its on-page rect to the centered layout
   // position. Reduced motion, a missing rect, or a not-yet-measurable layout
@@ -130,6 +151,14 @@ export function ImageZoomOverlay({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose()
+      if (hasGallery && e.key === 'ArrowLeft') {
+        e.preventDefault()
+        onNavigate?.(-1)
+      }
+      if (hasGallery && e.key === 'ArrowRight') {
+        e.preventDefault()
+        onNavigate?.(1)
+      }
       if (e.key === 'Tab') {
         e.preventDefault()
         const link = captionLinkRef.current
@@ -142,7 +171,7 @@ export function ImageZoomOverlay({
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [handleClose])
+  }, [handleClose, hasGallery, onNavigate])
 
   // Scrolling closes, like medium-zoom: the reader is leaving, get out of
   // the way.
@@ -184,6 +213,13 @@ export function ImageZoomOverlay({
     }
   }, [image.fullSrc])
 
+  const imageResetKey = `${image.src}\n${image.fullSrc ?? ''}`
+  useEffect(() => {
+    if (!imageResetKey) return
+    setHdSize(null)
+    setUpgrade(null)
+  }, [imageResetKey])
+
   // Apply the upgrade once the open animation has settled, so the layout
   // never changes mid-zoom. Reduced motion swaps instantly.
   useEffect(() => {
@@ -213,6 +249,24 @@ export function ImageZoomOverlay({
   const showImmediate = upgrade === null || upgrade.fading
   const holdOutgoing =
     upgrade !== null && upgrade.outgoingWidth > 0 && upgrade.outgoingHeight > 0
+  const handleCaptionClick = useCallback(
+    (e: MouseEvent<HTMLAnchorElement>) => e.stopPropagation(),
+    []
+  )
+  const handlePrevious = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation()
+      onNavigate?.(-1)
+    },
+    [onNavigate]
+  )
+  const handleNext = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation()
+      onNavigate?.(1)
+    },
+    [onNavigate]
+  )
 
   return (
     <div
@@ -231,7 +285,7 @@ export function ImageZoomOverlay({
           image is pinned over it at its captured size so the crossfade never
           moves pixels. */}
       <div ref={containerRef} className="relative">
-        {showFull && (
+        {showFull ? (
           // biome-ignore lint/performance/noImgElement: the overlay renders the raw full-resolution asset at runtime
           <img
             key="full"
@@ -244,8 +298,8 @@ export function ImageZoomOverlay({
             }`}
             draggable={false}
           />
-        )}
-        {showImmediate && (
+        ) : null}
+        {showImmediate ? (
           // biome-ignore lint/performance/noImgElement: mirrors the clicked image's already-loaded source
           <img
             key="immediate"
@@ -270,7 +324,7 @@ export function ImageZoomOverlay({
             }
             draggable={false}
           />
-        )}
+        ) : null}
       </div>
       {/* Post attribution for gallery photos. A sibling of the FLIP
           container so it fades with the backdrop instead of animating with
@@ -278,20 +332,40 @@ export function ImageZoomOverlay({
           close; only the link itself stops propagation so it can navigate
           (the opener clears the zoom on pathname change, and the body
           scroll lock releases when the overlay unmounts). */}
-      {caption && (
+      {caption ? (
         <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-1.5 px-6 text-center">
-          {image.alt && (
+          {image.alt ? (
             <p className="font-serif text-sm text-white/90">{image.alt}</p>
-          )}
+          ) : null}
           <Link
             ref={captionLinkRef}
             href={caption.href}
             className="text-xs text-gray-300 underline decoration-gray-500 underline-offset-4 hover:text-white"
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleCaptionClick}
           >
             Featured on {caption.title}
           </Link>
         </div>
+      ) : null}
+      {hasGallery && (
+        <>
+          <button
+            type="button"
+            onClick={handlePrevious}
+            aria-label="Previous image"
+            className="-translate-y-1/2 absolute top-1/2 left-4 p-3 text-white/75 transition-colors hover:text-white"
+          >
+            <ChevronLeft aria-hidden="true" className="h-8 w-8" />
+          </button>
+          <button
+            type="button"
+            onClick={handleNext}
+            aria-label="Next image"
+            className="-translate-y-1/2 absolute top-1/2 right-4 p-3 text-white/75 transition-colors hover:text-white"
+          >
+            <ChevronRight aria-hidden="true" className="h-8 w-8" />
+          </button>
+        </>
       )}
     </div>
   )
