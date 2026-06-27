@@ -96,6 +96,7 @@ export default function PostcardPage() {
             width={200}
             height={48}
             className="h-10 md:h-12 w-auto mx-auto"
+            style={{ width: 'auto' }}
             priority
           />
           <h1 className="sr-only">Postcard</h1>
