@@ -29,7 +29,7 @@ const MAX_ROW_WIDTH = 1216
 const STRETCH = 1.25
 const PHOTO_VIEWER_DESCRIPTION_MAX = 900
 const TRIP_START = '2026-06-24'
-const TRIP_END = '2026-07-08'
+const TRIP_END = '2026-07-07'
 const INTRO = [
   'In Summer 2026, I found myself with unexpected downtime between jobs. I flew to Japan, bought a camera, and practiced photography.',
   'My photos usually live inside essays, so I quickly built up a stack of unpublished images.',
