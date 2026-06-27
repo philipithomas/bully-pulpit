@@ -163,7 +163,7 @@ export default function TsundokuPage() {
               <p key={paragraph}>{paragraph}</p>
             ))}
           </div>
-          <SubscribeCta newsletter="tsundoku" className="mt-5" />
+          <SubscribeCta newsletter="tsundoku" align="center" className="mt-5" />
         </div>
 
         <div className="flex flex-wrap gap-x-2 gap-y-5 [--row-h:160px] sm:gap-y-6 sm:[--row-h:220px] lg:[--row-h:260px]">

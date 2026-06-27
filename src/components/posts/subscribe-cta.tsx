@@ -29,9 +29,11 @@ type Preferences = Record<(typeof preferenceKeys)[Newsletter], boolean>
 export function SubscribeCta({
   newsletter,
   className = 'mt-16',
+  align = 'start',
 }: {
   newsletter: Newsletter
   className?: string
+  align?: 'start' | 'center'
 }) {
   const { user } = useAuthContext()
   const [prefs, setPrefs] = useState<Preferences | null>(null)
@@ -116,7 +118,7 @@ export function SubscribeCta({
         </button>
       ) : (
         <InlineSignupForm
-          align="center"
+          align={align}
           buttonClassName={buttonClassName}
           newsletters={[newsletter]}
         />
