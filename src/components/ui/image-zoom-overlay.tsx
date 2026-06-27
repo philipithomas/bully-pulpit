@@ -1,6 +1,7 @@
 'use client'
 
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import NextImage from 'next/image'
 import Link from 'next/link'
 import {
   type MouseEvent,
@@ -9,6 +10,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { ArrowIcon } from '@/components/ui/arrow-icon'
 
 export interface ZoomCaption {
   href: string
@@ -539,18 +541,27 @@ export function ImageZoomOverlay({
                 ) : null}
               </div>
               <footer className="flex shrink-0 items-center justify-end gap-4 border-gray-200 border-t px-5 py-4 sm:justify-between md:px-7 md:py-5">
-                <span className="hidden font-sans text-xs text-gray-400 sm:inline">
-                  Tsundoku
-                </span>
+                <NextImage
+                  src="/images/tsundoku.svg"
+                  alt="Tsundoku"
+                  width={92}
+                  height={14}
+                  className="hidden h-[14px] w-auto opacity-70 sm:block"
+                />
                 <Link
                   href={caption.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 font-sans text-sm font-semibold text-gray-900 transition-colors hover:text-sun"
+                  className="group inline-flex items-center gap-2 font-sans text-sm font-semibold text-gray-900 transition-colors hover:text-sun"
                   onClick={handleCaptionClick}
                 >
                   Open post
-                  <span aria-hidden="true">-&gt;</span>
+                  <span
+                    aria-hidden="true"
+                    className="transition-transform group-hover:translate-x-0.5"
+                  >
+                    <ArrowIcon className="h-3.5 w-3.5" />
+                  </span>
                 </Link>
               </footer>
             </div>
