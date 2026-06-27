@@ -114,9 +114,7 @@ export default function PhotographyPage() {
               data-zoomable=""
               data-zoom-link-href={`/${photo.post.slug}`}
               data-zoom-link-title={photo.post.frontmatter.title}
-              {...(photo.post.fullCoverImage
-                ? { 'data-full-src': photo.post.fullCoverImage }
-                : {})}
+              data-full-src={photo.src}
               className="relative block cursor-zoom-in overflow-hidden bg-gray-100"
               style={{
                 flexGrow: ratio * 100,

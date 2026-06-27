@@ -17,22 +17,19 @@ import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
  * repo, no network or API keys), and fails loudly with the command to run.
  *
  *   1. Cover images referenced by frontmatter exist on disk.
- *   2. Every cover has a 1200×630 Open Graph variant within budget
- *      (pnpm images:generate).
- *   3. Web/email image sources stay within Vercel Image Optimization's source
- *      dimension limit.
- *   4. The committed search index matches the recomputed merkle tree over the
+ *   2. Web/email/social image sources stay within Vercel Image Optimization's
+ *      source dimension limit.
+ *   3. The committed search index matches the recomputed merkle tree over the
  *      post corpus, and related-posts.json covers every post (pnpm search:index).
- *   5. In-article images stay within Vercel Image Optimization's source
+ *   4. In-article images stay within Vercel Image Optimization's source
  *      dimension limit.
- *   6. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
+ *   5. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
  *      with non-empty alt text — a missing or empty alt fails the build.
- *   7. The rendered email HTML for every post stays under Gmail's clipping
- *      threshold (warn near the line, fail over it).
+ *   6. The rendered email HTML for every non-exempt post stays under Gmail's
+ *      clipping threshold (warn near the line, fail over it).
  */
 
 const IMAGES = path.join(process.cwd(), 'public/images')
-const OG_COVERS = path.join(IMAGES, 'og/covers')
 const RELATED_JSON = path.join(
   process.cwd(),
   'src/generated/related-posts.json'
@@ -40,9 +37,6 @@ const RELATED_JSON = path.join(
 
 // Vercel Image Optimization rejects source images above this edge limit.
 const MAX_VERCEL_SOURCE_EDGE = 8192
-const OG_COVER_WIDTH = 1200
-const OG_COVER_HEIGHT = 630
-const MAX_OG_COVER_BYTES = 1024 * 1024
 // Gmail clips messages near 102KB of HTML; warn close to the line, fail over it.
 const MAX_EMAIL_HTML_BYTES = 100 * 1024
 const WARN_EMAIL_HTML_BYTES = 95 * 1024
@@ -53,31 +47,6 @@ const EMAIL_HTML_BUDGET_EXEMPT_SLUGS = new Set([
 
 const errors: string[] = []
 const warnings: string[] = []
-
-async function checkOgCoverVariant(basename: string, slug: string) {
-  const ogBasename = `${path.parse(basename).name}.jpg`
-  const variant = path.join(OG_COVERS, ogBasename)
-  if (!fs.existsSync(variant)) {
-    errors.push(
-      `${slug}: missing Open Graph cover ${path.relative(process.cwd(), variant)} — run \`pnpm images:generate\``
-    )
-    return
-  }
-
-  const meta = await sharp(variant).metadata()
-  if (meta.width !== OG_COVER_WIDTH || meta.height !== OG_COVER_HEIGHT) {
-    errors.push(
-      `${slug}: Open Graph cover ${ogBasename} is ${meta.width}x${meta.height}, expected ${OG_COVER_WIDTH}x${OG_COVER_HEIGHT} — run \`pnpm images:generate\``
-    )
-  }
-
-  const size = fs.statSync(variant).size
-  if (size > MAX_OG_COVER_BYTES) {
-    errors.push(
-      `${slug}: Open Graph cover ${ogBasename} is ${(size / 1024).toFixed(0)}KB (budget ${MAX_OG_COVER_BYTES / 1024}KB) — run \`pnpm images:generate\``
-    )
-  }
-}
 
 async function checkVercelSourceImage(filePath: string) {
   const meta = await sharp(filePath).metadata()
@@ -92,7 +61,7 @@ async function checkVercelSourceImage(filePath: string) {
 async function main() {
   const posts = getAllPosts()
 
-  // 1 + 2: cover images and their generated Open Graph variants
+  // 1 + 2: cover images and their Vercel Image Optimization source limits
   for (const post of posts) {
     const cover = post.frontmatter.coverImage
     if (!cover || cover.startsWith('http')) continue
@@ -101,12 +70,10 @@ async function main() {
       errors.push(`${post.slug}: coverImage ${cover} does not exist on disk`)
       continue
     }
-    const basename = path.basename(cover)
     await checkVercelSourceImage(source)
-    await checkOgCoverVariant(basename, post.slug)
   }
 
-  // 3: hero sources must be valid Vercel Image Optimization inputs
+  // 2: hero sources must be valid Vercel Image Optimization inputs
   const sources = ['portrait.jpg', 'philip-horizontal.jpg']
     .map((name) => path.join(IMAGES, name))
     .filter((p) => fs.existsSync(p))
@@ -114,7 +81,7 @@ async function main() {
     await checkVercelSourceImage(src)
   }
 
-  // 5: in-article image sources must be valid Vercel Image Optimization inputs.
+  // 4: in-article image sources must be valid Vercel Image Optimization inputs.
   const postsDir = path.join(IMAGES, 'posts')
   if (fs.existsSync(postsDir)) {
     const stack = [postsDir]
@@ -132,7 +99,7 @@ async function main() {
     }
   }
 
-  // 4a: the committed search index matches the recomputed merkle tree
+  // 3a: the committed search index matches the recomputed merkle tree
   // (offline — recomputes chunk hashes from content/, no embedding calls)
   const index = loadSearchIndex()
   if (!index) {

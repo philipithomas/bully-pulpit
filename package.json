@@ -12,7 +12,6 @@
     "check": "biome check .",
     "test": "vitest run",
     "search:index": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/generate-search-index.ts",
-    "images:generate": "tsx scripts/generate-images.ts",
     "content:check": "tsx scripts/check-content.ts",
     "links:check": "tsx scripts/check-links.ts",
     "workflow:check": "tsx scripts/check-workflow.ts",

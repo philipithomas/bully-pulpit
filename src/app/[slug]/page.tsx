@@ -34,14 +34,37 @@ interface Props {
   params: Promise<{ slug: string }>
 }
 
-const SOCIAL_IMAGE_SIZE = { width: 1200, height: 630 } as const
+const SOCIAL_IMAGE_WIDTH = 1200
+const SOCIAL_IMAGE_QUALITY = 80
+const FALLBACK_SOCIAL_IMAGE_SIZE = { width: 1200, height: 630 } as const
 
-function getOgCoverImagePath(coverImage: string): string {
-  const basename = coverImage
-    .split('/')
-    .pop()
-    ?.replace(/\.[^.]+$/, '.jpg')
-  return `/images/og/covers/${basename ?? 'cover.jpg'}`
+function toVercelImagePath(
+  imagePath: string,
+  width = SOCIAL_IMAGE_WIDTH,
+  quality = SOCIAL_IMAGE_QUALITY
+): string {
+  const params = new URLSearchParams({
+    url: imagePath,
+    w: String(width),
+    q: String(quality),
+  })
+  return `/_next/image?${params.toString()}`
+}
+
+function getScaledSocialDimensions(dimensions?: {
+  width: number
+  height: number
+}): { width: number; height?: number } {
+  if (!dimensions || dimensions.width <= 0 || dimensions.height <= 0) {
+    return { width: SOCIAL_IMAGE_WIDTH }
+  }
+
+  return {
+    width: SOCIAL_IMAGE_WIDTH,
+    height: Math.round(
+      (dimensions.height / dimensions.width) * SOCIAL_IMAGE_WIDTH
+    ),
+  }
 }
 
 function getSocialImage({
@@ -57,8 +80,8 @@ function getSocialImage({
 }) {
   if (coverImage?.startsWith('/images/covers/')) {
     return {
-      url: getOgCoverImagePath(coverImage),
-      ...SOCIAL_IMAGE_SIZE,
+      url: toVercelImagePath(coverImage),
+      ...getScaledSocialDimensions(coverDimensions),
       alt: coverImageAlt ?? title,
     }
   }
@@ -73,7 +96,7 @@ function getSocialImage({
 
   return {
     url: siteConfig.image,
-    ...SOCIAL_IMAGE_SIZE,
+    ...FALLBACK_SOCIAL_IMAGE_SIZE,
     alt: siteConfig.title,
   }
 }
@@ -215,9 +238,7 @@ export default async function SlugPage({ params }: Props) {
               width={post?.coverDimensions?.width ?? 1280}
               height={post?.coverDimensions?.height ?? 640}
               data-zoomable=""
-              {...(post?.fullCoverImage
-                ? { 'data-full-src': post.fullCoverImage }
-                : {})}
+              data-full-src={item.frontmatter.coverImage}
               className="w-full cursor-zoom-in"
               priority
               sizes={POST_COVER_SIZES}
