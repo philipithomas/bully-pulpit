@@ -46,6 +46,10 @@ const MAX_OG_COVER_BYTES = 1024 * 1024
 // Gmail clips messages near 102KB of HTML; warn close to the line, fail over it.
 const MAX_EMAIL_HTML_BYTES = 100 * 1024
 const WARN_EMAIL_HTML_BYTES = 95 * 1024
+const EMAIL_HTML_BUDGET_EXEMPT_SLUGS = new Set([
+  // Old archive post, not sent as a newsletter from this site.
+  'rethinking-work-beyond-the-factory',
+])
 
 const errors: string[] = []
 const warnings: string[] = []
@@ -224,6 +228,8 @@ async function main() {
   // the unsubscribe link.
   const unsubscribeUrl = `${siteConfig.url}/unsubscribe?token=00000000-0000-0000-0000-000000000000`
   for (const post of posts) {
+    if (EMAIL_HTML_BUDGET_EXEMPT_SLUGS.has(post.slug)) continue
+
     const body = await buildEmailBodyHtml(post)
     const html = renderFullNewsletter({
       bodyHtml: body.html,
