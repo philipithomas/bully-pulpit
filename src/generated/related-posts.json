@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-06-28T23:25:27.030Z",
+  "generatedAt": "2026-06-28T23:46:15.352Z",
   "posts": {
+    "toast": {
+      "related": [
+        {
+          "slug": "listening",
+          "score": 0.4241101
+        },
+        {
+          "slug": "geisha",
+          "score": 0.4504791
+        },
+        {
+          "slug": "weekenders-coffee",
+          "score": 0.4728255
+        }
+      ]
+    },
     "introducing-tsundoku": {
       "related": [
         {
@@ -24,12 +40,12 @@
           "score": 0.2306363
         },
         {
-          "slug": "geisha",
-          "score": 0.4898331
+          "slug": "toast",
+          "score": 0.4866162
         },
         {
-          "slug": "almost-perfect",
-          "score": 0.5136959
+          "slug": "geisha",
+          "score": 0.4898331
         }
       ]
     },
@@ -40,12 +56,12 @@
           "score": 0.2306363
         },
         {
-          "slug": "geisha",
-          "score": 0.4413652
+          "slug": "toast",
+          "score": 0.4241101
         },
         {
-          "slug": "almost-perfect",
-          "score": 0.462375
+          "slug": "geisha",
+          "score": 0.4413652
         }
       ]
     },
@@ -156,8 +172,8 @@
           "score": 0.5275053
         },
         {
-          "slug": "introducing-tsundoku",
-          "score": 0.5398145
+          "slug": "toast",
+          "score": 0.5280102
         }
       ]
     },
