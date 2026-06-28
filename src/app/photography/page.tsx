@@ -2,6 +2,10 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { getAllPosts } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
+import {
+  CAPTIONED_ZOOM_IMAGE_SIZES,
+  zoomImageDataAttrs,
+} from '@/lib/content/zoom-image'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 
 export const metadata: Metadata = {
@@ -142,7 +146,11 @@ export default function PhotographyPage() {
               data-zoom-caption-title={photo.alt}
               data-zoom-caption-footer-heading="Featured on"
               data-zoom-caption-links={JSON.stringify(photo.mentions)}
-              data-full-src={photo.src}
+              {...zoomImageDataAttrs({
+                src: photo.src,
+                dimensions: { width: photo.width, height: photo.height },
+                sizes: CAPTIONED_ZOOM_IMAGE_SIZES,
+              })}
               className="relative block cursor-zoom-in overflow-hidden bg-gray-100"
               style={{
                 flexGrow: ratio * 100,

@@ -1,6 +1,7 @@
 import { withBotId } from 'botid/next/config'
 import type { NextConfig } from 'next'
 import { withWorkflow } from 'workflow/next'
+import { OPTIMIZED_IMAGE_WIDTHS } from '@/lib/content/zoom-image'
 import { getRedirects } from '@/lib/redirects'
 
 const securityHeaders = [
@@ -37,12 +38,10 @@ const nextConfig: NextConfig = {
     // default optimizer input limit in local dev. Vercel still resizes the
     // served variants; this only allows the source file to be read.
     maximumResponseBody: 100_000_000,
-    // 1920 stays: the post hero renders 1280px CSS (100vw under 1312px), so
-    // 1x desktops need 1280 and 2x prose images need 1344 — both select 1920.
-    // 2048 dropped: it only served as the ceiling for >=2x heroes (2560 px
-    // needed), which 1920 now caps at a ~6% linear resolution cost for ~12%
-    // fewer bytes and one fewer variant per cover.
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    // Shared with the zoom viewer source sets. The larger widths let photo
+    // overlays and their preloads climb through optimized variants instead of
+    // jumping from a 1920px rendition to the raw camera original.
+    deviceSizes: [...OPTIMIZED_IMAGE_WIDTHS],
   },
   async headers() {
     return [

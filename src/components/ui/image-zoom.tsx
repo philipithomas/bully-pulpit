@@ -10,6 +10,7 @@ import type {
   ZoomGalleryItem,
 } from '@/components/ui/image-zoom-overlay'
 import { preloadZoomItemSources } from '@/components/ui/image-zoom-preload'
+import { zoomImageSources } from '@/lib/content/zoom-image'
 
 // Keeps the overlay out of the shared first-load bundle;
 // the chunk loads only when an image is actually zoomed.
@@ -106,11 +107,30 @@ function zoomCaptionLinksFromDataset(value: string | undefined) {
   }
 }
 
+function positiveIntegerFromDataset(value: string | undefined): number | null {
+  if (!value || !/^[0-9]+$/.test(value)) return null
+  const parsed = Number(value)
+  return parsed > 0 ? parsed : null
+}
+
 function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
   const img =
     element instanceof HTMLImageElement ? element : element.querySelector('img')
   if (!img) return null
   const fullSrc = element.dataset.fullSrc ?? img.dataset.fullSrc ?? null
+  const fullWidth = positiveIntegerFromDataset(
+    element.dataset.fullWidth ?? img.dataset.fullWidth
+  )
+  const fullHeight = positiveIntegerFromDataset(
+    element.dataset.fullHeight ?? img.dataset.fullHeight
+  )
+  const fullSizes = element.dataset.fullSizes ?? img.dataset.fullSizes
+  const fullSources = zoomImageSources({
+    src: fullSrc,
+    dimensions:
+      fullWidth && fullHeight ? { width: fullWidth, height: fullHeight } : null,
+    sizes: fullSizes,
+  })
   const href = element.dataset.zoomCaptionHref ?? img.dataset.zoomCaptionHref
   const title = element.dataset.zoomCaptionTitle ?? img.dataset.zoomCaptionTitle
   const description =
@@ -131,16 +151,24 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
   )
   const rect = img.getBoundingClientRect()
   const width =
-    img.naturalWidth > 0 ? img.naturalWidth : rect.width > 0 ? rect.width : null
+    fullWidth ??
+    (img.naturalWidth > 0
+      ? img.naturalWidth
+      : rect.width > 0
+        ? rect.width
+        : null)
   const height =
-    img.naturalHeight > 0
+    fullHeight ??
+    (img.naturalHeight > 0
       ? img.naturalHeight
       : rect.height > 0
         ? rect.height
-        : null
+        : null)
   return {
     src: img.currentSrc || img.src,
-    fullSrc,
+    fullSrc: fullSources?.src ?? fullSrc,
+    fullSrcSet: fullSources?.srcSet ?? null,
+    fullSizes: fullSources?.sizes ?? null,
     alt: img.alt ?? '',
     width,
     height,
