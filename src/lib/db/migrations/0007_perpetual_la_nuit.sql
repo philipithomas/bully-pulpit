@@ -1,0 +1,4 @@
+CREATE INDEX "idx_subscribers_postcard_created" ON "subscribers" USING btree ("created_at" DESC NULLS LAST,"id" DESC NULLS LAST) WHERE "subscribers"."subscribed_postcard" = true;--> statement-breakpoint
+CREATE INDEX "idx_subscribers_contraption_created" ON "subscribers" USING btree ("created_at" DESC NULLS LAST,"id" DESC NULLS LAST) WHERE "subscribers"."subscribed_contraption" = true;--> statement-breakpoint
+CREATE INDEX "idx_subscribers_workshop_created" ON "subscribers" USING btree ("created_at" DESC NULLS LAST,"id" DESC NULLS LAST) WHERE "subscribers"."subscribed_workshop" = true;--> statement-breakpoint
+CREATE INDEX "idx_subscribers_tsundoku_created" ON "subscribers" USING btree ("created_at" DESC NULLS LAST,"id" DESC NULLS LAST) WHERE "subscribers"."subscribed_tsundoku" = true;

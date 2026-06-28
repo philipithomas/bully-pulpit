@@ -1,4 +1,14 @@
 packages: []
+allowBuilds:
+  '@nestjs/core': false
+  '@swc/core': true
+  cbor-extract: true
+  esbuild: true
+  sharp: true
+ignoredBuiltDependencies:
+  - '@nestjs/core'
 onlyBuiltDependencies:
+  - '@swc/core'
+  - cbor-extract
   - esbuild
   - sharp
