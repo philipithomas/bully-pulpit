@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-28T04:57:27.249Z",
+  "generatedAt": "2026-06-28T05:07:19.936Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
@@ -14,6 +14,22 @@
         {
           "slug": "2026-01",
           "score": 0.3170654
+        }
+      ]
+    },
+    "weekenders-coffee": {
+      "related": [
+        {
+          "slug": "slow-travel",
+          "score": 0.3764236
+        },
+        {
+          "slug": "geisha",
+          "score": 0.3911129
+        },
+        {
+          "slug": "roastery",
+          "score": 0.4025901
         }
       ]
     },
@@ -44,8 +60,8 @@
           "score": 0.5398145
         },
         {
-          "slug": "almost-perfect",
-          "score": 0.5612774
+          "slug": "weekenders-coffee",
+          "score": 0.5609987
         }
       ]
     },
@@ -92,8 +108,8 @@
           "score": 0.3681953
         },
         {
-          "slug": "introducing-workshop",
-          "score": 0.4426088
+          "slug": "weekenders-coffee",
+          "score": 0.4025901
         }
       ]
     },
@@ -104,12 +120,12 @@
           "score": 0.3681953
         },
         {
-          "slug": "whiskey-tasting",
-          "score": 0.4122248
+          "slug": "weekenders-coffee",
+          "score": 0.3911129
         },
         {
-          "slug": "slow-travel",
-          "score": 0.4287654
+          "slug": "whiskey-tasting",
+          "score": 0.4122248
         }
       ]
     },
@@ -1800,12 +1816,12 @@
           "score": 0.3594002
         },
         {
-          "slug": "introducing-workshop",
-          "score": 0.3907798
+          "slug": "weekenders-coffee",
+          "score": 0.3764236
         },
         {
-          "slug": "geisha",
-          "score": 0.4287654
+          "slug": "introducing-workshop",
+          "score": 0.3907798
         }
       ]
     },
