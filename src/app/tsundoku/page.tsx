@@ -33,8 +33,9 @@ const TRIP_END = '2026-07-07'
 const INTRO = [
   'In Summer 2026, I found myself with unexpected downtime between jobs. I flew to Japan, bought a camera, and practiced photography.',
   'My photos usually live inside essays, so I quickly built up a stack of unpublished images.',
-  'This pop-up newsletter shares my favorite photos from the trip.',
 ]
+const INTRO_FINAL =
+  'This pop-up newsletter shares my favorite photos from the trip.'
 
 function photoViewerDescription(post: Post): string {
   const text =
@@ -162,6 +163,15 @@ export default function TsundokuPage() {
             {INTRO.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
+            <p>
+              {INTRO_FINAL}{' '}
+              <Link
+                href="/introducing-tsundoku"
+                className="whitespace-nowrap text-sun underline decoration-sun/30 underline-offset-4 transition-colors hover:text-gray-900 hover:decoration-gray-400"
+              >
+                Learn more →
+              </Link>
+            </p>
           </div>
           <SubscribeCta newsletter="tsundoku" align="center" className="mt-5" />
         </div>
