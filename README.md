@@ -45,6 +45,19 @@ coverImage: "/images/covers/slug.jpg"  # optional
 ---
 ```
 
+Deployable images live under `public/images/` and should be web-sized, not
+camera originals. Before committing new JPG/PNG/WebP/AVIF files, run:
+
+```bash
+pnpm images:optimize public/images/path/to/image.jpg
+pnpm content:check
+```
+
+The optimizer resizes public raster images to the site policy: longest edge at
+most 5120px and file size at most 8MB. It skips files that already fit the
+policy, so rerunning it on the same image does not keep recompressing it. Keep
+full-resolution originals outside this app repository.
+
 ## License
 
 Copyright (c) 2020-2026 The Contraption Company LLC. All rights reserved.

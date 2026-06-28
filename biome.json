@@ -56,7 +56,7 @@
       "complexity": {
         "noImportantStyles": "off"
       },
-      "recommended": true,
+      "preset": "recommended",
       "security": {
         "noDangerouslySetInnerHtml": "off"
       },

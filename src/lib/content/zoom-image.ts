@@ -2,7 +2,7 @@ import type { ImageDimensions } from '@/lib/content/types'
 
 export const OPTIMIZED_IMAGE_WIDTHS = [
   640, 750, 828, 1080, 1200, 1920, 2000, 2800, 3840, 4000, 4032, 4638, 4640,
-  8192,
+  5120,
 ] as const
 
 const IMAGE_QUALITY = 100

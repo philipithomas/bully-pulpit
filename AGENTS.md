@@ -7,11 +7,11 @@ Personal website and blog for philipithomas.com. Next.js with MDX content. Hoste
 ```bash
 nvm use 24
 pnpm install
-git lfs install    # Once per machine; photos/cover assets use Git LFS
 pnpm dev          # Start dev server with Turbopack
 pnpm build        # Production build
 pnpm test         # Run Vitest tests (unit + PGlite integration)
 pnpm check        # Biome lint + format check
+pnpm images:optimize  # Resize/compress public raster images to deployable web limits
 pnpm content:check    # Validate generated artifacts are in sync (images, search index, related)
 pnpm links:check      # Validate internal links/images in content MDX (offline)
 pnpm canonical:check  # Scan built HTML: every indexable page has a canonical (runs as postbuild)
@@ -25,7 +25,7 @@ pnpm db:studio    # Open Drizzle Studio against the DB
 
 ## Architecture
 
-- **Content**: MDX files in `content/{contraption,workshop,postcard,tsundoku,pages}/`. New-post pipeline: add MDX (+ cover under `public/images/covers/` or post photos under `public/images/posts/`; photo and cover assets are Git LFS-tracked by `.gitattributes`) → `pnpm search:index` → commit the generated artifacts. `pnpm content:check` (offline, fast) validates all of it — image sources fit Vercel Image Optimization's source dimension limit, the committed search index matches a recomputed merkle tree over the post corpus, every post has a related-posts entry — and runs in **pre-commit, CI, and the Vercel build command**, so a forgotten step fails the deploy instead of silently shipping degraded pages/search. Web images, social preview images, and newsletter email images rely on Vercel Image Optimization at render/fetch time rather than committed resized variants. Keep Git LFS enabled in the Vercel project; otherwise builds will see pointer files and image validation will fail
+- **Content**: MDX files in `content/{contraption,workshop,postcard,tsundoku,pages}/`. New-post pipeline: add MDX (+ cover under `public/images/covers/` or post photos under `public/images/posts/`) → run `pnpm images:optimize public/images/path/to/image.jpg` for every new deployable raster image → `pnpm search:index` → commit the generated artifacts. The image optimizer skips files that already fit policy, so reruns are safe and do not keep recompressing the same image. Public raster images are normal Git files, not Git LFS files; keep camera originals outside this app repo and commit only web masters. `pnpm content:check` (offline, fast) validates all of it — every public JPG/PNG/WebP/AVIF is at most 5120px on the longest edge and 8MB on disk, image sources are readable real files rather than LFS pointers, the committed search index matches a recomputed merkle tree over the post corpus, every post has a related-posts entry — and runs in **pre-commit, CI, and the Vercel build command**, so a forgotten step fails the deploy instead of silently shipping degraded pages/search. Web images, social preview images, and newsletter email images rely on Vercel Image Optimization at render/fetch time rather than committed resized variants
 - **Rendering**: All public pages statically generated via `generateStaticParams`. The exception is the Printing Press admin (`/printing-press/*`), which renders dynamically: its layout awaits `requireAdmin()`, which reads the session cookie per request. **Canonical guard**: `pnpm canonical:check` (`scripts/check-canonical.ts`) scans the prerendered HTML in `.next/server/app/**/*.html` after every build and fails if any indexable page lacks exactly one `<link rel="canonical">` on the production host. It runs automatically as the `postbuild` npm hook, so it fires in pre-commit, CI, and the Vercel build with no extra wiring. The indexable/noindex partition is self-deriving from the HTML (a page that emits `<meta name="robots" content="noindex">` is exempt; the exemption is itself asserted), so the guard needs no per-route maintenance as content grows. Utility pages (`/account`, `/unsubscribe`) set `robots: { index: false }` in their metadata and are the intended exemptions
 - **Auth**: Client-side overlay; subscribers/OTP/magic-link in Neon Postgres; session is a JWT (jose, HS256) in the httpOnly `bp_token` cookie (`bp_has_session` mirrors login state for the client)
 - **Database**: Neon Postgres via Drizzle ORM (`src/lib/db/`). DB clients are lazy so `next build` never needs `DATABASE_URL` — keep all DB access in route handlers / server actions / workflows, never at module scope or in static generation. The `vercel.json` build command is `content:check && db:migrate:deploy && next build`: the offline content check runs first (fails fast before any state change), then migrations, then build. Migrations are **guarded to `VERCEL_ENV=production`** — preview builds must not run migrations. `db:migrate` uses `DATABASE_URL_UNPOOLED` when present. Use additive (expand/contract) migrations so a mid-deploy schema/code gap stays backward-compatible
@@ -68,7 +68,7 @@ For up-to-date Next.js documentation refer to `node_modules/next/dist/docs/`. Yo
 - `src/workflows/` - Vercel Workflow definitions (durable newsletter send, voicemail processing, no-op smoke test)
 - `.codex/skills/` - Repo-local Codex skills for editorial workflows
 - `src/styles/globals.css` - Tailwind theme + component styles
-- `public/images/` - Static images (portraits, covers, post assets); photos and cover assets are Git LFS-tracked
+- `public/images/` - Static images (portraits, covers, post assets); commit optimized web masters directly and run `pnpm images:optimize` before committing new raster assets
 
 ## Prose style guide
 
