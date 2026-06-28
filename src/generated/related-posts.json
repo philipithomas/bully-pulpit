@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-28T05:33:13.645Z",
+  "generatedAt": "2026-06-28T22:41:16.166Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
@@ -17,6 +17,22 @@
         }
       ]
     },
+    "stationery-store": {
+      "related": [
+        {
+          "slug": "nakameguro",
+          "score": 0.4060398
+        },
+        {
+          "slug": "digital-product-studios",
+          "score": 0.4546616
+        },
+        {
+          "slug": "introducing-tsundoku",
+          "score": 0.4670169
+        }
+      ]
+    },
     "downpour": {
       "related": [
         {
@@ -28,8 +44,8 @@
           "score": 0.585847
         },
         {
-          "slug": "weekenders-coffee",
-          "score": 0.618272
+          "slug": "stationery-store",
+          "score": 0.6154599
         }
       ]
     },
@@ -92,8 +108,8 @@
           "score": 0.5398145
         },
         {
-          "slug": "weekenders-coffee",
-          "score": 0.5609987
+          "slug": "stationery-store",
+          "score": 0.5534918
         }
       ]
     },
@@ -108,8 +124,8 @@
           "score": 0.5123153
         },
         {
-          "slug": "introducing-tsundoku",
-          "score": 0.6162118
+          "slug": "stationery-store",
+          "score": 0.5779978
         }
       ]
     },
@@ -164,16 +180,16 @@
     "nakameguro": {
       "related": [
         {
+          "slug": "stationery-store",
+          "score": 0.4060398
+        },
+        {
           "slug": "almost-perfect",
           "score": 0.4416485
         },
         {
           "slug": "geisha",
           "score": 0.4629743
-        },
-        {
-          "slug": "carrera",
-          "score": 0.4681371
         }
       ]
     },
