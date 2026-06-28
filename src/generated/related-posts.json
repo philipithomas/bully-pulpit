@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-28T05:07:19.936Z",
+  "generatedAt": "2026-06-28T05:27:35.887Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
@@ -14,6 +14,22 @@
         {
           "slug": "2026-01",
           "score": 0.3170654
+        }
+      ]
+    },
+    "wild-boar-shrine": {
+      "related": [
+        {
+          "slug": "nakameguro",
+          "score": 0.5809862
+        },
+        {
+          "slug": "geisha",
+          "score": 0.692916
+        },
+        {
+          "slug": "weekenders-coffee",
+          "score": 0.6999703
         }
       ]
     },
