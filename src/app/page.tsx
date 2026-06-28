@@ -5,6 +5,7 @@ import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
+import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 
 // Auth redirects land on /?signed-in=1 and /?error=invalid-token; the
@@ -61,7 +62,10 @@ export default function HomePage() {
               {...desktopPortrait}
               className="w-full max-w-md h-auto cursor-zoom-in"
               data-zoomable=""
-              data-full-src="/images/portrait.jpg"
+              {...zoomImageDataAttrs({
+                src: '/images/portrait.jpg',
+                dimensions: { width: 4000, height: 5000 },
+              })}
             />
           </picture>
         </div>
@@ -142,7 +146,10 @@ export default function HomePage() {
                 {...mobilePortrait}
                 className="w-full h-auto cursor-zoom-in"
                 data-zoomable=""
-                data-full-src="/images/portrait.jpg"
+                {...zoomImageDataAttrs({
+                  src: '/images/portrait.jpg',
+                  dimensions: { width: 4000, height: 5000 },
+                })}
               />
             </picture>
           </div>

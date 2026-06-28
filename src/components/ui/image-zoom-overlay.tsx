@@ -37,6 +37,8 @@ export interface ZoomCaptionLink {
 export interface ZoomGalleryItem {
   src: string
   fullSrc: string | null
+  fullSrcSet?: string | null
+  fullSizes?: string | null
   alt: string
   width: number | null
   height: number | null
@@ -46,6 +48,8 @@ export interface ZoomGalleryItem {
 export interface ZoomedImage {
   src: string
   fullSrc: string | null
+  fullSrcSet?: string | null
+  fullSizes?: string | null
   alt: string
   width: number | null
   height: number | null
@@ -288,22 +292,33 @@ export function ImageZoomOverlay({
     preloadZoomGalleryNeighbors(gallery)
   }, [gallery])
 
-  // Preload the full-resolution image.
+  // Preload the viewer source set, letting the browser pick the right Vercel
+  // optimized rendition for this viewport instead of fetching the raw source.
   useEffect(() => {
     if (!image.fullSrc) return
     let cancelled = false
     const hd = new Image()
     hd.onload = () => {
-      if (cancelled || !hd.naturalWidth || !hd.naturalHeight) return
-      setHdSize({ width: hd.naturalWidth, height: hd.naturalHeight })
+      const width = image.width ?? hd.naturalWidth
+      const height = image.height ?? hd.naturalHeight
+      if (cancelled || !width || !height) return
+      setHdSize({ width, height })
     }
+    if (image.fullSizes) hd.sizes = image.fullSizes
+    if (image.fullSrcSet) hd.srcset = image.fullSrcSet
     hd.src = image.fullSrc
     return () => {
       cancelled = true
     }
-  }, [image.fullSrc])
+  }, [
+    image.fullSrc,
+    image.fullSrcSet,
+    image.fullSizes,
+    image.width,
+    image.height,
+  ])
 
-  const imageResetKey = `${image.src}\n${image.fullSrc ?? ''}`
+  const imageResetKey = `${image.src}\n${image.fullSrc ?? ''}\n${image.fullSrcSet ?? ''}\n${image.fullSizes ?? ''}`
   useEffect(() => {
     if (!imageResetKey) return
     setHdSize(null)
@@ -434,10 +449,14 @@ export function ImageZoomOverlay({
             }
           >
             {showFull ? (
-              // biome-ignore lint/performance/noImgElement: the overlay renders the raw full-resolution asset at runtime
+              // biome-ignore lint/performance/noImgElement: the overlay needs a plain img for the FLIP/crossfade layers
               <img
                 key="full"
                 src={fullSrc}
+                srcSet={image.fullSrcSet ?? undefined}
+                sizes={
+                  image.fullSrcSet ? (image.fullSizes ?? undefined) : undefined
+                }
                 alt={image.alt}
                 width={upgrade.width}
                 height={upgrade.height}

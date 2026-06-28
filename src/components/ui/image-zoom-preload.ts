@@ -6,19 +6,28 @@ import type {
 const preloadedImageUrls = new Set<string>()
 const activeImagePreloads = new Map<string, HTMLImageElement>()
 
-function preloadImageUrl(src: string | null | undefined) {
+function preloadImageUrl({
+  src,
+  srcSet,
+  sizes,
+}: {
+  src: string | null | undefined
+  srcSet?: string | null
+  sizes?: string | null
+}) {
   const url = src?.trim()
+  const preloadKey = [url, srcSet?.trim() ?? '', sizes?.trim() ?? ''].join('\n')
   if (
     !url ||
     typeof window === 'undefined' ||
-    preloadedImageUrls.has(url) ||
-    activeImagePreloads.has(url)
+    preloadedImageUrls.has(preloadKey) ||
+    activeImagePreloads.has(preloadKey)
   ) {
     return
   }
 
   const image = new window.Image()
-  const cleanup = () => activeImagePreloads.delete(url)
+  const cleanup = () => activeImagePreloads.delete(preloadKey)
   const finish = () => {
     if (typeof image.decode === 'function') {
       void image
@@ -31,25 +40,36 @@ function preloadImageUrl(src: string | null | undefined) {
   }
 
   image.decoding = 'async'
+  if (sizes) image.sizes = sizes
+  if (srcSet) image.srcset = srcSet
   image.onload = finish
   image.onerror = () => {
-    preloadedImageUrls.delete(url)
+    preloadedImageUrls.delete(preloadKey)
     cleanup()
   }
 
-  preloadedImageUrls.add(url)
-  activeImagePreloads.set(url, image)
+  preloadedImageUrls.add(preloadKey)
+  activeImagePreloads.set(preloadKey, image)
   image.src = url
 
   if (image.complete && image.naturalWidth > 0) finish()
 }
 
 export function preloadZoomItemSources(
-  item: Pick<ZoomGalleryItem, 'src' | 'fullSrc'> | null | undefined
+  item:
+    | Pick<ZoomGalleryItem, 'src' | 'fullSrc' | 'fullSrcSet' | 'fullSizes'>
+    | null
+    | undefined
 ) {
   if (!item) return
-  preloadImageUrl(item.src)
-  if (item.fullSrc !== item.src) preloadImageUrl(item.fullSrc)
+  preloadImageUrl({ src: item.src })
+  if (item.fullSrc !== item.src || item.fullSrcSet) {
+    preloadImageUrl({
+      src: item.fullSrc,
+      srcSet: item.fullSrcSet,
+      sizes: item.fullSizes,
+    })
+  }
 }
 
 export function preloadZoomGalleryNeighbors(
@@ -59,4 +79,5 @@ export function preloadZoomGalleryNeighbors(
 
   preloadZoomItemSources(gallery.items[gallery.index - 1])
   preloadZoomItemSources(gallery.items[gallery.index + 1])
+  preloadZoomItemSources(gallery.items[gallery.index + 2])
 }

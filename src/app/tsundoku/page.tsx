@@ -7,6 +7,10 @@ import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import { markdownToPlaintext } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
+import {
+  CAPTIONED_ZOOM_IMAGE_SIZES,
+  zoomImageDataAttrs,
+} from '@/lib/content/zoom-image'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 
 export const metadata: Metadata = {
@@ -84,7 +88,11 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
         data-zoom-caption-date={post.frontmatter.publishedAt}
         data-zoom-caption-location-name={location?.name}
         data-zoom-caption-location-url={location?.url}
-        data-full-src={coverImage}
+        {...zoomImageDataAttrs({
+          src: coverImage,
+          dimensions: post.coverDimensions,
+          sizes: CAPTIONED_ZOOM_IMAGE_SIZES,
+        })}
         className="image-loading-surface relative block w-full cursor-zoom-in overflow-hidden bg-gray-100"
         style={{
           aspectRatio: `${post.coverDimensions.width} / ${post.coverDimensions.height}`,

@@ -30,6 +30,10 @@ import {
 import { getRelatedPosts } from '@/lib/content/related'
 import { markdownToPlaintext } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
+import {
+  CAPTIONED_ZOOM_IMAGE_SIZES,
+  zoomImageDataAttrs,
+} from '@/lib/content/zoom-image'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 
 interface Props {
@@ -306,7 +310,11 @@ export default async function SlugPage({ params }: Props) {
               width={post?.coverDimensions?.width ?? 1280}
               height={post?.coverDimensions?.height ?? 640}
               data-zoomable=""
-              data-full-src={item.frontmatter.coverImage}
+              {...zoomImageDataAttrs({
+                src: item.frontmatter.coverImage,
+                dimensions: post?.coverDimensions,
+                sizes: isTsundokuPost ? CAPTIONED_ZOOM_IMAGE_SIZES : undefined,
+              })}
               {...coverZoomCaption}
               className="relative z-10 block w-full cursor-zoom-in"
               priority

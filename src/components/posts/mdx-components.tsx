@@ -7,6 +7,7 @@ import {
 } from 'react'
 import { getImageDimensions } from '@/lib/content/loader'
 import { createSlugger } from '@/lib/content/slugify'
+import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
 
 /**
  * The prose column is max-w-2xl (672px) inside the 1rem/1.5rem container.
@@ -18,9 +19,10 @@ const PROSE_IMAGE_SIZES = '(min-width: 704px) 672px, 100vw'
 /**
  * In-article images: local JPEG/PNG sources render through next/image with
  * build-time intrinsic dimensions (no layout shift), lazy loading, and a
- * responsive srcset served by Vercel image optimization. data-full-src points
- * the zoom overlay at the original public image instead of an optimized
- * variant. Anything else (GIF, SVG, external) falls back to a plain lazy <img>.
+ * responsive srcset served by Vercel image optimization. The zoom data keeps
+ * the original public path and dimensions so the overlay can build its own
+ * larger optimized source set. Anything else (GIF, SVG, external) falls back
+ * to a plain lazy <img>.
  */
 function MdxImage(props: ComponentPropsWithoutRef<'img'>) {
   const { src, alt = '', ...rest } = props
@@ -35,7 +37,7 @@ function MdxImage(props: ComponentPropsWithoutRef<'img'>) {
           width={dims.width}
           height={dims.height}
           sizes={PROSE_IMAGE_SIZES}
-          data-full-src={src}
+          {...zoomImageDataAttrs({ src, dimensions: dims })}
         />
       )
     }
