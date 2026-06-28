@@ -36,8 +36,6 @@ jobs:
 
       # Fails the PR if a content change did not regenerate the committed
       # search index (merkle root mismatch) or any other generated artifact.
-      # The search-index.yml workflow regenerates and commits the index on
-      # push to main, so main self-heals; this is the PR-time gate.
       - name: Content pipeline check (images + search index)
         run: pnpm content:check
 
