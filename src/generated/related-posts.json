@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-28T22:41:16.166Z",
+  "generatedAt": "2026-06-28T22:55:04.489Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
@@ -17,8 +17,28 @@
         }
       ]
     },
+    "house": {
+      "related": [
+        {
+          "slug": "stationery-store",
+          "score": 0.3889172
+        },
+        {
+          "slug": "nakameguro",
+          "score": 0.4577468
+        },
+        {
+          "slug": "almost-perfect",
+          "score": 0.4755256
+        }
+      ]
+    },
     "stationery-store": {
       "related": [
+        {
+          "slug": "house",
+          "score": 0.3889172
+        },
         {
           "slug": "nakameguro",
           "score": 0.4060398
@@ -26,15 +46,15 @@
         {
           "slug": "digital-product-studios",
           "score": 0.4546616
-        },
-        {
-          "slug": "introducing-tsundoku",
-          "score": 0.4670169
         }
       ]
     },
     "downpour": {
       "related": [
+        {
+          "slug": "house",
+          "score": 0.5183081
+        },
         {
           "slug": "introducing-tsundoku",
           "score": 0.563149
@@ -42,10 +62,6 @@
         {
           "slug": "nakameguro",
           "score": 0.585847
-        },
-        {
-          "slug": "stationery-store",
-          "score": 0.6154599
         }
       ]
     },
@@ -60,8 +76,8 @@
           "score": 0.6692502
         },
         {
-          "slug": "geisha",
-          "score": 0.692916
+          "slug": "house",
+          "score": 0.6803505
         }
       ]
     },
@@ -124,8 +140,8 @@
           "score": 0.5123153
         },
         {
-          "slug": "stationery-store",
-          "score": 0.5779978
+          "slug": "house",
+          "score": 0.5543437
         }
       ]
     },
@@ -188,8 +204,8 @@
           "score": 0.4416485
         },
         {
-          "slug": "geisha",
-          "score": 0.4629743
+          "slug": "house",
+          "score": 0.4577468
         }
       ]
     },
