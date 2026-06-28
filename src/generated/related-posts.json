@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-28T23:10:10.928Z",
+  "generatedAt": "2026-06-28T23:25:27.030Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
@@ -17,8 +17,28 @@
         }
       ]
     },
+    "hi-fi": {
+      "related": [
+        {
+          "slug": "listening",
+          "score": 0.2306363
+        },
+        {
+          "slug": "geisha",
+          "score": 0.4898331
+        },
+        {
+          "slug": "almost-perfect",
+          "score": 0.5136959
+        }
+      ]
+    },
     "listening": {
       "related": [
+        {
+          "slug": "hi-fi",
+          "score": 0.2306363
+        },
         {
           "slug": "geisha",
           "score": 0.4413652
@@ -26,10 +46,6 @@
         {
           "slug": "almost-perfect",
           "score": 0.462375
-        },
-        {
-          "slug": "nakameguro",
-          "score": 0.4650057
         }
       ]
     },
@@ -136,12 +152,12 @@
           "score": 0.4122248
         },
         {
-          "slug": "introducing-tsundoku",
-          "score": 0.5398145
+          "slug": "hi-fi",
+          "score": 0.5275053
         },
         {
-          "slug": "listening",
-          "score": 0.547075
+          "slug": "introducing-tsundoku",
+          "score": 0.5398145
         }
       ]
     },
