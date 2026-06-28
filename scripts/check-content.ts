@@ -2,6 +2,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
 import { siteConfig } from '@/lib/config'
+import {
+  formatImageBytes,
+  isPolicyImagePath,
+  MAX_PUBLIC_IMAGE_BYTES,
+  MAX_PUBLIC_IMAGE_EDGE,
+} from '@/lib/content/image-policy'
 import { getAllPosts } from '@/lib/content/loader'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { renderFullNewsletter } from '@/lib/email/send'
@@ -17,12 +23,11 @@ import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
  * repo, no network or API keys), and fails loudly with the command to run.
  *
  *   1. Cover images referenced by frontmatter exist on disk.
- *   2. Web/email/social image sources stay within Vercel Image Optimization's
- *      source dimension limit.
+ *   2. Public web images fit the local deployment policy: web-sized sources
+ *      only, no camera originals or LFS pointers in the Vercel artifact.
  *   3. The committed search index matches the recomputed merkle tree over the
  *      post corpus, and related-posts.json covers every post (pnpm search:index).
- *   4. In-article images stay within Vercel Image Optimization's source
- *      dimension limit.
+ *   4. In-article image sources are covered by the same public image policy.
  *   5. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
  *      with non-empty alt text — a missing or empty alt fails the build.
  *   6. The rendered email HTML for every non-exempt post stays under Gmail's
@@ -35,8 +40,6 @@ const RELATED_JSON = path.join(
   'src/generated/related-posts.json'
 )
 
-// Vercel Image Optimization rejects source images above this edge limit.
-const MAX_VERCEL_SOURCE_EDGE = 8192
 // Gmail clips messages near 102KB of HTML; warn close to the line, fail over it.
 const MAX_EMAIL_HTML_BYTES = 100 * 1024
 const WARN_EMAIL_HTML_BYTES = 95 * 1024
@@ -48,12 +51,26 @@ const EMAIL_HTML_BUDGET_EXEMPT_SLUGS = new Set([
 const errors: string[] = []
 const warnings: string[] = []
 
-async function checkVercelSourceImage(filePath: string) {
-  const meta = await sharp(filePath).metadata()
-  const longest = Math.max(meta.width ?? 0, meta.height ?? 0)
-  if (longest > MAX_VERCEL_SOURCE_EDGE) {
+async function checkPublicImagePolicy(filePath: string) {
+  const relative = path.relative(process.cwd(), filePath)
+  const bytes = fs.statSync(filePath).size
+  if (bytes > MAX_PUBLIC_IMAGE_BYTES) {
     errors.push(
-      `${path.relative(process.cwd(), filePath)} is ${longest}px on its longest side (max ${MAX_VERCEL_SOURCE_EDGE} for Vercel Image Optimization)`
+      `${relative} is ${formatImageBytes(bytes)} (max ${formatImageBytes(MAX_PUBLIC_IMAGE_BYTES)} for deployable public images) — run \`pnpm images:optimize ${relative}\``
+    )
+  }
+
+  try {
+    const meta = await sharp(filePath).metadata()
+    const longest = Math.max(meta.width ?? 0, meta.height ?? 0)
+    if (longest > MAX_PUBLIC_IMAGE_EDGE) {
+      errors.push(
+        `${relative} is ${longest}px on its longest side (max ${MAX_PUBLIC_IMAGE_EDGE} for deployable public images) — run \`pnpm images:optimize ${relative}\``
+      )
+    }
+  } catch {
+    errors.push(
+      `${relative} could not be read as an image — make sure it is a real optimized image file, not a Git LFS pointer`
     )
   }
 }
@@ -61,30 +78,19 @@ async function checkVercelSourceImage(filePath: string) {
 async function main() {
   const posts = getAllPosts()
 
-  // 1 + 2: cover images and their Vercel Image Optimization source limits
+  // 1: cover images referenced by frontmatter must exist
   for (const post of posts) {
     const cover = post.frontmatter.coverImage
     if (!cover || cover.startsWith('http')) continue
     const source = path.join(process.cwd(), 'public', cover)
     if (!fs.existsSync(source)) {
       errors.push(`${post.slug}: coverImage ${cover} does not exist on disk`)
-      continue
     }
-    await checkVercelSourceImage(source)
   }
 
-  // 2: hero sources must be valid Vercel Image Optimization inputs
-  const sources = ['portrait.jpg', 'philip-horizontal.jpg']
-    .map((name) => path.join(IMAGES, name))
-    .filter((p) => fs.existsSync(p))
-  for (const src of sources) {
-    await checkVercelSourceImage(src)
-  }
-
-  // 4: in-article image sources must be valid Vercel Image Optimization inputs.
-  const postsDir = path.join(IMAGES, 'posts')
-  if (fs.existsSync(postsDir)) {
-    const stack = [postsDir]
+  // 2 + 4: every deployable public raster image must fit the web image policy.
+  if (fs.existsSync(IMAGES)) {
+    const stack = [IMAGES]
     while (stack.length > 0) {
       const dir = stack.pop() as string
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -93,8 +99,8 @@ async function main() {
           stack.push(full)
           continue
         }
-        if (!/\.(jpe?g|png)$/i.test(entry.name)) continue
-        await checkVercelSourceImage(full)
+        if (!entry.isFile() || !isPolicyImagePath(full)) continue
+        await checkPublicImagePolicy(full)
       }
     }
   }

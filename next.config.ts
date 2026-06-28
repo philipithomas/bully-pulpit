@@ -34,13 +34,9 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
     qualities: [100],
     minimumCacheTTL: 2678400,
-    // Camera-original Tsundoku covers can sit just above Next's 50 MB
-    // default optimizer input limit in local dev. Vercel still resizes the
-    // served variants; this only allows the source file to be read.
-    maximumResponseBody: 100_000_000,
     // Shared with the zoom viewer source sets. The larger widths let photo
-    // overlays and their preloads climb through optimized variants instead of
-    // jumping from a 1920px rendition to the raw camera original.
+    // overlays and their preloads climb through optimized variants while the
+    // committed public sources stay web-sized.
     deviceSizes: [...OPTIMIZED_IMAGE_WIDTHS],
   },
   async headers() {
