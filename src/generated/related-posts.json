@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-28T00:58:07.139Z",
+  "generatedAt": "2026-06-28T04:57:27.249Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
@@ -30,6 +30,22 @@
         {
           "slug": "2025-06",
           "score": 0.2101625
+        }
+      ]
+    },
+    "whiskey-tasting": {
+      "related": [
+        {
+          "slug": "geisha",
+          "score": 0.4122248
+        },
+        {
+          "slug": "introducing-tsundoku",
+          "score": 0.5398145
+        },
+        {
+          "slug": "almost-perfect",
+          "score": 0.5612774
         }
       ]
     },
@@ -88,12 +104,12 @@
           "score": 0.3681953
         },
         {
-          "slug": "slow-travel",
-          "score": 0.4287654
+          "slug": "whiskey-tasting",
+          "score": 0.4122248
         },
         {
-          "slug": "digital-product-studios",
-          "score": 0.4569263
+          "slug": "slow-travel",
+          "score": 0.4287654
         }
       ]
     },
