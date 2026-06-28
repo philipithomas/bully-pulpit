@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-06-28T23:46:15.352Z",
+  "generatedAt": "2026-06-28T23:50:46.195Z",
   "posts": {
     "toast": {
       "related": [
         {
           "slug": "listening",
-          "score": 0.4241101
+          "score": 0.4346454
         },
         {
           "slug": "geisha",
-          "score": 0.4504791
+          "score": 0.4474342
         },
         {
           "slug": "weekenders-coffee",
-          "score": 0.4728255
+          "score": 0.472681
         }
       ]
     },
@@ -40,12 +40,12 @@
           "score": 0.2306363
         },
         {
-          "slug": "toast",
-          "score": 0.4866162
-        },
-        {
           "slug": "geisha",
           "score": 0.4898331
+        },
+        {
+          "slug": "toast",
+          "score": 0.4947188
         }
       ]
     },
@@ -57,7 +57,7 @@
         },
         {
           "slug": "toast",
-          "score": 0.4241101
+          "score": 0.4346454
         },
         {
           "slug": "geisha",
@@ -173,7 +173,7 @@
         },
         {
           "slug": "toast",
-          "score": 0.5280102
+          "score": 0.5311843
         }
       ]
     },
