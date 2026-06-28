@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-28T00:15:52.023Z",
+  "generatedAt": "2026-06-28T00:37:28.221Z",
   "posts": {
     "introducing-tsundoku": {
       "related": [
@@ -33,6 +33,22 @@
         }
       ]
     },
+    "shinkansen": {
+      "related": [
+        {
+          "slug": "nakameguro",
+          "score": 0.497413
+        },
+        {
+          "slug": "carrera",
+          "score": 0.5123153
+        },
+        {
+          "slug": "introducing-tsundoku",
+          "score": 0.6162118
+        }
+      ]
+    },
     "carrera": {
       "related": [
         {
@@ -40,12 +56,12 @@
           "score": 0.4681371
         },
         {
-          "slug": "introducing-tsundoku",
-          "score": 0.516621
+          "slug": "shinkansen",
+          "score": 0.5123153
         },
         {
-          "slug": "first-photo",
-          "score": 0.5823372
+          "slug": "introducing-tsundoku",
+          "score": 0.516621
         }
       ]
     },
