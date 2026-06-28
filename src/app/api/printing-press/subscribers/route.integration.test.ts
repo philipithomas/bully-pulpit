@@ -152,6 +152,44 @@ describe('GET list', () => {
     expect(byName.rows[0].email).toBe('alice@example.com')
   })
 
+  it('filters by newsletter subscription via newsletter', async () => {
+    await signInAsAdmin()
+    await seedSubscriber({
+      email: 'tsundoku@example.com',
+      subscribedTsundoku: true,
+    })
+    await seedSubscriber({
+      email: 'not-tsundoku@example.com',
+      subscribedTsundoku: false,
+    })
+    await seedSubscriber({
+      email: 'also-tsundoku@other.org',
+      subscribedTsundoku: true,
+    })
+
+    const filtered = await (
+      await listGet(listRequest('?newsletter=tsundoku'))
+    ).json()
+    expect(filtered.total).toBe(2)
+    expect(filtered.rows.map((r: { email: string }) => r.email)).toEqual([
+      'also-tsundoku@other.org',
+      'tsundoku@example.com',
+    ])
+
+    const searched = await (
+      await listGet(listRequest('?newsletter=tsundoku&q=example.com'))
+    ).json()
+    expect(searched.total).toBe(1)
+    expect(searched.rows[0].email).toBe('tsundoku@example.com')
+  })
+
+  it('rejects an invalid newsletter filter', async () => {
+    await signInAsAdmin()
+    const res = await listGet(listRequest('?newsletter=bogus'))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'Invalid newsletter' })
+  })
+
   it('paginates with offset', async () => {
     await signInAsAdmin()
     await seedSubscriber({ email: 'alice@example.com' })

@@ -9,7 +9,13 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  type ChangeEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { toast } from 'sonner'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -24,19 +30,73 @@ import {
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { siteConfig } from '@/lib/config'
+import type { Newsletter } from '@/lib/content/types'
 import type { SubscriberListItem } from '@/lib/db/queries/subscribers'
 import { newsletterAccentDots, newsletterList } from '@/lib/newsletters'
 import { suppressionSentence } from '@/lib/printing-press'
 import { cn } from '@/lib/utils'
 
+type NewsletterFilter = Newsletter | ''
+
 const NEWSLETTERS = newsletterList.map((newsletter) => ({
+  slug: newsletter,
   key: `subscribed${newsletter[0].toUpperCase()}${newsletter.slice(1)}` as keyof SubscriberListItem,
   name: siteConfig.newsletters[newsletter].name,
   dot: newsletterAccentDots[newsletter],
 }))
 
+function isNewsletterFilter(value: string): value is NewsletterFilter {
+  return value === '' || newsletterList.includes(value as Newsletter)
+}
+
 function joinedLabel(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10)
+}
+
+function subscribersUrl({
+  query,
+  newsletter,
+  offset,
+}: {
+  query: string
+  newsletter: NewsletterFilter
+  offset?: number
+}): string {
+  const params = new URLSearchParams()
+  if (query) params.set('q', query)
+  if (newsletter) params.set('newsletter', newsletter)
+  if (offset) params.set('offset', String(offset))
+  const qs = params.toString()
+  return qs
+    ? `/api/printing-press/subscribers?${qs}`
+    : '/api/printing-press/subscribers'
+}
+
+function subscriberCountLabel({
+  total,
+  query,
+  newsletter,
+}: {
+  total: number
+  query: string
+  newsletter: NewsletterFilter
+}): string {
+  const noun = total === 1 ? 'subscriber' : 'subscribers'
+  const scope = newsletter
+    ? `${siteConfig.newsletters[newsletter].name} ${noun}`
+    : noun
+  return query ? `${total} matching ${scope}` : `${total} ${scope}`
+}
+
+function emptyLabel(query: string, newsletter: NewsletterFilter): string {
+  if (query && newsletter) {
+    return `No ${siteConfig.newsletters[newsletter].name} subscribers match “${query}”.`
+  }
+  if (query) return `No subscribers match “${query}”.`
+  if (newsletter) {
+    return `No ${siteConfig.newsletters[newsletter].name} subscribers.`
+  }
+  return 'No subscribers yet.'
 }
 
 export function SubscribersClient({
@@ -49,6 +109,7 @@ export function SubscribersClient({
   const [rows, setRows] = useState(initialRows)
   const [total, setTotal] = useState(initialTotal)
   const [query, setQuery] = useState('')
+  const [newsletterFilter, setNewsletterFilter] = useState<NewsletterFilter>('')
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
@@ -66,29 +127,30 @@ export function SubscribersClient({
   const firstRender = useRef(true)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const runSearch = useCallback(async (q: string) => {
-    const id = ++reqId.current
-    setLoading(true)
-    try {
-      const res = await fetch(
-        `/api/printing-press/subscribers?q=${encodeURIComponent(q)}`
-      )
-      const data = await res.json().catch(() => null)
-      if (id !== reqId.current) return // a newer search superseded this one
-      if (res.ok && data) {
-        setRows(data.rows)
-        setTotal(data.total)
-      } else {
-        // Definitive server rejection (e.g. session expired) — don't present
-        // the stale list as results for the new query.
-        toast.error(data?.error ?? 'Search failed')
+  const runSearch = useCallback(
+    async (q: string, newsletter: NewsletterFilter) => {
+      const id = ++reqId.current
+      setLoading(true)
+      try {
+        const res = await fetch(subscribersUrl({ query: q, newsletter }))
+        const data = await res.json().catch(() => null)
+        if (id !== reqId.current) return // a newer search superseded this one
+        if (res.ok && data) {
+          setRows(data.rows)
+          setTotal(data.total)
+        } else {
+          // Definitive server rejection (e.g. session expired) — don't present
+          // the stale list as results for the new query.
+          toast.error(data?.error ?? 'Search failed')
+        }
+      } catch {
+        // transient network blip; leave the current list in place
+      } finally {
+        if (id === reqId.current) setLoading(false)
       }
-    } catch {
-      // transient network blip; leave the current list in place
-    } finally {
-      if (id === reqId.current) setLoading(false)
-    }
-  }, [])
+    },
+    []
+  )
 
   // Debounced search whenever the query changes (skips the initial SSR list).
   useEffect(() => {
@@ -96,16 +158,20 @@ export function SubscribersClient({
       firstRender.current = false
       return
     }
-    const t = setTimeout(() => void runSearch(query), 300)
+    const t = setTimeout(() => void runSearch(query, newsletterFilter), 300)
     return () => clearTimeout(t)
-  }, [query, runSearch])
+  }, [newsletterFilter, query, runSearch])
 
   const loadMore = useCallback(async () => {
     const id = reqId.current // don't bump: only a newer search invalidates this
     setLoadingMore(true)
     try {
       const res = await fetch(
-        `/api/printing-press/subscribers?q=${encodeURIComponent(query)}&offset=${rows.length}`
+        subscribersUrl({
+          query,
+          newsletter: newsletterFilter,
+          offset: rows.length,
+        })
       )
       const data = await res.json().catch(() => null)
       if (id !== reqId.current) return // a newer search replaced the list
@@ -130,7 +196,15 @@ export function SubscribersClient({
     } finally {
       setLoadingMore(false)
     }
-  }, [query, rows.length])
+  }, [newsletterFilter, query, rows.length])
+
+  const onNewsletterFilterChange = useCallback(
+    (e: ChangeEvent<HTMLSelectElement>) => {
+      const next = e.target.value
+      if (isNewsletterFilter(next)) setNewsletterFilter(next)
+    },
+    []
+  )
 
   const copyEmail = useCallback(async (email: string, uuid: string) => {
     try {
@@ -199,7 +273,7 @@ export function SubscribersClient({
   }, [clearTarget])
 
   const onImportFile = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       e.target.value = '' // allow re-selecting the same file later
       if (!file) return
@@ -225,7 +299,7 @@ export function SubscribersClient({
               data.skipped ? `, ${data.skipped} skipped` : ''
             }`
           )
-          await runSearch(query) // refresh list + total
+          await runSearch(query, newsletterFilter) // refresh list + total
         } else {
           // data is null for non-JSON platform errors (e.g. a 413 body-size cap).
           toast.error(data?.error ?? `Import failed (${res.status})`)
@@ -236,26 +310,41 @@ export function SubscribersClient({
         setImporting(false)
       }
     },
-    [query, runSearch]
+    [newsletterFilter, query, runSearch]
   )
 
   return (
     <div>
       {/* Toolbar: search + CSV export/import */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by email…"
-            aria-label="Search subscribers by email"
-            className="h-10 w-full border border-gray-200 bg-white pr-9 pl-9 text-sm text-gray-900 placeholder:text-gray-400"
-          />
-          {loading && (
-            <Spinner className="-translate-y-1/2 absolute top-1/2 right-3 h-4 w-4 text-gray-400" />
-          )}
+        <div className="flex w-full flex-col gap-2 sm:max-w-xl sm:flex-row">
+          <div className="relative min-w-0 flex-1">
+            <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by email…"
+              aria-label="Search subscribers by email"
+              className="h-10 w-full border border-gray-200 bg-white pr-9 pl-9 text-sm text-gray-900 placeholder:text-gray-400"
+            />
+            {loading && (
+              <Spinner className="-translate-y-1/2 absolute top-1/2 right-3 h-4 w-4 text-gray-400" />
+            )}
+          </div>
+          <select
+            value={newsletterFilter}
+            onChange={onNewsletterFilterChange}
+            aria-label="Filter subscribers by newsletter"
+            className="h-10 w-full border border-gray-200 bg-white px-3 text-sm text-gray-900 sm:w-44"
+          >
+            <option value="">All subscribers</option>
+            {NEWSLETTERS.map((newsletter) => (
+              <option key={newsletter.slug} value={newsletter.slug}>
+                {newsletter.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a
@@ -294,13 +383,13 @@ export function SubscribersClient({
       </div>
 
       <p className="mb-3 text-xs text-gray-500">
-        {query ? `${total} matching` : `${total} subscribers`}
+        {subscriberCountLabel({ total, query, newsletter: newsletterFilter })}
       </p>
 
       {/* List */}
       {rows.length === 0 ? (
         <div className="border border-gray-200 bg-white px-4 py-12 text-center text-sm text-gray-500">
-          {query ? `No subscribers match “${query}”.` : 'No subscribers yet.'}
+          {emptyLabel(query, newsletterFilter)}
         </div>
       ) : (
         <ul className="divide-y divide-gray-100 border border-gray-200 bg-white">

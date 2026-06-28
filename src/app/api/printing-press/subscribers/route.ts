@@ -3,7 +3,9 @@ import { guardAdmin } from '@/lib/auth/admin'
 import {
   deleteWithData,
   findByUuid,
+  isNewsletter,
   listSubscribers,
+  type NewsletterSlug,
 } from '@/lib/db/queries/subscribers'
 
 const PAGE_SIZE = 50
@@ -16,6 +18,13 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams
   const search = params.get('q') ?? undefined
+  const rawNewsletter = params.get('newsletter') ?? undefined
+  let newsletter: NewsletterSlug | undefined
+  if (rawNewsletter && isNewsletter(rawNewsletter)) {
+    newsletter = rawNewsletter
+  } else if (rawNewsletter) {
+    return NextResponse.json({ error: 'Invalid newsletter' }, { status: 400 })
+  }
   const offset = Math.max(
     Number.parseInt(params.get('offset') ?? '0', 10) || 0,
     0
@@ -23,6 +32,7 @@ export async function GET(request: NextRequest) {
 
   const { rows, total } = await listSubscribers({
     search,
+    newsletter,
     offset,
     limit: PAGE_SIZE,
   })

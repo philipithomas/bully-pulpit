@@ -43,6 +43,18 @@ export const subscribers = pgTable(
     index('idx_subscribers_uuid').on(table.uuid),
     // Eligibility and active-count queries filter on confirmed_at IS NOT NULL.
     index('idx_subscribers_confirmed_at').on(table.confirmedAt),
+    index('idx_subscribers_postcard_created')
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.subscribedPostcard} = true`),
+    index('idx_subscribers_contraption_created')
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.subscribedContraption} = true`),
+    index('idx_subscribers_workshop_created')
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.subscribedWorkshop} = true`),
+    index('idx_subscribers_tsundoku_created')
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.subscribedTsundoku} = true`),
   ]
 )
 

@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, or, type SQL, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import {
   emailSends,
@@ -312,15 +312,21 @@ export type SubscriberListItem = {
  */
 export async function listSubscribers(opts: {
   search?: string
+  newsletter?: NewsletterSlug
   limit?: number
   offset?: number
 }): Promise<{ rows: SubscriberListItem[]; total: number }> {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100)
   const offset = Math.max(opts.offset ?? 0, 0)
   const search = opts.search?.trim().toLowerCase()
-  const where = search
-    ? sql`lower(${subscribers.email}) LIKE ${`%${search}%`}`
-    : undefined
+  const filters: SQL[] = []
+  if (search) {
+    filters.push(sql`lower(${subscribers.email}) LIKE ${`%${search}%`}`)
+  }
+  if (opts.newsletter) {
+    filters.push(eq(newsletterColumns[opts.newsletter], true))
+  }
+  const where = filters.length > 0 ? and(...filters) : undefined
 
   const countRows = await getDb()
     .select({ n: sql<number>`count(*)::int` })

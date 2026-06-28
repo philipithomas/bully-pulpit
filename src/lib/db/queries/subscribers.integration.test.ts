@@ -475,6 +475,35 @@ describe('listSubscribers', () => {
     expect(miss.rows).toEqual([])
   })
 
+  it('filters by newsletter and combines with search', async () => {
+    await seed({
+      email: 'alice@example.com',
+      subscribedTsundoku: true,
+    })
+    await seed({
+      email: 'bob@example.com',
+      subscribedTsundoku: false,
+    })
+    await seed({
+      email: 'carol@other.org',
+      subscribedTsundoku: true,
+    })
+
+    const tsundoku = await listSubscribers({ newsletter: 'tsundoku' })
+    expect(tsundoku.total).toBe(2)
+    expect(tsundoku.rows.map((r) => r.email)).toEqual([
+      'carol@other.org',
+      'alice@example.com',
+    ])
+
+    const searched = await listSubscribers({
+      newsletter: 'tsundoku',
+      search: 'example.com',
+    })
+    expect(searched.total).toBe(1)
+    expect(searched.rows[0].email).toBe('alice@example.com')
+  })
+
   it('offset paging is stable when created_at ties (id tiebreaker)', async () => {
     // CSV imports share one NOW(); simulate with an identical createdAt
     const createdAt = new Date('2026-01-01T00:00:00Z')
