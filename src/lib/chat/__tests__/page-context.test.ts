@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getPageContextContent,
   PAGE_CONTENT_MAX_CHARS,
+  toPlaintext,
 } from '@/lib/chat/page-context'
 import { getAllPosts, getPageBySlug } from '@/lib/content/loader'
 
@@ -48,7 +49,10 @@ describe('getPageContextContent', () => {
   })
 
   it('truncates long content and sets the truncated flag', () => {
-    const post = getAllPosts()[0]
+    const post = getAllPosts().find(
+      (candidate) => toPlaintext(candidate.content).length > 100
+    )
+    if (!post) throw new Error('Expected at least one long post')
     const result = getPageContextContent(`/${post.slug}`, 100)
     expect(result?.truncated).toBe(true)
     expect(result?.content.length).toBe(100)
