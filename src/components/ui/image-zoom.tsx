@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type {
@@ -205,6 +205,7 @@ function warmZoomTargetSources(e: Event) {
 
 export function ImageZoom() {
   const pathname = usePathname()
+  const router = useRouter()
   const [zoomedImage, setZoomedImage] = useState<ZoomedImage | null>(null)
   const [mounted, setMounted] = useState(false)
   // Element focused before the overlay opened; focus returns to it on close
@@ -298,6 +299,14 @@ export function ImageZoom() {
 
     clearZoom()
   }, [clearZoom])
+
+  const handleNavigateTo = useCallback(
+    (href: string) => {
+      clearZoom()
+      router.replace(href)
+    },
+    [clearZoom, router]
+  )
 
   useEffect(() => setMounted(true), [])
 
@@ -409,6 +418,7 @@ export function ImageZoom() {
     <ImageZoomOverlay
       image={zoomedImage}
       onNavigate={handleNavigate}
+      onNavigateTo={handleNavigateTo}
       onClose={handleClose}
     />,
     document.body

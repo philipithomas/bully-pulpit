@@ -188,7 +188,7 @@ export default function TsundokuPage() {
           {posts.map((post, index) => (
             <PhotoTile key={post.slug} post={post} index={index} />
           ))}
-          <div aria-hidden className="grow-[9999] basis-0" />
+          <div aria-hidden className="hidden grow-[9999] basis-0 sm:block" />
         </div>
       </div>
     </div>
