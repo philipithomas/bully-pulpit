@@ -142,10 +142,12 @@ export function ImageZoomOverlay({
   image,
   onClose,
   onNavigate,
+  onNavigateTo,
 }: {
   image: ZoomedImage
   onClose: () => void
   onNavigate?: (direction: -1 | 1) => void
+  onNavigateTo?: (href: string) => void
 }) {
   const [phase, setPhase] = useState<'opening' | 'open' | 'closing'>('opening')
   const [hdSize, setHdSize] = useState<{
@@ -367,6 +369,18 @@ export function ImageZoomOverlay({
   const handleCaptionClick = useCallback((e: MouseEvent<HTMLElement>) => {
     e.stopPropagation()
   }, [])
+  const handleLogoClick = useCallback(
+    (e: MouseEvent<HTMLAnchorElement>) => {
+      e.stopPropagation()
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+        return
+      }
+      if (!onNavigateTo) return
+      e.preventDefault()
+      onNavigateTo('/tsundoku')
+    },
+    [onNavigateTo]
+  )
   const handleImmediateLoad = useCallback(() => setImmediateLoaded(true), [])
   const handleCaptionPanelClick = useCallback(
     (e: MouseEvent<HTMLElement>) => e.stopPropagation(),
@@ -607,14 +621,21 @@ export function ImageZoomOverlay({
                   </div>
                 </footer>
               ) : caption.href ? (
-                <footer className="flex shrink-0 items-center justify-end gap-4 border-gray-200 border-t px-5 py-4 sm:justify-between md:px-7 md:py-5">
-                  <NextImage
-                    src="/images/tsundoku.svg"
-                    alt="Tsundoku"
-                    width={92}
-                    height={14}
-                    className="hidden h-[14px] w-auto opacity-70 sm:block"
-                  />
+                <footer className="flex shrink-0 items-center justify-between gap-4 border-gray-200 border-t px-5 py-4 md:px-7 md:py-5">
+                  <Link
+                    href="/tsundoku"
+                    aria-label="Tsundoku"
+                    className="shrink-0 transition-opacity hover:opacity-80"
+                    onClick={handleLogoClick}
+                  >
+                    <NextImage
+                      src="/images/tsundoku.svg"
+                      alt="Tsundoku"
+                      width={92}
+                      height={14}
+                      className="h-[14px] w-auto"
+                    />
+                  </Link>
                   <Link
                     href={caption.href}
                     target="_blank"
