@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-06-30T01:16:28.232Z",
+  "generatedAt": "2026-06-30T01:50:41.237Z",
   "posts": {
+    "espresso": {
+      "related": [
+        {
+          "slug": "slow-travel",
+          "score": 0.3129865
+        },
+        {
+          "slug": "stripe-projects-launch",
+          "score": 0.3819438
+        },
+        {
+          "slug": "roastery",
+          "score": 0.3864825
+        }
+      ]
+    },
     "dt-suzuki-bench": {
       "related": [
         {
@@ -188,8 +204,8 @@
           "score": 0.3911129
         },
         {
-          "slug": "roastery",
-          "score": 0.4025901
+          "slug": "espresso",
+          "score": 0.3927825
         }
       ]
     },
@@ -216,12 +232,12 @@
           "score": 0.4122248
         },
         {
-          "slug": "hi-fi",
-          "score": 0.5275053
+          "slug": "espresso",
+          "score": 0.5249963
         },
         {
-          "slug": "toast",
-          "score": 0.5311843
+          "slug": "hi-fi",
+          "score": 0.5275053
         }
       ]
     },
@@ -268,8 +284,8 @@
           "score": 0.3681953
         },
         {
-          "slug": "weekenders-coffee",
-          "score": 0.4025901
+          "slug": "espresso",
+          "score": 0.3864825
         }
       ]
     },
@@ -284,8 +300,8 @@
           "score": 0.3911129
         },
         {
-          "slug": "whiskey-tasting",
-          "score": 0.4122248
+          "slug": "espresso",
+          "score": 0.3948568
         }
       ]
     },
@@ -316,8 +332,8 @@
           "score": 0.4887693
         },
         {
-          "slug": "2023-10",
-          "score": 0.5173529
+          "slug": "espresso",
+          "score": 0.5093903
         }
       ]
     },
@@ -1972,16 +1988,16 @@
     "slow-travel": {
       "related": [
         {
+          "slug": "espresso",
+          "score": 0.3129865
+        },
+        {
           "slug": "roastery",
           "score": 0.3594002
         },
         {
           "slug": "weekenders-coffee",
           "score": 0.3764236
-        },
-        {
-          "slug": "introducing-workshop",
-          "score": 0.3907798
         }
       ]
     },
