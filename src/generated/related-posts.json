@@ -1,6 +1,54 @@
 {
-  "generatedAt": "2026-06-28T23:50:46.195Z",
+  "generatedAt": "2026-06-30T01:16:28.232Z",
   "posts": {
+    "dt-suzuki-bench": {
+      "related": [
+        {
+          "slug": "dt-suzuki-reflecting-pool",
+          "score": 0.4035789
+        },
+        {
+          "slug": "dt-suzuki-hallway",
+          "score": 0.4571168
+        },
+        {
+          "slug": "listening",
+          "score": 0.5130035
+        }
+      ]
+    },
+    "dt-suzuki-reflecting-pool": {
+      "related": [
+        {
+          "slug": "dt-suzuki-bench",
+          "score": 0.4035789
+        },
+        {
+          "slug": "dt-suzuki-hallway",
+          "score": 0.5214454
+        },
+        {
+          "slug": "downpour",
+          "score": 0.5850431
+        }
+      ]
+    },
+    "dt-suzuki-hallway": {
+      "related": [
+        {
+          "slug": "house",
+          "score": 0.4522536
+        },
+        {
+          "slug": "dt-suzuki-bench",
+          "score": 0.4571168
+        },
+        {
+          "slug": "stationery-store",
+          "score": 0.4633869
+        }
+      ]
+    },
     "toast": {
       "related": [
         {
@@ -72,12 +120,12 @@
           "score": 0.3889172
         },
         {
-          "slug": "nakameguro",
-          "score": 0.4577468
+          "slug": "dt-suzuki-hallway",
+          "score": 0.4522536
         },
         {
-          "slug": "almost-perfect",
-          "score": 0.4755256
+          "slug": "nakameguro",
+          "score": 0.4577468
         }
       ]
     },
@@ -120,12 +168,12 @@
           "score": 0.5809862
         },
         {
-          "slug": "downpour",
-          "score": 0.6692502
+          "slug": "dt-suzuki-hallway",
+          "score": 0.6666178
         },
         {
-          "slug": "house",
-          "score": 0.6803505
+          "slug": "downpour",
+          "score": 0.6692502
         }
       ]
     },
