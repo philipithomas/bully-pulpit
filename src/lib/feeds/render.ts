@@ -44,6 +44,20 @@ function renderEmbedHtml(embed: ExtractedYouTubeEmbed): string {
   )
 }
 
+function renderCoverImageHtml(post: Post): string {
+  if (!post.frontmatter.coverImage) return ''
+  const alt = escapeHtml(
+    post.frontmatter.coverImageAlt ?? post.frontmatter.title
+  )
+  return `<p><img src="${siteConfig.url}${post.frontmatter.coverImage}" alt="${alt}"></p>`
+}
+
+function postPlaintextFallback(post: Post): string {
+  const plain = markdownToPlaintext(post.content, 2000)
+  if (plain) return plain
+  return post.frontmatter.coverImageAlt ?? post.frontmatter.title
+}
+
 /**
  * Renders a post's full content for feed consumption: clean semantic HTML
  * with no inline styles (readers supply their own typography), YouTube
@@ -53,9 +67,14 @@ function renderEmbedHtml(embed: ExtractedYouTubeEmbed): string {
 export async function renderPostContentHtml(post: Post): Promise<string> {
   const { markdown, embeds } = extractYouTubeEmbeds(post.content)
   const html = await renderMarkdownToHtml(markdown, { inlineStyles: false })
-  return resolveRelativeUrls(
+  const resolved = resolveRelativeUrls(
     restoreYouTubeEmbedsAsHtml(html, embeds, renderEmbedHtml),
     siteConfig.url
+  ).trim()
+  if (resolved) return resolved
+  return (
+    renderCoverImageHtml(post) ||
+    `<p>${escapeHtml(postPlaintextFallback(post))}</p>`
   )
 }
 
@@ -91,5 +110,5 @@ export function truncateAtSentenceBoundary(
  */
 export function feedSummary(post: Post): string {
   if (post.frontmatter.description) return post.frontmatter.description
-  return truncateAtSentenceBoundary(markdownToPlaintext(post.content, 2000))
+  return truncateAtSentenceBoundary(postPlaintextFallback(post))
 }

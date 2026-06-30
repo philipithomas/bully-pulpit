@@ -47,7 +47,10 @@ export function getPageContextContent(
   const item = getPostBySlug(slug) ?? getPageBySlug(slug)
   if (!item) return null
 
-  const plain = toPlaintext(item.content)
+  const plain =
+    toPlaintext(item.content) ||
+    item.frontmatter.coverImageAlt ||
+    item.frontmatter.title
   const truncated = plain.length > maxChars
   return {
     slug,
