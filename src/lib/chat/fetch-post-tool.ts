@@ -1,7 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod/v4'
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
-import { extractHeadings } from '@/lib/search/corpus'
+import { extractHeadings, extractImageAssets } from '@/lib/search/corpus'
 
 export const fetchPost = tool({
   description:
@@ -29,6 +29,26 @@ export const fetchPost = tool({
       anchor: h.anchor,
       url: `/${item.slug}#${h.anchor}`,
     }))
+    const images = post
+      ? extractImageAssets(post).map((image) => ({
+          id: image.id,
+          src: image.src,
+          alt: image.alt,
+          kind: image.kind,
+          url: image.heading
+            ? `/${item.slug}#${image.heading.anchor}`
+            : `/${item.slug}`,
+          description: image.alt,
+          ...(image.heading
+            ? {
+                section: {
+                  heading: image.heading.text,
+                  url: `/${item.slug}#${image.heading.anchor}`,
+                },
+              }
+            : {}),
+        }))
+      : []
 
     return JSON.stringify({
       title: item.frontmatter.title,
@@ -36,6 +56,7 @@ export const fetchPost = tool({
       publishedAt: item.frontmatter.publishedAt ?? null,
       newsletter: 'newsletter' in item ? item.newsletter : null,
       outline,
+      images,
       content: item.content,
     })
   },

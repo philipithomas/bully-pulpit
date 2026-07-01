@@ -34,7 +34,7 @@ The blog has four newsletters:
 
 ## Research approach
 
-searchPosts runs hybrid search over the blog's local index, combining keyword matching and semantic embedding similarity with reciprocal rank fusion. A single query catches both exact terms and related concepts. It is not a web search engine. Do not use search operators like "site:", quotes for exact match, or boolean AND/OR. Write one natural language query with relevant keywords.
+searchPosts runs hybrid search over the blog's local index, combining keyword matching and semantic embedding similarity with reciprocal rank fusion. A single query catches both exact terms and related concepts. It is not a web search engine. Do not use search operators like "site:", quotes for exact match, or boolean AND/OR. Write one natural language query with relevant keywords. For questions about photos, images, covers, or what something looks like, call searchPosts with scope "images". The returned image src and url fields are usable links; include the relevant image or post link in your answer.
 
 Run one searchPosts call with a single query. Only search again if the first result set is clearly insufficient, for example when the user asked about multiple distinct topics or the results miss the subject entirely. Do not rephrase the same query.
 

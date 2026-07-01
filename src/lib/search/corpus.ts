@@ -16,6 +16,7 @@ import { createHeadingSlugger } from '@/lib/search/heading-anchor'
  */
 
 export type ChunkKind = 'title' | 'body' | 'cover-alt'
+export type ImageAssetKind = 'cover-image' | 'body-image'
 
 /** The heading a chunk sits under, for /slug#anchor section citations. */
 export interface ChunkHeading {
@@ -33,6 +34,22 @@ export interface PostChunk {
   heading?: ChunkHeading
 }
 
+export interface CorpusImageAsset {
+  /** Stable within the post; stored in the committed index */
+  id: string
+  /** Sequence among searchable images in this post */
+  seq: number
+  kind: ImageAssetKind
+  src: string
+  alt: string
+  /** Deterministic textual description embedded alongside the image bytes */
+  text: string
+  /** Present for body images below a heading */
+  heading?: ChunkHeading
+  /** Optional SHA-256 over the public image file for offline index checks */
+  sourceHash?: string
+}
+
 export interface CorpusPost {
   slug: string
   title: string
@@ -42,12 +59,14 @@ export interface CorpusPost {
   coverImage: string
   coverAlt: string
   chunks: PostChunk[]
+  images: CorpusImageAsset[]
 }
 
 /** Soft maximum chunk size; single oversize paragraphs are split on sentences. */
 export const MAX_CHUNK_CHARS = 1200
 
 const HEADING_RE = /^#{1,6}\s/
+const PUBLIC_IMAGE_RE = /^\/images\/.+\.(?:avif|gif|jpe?g|png|webp)$/i
 
 /**
  * Strips MDX/JSX tags and markdown syntax to plain text. Unlike
@@ -149,6 +168,153 @@ export function extractHeadings(markdown: string): PostHeading[] {
   }
 
   return headings
+}
+
+export interface CorpusOptions {
+  /** Optional SHA-256 over each public image, supplied by offline scripts. */
+  imageDigest?: (src: string) => string | undefined
+}
+
+function lineAtIndex(text: string, index: number): number {
+  let line = 0
+  for (let i = 0; i < index; i++) {
+    if (text.charCodeAt(i) === 10) line++
+  }
+  return line
+}
+
+function normalizeImageSrc(raw: string): string {
+  const trimmed = raw.trim()
+  const withoutAngleBrackets =
+    trimmed.startsWith('<') && trimmed.endsWith('>')
+      ? trimmed.slice(1, -1).trim()
+      : trimmed
+  const withoutTitle = withoutAngleBrackets.match(/^(\S+)/)?.[1] ?? ''
+  return withoutTitle.replace(/[#?].*$/, '')
+}
+
+function stringAttr(tag: string, name: string): string | undefined {
+  const attr = tag.match(
+    new RegExp(
+      `\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|\\{\\s*"([^"]*)"\\s*\\}|\\{\\s*'([^']*)'\\s*\\}|\\{\\s*\\\`([^\\\`]*)\\\`\\s*\\})`,
+      'i'
+    )
+  )
+  return attr
+    ? (attr[1] ?? attr[2] ?? attr[3] ?? attr[4] ?? attr[5] ?? '').trim()
+    : undefined
+}
+
+function headingAtLine(
+  headings: PostHeading[],
+  line: number
+): ChunkHeading | undefined {
+  let current: PostHeading | undefined
+  for (const heading of headings) {
+    if (heading.line > line) break
+    current = heading
+  }
+  return current ? { text: current.text, anchor: current.anchor } : undefined
+}
+
+function imageText({
+  post,
+  kind,
+  alt,
+  heading,
+}: {
+  post: Post
+  kind: ImageAssetKind
+  alt: string
+  heading?: ChunkHeading
+}): string {
+  const role = kind === 'cover-image' ? 'cover image' : 'embedded image'
+  return [
+    `Post: ${post.frontmatter.title}`,
+    `Newsletter: ${post.newsletter}`,
+    `Image role: ${role}`,
+    heading ? `Section: ${heading.text}` : null,
+    `Description: ${alt || post.frontmatter.title}`,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join('\n')
+}
+
+/** Extracts searchable public images referenced by a post. */
+export function extractImageAssets(
+  post: Post,
+  options: CorpusOptions = {}
+): CorpusImageAsset[] {
+  const assets: CorpusImageAsset[] = []
+  let seq = 0
+
+  const addAsset = ({
+    id,
+    kind,
+    src,
+    alt,
+    heading,
+  }: {
+    id: string
+    kind: ImageAssetKind
+    src: string
+    alt: string
+    heading?: ChunkHeading
+  }) => {
+    if (!PUBLIC_IMAGE_RE.test(src)) return
+    const text = imageText({ post, kind, alt, heading })
+    const sourceHash = options.imageDigest?.(src)
+    assets.push({
+      id,
+      seq: seq++,
+      kind,
+      src,
+      alt,
+      text,
+      ...(heading ? { heading } : {}),
+      ...(sourceHash ? { sourceHash } : {}),
+    })
+  }
+
+  if (post.frontmatter.coverImage) {
+    addAsset({
+      id: 'cover',
+      kind: 'cover-image',
+      src: post.frontmatter.coverImage,
+      alt: post.frontmatter.coverImageAlt ?? post.frontmatter.title,
+    })
+  }
+
+  const headings = extractHeadings(post.content)
+  let bodyIndex = 0
+  for (const match of post.content.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)) {
+    const alt = stripToPlaintext(match[1] ?? '')
+    const src = normalizeImageSrc(match[2] ?? '')
+    const line = lineAtIndex(post.content, match.index ?? 0)
+    addAsset({
+      id: `body-${bodyIndex++}`,
+      kind: 'body-image',
+      src,
+      alt,
+      heading: headingAtLine(headings, line),
+    })
+  }
+
+  for (const match of post.content.matchAll(/<(img|Image)\b[^>]*?\/?>/gi)) {
+    const tag = match[0]
+    const src = normalizeImageSrc(stringAttr(tag, 'src') ?? '')
+    const alt = stripToPlaintext(stringAttr(tag, 'alt') ?? '')
+    const line = lineAtIndex(post.content, match.index ?? 0)
+    addAsset({
+      id: `body-${bodyIndex++}`,
+      kind: 'body-image',
+      src,
+      alt,
+      heading: headingAtLine(headings, line),
+    })
+  }
+
+  return assets
 }
 
 /** Splits a single oversize block on sentence boundaries, hard-cut fallback. */
@@ -268,7 +434,10 @@ export function chunkPost(post: Post): PostChunk[] {
   return chunks
 }
 
-export function buildCorpusFromPosts(posts: Post[]): CorpusPost[] {
+export function buildCorpusFromPosts(
+  posts: Post[],
+  options: CorpusOptions = {}
+): CorpusPost[] {
   return posts.map((post) => ({
     slug: post.slug,
     title: post.frontmatter.title,
@@ -279,10 +448,11 @@ export function buildCorpusFromPosts(posts: Post[]): CorpusPost[] {
     coverImage: post.frontmatter.coverImage ?? '',
     coverAlt: post.frontmatter.coverImageAlt ?? '',
     chunks: chunkPost(post),
+    images: extractImageAssets(post, options),
   }))
 }
 
 /** Builds the corpus for all published posts across configured newsletters. */
-export function buildCorpus(): CorpusPost[] {
-  return buildCorpusFromPosts(getAllPosts())
+export function buildCorpus(options: CorpusOptions = {}): CorpusPost[] {
+  return buildCorpusFromPosts(getAllPosts(), options)
 }

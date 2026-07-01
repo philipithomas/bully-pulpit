@@ -21,19 +21,53 @@ export interface LexicalResult {
   terms: string[]
 }
 
+export interface LexicalImageResult {
+  id: string
+  slug: string
+  title: string
+  url: string
+  newsletter: string
+  imageSrc: string
+  imageAlt: string
+  score: number
+  /** Matched index terms (prefix/fuzzy expansions included) */
+  terms: string[]
+}
+
 export interface LexicalIndex {
   search(query: string, limit?: number): LexicalResult[]
+  searchImages(query: string, limit?: number): LexicalImageResult[]
   extractExcerpts(slug: string, terms: string[], maxExcerpts?: number): string[]
 }
 
-const FIELD_BOOSTS = { title: 6, description: 2, body: 1, coverAlt: 1.5 }
+const FIELD_BOOSTS = {
+  title: 6,
+  description: 2,
+  body: 1,
+  coverAlt: 1.5,
+  imageText: 2,
+}
+const IMAGE_FIELD_BOOSTS = { alt: 5, title: 2, heading: 2, text: 1 }
 const EXCERPT_CHARS = 120
 
 export function buildLexicalIndex(corpus: CorpusPost[]): LexicalIndex {
   const mini = new MiniSearch({
-    fields: ['title', 'description', 'body', 'coverAlt'],
+    fields: ['title', 'description', 'body', 'coverAlt', 'imageText'],
     storeFields: ['slug', 'title', 'url', 'newsletter', 'coverImage'],
     idField: 'slug',
+  })
+  const imageMini = new MiniSearch({
+    fields: ['title', 'alt', 'heading', 'text'],
+    storeFields: [
+      'id',
+      'slug',
+      'title',
+      'url',
+      'newsletter',
+      'imageSrc',
+      'imageAlt',
+    ],
+    idField: 'id',
   })
 
   mini.addAll(
@@ -46,10 +80,27 @@ export function buildLexicalIndex(corpus: CorpusPost[]): LexicalIndex {
         .map((c) => c.text)
         .join('\n'),
       coverAlt: post.coverAlt,
+      imageText: post.images.map((image) => image.text).join('\n'),
       url: post.url,
       newsletter: post.newsletter,
       coverImage: post.coverImage,
     }))
+  )
+  imageMini.addAll(
+    corpus.flatMap((post) =>
+      post.images.map((image) => ({
+        id: `${post.slug}#${image.id}`,
+        slug: post.slug,
+        title: post.title,
+        alt: image.alt,
+        heading: image.heading?.text ?? '',
+        text: image.text,
+        url: post.url,
+        newsletter: post.newsletter,
+        imageSrc: image.src,
+        imageAlt: image.alt,
+      }))
+    )
   )
 
   const bySlug = new Map(corpus.map((post) => [post.slug, post]))
@@ -73,6 +124,34 @@ export function buildLexicalIndex(corpus: CorpusPost[]): LexicalIndex {
         url: hit.url as string,
         newsletter: hit.newsletter as string,
         coverImage: (hit.coverImage as string) ?? '',
+        score: hit.score,
+        terms: hit.terms,
+      }))
+    },
+
+    searchImages(query, limit = 10) {
+      let hits = imageMini.search(query, {
+        boost: IMAGE_FIELD_BOOSTS,
+        prefix: (_term, i, terms) => i === terms.length - 1,
+        fuzzy: 0.15,
+        combineWith: 'AND',
+      })
+      if (hits.length === 0) {
+        hits = imageMini.search(query, {
+          boost: IMAGE_FIELD_BOOSTS,
+          prefix: (_term, i, terms) => i === terms.length - 1,
+          fuzzy: 0.15,
+          combineWith: 'OR',
+        })
+      }
+      return hits.slice(0, limit).map((hit) => ({
+        id: hit.id as string,
+        slug: hit.slug as string,
+        title: hit.title as string,
+        url: hit.url as string,
+        newsletter: hit.newsletter as string,
+        imageSrc: hit.imageSrc as string,
+        imageAlt: hit.imageAlt as string,
         score: hit.score,
         terms: hit.terms,
       }))

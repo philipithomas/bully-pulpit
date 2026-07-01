@@ -22,14 +22,14 @@ function WelcomeScreen({ userName }: { userName?: string | null }) {
           {userName ? `Hey ${userName}, this is Bell.` : 'Hey, this is Bell.'}
         </p>
         <p className="mt-1 font-serif text-sm text-gray-500">
-          I can search Philip&apos;s writing and answer questions about his
-          essays and projects.
+          I can search Philip&apos;s writing and photos, then answer questions
+          about his essays and projects.
         </p>
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         {[
           'Summarize this page',
-          'Favorite coffee shops',
+          'Photos of coffee',
           'All mentions of craft-focused books',
         ].map((q) => (
           <button

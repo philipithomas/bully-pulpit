@@ -14,14 +14,24 @@ export interface SearchIndexChunk {
   vector: string
 }
 
+export interface SearchIndexImage {
+  id: string
+  hash: string
+  /** base64 float32 little-endian, EMBEDDING_DIMS dims, L2-normalized */
+  vector: string
+}
+
 export interface SearchIndexPost {
   slug: string
   hash: string
   chunks: SearchIndexChunk[]
+  images: SearchIndexImage[]
 }
 
+export const SEARCH_INDEX_VERSION = 2
+
 export interface SearchIndexFile {
-  version: 1
+  version: typeof SEARCH_INDEX_VERSION
   model: string
   dims: number
   merkleRoot: string

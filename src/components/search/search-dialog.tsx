@@ -11,12 +11,28 @@ import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
 interface SearchResult {
+  type?: 'post' | 'image'
+  id?: string
   slug: string
   title: string
   url: string
   newsletter: string
   coverImage: string
   excerpts: string[]
+  images?: {
+    id: string
+    src: string
+    alt: string
+    url: string
+    description: string
+  }[]
+  image?: {
+    id: string
+    src: string
+    alt: string
+    url: string
+    description: string
+  }
 }
 
 interface SearchResponse {
@@ -179,9 +195,9 @@ export function SearchDialog({
   )
 
   const navigate = useCallback(
-    (slug: string) => {
+    (url: string) => {
       onOpenChange(false)
-      router.push(`/${slug}`)
+      router.push(url.startsWith('/') ? url : `/${url}`)
     },
     [router, onOpenChange]
   )
@@ -222,7 +238,7 @@ export function SearchDialog({
         if (showAskAI && activeIndex === displayResults.length) {
           handleAskAI()
         } else if (displayResults[activeIndex]) {
-          navigate(displayResults[activeIndex].slug)
+          navigate(displayResults[activeIndex].url)
         }
       }
     },
@@ -281,16 +297,19 @@ export function SearchDialog({
                     className="max-h-80 overflow-y-auto p-2"
                   >
                     {displayResults.map((result, i) => {
-                      const snippet = result.excerpts[0]
+                      const matchedImage = result.image ?? result.images?.[0]
+                      const snippet =
+                        matchedImage?.description ?? result.excerpts[0]
+                      const thumbnail = matchedImage?.src ?? result.coverImage
                       return (
-                        <li key={result.slug} role="presentation">
+                        <li key={result.id ?? result.slug} role="presentation">
                           <button
                             type="button"
                             role="option"
                             id={`${baseId}-option-${i}`}
                             aria-selected={i === activeIndex}
                             tabIndex={-1}
-                            onClick={() => navigate(result.slug)}
+                            onClick={() => navigate(result.url)}
                             onMouseEnter={() => setActiveIndex(i)}
                             className={cn(
                               'flex w-full gap-3 px-3 py-2.5 text-left transition-colors',
@@ -300,9 +319,9 @@ export function SearchDialog({
                                 : 'hover:bg-gray-050'
                             )}
                           >
-                            {result.coverImage ? (
+                            {thumbnail ? (
                               <Image
-                                src={result.coverImage}
+                                src={thumbnail}
                                 alt=""
                                 width={40}
                                 height={27}

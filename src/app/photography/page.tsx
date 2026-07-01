@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
+import { PhotographyImageSearch } from '@/app/photography/image-search'
 import { getAllPosts } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
 import {
@@ -125,6 +126,8 @@ export default function PhotographyPage() {
           I take and edit all photos on the site.
         </p>
       </div>
+
+      <PhotographyImageSearch />
 
       {/*
         Justified rows in pure CSS: each tile's flex-grow and flex-basis are
