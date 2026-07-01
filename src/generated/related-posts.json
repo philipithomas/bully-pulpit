@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-07-01T06:16:42.151Z",
+  "generatedAt": "2026-07-01T06:25:04.499Z",
   "posts": {
+    "library": {
+      "related": [
+        {
+          "slug": "listening",
+          "score": 0.348991
+        },
+        {
+          "slug": "dt-suzuki-hallway",
+          "score": 0.3885294
+        },
+        {
+          "slug": "hi-fi",
+          "score": 0.4325892
+        }
+      ]
+    },
     "morning-coffee": {
       "related": [
         {
@@ -28,8 +44,8 @@
           "score": 0.3822545
         },
         {
-          "slug": "almost-perfect",
-          "score": 0.5408977
+          "slug": "library",
+          "score": 0.47458
         }
       ]
     },
@@ -84,16 +100,16 @@
     "dt-suzuki-hallway": {
       "related": [
         {
+          "slug": "library",
+          "score": 0.3885294
+        },
+        {
           "slug": "house",
           "score": 0.4522536
         },
         {
           "slug": "dt-suzuki-bench",
           "score": 0.4571168
-        },
-        {
-          "slug": "stationery-store",
-          "score": 0.4633869
         }
       ]
     },
@@ -140,8 +156,8 @@
           "score": 0.3216581
         },
         {
-          "slug": "geisha",
-          "score": 0.4898331
+          "slug": "library",
+          "score": 0.4325892
         }
       ]
     },
@@ -152,12 +168,12 @@
           "score": 0.2306363
         },
         {
-          "slug": "vinyl",
-          "score": 0.3822545
+          "slug": "library",
+          "score": 0.348991
         },
         {
-          "slug": "toast",
-          "score": 0.4346454
+          "slug": "vinyl",
+          "score": 0.3822545
         }
       ]
     },
