@@ -6,7 +6,7 @@ function makeCorpusPost(
   slug: string,
   title: string,
   body: string[],
-  extra: Partial<Pick<CorpusPost, 'description' | 'coverAlt'>> = {}
+  extra: Partial<Pick<CorpusPost, 'description' | 'coverAlt' | 'images'>> = {}
 ): CorpusPost {
   const chunks = [
     { seq: 0, kind: 'title' as const, text: title },
@@ -21,6 +21,7 @@ function makeCorpusPost(
     coverImage: '',
     coverAlt: extra.coverAlt ?? '',
     chunks,
+    images: extra.images ?? [],
   }
 }
 
@@ -71,6 +72,47 @@ describe('buildLexicalIndex', () => {
       }),
     ])
     expect(index.search('sailboat')[0]?.slug).toBe('a-trip')
+  })
+
+  it('matches image descriptions in post search', () => {
+    const index = buildLexicalIndex([
+      makeCorpusPost('coffee-photo', 'A cafe', ['Short note.'], {
+        images: [
+          {
+            id: 'cover',
+            seq: 0,
+            kind: 'cover-image',
+            src: '/images/covers/coffee.jpg',
+            alt: 'A cappuccino at a walnut table',
+            text: 'Description: A cappuccino at a walnut table',
+          },
+        ],
+      }),
+    ])
+    expect(index.search('cappuccino walnut')[0]?.slug).toBe('coffee-photo')
+  })
+
+  it('can search image assets directly', () => {
+    const index = buildLexicalIndex([
+      makeCorpusPost('coffee-photo', 'A cafe', ['Short note.'], {
+        images: [
+          {
+            id: 'cover',
+            seq: 0,
+            kind: 'cover-image',
+            src: '/images/covers/coffee.jpg',
+            alt: 'A cappuccino at a walnut table',
+            text: 'Description: A cappuccino at a walnut table',
+          },
+        ],
+      }),
+    ])
+    const [result] = index.searchImages('cappuccino')
+    expect(result).toMatchObject({
+      id: 'coffee-photo#cover',
+      slug: 'coffee-photo',
+      imageSrc: '/images/covers/coffee.jpg',
+    })
   })
 
   it('respects the limit and returns stored fields', () => {

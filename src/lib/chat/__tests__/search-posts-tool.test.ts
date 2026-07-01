@@ -16,8 +16,12 @@ vi.mock('@/lib/search/embedding', async (importOriginal) => {
 
 const callOptions = { toolCallId: 'test-call', messages: [] }
 
-async function run(query: string): Promise<PostResult[]> {
-  const out = await searchPosts.execute!({ query }, callOptions)
+async function run(
+  query: string,
+  scope?: 'posts' | 'images'
+): Promise<PostResult[]> {
+  const input = { query, scope: scope ?? 'posts' }
+  const out = await searchPosts.execute!(input, callOptions)
   return JSON.parse(out as string) as PostResult[]
 }
 
@@ -32,9 +36,12 @@ describe('searchPosts tool output', () => {
 
     for (const result of results) {
       expect(typeof result.title).toBe('string')
+      expect(result.type).toMatch(/^(post|image)$/)
       expect(result.url).toMatch(/^\/[a-z0-9-]+$/)
       expect(typeof result.newsletter).toBe('string')
+      expect(typeof result.coverImage).toBe('string')
       expect(Array.isArray(result.excerpts)).toBe(true)
+      expect(Array.isArray(result.images)).toBe(true)
       for (const excerpt of result.excerpts) {
         expect(typeof excerpt.text).toBe('string')
         expect(excerpt.text.length).toBeGreaterThan(0)
@@ -46,6 +53,14 @@ describe('searchPosts tool output', () => {
         }
       }
     }
+  })
+
+  it('can return direct image results for photo questions', async () => {
+    const results = await run('coffee photo', 'images')
+    expect(results.length).toBeGreaterThan(0)
+    expect(results[0].type).toBe('image')
+    expect(results[0].image?.src).toMatch(/^\/images\//)
+    expect(results[0].images[0]?.src).toBe(results[0].image?.src)
   })
 
   it('cites the section for excerpts that sit under a heading', async () => {
