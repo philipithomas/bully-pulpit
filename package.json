@@ -29,7 +29,7 @@
     ]
   },
   "dependencies": {
-    "@ai-sdk/gateway": "^3.0.133",
+    "@ai-sdk/gateway": "^4.0.7",
     "@ai-sdk/openai": "^3.0.72",
     "@ai-sdk/react": "^3.0.209",
     "@aws-sdk/client-sesv2": "^3.1070.0",
