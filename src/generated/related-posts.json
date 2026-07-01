@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-30T01:50:41.237Z",
+  "generatedAt": "2026-07-01T00:02:44.824Z",
   "posts": {
     "espresso": {
       "related": [
@@ -14,6 +14,22 @@
         {
           "slug": "roastery",
           "score": 0.3864825
+        }
+      ]
+    },
+    "vinyl": {
+      "related": [
+        {
+          "slug": "hi-fi",
+          "score": 0.3216581
+        },
+        {
+          "slug": "listening",
+          "score": 0.3822545
+        },
+        {
+          "slug": "almost-perfect",
+          "score": 0.5408977
         }
       ]
     },
@@ -104,12 +120,12 @@
           "score": 0.2306363
         },
         {
-          "slug": "geisha",
-          "score": 0.4898331
+          "slug": "vinyl",
+          "score": 0.3216581
         },
         {
-          "slug": "toast",
-          "score": 0.4947188
+          "slug": "geisha",
+          "score": 0.4898331
         }
       ]
     },
@@ -120,12 +136,12 @@
           "score": 0.2306363
         },
         {
-          "slug": "toast",
-          "score": 0.4346454
+          "slug": "vinyl",
+          "score": 0.3822545
         },
         {
-          "slug": "geisha",
-          "score": 0.4413652
+          "slug": "toast",
+          "score": 0.4346454
         }
       ]
     },
