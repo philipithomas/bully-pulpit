@@ -1,19 +1,35 @@
 {
-  "generatedAt": "2026-07-01T00:02:44.824Z",
+  "generatedAt": "2026-07-01T06:25:04.499Z",
   "posts": {
-    "espresso": {
+    "library": {
       "related": [
         {
+          "slug": "listening",
+          "score": 0.348991
+        },
+        {
+          "slug": "dt-suzuki-hallway",
+          "score": 0.3885294
+        },
+        {
+          "slug": "hi-fi",
+          "score": 0.4325892
+        }
+      ]
+    },
+    "morning-coffee": {
+      "related": [
+        {
+          "slug": "espresso",
+          "score": 0.2976905
+        },
+        {
+          "slug": "weekenders-coffee",
+          "score": 0.3058518
+        },
+        {
           "slug": "slow-travel",
-          "score": 0.3129865
-        },
-        {
-          "slug": "stripe-projects-launch",
-          "score": 0.3819438
-        },
-        {
-          "slug": "roastery",
-          "score": 0.3864825
+          "score": 0.3225495
         }
       ]
     },
@@ -28,8 +44,24 @@
           "score": 0.3822545
         },
         {
-          "slug": "almost-perfect",
-          "score": 0.5408977
+          "slug": "library",
+          "score": 0.47458
+        }
+      ]
+    },
+    "espresso": {
+      "related": [
+        {
+          "slug": "morning-coffee",
+          "score": 0.2976905
+        },
+        {
+          "slug": "slow-travel",
+          "score": 0.3129865
+        },
+        {
+          "slug": "stripe-projects-launch",
+          "score": 0.3819438
         }
       ]
     },
@@ -68,21 +100,25 @@
     "dt-suzuki-hallway": {
       "related": [
         {
+          "slug": "library",
+          "score": 0.3885294
+        },
+        {
           "slug": "house",
           "score": 0.4522536
         },
         {
           "slug": "dt-suzuki-bench",
           "score": 0.4571168
-        },
-        {
-          "slug": "stationery-store",
-          "score": 0.4633869
         }
       ]
     },
     "toast": {
       "related": [
+        {
+          "slug": "morning-coffee",
+          "score": 0.4095077
+        },
         {
           "slug": "listening",
           "score": 0.4346454
@@ -90,10 +126,6 @@
         {
           "slug": "geisha",
           "score": 0.4474342
-        },
-        {
-          "slug": "weekenders-coffee",
-          "score": 0.472681
         }
       ]
     },
@@ -124,8 +156,8 @@
           "score": 0.3216581
         },
         {
-          "slug": "geisha",
-          "score": 0.4898331
+          "slug": "library",
+          "score": 0.4325892
         }
       ]
     },
@@ -136,12 +168,12 @@
           "score": 0.2306363
         },
         {
-          "slug": "vinyl",
-          "score": 0.3822545
+          "slug": "library",
+          "score": 0.348991
         },
         {
-          "slug": "toast",
-          "score": 0.4346454
+          "slug": "vinyl",
+          "score": 0.3822545
         }
       ]
     },
@@ -212,16 +244,16 @@
     "weekenders-coffee": {
       "related": [
         {
+          "slug": "morning-coffee",
+          "score": 0.3058518
+        },
+        {
           "slug": "slow-travel",
           "score": 0.3764236
         },
         {
           "slug": "geisha",
           "score": 0.3911129
-        },
-        {
-          "slug": "espresso",
-          "score": 0.3927825
         }
       ]
     },
@@ -2008,12 +2040,12 @@
           "score": 0.3129865
         },
         {
-          "slug": "roastery",
-          "score": 0.3594002
+          "slug": "morning-coffee",
+          "score": 0.3225495
         },
         {
-          "slug": "weekenders-coffee",
-          "score": 0.3764236
+          "slug": "roastery",
+          "score": 0.3594002
         }
       ]
     },
