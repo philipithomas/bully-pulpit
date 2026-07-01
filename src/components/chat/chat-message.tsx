@@ -1,4 +1,5 @@
 import type { UIMessage } from 'ai'
+import Image from 'next/image'
 import Link from 'next/link'
 import type { ComponentPropsWithoutRef } from 'react'
 import Markdown from 'react-markdown'
@@ -35,6 +36,105 @@ function ToolStatus({ label, done }: { label: string; done?: boolean }) {
         <Spinner className="h-2.5 w-2.5 text-gray-400" />
       )}
       {label}
+    </div>
+  )
+}
+
+interface ToolImage {
+  id?: string
+  src: string
+  alt?: string
+  url?: string
+  description?: string
+}
+
+interface ToolResultWithImages {
+  title?: string
+  url?: string
+  coverImage?: string
+  image?: ToolImage
+  images?: ToolImage[]
+}
+
+function parseToolOutput(output: unknown): ToolResultWithImages[] {
+  const parsed =
+    typeof output === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(output) as unknown
+          } catch {
+            return null
+          }
+        })()
+      : output
+  if (Array.isArray(parsed)) return parsed as ToolResultWithImages[]
+  if (parsed && typeof parsed === 'object')
+    return [parsed as ToolResultWithImages]
+  return []
+}
+
+function ToolImageResults({
+  output,
+  onLocalLinkClick,
+}: {
+  output: unknown
+  onLocalLinkClick?: () => void
+}) {
+  const cards = parseToolOutput(output)
+    .flatMap((result) => {
+      const images =
+        result.image !== undefined
+          ? [result.image]
+          : result.images && result.images.length > 0
+            ? result.images
+            : result.coverImage
+              ? [
+                  {
+                    src: result.coverImage,
+                    alt: result.title,
+                    url: result.url,
+                    description: result.title,
+                  },
+                ]
+              : []
+      return images.map((image) => ({
+        src: image.src,
+        alt: image.alt || result.title || 'Search result image',
+        url: image.url || result.url || '/',
+        label: image.description || image.alt || result.title || 'Image',
+      }))
+    })
+    .filter((image) => image.src)
+    .filter(
+      (image, index, all) =>
+        all.findIndex((candidate) => candidate.src === image.src) === index
+    )
+    .slice(0, 4)
+
+  if (cards.length === 0) return null
+
+  return (
+    <div className="my-2 grid grid-cols-2 gap-2 font-sans">
+      {cards.map((image) => (
+        <Link
+          key={image.src}
+          href={image.url}
+          onClick={onLocalLinkClick}
+          className="group min-w-0"
+        >
+          <Image
+            src={image.src}
+            alt={image.alt}
+            width={160}
+            height={120}
+            sizes="(max-width: 640px) 40vw, 160px"
+            className="aspect-[4/3] w-full rounded-sm object-cover"
+          />
+          <span className="mt-1 block truncate text-xs text-gray-500 transition-colors group-hover:text-gray-950">
+            {image.label}
+          </span>
+        </Link>
+      ))}
     </div>
   )
 }
@@ -247,18 +347,26 @@ export function ChatMessage({
                 : undefined
 
             if (part.type === 'tool-fetchPost') {
+              const output = 'output' in part ? part.output : undefined
               return (
-                <ToolStatus
-                  key={key}
-                  done={done}
-                  label={
-                    input?.slug
-                      ? `${done ? 'Read' : 'Reading'} ${input.slug}`
-                      : done
-                        ? 'Read post'
-                        : 'Reading post…'
-                  }
-                />
+                <div key={key}>
+                  <ToolStatus
+                    done={done}
+                    label={
+                      input?.slug
+                        ? `${done ? 'Read' : 'Reading'} ${input.slug}`
+                        : done
+                          ? 'Read post'
+                          : 'Reading post…'
+                    }
+                  />
+                  {done && (
+                    <ToolImageResults
+                      output={output}
+                      onLocalLinkClick={handleLocalLinkClick}
+                    />
+                  )}
+                </div>
               )
             }
 
@@ -266,18 +374,26 @@ export function ChatMessage({
             const query = input?.query
             const truncated =
               query && query.length > 40 ? `${query.slice(0, 40)}…` : query
+            const output = 'output' in part ? part.output : undefined
             return (
-              <ToolStatus
-                key={key}
-                done={done}
-                label={
-                  truncated
-                    ? `${done ? 'Searched' : 'Searching'} "${truncated}"`
-                    : done
-                      ? 'Searched posts'
-                      : 'Searching…'
-                }
-              />
+              <div key={key}>
+                <ToolStatus
+                  done={done}
+                  label={
+                    truncated
+                      ? `${done ? 'Searched' : 'Searching'} "${truncated}"`
+                      : done
+                        ? 'Searched posts'
+                        : 'Searching…'
+                  }
+                />
+                {done && (
+                  <ToolImageResults
+                    output={output}
+                    onLocalLinkClick={handleLocalLinkClick}
+                  />
+                )}
+              </div>
             )
           }
 
