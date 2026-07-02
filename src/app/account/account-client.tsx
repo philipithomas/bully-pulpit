@@ -42,23 +42,28 @@ export function AccountClient() {
   const [deleted, setDeleted] = useState(false)
 
   useEffect(() => {
-    if (!user) return
-    if (preferences || loading) {
-      setPrefsError(null)
-      return
-    }
+    if (!user || loading) return
 
+    let cancelled = false
+    setPrefsError(null)
     fetch('/api/auth/preferences')
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load preferences')
         return res.json()
       })
       .then((data: SubscriberPreferences) => {
+        if (cancelled) return
         setPreferences(data)
         setPrefsError(null)
       })
-      .catch((e) => setPrefsError(e.message))
-  }, [user, preferences, loading, setPreferences])
+      .catch((e) => {
+        if (!cancelled) setPrefsError(e.message)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [user, loading, setPreferences])
 
   const handleToggle = useCallback(
     async (key: SubscriberPreferenceKey, enabled: boolean) => {
@@ -72,11 +77,7 @@ export function AccountClient() {
           body: JSON.stringify({ [key]: enabled }),
         })
         if (res.ok) {
-          const data = await res.json().catch(() => null)
-          setPreferences(
-            (prev) =>
-              data?.preferences ?? (prev ? { ...prev, [key]: enabled } : prev)
-          )
+          setPreferences((prev) => (prev ? { ...prev, [key]: enabled } : prev))
           setSaved(true)
           setSaveError(null)
         } else {
