@@ -31,7 +31,7 @@
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.7",
     "@ai-sdk/openai": "^4.0.5",
-    "@ai-sdk/react": "^4.0.10",
+    "@ai-sdk/react": "^4.0.15",
     "@aws-sdk/client-sesv2": "^3.1070.0",
     "@neondatabase/serverless": "^1.1.0",
     "@opentelemetry/api": "^1.9.1",
