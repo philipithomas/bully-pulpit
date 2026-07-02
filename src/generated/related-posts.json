@@ -1,6 +1,54 @@
 {
-  "generatedAt": "2026-07-02T00:43:00.798Z",
+  "generatedAt": "2026-07-02T01:57:38.676Z",
   "posts": {
+    "koffee": {
+      "related": [
+        {
+          "slug": "avant-garde-coffee",
+          "score": 0.190116
+        },
+        {
+          "slug": "pourover",
+          "score": 0.2589258
+        },
+        {
+          "slug": "morning-coffee",
+          "score": 0.2914824
+        }
+      ]
+    },
+    "pourover": {
+      "related": [
+        {
+          "slug": "avant-garde-coffee",
+          "score": 0.2306832
+        },
+        {
+          "slug": "koffee",
+          "score": 0.2589258
+        },
+        {
+          "slug": "espresso",
+          "score": 0.3312245
+        }
+      ]
+    },
+    "avant-garde-coffee": {
+      "related": [
+        {
+          "slug": "koffee",
+          "score": 0.190116
+        },
+        {
+          "slug": "pourover",
+          "score": 0.2306832
+        },
+        {
+          "slug": "weekenders-coffee",
+          "score": 0.2829019
+        }
+      ]
+    },
     "record-bar-analog": {
       "related": [
         {
@@ -36,16 +84,16 @@
     "morning-coffee": {
       "related": [
         {
+          "slug": "koffee",
+          "score": 0.2914824
+        },
+        {
           "slug": "espresso",
           "score": 0.2976905
         },
         {
           "slug": "weekenders-coffee",
           "score": 0.3058518
-        },
-        {
-          "slug": "slow-travel",
-          "score": 0.3225495
         }
       ]
     },
@@ -72,12 +120,12 @@
           "score": 0.2976905
         },
         {
-          "slug": "slow-travel",
-          "score": 0.3129865
+          "slug": "avant-garde-coffee",
+          "score": 0.2981547
         },
         {
-          "slug": "stripe-projects-launch",
-          "score": 0.3819438
+          "slug": "koffee",
+          "score": 0.3063351
         }
       ]
     },
@@ -132,16 +180,16 @@
     "toast": {
       "related": [
         {
+          "slug": "koffee",
+          "score": 0.396336
+        },
+        {
           "slug": "morning-coffee",
           "score": 0.4095077
         },
         {
-          "slug": "listening",
-          "score": 0.4346454
-        },
-        {
-          "slug": "geisha",
-          "score": 0.4474342
+          "slug": "avant-garde-coffee",
+          "score": 0.4167375
         }
       ]
     },
@@ -260,16 +308,16 @@
     "weekenders-coffee": {
       "related": [
         {
+          "slug": "avant-garde-coffee",
+          "score": 0.2829019
+        },
+        {
           "slug": "morning-coffee",
           "score": 0.3058518
         },
         {
-          "slug": "slow-travel",
-          "score": 0.3764236
-        },
-        {
-          "slug": "geisha",
-          "score": 0.3911129
+          "slug": "koffee",
+          "score": 0.3461909
         }
       ]
     },
@@ -296,12 +344,12 @@
           "score": 0.4122248
         },
         {
-          "slug": "record-bar-analog",
-          "score": 0.5178913
+          "slug": "avant-garde-coffee",
+          "score": 0.4233699
         },
         {
-          "slug": "espresso",
-          "score": 0.5249963
+          "slug": "record-bar-analog",
+          "score": 0.5178913
         }
       ]
     },
@@ -348,24 +396,24 @@
           "score": 0.3681953
         },
         {
-          "slug": "espresso",
-          "score": 0.3864825
+          "slug": "avant-garde-coffee",
+          "score": 0.3691727
         }
       ]
     },
     "geisha": {
       "related": [
         {
-          "slug": "roastery",
-          "score": 0.3681953
+          "slug": "avant-garde-coffee",
+          "score": 0.3008333
         },
         {
-          "slug": "weekenders-coffee",
-          "score": 0.3911129
+          "slug": "pourover",
+          "score": 0.3568011
         },
         {
-          "slug": "espresso",
-          "score": 0.3948568
+          "slug": "koffee",
+          "score": 0.3680836
         }
       ]
     },
@@ -2052,16 +2100,16 @@
     "slow-travel": {
       "related": [
         {
+          "slug": "avant-garde-coffee",
+          "score": 0.3011189
+        },
+        {
           "slug": "espresso",
           "score": 0.3129865
         },
         {
           "slug": "morning-coffee",
           "score": 0.3225495
-        },
-        {
-          "slug": "roastery",
-          "score": 0.3594002
         }
       ]
     },
