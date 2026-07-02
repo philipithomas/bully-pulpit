@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-07-01T06:25:04.499Z",
+  "generatedAt": "2026-07-02T00:43:00.798Z",
   "posts": {
+    "record-bar-analog": {
+      "related": [
+        {
+          "slug": "vinyl",
+          "score": 0.0889134
+        },
+        {
+          "slug": "hi-fi",
+          "score": 0.3226564
+        },
+        {
+          "slug": "listening",
+          "score": 0.3739338
+        }
+      ]
+    },
     "library": {
       "related": [
         {
@@ -36,16 +52,16 @@
     "vinyl": {
       "related": [
         {
+          "slug": "record-bar-analog",
+          "score": 0.0889134
+        },
+        {
           "slug": "hi-fi",
           "score": 0.3216581
         },
         {
           "slug": "listening",
           "score": 0.3822545
-        },
-        {
-          "slug": "library",
-          "score": 0.47458
         }
       ]
     },
@@ -156,8 +172,8 @@
           "score": 0.3216581
         },
         {
-          "slug": "library",
-          "score": 0.4325892
+          "slug": "record-bar-analog",
+          "score": 0.3226564
         }
       ]
     },
@@ -172,8 +188,8 @@
           "score": 0.348991
         },
         {
-          "slug": "vinyl",
-          "score": 0.3822545
+          "slug": "record-bar-analog",
+          "score": 0.3739338
         }
       ]
     },
@@ -280,12 +296,12 @@
           "score": 0.4122248
         },
         {
-          "slug": "espresso",
-          "score": 0.5249963
+          "slug": "record-bar-analog",
+          "score": 0.5178913
         },
         {
-          "slug": "hi-fi",
-          "score": 0.5275053
+          "slug": "espresso",
+          "score": 0.5249963
         }
       ]
     },
