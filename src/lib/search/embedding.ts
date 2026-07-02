@@ -63,16 +63,11 @@ export async function embedTexts(
     model: gateway.embeddingModel(EMBEDDING_MODEL),
     values: texts,
     abortSignal: options.abortSignal,
-    experimental_telemetry: {
+    telemetry: {
       isEnabled: true,
       recordInputs: false,
       recordOutputs: false,
       functionId: 'search-embedding',
-      metadata: {
-        model: EMBEDDING_MODEL,
-        dimensions: EMBEDDING_DIMS,
-        textCount: texts.length,
-      },
     },
   })
   return embeddings.map((e) => truncateAndNormalize(e))
