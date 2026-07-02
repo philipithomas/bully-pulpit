@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-07-02T02:41:46.542Z",
+  "generatedAt": "2026-07-02T23:29:06.527Z",
   "posts": {
+    "torii": {
+      "related": [
+        {
+          "slug": "nakameguro",
+          "score": 0.4114856
+        },
+        {
+          "slug": "wild-boar-shrine",
+          "score": 0.4476016
+        },
+        {
+          "slug": "downpour",
+          "score": 0.4697022
+        }
+      ]
+    },
     "2026-07": {
       "related": [
         {
@@ -292,21 +308,25 @@
     "downpour": {
       "related": [
         {
+          "slug": "torii",
+          "score": 0.4697022
+        },
+        {
           "slug": "house",
           "score": 0.5183081
         },
         {
           "slug": "listening",
           "score": 0.5466009
-        },
-        {
-          "slug": "introducing-tsundoku",
-          "score": 0.563149
         }
       ]
     },
     "wild-boar-shrine": {
       "related": [
+        {
+          "slug": "torii",
+          "score": 0.4476016
+        },
         {
           "slug": "nakameguro",
           "score": 0.5809862
@@ -314,10 +334,6 @@
         {
           "slug": "dt-suzuki-hallway",
           "score": 0.6666178
-        },
-        {
-          "slug": "downpour",
-          "score": 0.6692502
         }
       ]
     },
@@ -392,12 +408,12 @@
           "score": 0.4681371
         },
         {
-          "slug": "shinkansen",
-          "score": 0.5123153
+          "slug": "torii",
+          "score": 0.4857521
         },
         {
-          "slug": "introducing-tsundoku",
-          "score": 0.516621
+          "slug": "shinkansen",
+          "score": 0.5123153
         }
       ]
     },
@@ -440,12 +456,12 @@
           "score": 0.4060398
         },
         {
-          "slug": "almost-perfect",
-          "score": 0.4416485
+          "slug": "torii",
+          "score": 0.4114856
         },
         {
-          "slug": "house",
-          "score": 0.4577468
+          "slug": "almost-perfect",
+          "score": 0.4416485
         }
       ]
     },
