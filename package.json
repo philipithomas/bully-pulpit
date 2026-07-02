@@ -29,9 +29,9 @@
     ]
   },
   "dependencies": {
-    "@ai-sdk/gateway": "^3.0.133",
-    "@ai-sdk/openai": "^3.0.72",
-    "@ai-sdk/react": "^3.0.209",
+    "@ai-sdk/gateway": "^4.0.7",
+    "@ai-sdk/openai": "^4.0.5",
+    "@ai-sdk/react": "^4.0.10",
     "@aws-sdk/client-sesv2": "^3.1070.0",
     "@neondatabase/serverless": "^1.1.0",
     "@opentelemetry/api": "^1.9.1",
@@ -39,6 +39,7 @@
     "@shikijs/rehype": "^4.2.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/firewall": "^1.2.1",
+    "@vercel/oidc": "3.2.0",
     "@vercel/otel": "^2.1.3",
     "@vercel/speed-insights": "^2.0.0",
     "ai": "^7.0.9",
