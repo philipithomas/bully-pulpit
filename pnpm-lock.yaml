@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@ai-sdk/gateway':
-        specifier: ^4.0.7
-        version: 4.0.7(zod@4.4.3)
+        specifier: ^4.0.11
+        version: 4.0.11(zod@4.4.3)
       '@ai-sdk/openai':
         specifier: ^4.0.5
         version: 4.0.5(zod@4.4.3)
@@ -183,6 +183,12 @@ importers:
 
 packages:
 
+  '@ai-sdk/gateway@4.0.11':
+    resolution: {integrity: sha512-ZdZzQnBxYfjJpWpSNkV+rRWycwTBhxyvwGvxcwx9g+WQoy3MK2xNahSySEgP9hD/X2xY9jkjd0xB67oDE3rLMA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/gateway@4.0.7':
     resolution: {integrity: sha512-L0/CZwEL8AHO/Nxe5D0laNq9Q44mrKcth99tPgMNHqfsYbbNExwke4OYH18o/eLd3FLLBxs+03SuHP+Gcyp51Q==}
     engines: {node: '>=22'}
@@ -213,8 +219,18 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/provider-utils@5.0.5':
+    resolution: {integrity: sha512-oI0t3dvCoqWNV1I8o1Rybi2DXDvHES5r/TrwtJW90tuFLVepgJlftPxrcjh8vaSvjqC2diTuA2vXyjKAyHJm4A==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/provider@4.0.1':
     resolution: {integrity: sha512-6p3C/vGqVIjcptBu1DnVd/BZJ2wWmV9TUv9192vT6ZvT9KNED8EwRTqyqFpoQZKgSbMDSvBSq3dqR524Nt/Crw==}
+    engines: {node: '>=22'}
+
+  '@ai-sdk/provider@4.0.2':
+    resolution: {integrity: sha512-pfPoy9J1B1xV7cqJ8MYHOsDYrMv5tR3+EMNfI249OhkD2uRakvav3Fo7XpD2luuN/YNCBY7KfEQc7vEV7KEtyw==}
     engines: {node: '>=22'}
 
   '@ai-sdk/react@4.0.10':
@@ -2986,10 +3002,6 @@ packages:
     resolution: {integrity: sha512-LMRMEai3Z+BODyxGcU9+KiWrS/UElNiOLKiNRfGNt2Vu3NTEmXgFeXG9wBfocAnTe5yJCX/DY6k3k7S/LkPp/g==}
     engines: {node: '>= 18'}
 
-  '@vercel/cli-exec@1.0.0':
-    resolution: {integrity: sha512-kQF8LGie/Hbdq9/psJxLE7owRTcqMQMhgybU04gCeR7cbQAr5t8OrjefDNColJv1QSSucFt4pLwRiARVmlOnug==}
-    engines: {node: '>= 18'}
-
   '@vercel/container@0.0.2':
     resolution: {integrity: sha512-t7vIpTRejh7zoxxcqa9lNSwlzYqB/mOYo3cQjifnBvBPyrFI3OXdW9WCFl+y3hgOAY6cIUnNFeD3OHzAZf3cwA==}
 
@@ -3070,10 +3082,6 @@ packages:
 
   '@vercel/oidc@3.6.1':
     resolution: {integrity: sha512-8ipTFoiX3WBRrvXLjSrmgAiwtMDQk3EgSxe8N7v2rXBz39NBIIyoGXeVbJRoBcP8WEuVnvjvIQsggbGU7ZKrMw==}
-    engines: {node: '>= 20'}
-
-  '@vercel/oidc@3.7.1':
-    resolution: {integrity: sha512-RrSsVWbq3KLK5lJobyTPp3tSthNfUp+zWkXno5Wkko0oEW05rA4ngOrnVypP4+L8/Av89uPo2rWFmzL8iwnsmA==}
     engines: {node: '>= 20'}
 
   '@vercel/otel@2.1.3':
@@ -6503,6 +6511,13 @@ packages:
 
 snapshots:
 
+  '@ai-sdk/gateway@4.0.11(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.2
+      '@ai-sdk/provider-utils': 5.0.5(zod@4.4.3)
+      '@vercel/oidc': 3.2.0
+      zod: 4.4.3
+
   '@ai-sdk/gateway@4.0.7(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 4.0.1
@@ -6539,7 +6554,19 @@ snapshots:
       eventsource-parser: 3.1.0
       zod: 4.4.3
 
+  '@ai-sdk/provider-utils@5.0.5(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.2
+      '@standard-schema/spec': 1.1.0
+      '@workflow/serde': 4.1.0
+      eventsource-parser: 3.1.0
+      zod: 4.4.3
+
   '@ai-sdk/provider@4.0.1':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@4.0.2':
     dependencies:
       json-schema: 0.4.0
 
@@ -8669,10 +8696,6 @@ snapshots:
     dependencies:
       execa: 5.1.1
 
-  '@vercel/cli-exec@1.0.0':
-    dependencies:
-      execa: 5.1.1
-
   '@vercel/container@0.0.2': {}
 
   '@vercel/detect-agent@1.2.3': {}
@@ -8870,12 +8893,6 @@ snapshots:
       '@vercel/cli-exec': 0.1.1
       jose: 5.10.0
 
-  '@vercel/oidc@3.7.1':
-    dependencies:
-      '@vercel/cli-config': 0.2.0
-      '@vercel/cli-exec': 1.0.0
-      jose: 5.10.0
-
   '@vercel/otel@2.1.3(@opentelemetry/api-logs@0.218.0)(@opentelemetry/api@1.9.1)(@opentelemetry/instrumentation@0.218.0(@opentelemetry/api@1.9.1))(@opentelemetry/resources@2.7.1(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-logs@0.218.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-metrics@2.7.1(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.1(@opentelemetry/api@1.9.1))':
     dependencies:
       '@opentelemetry/api': 1.9.1
@@ -8904,7 +8921,7 @@ snapshots:
 
   '@vercel/queue@0.3.1':
     dependencies:
-      '@vercel/oidc': 3.7.1
+      '@vercel/oidc': 3.2.0
       minimatch: 10.2.5
       mixpart: 0.0.6
       picocolors: 1.1.1
