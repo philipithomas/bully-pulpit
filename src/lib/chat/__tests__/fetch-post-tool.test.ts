@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
 
-const callOptions = { toolCallId: 'test-call', messages: [] }
+const callOptions = { toolCallId: 'test-call', messages: [], context: {} }
 
 interface FetchPostOutput {
   title: string

@@ -1,5 +1,3 @@
-import { openai } from '@ai-sdk/openai'
-import { experimental_transcribe as transcribe } from 'ai'
 import { sendEmailWithAttachment } from '@/lib/email/ses'
 import {
   renderVoicemailEmail,
@@ -23,6 +21,9 @@ export type VoicemailInput = {
 
 /** Audio below this size is a butt-dial or an empty hang-up recording. */
 const MIN_AUDIO_BYTES = 1_000
+const OPENAI_TRANSCRIPTIONS_URL =
+  'https://api.openai.com/v1/audio/transcriptions'
+const OPENAI_TRANSCRIPTION_MODEL = 'gpt-4o-mini-transcribe'
 
 async function downloadRecording(recordingUrl: string): Promise<Uint8Array> {
   // Twilio serves recordings in multiple formats; `.mp3` selects the MP3
@@ -38,10 +39,43 @@ async function downloadRecording(recordingUrl: string): Promise<Uint8Array> {
 
 async function transcribeAudio(audio: Uint8Array): Promise<string | null> {
   try {
-    const result = await transcribe({
-      model: openai.transcription('gpt-4o-mini-transcribe'),
-      audio,
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY is not set')
+    }
+
+    const audioBuffer = new ArrayBuffer(audio.byteLength)
+    new Uint8Array(audioBuffer).set(audio)
+
+    const formData = new FormData()
+    formData.set('model', OPENAI_TRANSCRIPTION_MODEL)
+    formData.set(
+      'file',
+      new Blob([audioBuffer], { type: 'audio/mpeg' }),
+      'voicemail.mp3'
+    )
+
+    const response = await fetch(OPENAI_TRANSCRIPTIONS_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: formData,
     })
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      throw new Error(
+        `OpenAI transcription failed: ${response.status} ${response.statusText}${body ? ` ${body}` : ''}`
+      )
+    }
+
+    const result: unknown = await response.json()
+    if (
+      typeof result !== 'object' ||
+      result === null ||
+      !('text' in result) ||
+      typeof result.text !== 'string'
+    ) {
+      throw new Error('OpenAI transcription response did not include text')
+    }
     return result.text
   } catch (err) {
     // A recording Twilio produced but OpenAI rejects (corrupted or

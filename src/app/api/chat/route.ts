@@ -113,12 +113,13 @@ export async function POST(request: Request) {
     // recordInputs/recordOutputs put full prompts and responses on the AI
     // spans in Vercel Observability (Project → Observability → AI). Flip
     // both to false to stop recording visitor messages.
-    experimental_telemetry: {
+    runtimeContext: { path: path ?? 'unknown' },
+    telemetry: {
       isEnabled: true,
       functionId: 'bell-chat',
       recordInputs: true,
       recordOutputs: true,
-      metadata: { path: path ?? 'unknown' },
+      includeRuntimeContext: { path: true },
     },
     system,
     messages,

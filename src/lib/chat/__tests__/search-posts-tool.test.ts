@@ -14,7 +14,7 @@ vi.mock('@/lib/search/embedding', async (importOriginal) => {
   }
 })
 
-const callOptions = { toolCallId: 'test-call', messages: [] }
+const callOptions = { toolCallId: 'test-call', messages: [], context: {} }
 
 async function run(query: string): Promise<PostResult[]> {
   const out = await searchPosts.execute!({ query }, callOptions)

@@ -30,6 +30,10 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  // The Workflow step route pulls in AI SDK gateway serialization classes.
+  // Externalize OIDC so Turbopack does not inline its CommonJS wrapper while
+  // collecting page data for the generated workflow routes.
+  serverExternalPackages: ['@vercel/oidc'],
   images: {
     formats: ['image/avif', 'image/webp'],
     qualities: [100],
