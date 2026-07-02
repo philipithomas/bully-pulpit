@@ -18,24 +18,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
+import type {
+  SubscriberPreferenceKey,
+  SubscriberPreferences,
+} from '@/lib/auth/preferences'
 import { newsletterRows } from '@/lib/newsletters'
 import { useAuthModal } from '@/stores/auth-store'
 
 const newsletterInfo = newsletterRows()
 
-interface Preferences {
-  email: string
-  subscribed_contraption: boolean
-  subscribed_workshop: boolean
-  subscribed_postcard: boolean
-  subscribed_tsundoku: boolean
-}
-
 export function AccountClient() {
-  const { user, loading, logout } = useAuthContext()
+  const { user, loading, logout, preferences, setPreferences } =
+    useAuthContext()
   const { openModal } = useAuthModal()
   const router = useRouter()
-  const [prefs, setPrefs] = useState<Preferences | null>(null)
   const [prefsError, setPrefsError] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -47,19 +43,26 @@ export function AccountClient() {
 
   useEffect(() => {
     if (!user) return
+    if (preferences || loading) {
+      setPrefsError(null)
+      return
+    }
 
     fetch('/api/auth/preferences')
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load preferences')
         return res.json()
       })
-      .then(setPrefs)
+      .then((data: SubscriberPreferences) => {
+        setPreferences(data)
+        setPrefsError(null)
+      })
       .catch((e) => setPrefsError(e.message))
-  }, [user])
+  }, [user, preferences, loading, setPreferences])
 
   const handleToggle = useCallback(
-    async (key: string, enabled: boolean) => {
-      if (!prefs) return
+    async (key: SubscriberPreferenceKey, enabled: boolean) => {
+      if (!preferences) return
       setSaving(key)
       setSaved(false)
       try {
@@ -69,7 +72,11 @@ export function AccountClient() {
           body: JSON.stringify({ [key]: enabled }),
         })
         if (res.ok) {
-          setPrefs((prev) => (prev ? { ...prev, [key]: enabled } : prev))
+          const data = await res.json().catch(() => null)
+          setPreferences(
+            (prev) =>
+              data?.preferences ?? (prev ? { ...prev, [key]: enabled } : prev)
+          )
           setSaved(true)
           setSaveError(null)
         } else {
@@ -81,7 +88,7 @@ export function AccountClient() {
         setSaving(null)
       }
     },
-    [prefs]
+    [preferences, setPreferences]
   )
 
   const handleDelete = useCallback(async () => {
@@ -173,10 +180,10 @@ export function AccountClient() {
           <h2 className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-3">
             Email
           </h2>
-          <p className="text-gray-900">{prefs?.email ?? user.email}</p>
+          <p className="text-gray-900">{preferences?.email ?? user.email}</p>
         </section>
 
-        {prefs && (
+        {preferences && (
           <section className="mb-10">
             <h2 className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-4">
               Newsletters
@@ -202,7 +209,7 @@ export function AccountClient() {
                   </div>
                   <input
                     type="checkbox"
-                    checked={prefs[nl.key as keyof Preferences] as boolean}
+                    checked={preferences[nl.key]}
                     disabled={saving === nl.key}
                     onChange={(e) => handleToggle(nl.key, e.target.checked)}
                     className="h-4 w-4 accent-gray-900"
@@ -221,13 +228,13 @@ export function AccountClient() {
           </section>
         )}
 
-        {!prefs && prefsError && (
+        {!preferences && prefsError && (
           <p role="alert" className="mb-10 text-sm text-red">
             {prefsError}
           </p>
         )}
 
-        {!prefs && !prefsError && (
+        {!preferences && !prefsError && (
           <section className="mb-10">
             <h2 className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-4">
               Newsletters

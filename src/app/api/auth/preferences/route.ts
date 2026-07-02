@@ -7,6 +7,7 @@ import {
   findByUuid,
   prefsFromBody,
   serializeSubscriber,
+  serializeSubscriberPreferences,
   updateSubscriber,
 } from '@/lib/db/queries/subscribers'
 import { sendNewsletterOptInNotification } from '@/lib/email/send'
@@ -35,13 +36,7 @@ export async function GET() {
     )
   }
 
-  return NextResponse.json({
-    email: subscriber.email,
-    subscribed_contraption: subscriber.subscribedContraption,
-    subscribed_workshop: subscriber.subscribedWorkshop,
-    subscribed_postcard: subscriber.subscribedPostcard,
-    subscribed_tsundoku: subscriber.subscribedTsundoku,
-  })
+  return NextResponse.json(serializeSubscriberPreferences(subscriber))
 }
 
 export async function PATCH(request: Request) {
@@ -85,7 +80,10 @@ export async function PATCH(request: Request) {
     }
   }
 
-  return NextResponse.json({ subscriber: serializeSubscriber(subscriber) })
+  return NextResponse.json({
+    subscriber: serializeSubscriber(subscriber),
+    preferences: serializeSubscriberPreferences(subscriber),
+  })
 }
 
 export async function DELETE() {

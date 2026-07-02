@@ -1,4 +1,5 @@
 import { and, desc, eq, isNotNull, or, type SQL, sql } from 'drizzle-orm'
+import type { SubscriberPreferences } from '@/lib/auth/preferences'
 import { getDb } from '@/lib/db/client'
 import {
   emailSends,
@@ -234,6 +235,18 @@ export function serializeSubscriber(s: Subscriber): SerializedSubscriber {
     source: s.source,
     created_at: s.createdAt.toISOString(),
     updated_at: s.updatedAt.toISOString(),
+  }
+}
+
+export function serializeSubscriberPreferences(
+  s: Subscriber
+): SubscriberPreferences {
+  return {
+    email: s.email,
+    subscribed_contraption: s.subscribedContraption,
+    subscribed_workshop: s.subscribedWorkshop,
+    subscribed_postcard: s.subscribedPostcard,
+    subscribed_tsundoku: s.subscribedTsundoku,
   }
 }
 

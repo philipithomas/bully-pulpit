@@ -1,17 +1,18 @@
 'use client'
 
-import { createContext, useContext } from 'react'
-import { useAuth } from '@/hooks/use-auth'
-
-interface User {
-  uuid: string
-  email: string
-  name: string | null
-  isAdmin: boolean
-}
+import {
+  createContext,
+  type Dispatch,
+  type SetStateAction,
+  useContext,
+} from 'react'
+import { type AuthUser, useAuth } from '@/hooks/use-auth'
+import type { SubscriberPreferences } from '@/lib/auth/preferences'
 
 interface AuthContextType {
-  user: User | null
+  user: AuthUser | null
+  preferences: SubscriberPreferences | null
+  setPreferences: Dispatch<SetStateAction<SubscriberPreferences | null>>
   hasSession: boolean | null
   loading: boolean
   logout: () => Promise<void>
@@ -19,6 +20,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  preferences: null,
+  setPreferences: () => {},
   hasSession: null,
   loading: true,
   logout: async () => {},
