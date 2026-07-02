@@ -43,7 +43,7 @@ export function InlineSignupForm({
   buttonClassName = 'btn btn-primary',
   showSubscriberCount = false,
 }: Props) {
-  const { user } = useAuthContext()
+  const { user, hasSession, loading: authLoading } = useAuthContext()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<Step>('email')
@@ -142,8 +142,11 @@ export function InlineSignupForm({
     [email]
   )
 
-  // No authLoading gate: the form must be in the static HTML for logged-out
-  // visitors; signed-in members get a brief flash before it collapses.
+  const initialMemberClassName =
+    hideWhenLoggedIn && hasSession === null ? '[[data-member]_&]:hidden' : ''
+  const rootClassName = `${initialMemberClassName} ${className ?? ''}`
+
+  if (hideWhenLoggedIn && hasSession && authLoading) return null
   if (hideWhenLoggedIn && user) return null
 
   if (step === 'confirmed') {
@@ -151,7 +154,7 @@ export function InlineSignupForm({
       <div
         className={`flex flex-col ${
           align === 'center' ? 'items-center text-center' : 'items-start'
-        } ${className ?? ''}`}
+        } ${rootClassName}`}
       >
         <p className="font-sans text-sm font-semibold text-gray-800">
           Confirmed
@@ -168,7 +171,7 @@ export function InlineSignupForm({
       <div
         className={`flex flex-col ${
           align === 'center' ? 'items-center text-center' : 'items-start'
-        } ${className ?? ''}`}
+        } ${rootClassName}`}
       >
         <p className="font-sans text-sm font-semibold text-gray-800">
           Check your email
@@ -226,7 +229,7 @@ export function InlineSignupForm({
       onSubmit={handleEmailSubmit}
       className={`flex flex-col ${
         align === 'center' ? 'items-center' : 'items-start'
-      } ${className ?? ''}`}
+      } ${rootClassName}`}
     >
       {resolvedHeaderText ? (
         <p className="font-sans text-lg font-medium mb-3 text-gray-800">

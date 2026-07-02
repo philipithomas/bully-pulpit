@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import type { SubscriberPreferences } from '@/lib/auth/preferences'
 
-interface User {
+export interface AuthUser {
   uuid: string
   email: string
   name: string | null
@@ -16,7 +17,10 @@ function hasSessionCookie(): boolean {
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [preferences, setPreferences] = useState<SubscriberPreferences | null>(
+    null
+  )
   // null until the cookie is read on the client. The header renders both
   // presentations while null and lets the pre-paint session hint script in
   // the root layout pick the visible one, so first paint is correct for
@@ -33,9 +37,26 @@ export function useAuth() {
     }
 
     fetch('/api/auth/me')
-      .then((res) => res.json())
-      .then((data) => setUser(data.user))
-      .catch(() => setUser(null))
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load session')
+        return res.json()
+      })
+      .then(
+        (data: {
+          user: AuthUser | null
+          preferences?: SubscriberPreferences | null
+        }) => {
+          const nextUser = data.user ?? null
+          setUser(nextUser)
+          setPreferences(nextUser ? (data.preferences ?? null) : null)
+          if (!nextUser) setHasSession(false)
+        }
+      )
+      .catch(() => {
+        setUser(null)
+        setPreferences(null)
+        setHasSession(false)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -44,7 +65,17 @@ export function useAuth() {
     // biome-ignore lint/suspicious/noDocumentCookie: clearing session indicator
     document.cookie = 'bp_has_session=; path=/; max-age=0'
     setUser(null)
+    setPreferences(null)
+    setHasSession(false)
+    document.documentElement.removeAttribute('data-member')
   }, [])
 
-  return { user, hasSession, loading, logout }
+  return {
+    user,
+    preferences,
+    setPreferences,
+    hasSession,
+    loading,
+    logout,
+  }
 }
