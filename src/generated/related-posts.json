@@ -1,6 +1,38 @@
 {
-  "generatedAt": "2026-07-02T23:29:06.527Z",
+  "generatedAt": "2026-07-03T23:39:10.102Z",
   "posts": {
+    "bamboo": {
+      "related": [
+        {
+          "slug": "bamboo-forest",
+          "score": 0.139657
+        },
+        {
+          "slug": "nakameguro",
+          "score": 0.5132793
+        },
+        {
+          "slug": "listening",
+          "score": 0.5289376
+        }
+      ]
+    },
+    "bamboo-forest": {
+      "related": [
+        {
+          "slug": "bamboo",
+          "score": 0.139657
+        },
+        {
+          "slug": "nakameguro",
+          "score": 0.4876082
+        },
+        {
+          "slug": "torii",
+          "score": 0.497515
+        }
+      ]
+    },
     "torii": {
       "related": [
         {
@@ -332,8 +364,8 @@
           "score": 0.5809862
         },
         {
-          "slug": "dt-suzuki-hallway",
-          "score": 0.6666178
+          "slug": "bamboo-forest",
+          "score": 0.6099377
         }
       ]
     },
