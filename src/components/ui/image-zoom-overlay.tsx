@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react'
 import NextImage from 'next/image'
 import Link from 'next/link'
 import {
@@ -36,6 +36,7 @@ export interface ZoomCaptionLink {
 
 export interface ZoomGalleryItem {
   src: string
+  originalSrc: string | null
   fullSrc: string | null
   fullSrcSet?: string | null
   fullSizes?: string | null
@@ -47,6 +48,7 @@ export interface ZoomGalleryItem {
 
 export interface ZoomedImage {
   src: string
+  originalSrc: string | null
   fullSrc: string | null
   fullSrcSet?: string | null
   fullSizes?: string | null
@@ -369,6 +371,12 @@ export function ImageZoomOverlay({
   const handleCaptionClick = useCallback((e: MouseEvent<HTMLElement>) => {
     e.stopPropagation()
   }, [])
+  const handleOriginalLinkClick = useCallback(
+    (e: MouseEvent<HTMLAnchorElement>) => {
+      e.stopPropagation()
+    },
+    []
+  )
   const handleLogoClick = useCallback(
     (e: MouseEvent<HTMLAnchorElement>) => {
       e.stopPropagation()
@@ -539,6 +547,19 @@ export function ImageZoomOverlay({
               </button>
             </>
           )}
+          {image.originalSrc ? (
+            <a
+              href={image.originalSrc}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open original image in new tab"
+              title="Open original image"
+              onClick={handleOriginalLinkClick}
+              className="absolute right-3 bottom-3 z-20 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-black/35 text-white opacity-100 transition-[background-color,color,opacity] hover:bg-black/50 focus-visible:bg-black/50 md:right-4 md:bottom-4 md:bg-black/0 md:opacity-0 md:group-focus-within:bg-black/35 md:group-focus-within:opacity-100 md:group-hover:bg-black/35 md:group-hover:opacity-100"
+            >
+              <ExternalLink aria-hidden="true" className="h-5 w-5" />
+            </a>
+          ) : null}
         </div>
         {caption ? (
           <aside
