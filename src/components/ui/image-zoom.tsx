@@ -118,6 +118,9 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
     element instanceof HTMLImageElement ? element : element.querySelector('img')
   if (!img) return null
   const fullSrc = element.dataset.fullSrc ?? img.dataset.fullSrc ?? null
+  const srcAttr = img.getAttribute('src')
+  const originalSrc =
+    fullSrc ?? (srcAttr && !srcAttr.startsWith('/_next/image') ? srcAttr : null)
   const fullWidth = positiveIntegerFromDataset(
     element.dataset.fullWidth ?? img.dataset.fullWidth
   )
@@ -166,6 +169,7 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
         : null)
   return {
     src: img.currentSrc || img.src,
+    originalSrc,
     fullSrc: fullSources?.src ?? fullSrc,
     fullSrcSet: fullSources?.srcSet ?? null,
     fullSizes: fullSources?.sizes ?? null,
