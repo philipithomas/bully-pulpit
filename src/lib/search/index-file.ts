@@ -5,6 +5,8 @@ import path from 'node:path'
  * Committed vector index at src/generated/search-index.json. Stores no chunk
  * text — only merkle hashes and base64-encoded float32 vectors. Chunk text is
  * recomputed from content/ at runtime and aligned to vectors by chunk hash.
+ * The `posts` array is the historical file key; it now contains searchable
+ * posts and content pages.
  */
 
 export interface SearchIndexChunk {

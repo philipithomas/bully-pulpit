@@ -52,6 +52,24 @@ describe('hybridSearchPosts', () => {
     expect(mockedEmbedQuery).not.toHaveBeenCalled()
   })
 
+  it('returns content pages in the default search scope', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { mode, results } = await hybridSearchPosts('contact telephone')
+    const contact = results.find((result) => result.url === '/contact')
+
+    expect(mode).toBe('lexical')
+    expect(contact).toMatchObject({
+      type: 'page',
+      title: 'Contact',
+      newsletter: 'page',
+      coverImage: '',
+    })
+    expect(
+      contact?.excerpts.map((excerpt) => excerpt.text).join(' ')
+    ).toContain('+1 212 347 3190')
+  })
+
   it('falls back to BM25 results when query embedding times out', async () => {
     const mockedEmbedQuery = vi.mocked(embedQuery)
     mockedEmbedQuery.mockClear()

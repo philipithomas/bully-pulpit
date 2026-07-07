@@ -26,10 +26,10 @@ import { topKBySimilarity } from '@/lib/search/vector'
  * Generates the committed search artifacts:
  *
  *   1. src/generated/search-index.json — merkle hashes + embedding vectors
- *      for every text chunk and image asset of every post. Vectors for
- *      unchanged hashes are reused from the existing committed index, so a
- *      routine run after adding one post embeds only that post's new text and
- *      image assets.
+ *      for every text chunk and image asset of every searchable post and
+ *      page. Vectors for unchanged hashes are reused from the existing
+ *      committed index, so a routine run after adding one post embeds only
+ *      that post's new text and image assets.
  *   2. src/generated/related-posts.json — top 3 related posts per post by
  *      cosine similarity between per-post centroid vectors. Score is
  *      (1 - cosine) so lower stays better, matching the previous format.
@@ -72,7 +72,7 @@ async function main() {
   const totalChunks = tree.posts.reduce((n, p) => n + p.chunks.length, 0)
   const totalImages = tree.posts.reduce((n, p) => n + p.images.length, 0)
   console.log(
-    `Corpus: ${corpus.length} posts, ${totalChunks} chunks, ${totalImages} images (model ${EMBEDDING_MODEL}, ${EMBEDDING_DIMS} dims)`
+    `Corpus: ${corpus.length} entries, ${totalChunks} chunks, ${totalImages} images (model ${EMBEDDING_MODEL}, ${EMBEDDING_DIMS} dims)`
   )
 
   // Reuse vectors from the committed index for unchanged chunk hashes
@@ -188,6 +188,7 @@ async function main() {
   )
 
   // Related posts: per-post centroid = L2-normalized mean of text and image vectors
+  // Content pages are searchable, but they do not belong in post recommendations.
   const centroids = posts.map((post) => {
     const sum = new Array<number>(EMBEDDING_DIMS).fill(0)
     const vectors = [
@@ -206,12 +207,18 @@ async function main() {
     generatedAt: new Date().toISOString(),
     posts: {},
   }
-  // Keep the previous key order (date-descending, the corpus order)
-  for (const post of corpus) {
+  const postCorpus = corpus.filter((entry) => entry.contentType === 'post')
+  const postSlugs = new Set(postCorpus.map((post) => post.slug))
+  const postCentroids = centroids.filter((centroid) =>
+    postSlugs.has(centroid.slug)
+  )
+
+  // Keep the previous key order (date-descending, the post corpus order)
+  for (const post of postCorpus) {
     const self = centroids.find((c) => c.slug === post.slug)!
     const top = topKBySimilarity(
       self.vector,
-      centroids.filter((c) => c.slug !== post.slug),
+      postCentroids.filter((c) => c.slug !== post.slug),
       (c) => c.vector,
       3
     )

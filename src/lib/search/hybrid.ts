@@ -17,11 +17,11 @@ import { chunkHash } from '@/lib/search/merkle'
 import { rrfFuse, topKBySimilarity } from '@/lib/search/vector'
 
 /**
- * Unified search used by both the typeahead UI and Bell. The default post
- * scope rolls text chunks and image assets up to posts; the image scope returns
- * individual image matches. Both scopes fuse BM25 with brute-force cosine over
- * the committed local vector index and degrade to BM25 if runtime query
- * embedding is unavailable or too slow.
+ * Unified search used by both the typeahead UI and Bell. The default content
+ * scope rolls text chunks and image assets up to posts or pages; the image
+ * scope returns individual image matches. Both scopes fuse BM25 with
+ * brute-force cosine over the committed local vector index and degrade to BM25
+ * if runtime query embedding is unavailable or too slow.
  */
 
 export const HYBRID_SEARCH_WEIGHTS = {
@@ -47,6 +47,7 @@ export interface SearchExcerpt {
   section?: SearchExcerptSection
 }
 
+// "posts" is the legacy default scope name. It now searches posts and pages.
 export type SearchScope = 'posts' | 'images'
 
 export interface SearchImageMatch {
@@ -60,7 +61,7 @@ export interface SearchImageMatch {
 }
 
 export interface HybridSearchResult {
-  type: 'post' | 'image'
+  type: 'post' | 'page' | 'image'
   id: string
   slug: string
   title: string
@@ -109,7 +110,10 @@ interface ImageVectorEntry {
 type VectorEntry = TextVectorEntry | ImageVectorEntry
 
 interface PostMeta
-  extends Pick<CorpusPost, 'title' | 'url' | 'newsletter' | 'coverImage'> {
+  extends Pick<
+    CorpusPost,
+    'contentType' | 'title' | 'url' | 'newsletter' | 'coverImage'
+  > {
   chunks: PostChunk[]
   images: CorpusImageAsset[]
 }
@@ -139,6 +143,7 @@ function buildPostMeta(corpus: CorpusPost[]): Map<string, PostMeta> {
       {
         title: post.title,
         url: post.url,
+        contentType: post.contentType,
         newsletter: post.newsletter,
         coverImage: post.coverImage,
         chunks: post.chunks,
@@ -449,7 +454,7 @@ export async function hybridSearchPosts(
       .slice(0, maxImages)
 
     results.push({
-      type: 'post',
+      type: meta.contentType,
       id: slug,
       slug,
       title: meta.title,
