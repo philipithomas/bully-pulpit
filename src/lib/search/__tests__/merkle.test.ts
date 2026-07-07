@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import type { CorpusPost } from '@/lib/search/corpus'
 import { buildCorpus } from '@/lib/search/corpus'
 import { EMBEDDING_DIMS, EMBEDDING_MODEL } from '@/lib/search/embedding'
+import { publicImageDigest } from '@/lib/search/image-source'
 import { loadSearchIndex } from '@/lib/search/index-file'
 import {
   buildMerkleTree,
   chunkHash,
   diffMerkleTrees,
+  imageAssetHash,
   sha256Hex,
 } from '@/lib/search/merkle'
 
@@ -27,6 +29,7 @@ function makeCorpusPost(slug: string, texts: string[]): CorpusPost {
       kind: seq === 0 ? ('title' as const) : ('body' as const),
       text,
     })),
+    images: [],
   }
 }
 
@@ -37,6 +40,27 @@ describe('chunkHash', () => {
     expect(chunkHash(MODEL, 512, 'hello')).not.toBe(base)
     expect(chunkHash('other-model', DIMS, 'hello')).not.toBe(base)
     expect(chunkHash(MODEL, DIMS, 'hello!')).not.toBe(base)
+  })
+})
+
+describe('imageAssetHash', () => {
+  it('commits to image metadata and source hash', () => {
+    const image = {
+      id: 'cover',
+      seq: 0,
+      kind: 'cover-image' as const,
+      src: '/images/covers/a.jpg',
+      alt: 'A cafe table',
+      text: 'Description: A cafe table',
+      sourceHash: 'abc',
+    }
+    const base = imageAssetHash(MODEL, DIMS, image)
+    expect(
+      imageAssetHash(MODEL, DIMS, { ...image, sourceHash: 'def' })
+    ).not.toBe(base)
+    expect(imageAssetHash(MODEL, DIMS, { ...image, alt: 'A coffee' })).not.toBe(
+      base
+    )
   })
 })
 
@@ -130,7 +154,11 @@ describe('committed index stability', () => {
     expect(index).not.toBeNull()
     expect(index!.model).toBe(EMBEDDING_MODEL)
     expect(index!.dims).toBe(EMBEDDING_DIMS)
-    const tree = buildMerkleTree(buildCorpus(), EMBEDDING_MODEL, EMBEDDING_DIMS)
+    const tree = buildMerkleTree(
+      buildCorpus({ imageDigest: publicImageDigest }),
+      EMBEDDING_MODEL,
+      EMBEDDING_DIMS
+    )
     expect(tree.root).toBe(index!.merkleRoot)
   })
 })

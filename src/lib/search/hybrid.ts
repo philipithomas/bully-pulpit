@@ -1,4 +1,9 @@
-import type { ChunkHeading, CorpusPost, PostChunk } from '@/lib/search/corpus'
+import type {
+  ChunkHeading,
+  CorpusImageAsset,
+  CorpusPost,
+  PostChunk,
+} from '@/lib/search/corpus'
 import { buildCorpus } from '@/lib/search/corpus'
 import {
   decodeVector,
@@ -6,17 +11,17 @@ import {
   EMBEDDING_MODEL,
   embedQuery,
 } from '@/lib/search/embedding'
-import { loadSearchIndex } from '@/lib/search/index-file'
+import { loadSearchIndex, SEARCH_INDEX_VERSION } from '@/lib/search/index-file'
 import { getLexicalIndex } from '@/lib/search/lexical'
 import { chunkHash } from '@/lib/search/merkle'
 import { rrfFuse, topKBySimilarity } from '@/lib/search/vector'
 
 /**
- * Unified post search used by both the typeahead UI and Bell. The BM25 side
- * comes from the lexical index, including its title boost; the vector side is
- * brute-force cosine over the committed local vector index. Results are fused
- * with weighted reciprocal rank fusion and degrade to BM25-only if runtime
- * query embedding is unavailable or too slow.
+ * Unified search used by both the typeahead UI and Bell. The default post
+ * scope rolls text chunks and image assets up to posts; the image scope returns
+ * individual image matches. Both scopes fuse BM25 with brute-force cosine over
+ * the committed local vector index and degrade to BM25 if runtime query
+ * embedding is unavailable or too slow.
  */
 
 export const HYBRID_SEARCH_WEIGHTS = {
@@ -42,13 +47,29 @@ export interface SearchExcerpt {
   section?: SearchExcerptSection
 }
 
+export type SearchScope = 'posts' | 'images'
+
+export interface SearchImageMatch {
+  id: string
+  src: string
+  alt: string
+  kind: CorpusImageAsset['kind']
+  url: string
+  description: string
+  section?: SearchExcerptSection
+}
+
 export interface HybridSearchResult {
+  type: 'post' | 'image'
+  id: string
   slug: string
   title: string
   url: string
   newsletter: string
   coverImage: string
   excerpts: SearchExcerpt[]
+  images: SearchImageMatch[]
+  image?: SearchImageMatch
   score: number
 }
 
@@ -60,12 +81,15 @@ export interface HybridSearchResponse {
 export interface HybridSearchOptions {
   limit?: number
   maxExcerpts?: number
+  maxImages?: number
   vectorLimit?: number
   weights?: HybridSearchWeights
   embeddingTimeoutMs?: number
+  scope?: SearchScope
 }
 
-interface VectorEntry {
+interface TextVectorEntry {
+  type: 'chunk'
   slug: string
   kind: string
   text: string
@@ -73,22 +97,39 @@ interface VectorEntry {
   vector: Float32Array
 }
 
+interface ImageVectorEntry {
+  type: 'image'
+  id: string
+  slug: string
+  image: CorpusImageAsset
+  vector: Float32Array
+}
+
+type VectorEntry = TextVectorEntry | ImageVectorEntry
+
 interface PostMeta
   extends Pick<CorpusPost, 'title' | 'url' | 'newsletter' | 'coverImage'> {
   chunks: PostChunk[]
+  images: CorpusImageAsset[]
 }
 
 interface VectorStore {
   entries: VectorEntry[]
   meta: Map<string, PostMeta>
+  images: Map<string, ImageVectorEntry>
 }
 
 const DEFAULT_LIMIT = 10
 const DEFAULT_MAX_EXCERPTS = 3
+const DEFAULT_MAX_IMAGES = 3
 const DEFAULT_VECTOR_LIMIT = 30
 
 let storePromise: Promise<VectorStore> | null = null
 let hasLoggedEmbeddingFailure = false
+
+function imageKey(slug: string, id: string): string {
+  return `${slug}#${id}`
+}
 
 function buildPostMeta(corpus: CorpusPost[]): Map<string, PostMeta> {
   return new Map<string, PostMeta>(
@@ -100,6 +141,7 @@ function buildPostMeta(corpus: CorpusPost[]): Map<string, PostMeta> {
         newsletter: post.newsletter,
         coverImage: post.coverImage,
         chunks: post.chunks,
+        images: post.images,
       },
     ])
   )
@@ -110,17 +152,24 @@ function getVectorStore(): Promise<VectorStore> {
     storePromise = Promise.resolve().then(() => {
       const corpus = buildCorpus()
       const meta = buildPostMeta(corpus)
-
       const entries: VectorEntry[] = []
+      const images = new Map<string, ImageVectorEntry>()
+
       const index = loadSearchIndex()
-      if (!index || index.model !== EMBEDDING_MODEL) {
-        return { entries, meta }
+      if (
+        !index ||
+        index.version !== SEARCH_INDEX_VERSION ||
+        index.model !== EMBEDDING_MODEL ||
+        index.dims !== EMBEDDING_DIMS
+      ) {
+        return { entries, meta, images }
       }
 
       const indexBySlug = new Map(index.posts.map((p) => [p.slug, p]))
       for (const post of corpus) {
         const indexed = indexBySlug.get(post.slug)
         if (!indexed) continue
+
         const vectorByHash = new Map(
           indexed.chunks.map((c) => [c.hash, c.vector])
         )
@@ -131,6 +180,7 @@ function getVectorStore(): Promise<VectorStore> {
           // skip it rather than pair a vector with the wrong chunk.
           if (!vector) continue
           entries.push({
+            type: 'chunk',
             slug: post.slug,
             kind: chunk.kind,
             text: chunk.text,
@@ -138,9 +188,26 @@ function getVectorStore(): Promise<VectorStore> {
             vector: decodeVector(vector),
           })
         }
+
+        const vectorByImageId = new Map(
+          indexed.images.map((image) => [image.id, image.vector])
+        )
+        for (const image of post.images) {
+          const vector = vectorByImageId.get(image.id)
+          if (!vector) continue
+          const entry: ImageVectorEntry = {
+            type: 'image',
+            id: imageKey(post.slug, image.id),
+            slug: post.slug,
+            image,
+            vector: decodeVector(vector),
+          }
+          entries.push(entry)
+          images.set(entry.id, entry)
+        }
       }
 
-      return { entries, meta }
+      return { entries, meta, images }
     })
   }
   return storePromise
@@ -172,29 +239,138 @@ async function embedQueryWithTimeout(
   }
 }
 
+function toSection(
+  meta: PostMeta,
+  heading: ChunkHeading | undefined
+): SearchExcerptSection | undefined {
+  return heading
+    ? { heading: heading.text, url: `${meta.url}#${heading.anchor}` }
+    : undefined
+}
+
+function toImageMatch(
+  store: VectorStore,
+  slug: string,
+  image: CorpusImageAsset
+): SearchImageMatch | null {
+  const meta = store.meta.get(slug)
+  if (!meta) return null
+  const section = toSection(meta, image.heading)
+  return {
+    id: imageKey(slug, image.id),
+    src: image.src,
+    alt: image.alt || meta.title,
+    kind: image.kind,
+    url: section?.url ?? meta.url,
+    description: image.alt || meta.title,
+    ...(section ? { section } : {}),
+  }
+}
+
+function logEmbeddingFailureOnce(err: unknown) {
+  if (hasLoggedEmbeddingFailure) return
+  hasLoggedEmbeddingFailure = true
+  const message =
+    err instanceof Error ? err.message.split('\n')[0] : String(err)
+  console.error(
+    `Query embedding failed or timed out, using BM25 only: ${message}`
+  )
+}
+
 export async function hybridSearchPosts(
   query: string,
   options: HybridSearchOptions = {}
 ): Promise<HybridSearchResponse> {
   const limit = options.limit ?? DEFAULT_LIMIT
   const maxExcerpts = options.maxExcerpts ?? DEFAULT_MAX_EXCERPTS
+  const maxImages = options.maxImages ?? DEFAULT_MAX_IMAGES
   const vectorLimit = options.vectorLimit ?? DEFAULT_VECTOR_LIMIT
   const weights = options.weights ?? HYBRID_SEARCH_WEIGHTS
   const embeddingTimeoutMs =
     options.embeddingTimeoutMs ?? DEFAULT_QUERY_EMBEDDING_TIMEOUT_MS
+  const scope = options.scope ?? 'posts'
 
   const [lexical, store] = await Promise.all([
     getLexicalIndex(),
     getVectorStore(),
   ])
 
+  const imageLexicalHits = lexical.searchImages(query, vectorLimit)
+
+  if (scope === 'images') {
+    const lexicalRanking = imageLexicalHits.map((hit) => hit.id)
+    const vectorRanking: string[] = []
+    let mode: HybridSearchResponse['mode'] = 'lexical'
+
+    if (store.images.size > 0) {
+      try {
+        const queryVector = await embedQueryWithTimeout(
+          query,
+          embeddingTimeoutMs
+        )
+        const top = topKBySimilarity(
+          queryVector,
+          [...store.images.values()],
+          (entry) => entry.vector,
+          vectorLimit
+        )
+        for (const { item } of top) vectorRanking.push(item.id)
+        mode = 'hybrid'
+      } catch (err) {
+        logEmbeddingFailureOnce(err)
+      }
+    }
+
+    const fused = rrfFuse([lexicalRanking, vectorRanking], 60, [
+      weights.lexical,
+      weights.vector,
+    ])
+
+    const results: HybridSearchResult[] = []
+    for (const { id, score } of fused.slice(0, limit)) {
+      const entry = store.images.get(id)
+      const meta = entry ? store.meta.get(entry.slug) : undefined
+      const image = entry ? toImageMatch(store, entry.slug, entry.image) : null
+      if (!entry || !meta || !image) continue
+      results.push({
+        type: 'image',
+        id,
+        slug: entry.slug,
+        title: meta.title,
+        url: image.url,
+        newsletter: meta.newsletter,
+        coverImage: image.src,
+        excerpts: image.description
+          ? [
+              image.section
+                ? { text: image.description, section: image.section }
+                : { text: image.description },
+            ]
+          : [],
+        images: [image],
+        image,
+        score,
+      })
+    }
+
+    return { results, mode }
+  }
+
   const lexicalHits = lexical.search(query, limit)
   const lexicalRanking = lexicalHits.map((hit) => hit.slug)
   const termsBySlug = new Map(lexicalHits.map((hit) => [hit.slug, hit.terms]))
 
-  const chunksBySlug = new Map<string, VectorEntry[]>()
+  const chunksBySlug = new Map<string, TextVectorEntry[]>()
+  const imagesBySlug = new Map<string, ImageVectorEntry[]>()
   const vectorRanking: string[] = []
   let mode: HybridSearchResponse['mode'] = 'lexical'
+
+  for (const hit of imageLexicalHits) {
+    const entry = store.images.get(hit.id)
+    if (!entry) continue
+    if (!imagesBySlug.has(entry.slug)) imagesBySlug.set(entry.slug, [])
+    imagesBySlug.get(entry.slug)!.push(entry)
+  }
 
   if (store.entries.length > 0) {
     try {
@@ -206,22 +382,19 @@ export async function hybridSearchPosts(
         vectorLimit
       )
       for (const { item } of top) {
-        if (!chunksBySlug.has(item.slug)) {
-          chunksBySlug.set(item.slug, [])
-          vectorRanking.push(item.slug)
+        if (!vectorRanking.includes(item.slug)) vectorRanking.push(item.slug)
+        if (item.type === 'chunk') {
+          if (!chunksBySlug.has(item.slug)) chunksBySlug.set(item.slug, [])
+          chunksBySlug.get(item.slug)!.push(item)
+        } else {
+          if (!imagesBySlug.has(item.slug)) imagesBySlug.set(item.slug, [])
+          const images = imagesBySlug.get(item.slug)!
+          if (!images.some((entry) => entry.id === item.id)) images.push(item)
         }
-        chunksBySlug.get(item.slug)!.push(item)
       }
       mode = 'hybrid'
     } catch (err) {
-      if (!hasLoggedEmbeddingFailure) {
-        hasLoggedEmbeddingFailure = true
-        const message =
-          err instanceof Error ? err.message.split('\n')[0] : String(err)
-        console.error(
-          `Query embedding failed or timed out, using BM25 only: ${message}`
-        )
-      }
+      logEmbeddingFailureOnce(err)
     }
   }
 
@@ -235,18 +408,11 @@ export async function hybridSearchPosts(
     const meta = store.meta.get(slug)
     if (!meta) continue
 
-    const toSection = (
-      heading: ChunkHeading | undefined
-    ): SearchExcerptSection | undefined =>
-      heading
-        ? { heading: heading.text, url: `${meta.url}#${heading.anchor}` }
-        : undefined
-
     const excerpts: SearchExcerpt[] = (chunksBySlug.get(slug) ?? [])
       .filter((chunk) => chunk.kind === 'body')
       .slice(0, maxExcerpts)
       .map((chunk) => {
-        const section = toSection(chunk.heading)
+        const section = toSection(meta, chunk.heading)
         return section ? { text: chunk.text, section } : { text: chunk.text }
       })
 
@@ -263,7 +429,7 @@ export async function hybridSearchPosts(
           const source = meta.chunks.find(
             (chunk) => chunk.kind !== 'title' && chunk.text.includes(bare)
           )
-          const section = toSection(source?.heading)
+          const section = toSection(meta, source?.heading)
           excerpts.push(
             section ? { text: excerpt, section } : { text: excerpt }
           )
@@ -271,13 +437,25 @@ export async function hybridSearchPosts(
       }
     }
 
+    const images = (imagesBySlug.get(slug) ?? [])
+      .map((entry) => toImageMatch(store, slug, entry.image))
+      .filter((image): image is SearchImageMatch => image !== null)
+      .filter(
+        (image, index, all) =>
+          all.findIndex((candidate) => candidate.id === image.id) === index
+      )
+      .slice(0, maxImages)
+
     results.push({
+      type: 'post',
+      id: slug,
       slug,
       title: meta.title,
       url: meta.url,
       newsletter: meta.newsletter,
       coverImage: meta.coverImage,
       excerpts,
+      images,
       score,
     })
   }

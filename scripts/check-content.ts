@@ -13,7 +13,8 @@ import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { renderFullNewsletter } from '@/lib/email/send'
 import { buildCorpusFromPosts } from '@/lib/search/corpus'
 import { EMBEDDING_DIMS, EMBEDDING_MODEL } from '@/lib/search/embedding'
-import { loadSearchIndex } from '@/lib/search/index-file'
+import { publicImageDigest } from '@/lib/search/image-source'
+import { loadSearchIndex, SEARCH_INDEX_VERSION } from '@/lib/search/index-file'
 import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
 
 /**
@@ -116,9 +117,13 @@ async function main() {
     errors.push(
       `search-index.json was built with ${index.model} (${index.dims} dims), expected ${EMBEDDING_MODEL} (${EMBEDDING_DIMS} dims) — run \`pnpm search:index\``
     )
+  } else if (index.version !== SEARCH_INDEX_VERSION) {
+    errors.push(
+      `search-index.json is version ${index.version}, expected ${SEARCH_INDEX_VERSION} — run \`pnpm search:index\``
+    )
   } else {
     const tree = buildMerkleTree(
-      buildCorpusFromPosts(posts),
+      buildCorpusFromPosts(posts, { imageDigest: publicImageDigest }),
       EMBEDDING_MODEL,
       EMBEDDING_DIMS
     )
@@ -129,6 +134,7 @@ async function main() {
           slug: p.slug,
           hash: p.hash,
           chunks: p.chunks.map((c) => ({ seq: c.seq, hash: c.hash })),
+          images: p.images.map((i) => ({ id: i.id, hash: i.hash })),
         })),
       })
       const stale =

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto'
-import type { CorpusPost } from '@/lib/search/corpus'
+import type { CorpusImageAsset, CorpusPost } from '@/lib/search/corpus'
 
 /**
  * Merkle tree over the search corpus. Chunk hashes commit to the exact text
@@ -15,10 +15,16 @@ export interface MerkleChunk {
   hash: string
 }
 
+export interface MerkleImage {
+  id: string
+  hash: string
+}
+
 export interface MerklePost {
   slug: string
   hash: string
   chunks: MerkleChunk[]
+  images: MerkleImage[]
 }
 
 export interface MerkleTree {
@@ -34,8 +40,35 @@ export function chunkHash(model: string, dims: number, text: string): string {
   return sha256Hex(`${model}:${dims}:${text}`)
 }
 
-export function postHash(chunkHashes: string[]): string {
-  return sha256Hex(chunkHashes.join(''))
+export function imageAssetHash(
+  model: string,
+  dims: number,
+  image: CorpusImageAsset
+): string {
+  return sha256Hex(
+    [
+      model,
+      dims,
+      image.id,
+      image.kind,
+      image.src,
+      image.alt,
+      image.text,
+      image.sourceHash ?? '',
+    ].join('\0')
+  )
+}
+
+export function postHash(
+  chunkHashes: string[],
+  imageHashes: string[] = []
+): string {
+  return sha256Hex(
+    [
+      ...chunkHashes.map((hash) => `chunk:${hash}`),
+      ...imageHashes.map((hash) => `image:${hash}`),
+    ].join('')
+  )
 }
 
 export function merkleRoot(postHashes: string[]): string {
@@ -55,10 +88,18 @@ export function buildMerkleTree(
         seq: chunk.seq,
         hash: chunkHash(model, dims, chunk.text),
       }))
+      const images = post.images.map((image) => ({
+        id: image.id,
+        hash: imageAssetHash(model, dims, image),
+      }))
       return {
         slug: post.slug,
-        hash: postHash(chunks.map((c) => c.hash)),
+        hash: postHash(
+          chunks.map((c) => c.hash),
+          images.map((i) => i.hash)
+        ),
         chunks,
+        images,
       }
     })
 

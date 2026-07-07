@@ -4,6 +4,7 @@ import {
   buildCorpus,
   chunkPost,
   extractHeadings,
+  extractImageAssets,
   MAX_CHUNK_CHARS,
   stripToPlaintext,
 } from '@/lib/search/corpus'
@@ -147,6 +148,49 @@ describe('chunkPost', () => {
   })
 })
 
+describe('extractImageAssets', () => {
+  it('extracts cover and body images with deterministic metadata', () => {
+    const post = makePost({
+      frontmatter: {
+        title: 'My title',
+        coverImage: '/images/covers/x.jpg',
+        coverImageAlt: 'A red bicycle leaning on a wall',
+        publishedAt: '2026-01-01',
+        featured: false,
+        draft: false,
+      },
+      content:
+        'Intro.\n\n## Coffee\n\n![A cappuccino on a table](/images/posts/coffee.jpg)',
+    })
+    const images = extractImageAssets(post)
+    expect(images).toHaveLength(2)
+    expect(images[0]).toMatchObject({
+      id: 'cover',
+      seq: 0,
+      kind: 'cover-image',
+      src: '/images/covers/x.jpg',
+      alt: 'A red bicycle leaning on a wall',
+    })
+    expect(images[0].text).toContain('Image role: cover image')
+    expect(images[1]).toMatchObject({
+      id: 'body-0',
+      seq: 1,
+      kind: 'body-image',
+      src: '/images/posts/coffee.jpg',
+      alt: 'A cappuccino on a table',
+      heading: { text: 'Coffee', anchor: 'coffee' },
+    })
+    expect(images[1].text).toContain('Section: Coffee')
+  })
+
+  it('ignores external images', () => {
+    const post = makePost({
+      content: '![External](https://example.com/image.jpg)',
+    })
+    expect(extractImageAssets(post)).toEqual([])
+  })
+})
+
 describe('extractHeadings', () => {
   it('returns text, anchor, and line in document order', () => {
     const markdown =
@@ -284,6 +328,7 @@ describe('buildCorpus', () => {
     expect(a.length).toBeGreaterThan(50)
     for (const post of a) {
       expect(post.chunks[0].kind).toBe('title')
+      expect(Array.isArray(post.images)).toBe(true)
       expect(post.url).toBe(`/${post.slug}`)
     }
   })
