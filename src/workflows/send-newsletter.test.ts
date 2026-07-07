@@ -25,6 +25,14 @@ vi.mock('@/lib/db/queries/email-sends', () => ({
   pendingRowIdsBySlug: vi.fn(),
 }))
 
+vi.mock('@/lib/db/queries/sms-sends', () => ({
+  bulkCreateQueuedSms: vi.fn(),
+  findSendableSmsByIds: vi.fn(),
+  markSmsPermanentFailure: vi.fn(),
+  markSmsSent: vi.fn(),
+  pendingSmsRowIdsBySlug: vi.fn(),
+}))
+
 vi.mock('@/lib/db/queries/subscribers', async (importActual) => {
   const actual =
     await importActual<typeof import('@/lib/db/queries/subscribers')>()
@@ -34,8 +42,16 @@ vi.mock('@/lib/db/queries/subscribers', async (importActual) => {
   }
 })
 
+vi.mock('@/lib/db/queries/sms-subscribers', () => ({
+  findEligibleSmsIds: vi.fn(),
+}))
+
 vi.mock('@/lib/db/queries/suppressions', () => ({
   isSuppressed: vi.fn(),
+}))
+
+vi.mock('@/lib/db/queries/text-messages', () => ({
+  createTextMessage: vi.fn(),
 }))
 
 vi.mock('@/lib/email/render-body', () => ({
@@ -46,24 +62,42 @@ vi.mock('@/lib/email/queued-send', () => ({
   sendQueuedEmail: vi.fn(),
 }))
 
+vi.mock('@/lib/phone/twilio', () => ({
+  sendSms: vi.fn(),
+}))
+
 import { getStepMetadata, RetryableError } from 'workflow'
 import { getPostBySlugWithoutImages } from '@/lib/content/loader-without-images'
 import * as emailSends from '@/lib/db/queries/email-sends'
+import * as smsSends from '@/lib/db/queries/sms-sends'
+import { findEligibleSmsIds } from '@/lib/db/queries/sms-subscribers'
 import { findEligibleIds } from '@/lib/db/queries/subscribers'
 import { isSuppressed } from '@/lib/db/queries/suppressions'
+import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { sendQueuedEmail } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
+import { sendSms } from '@/lib/phone/twilio'
 import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
 
 const mockedSends = vi.mocked(emailSends)
+const mockedSmsSends = vi.mocked(smsSends)
 const mockedGetPost = vi.mocked(getPostBySlugWithoutImages)
 const mockedEligible = vi.mocked(findEligibleIds)
+const mockedSmsEligible = vi.mocked(findEligibleSmsIds)
 const mockedSuppressed = vi.mocked(isSuppressed)
 const mockedBuildBody = vi.mocked(buildEmailBodyHtml)
 const mockedSendQueued = vi.mocked(sendQueuedEmail)
+const mockedSendSms = vi.mocked(sendSms)
+const mockedCreateTextMessage = vi.mocked(createTextMessage)
 const mockedStepMetadata = vi.mocked(getStepMetadata)
 
-const POST = { slug: 'hello-world', newsletter: 'contraption' } as Post
+const POST = {
+  slug: 'hello-world',
+  newsletter: 'contraption',
+  frontmatter: { title: 'Hello world', publishedAt: '2026-06-09' },
+  content: '',
+  excerpt: '',
+} as Post
 
 const BODY = {
   subject: 'Hello',
@@ -108,6 +142,26 @@ function claimed(
   }
 }
 
+function claimedSms(id: number, phoneNumber = `+1555123000${id}`) {
+  return {
+    send: {
+      id,
+      smsSubscriberId: id,
+      postSlug: 'hello-world',
+      newsletter: 'contraption',
+      body: 'Contraption: Hello world\nhttps://www.philipithomas.com/hello-world\n\nReply STOP to unsubscribe.',
+      twilioSid: null,
+      twilioStatus: null,
+      sendError: null,
+      sentAt: null,
+      attempts: 0,
+      nextAttemptAt: null,
+      createdAt: new Date(),
+    },
+    phoneNumber,
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   // Fake timers absorb the per-send pacing sleep so tests stay instant.
@@ -123,6 +177,16 @@ beforeEach(() => {
   mockedSends.findSendableByIds.mockImplementation(async (ids) =>
     ids.map((id) => claimed(id))
   )
+  mockedSmsEligible.mockResolvedValue([])
+  mockedSmsSends.bulkCreateQueuedSms.mockResolvedValue([])
+  mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([])
+  mockedSmsSends.markSmsSent.mockResolvedValue(undefined)
+  mockedSmsSends.markSmsPermanentFailure.mockResolvedValue(undefined)
+  mockedSmsSends.findSendableSmsByIds.mockImplementation(async (ids) =>
+    ids.map((id) => claimedSms(id))
+  )
+  mockedSendSms.mockResolvedValue({ sid: 'SM_test', status: 'queued' })
+  mockedCreateTextMessage.mockResolvedValue({} as never)
 })
 
 afterEach(() => {
@@ -141,7 +205,14 @@ describe('sendNewsletterWorkflow', () => {
     await vi.runAllTimersAsync()
     const result = await promise
 
-    expect(result).toEqual({ batches: 2, sent: 51, failed: 0 })
+    expect(result).toEqual({
+      batches: 2,
+      sent: 51,
+      failed: 0,
+      smsBatches: 0,
+      smsSent: 0,
+      smsFailed: 0,
+    })
     expect(mockedSends.bulkCreateQueued).toHaveBeenCalledWith({
       subscriberIds: eligible,
       postSlug: 'hello-world',
@@ -187,7 +258,14 @@ describe('sendNewsletterWorkflow', () => {
     await vi.runAllTimersAsync()
     const result = await promise
 
-    expect(result).toEqual({ batches: 1, sent: 1, failed: 2 })
+    expect(result).toEqual({
+      batches: 1,
+      sent: 1,
+      failed: 2,
+      smsBatches: 0,
+      smsSent: 0,
+      smsFailed: 0,
+    })
     expect(mockedSends.bulkCreateQueued).not.toHaveBeenCalled()
     expect(mockedSends.markPermanentFailure).toHaveBeenCalledTimes(2)
     expect(mockedSends.markPermanentFailure).toHaveBeenCalledWith(
@@ -251,5 +329,53 @@ describe('sendNewsletterWorkflow', () => {
 
     expect(err).toBeInstanceOf(RetryableError)
     expect(err.retryAfter).toEqual(new Date(now.getTime() + 60_000))
+  })
+
+  it('enqueues and sends SMS subscribers after the email batches', async () => {
+    mockedEligible.mockResolvedValue([])
+    mockedSends.pendingRowIdsBySlug.mockResolvedValue([])
+    mockedSmsEligible.mockResolvedValue([7])
+    mockedSmsSends.bulkCreateQueuedSms.mockResolvedValue([701])
+    mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([701])
+    mockedSmsSends.findSendableSmsByIds.mockResolvedValue([
+      claimedSms(701, '+15551234567'),
+    ])
+
+    const promise = sendNewsletterWorkflow('hello-world')
+    await vi.runAllTimersAsync()
+    const result = await promise
+
+    expect(result).toEqual({
+      batches: 0,
+      sent: 0,
+      failed: 0,
+      smsBatches: 1,
+      smsSent: 1,
+      smsFailed: 0,
+    })
+    expect(mockedSmsSends.bulkCreateQueuedSms).toHaveBeenCalledWith({
+      smsSubscriberIds: [7],
+      postSlug: 'hello-world',
+      newsletter: 'contraption',
+      body: expect.stringContaining('Contraption: Hello world'),
+    })
+    expect(mockedSendSms).toHaveBeenCalledWith({
+      from: '+12123473190',
+      to: '+15551234567',
+      body: expect.stringContaining('Reply STOP to unsubscribe.'),
+    })
+    expect(mockedSmsSends.markSmsSent).toHaveBeenCalledWith({
+      id: 701,
+      twilioSid: 'SM_test',
+      twilioStatus: 'queued',
+    })
+    expect(mockedCreateTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromNumber: '+12123473190',
+        toNumber: '+15551234567',
+        direction: 'outbound',
+        twilioSid: 'SM_test',
+      })
+    )
   })
 })

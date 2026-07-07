@@ -1,4 +1,5 @@
 import { siteConfig } from '@/lib/config'
+import { smsSubscribeNumber } from '@/lib/phone/sms-subscribe'
 
 // Phone backend configuration. Ported from junk-drawer's TwilioClient: the
 // Twilio numbers stay in code (they are stable, public numbers), while the
@@ -7,7 +8,7 @@ import { siteConfig } from '@/lib/config'
 
 /** Twilio numbers owned by the Contraption Company, keyed by label. */
 export const phoneNumbers: Record<string, string> = {
-  NYC: '+12123473190',
+  NYC: smsSubscribeNumber,
   SF: '+14159157592',
 }
 

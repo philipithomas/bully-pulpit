@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { InlineSignupForm } from '@/components/auth/inline-signup-form'
+import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { Spinner } from '@/components/ui/spinner'
 import { siteConfig } from '@/lib/config'
 import type { Newsletter } from '@/lib/content/types'
@@ -76,20 +77,23 @@ export function SubscribeCta({
         Get new {newsletterNoun[newsletter]} by email:
       </p>
       {user ? (
-        <button
-          type="button"
-          onClick={subscribeSignedIn}
-          disabled={saving}
-          className={buttonClassName}
-        >
-          <span className="btn-text">
-            {saving ? (
-              <Spinner className="h-4 w-4" />
-            ) : (
-              `Subscribe to ${config.name}`
-            )}
-          </span>
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={subscribeSignedIn}
+            disabled={saving}
+            className={buttonClassName}
+          >
+            <span className="btn-text">
+              {saving ? (
+                <Spinner className="h-4 w-4" />
+              ) : (
+                `Subscribe to ${config.name}`
+              )}
+            </span>
+          </button>
+          <SmsSubscribePrompt align={align} />
+        </>
       ) : (
         <InlineSignupForm
           align={align}

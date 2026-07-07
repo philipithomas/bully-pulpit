@@ -9,6 +9,7 @@ import {
   useGoogleSignInAvailable,
 } from '@/components/auth/google-sign-in'
 import { matchesSubmittedEmail } from '@/components/auth/signup-completion'
+import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import {
   Dialog,
@@ -259,6 +260,7 @@ export function InlineSignupForm({
           </button>
         </div>
       </form>
+      <SmsSubscribePrompt align={align} />
 
       {step === 'code' ? (
         <SignupConfirmationDialog

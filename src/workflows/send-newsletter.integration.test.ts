@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Post } from '@/lib/content/types'
 
 // Real PGlite database with the real migrations applied; all of
@@ -52,7 +52,11 @@ import {
   type EmailSend,
   emailSends,
   emailSuppressions,
+  type SmsSend,
+  smsSends,
+  smsSubscribers,
   subscribers,
+  textMessages,
 } from '@/lib/db/schema'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { sendNewsletterEmail } from '@/lib/email/ses'
@@ -68,7 +72,13 @@ const mockedBuildBody = vi.mocked(buildEmailBodyHtml)
 const mockedSes = vi.mocked(sendNewsletterEmail)
 
 const SLUG = 'hello-world'
-const POST = { slug: SLUG, newsletter: 'contraption' } as Post
+const POST = {
+  slug: SLUG,
+  newsletter: 'contraption',
+  frontmatter: { title: 'Hello world', publishedAt: '2026-06-09' },
+  content: '',
+  excerpt: '',
+} as Post
 
 const BODY = {
   subject: 'Hello',
@@ -94,6 +104,22 @@ async function seedSubscriber(input: {
   return row
 }
 
+async function seedSmsSubscriber(input: {
+  phoneNumber: string
+  confirmed?: boolean
+  contraption?: boolean
+}) {
+  const [row] = await db
+    .insert(smsSubscribers)
+    .values({
+      phoneNumber: input.phoneNumber,
+      confirmedAt: input.confirmed === false ? null : new Date(),
+      subscribedContraption: input.contraption ?? true,
+    })
+    .returning()
+  return row
+}
+
 /** Direct insert of a pre-existing email_sends row (leftover from a prior run). */
 async function seedSendRow(
   subscriberId: number,
@@ -110,10 +136,36 @@ function allRows() {
   return db.select().from(emailSends).orderBy(emailSends.id)
 }
 
+function allSmsRows() {
+  return db.select().from(smsSends).orderBy(smsSends.id)
+}
+
 function rowFor(rows: EmailSend[], subscriberId: number): EmailSend {
   const row = rows.find((r) => r.subscriberId === subscriberId)
   if (!row) throw new Error(`no email_sends row for subscriber ${subscriberId}`)
   return row
+}
+
+function smsRowFor(rows: SmsSend[], subscriberId: number): SmsSend {
+  const row = rows.find((r) => r.smsSubscriberId === subscriberId)
+  if (!row) throw new Error(`no sms_sends row for subscriber ${subscriberId}`)
+  return row
+}
+
+function workflowResult(input: {
+  batches: number
+  sent: number
+  failed: number
+  smsBatches?: number
+  smsSent?: number
+  smsFailed?: number
+}) {
+  return {
+    smsBatches: 0,
+    smsSent: 0,
+    smsFailed: 0,
+    ...input,
+  }
 }
 
 /** SESv2 SDK errors carry the exception name; isPermanentSesError matches on it. */
@@ -123,12 +175,29 @@ function sesError(name: string, message: string) {
 
 beforeEach(async () => {
   await resetDb()
+  process.env.TWILIO_SID = 'AC_test'
+  process.env.TWILIO_SECRET = 'token_test'
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async () =>
+        new Response(JSON.stringify({ sid: 'SM_test', status: 'queued' }), {
+          status: 201,
+        })
+    )
+  )
   mockedSes.mockReset()
   mockedSes.mockResolvedValue(undefined)
   mockedGetPost.mockReset()
   mockedGetPost.mockReturnValue(POST)
   mockedBuildBody.mockReset()
   mockedBuildBody.mockResolvedValue(BODY)
+})
+
+afterEach(() => {
+  delete process.env.TWILIO_SID
+  delete process.env.TWILIO_SECRET
+  vi.unstubAllGlobals()
 })
 
 // Real timers throughout: the send step paces SEND_SPACING_MS (80ms) per
@@ -245,7 +314,7 @@ describe('sendNewsletterWorkflow', () => {
 
     const result = await sendNewsletterWorkflow(SLUG)
 
-    expect(result).toEqual({ batches: 1, sent: 2, failed: 0 })
+    expect(result).toEqual(workflowResult({ batches: 1, sent: 2, failed: 0 }))
     const rows = await allRows()
     expect(rows).toHaveLength(2)
     for (const row of rows) {
@@ -290,13 +359,13 @@ describe('sendNewsletterWorkflow', () => {
     await seedSubscriber({ email: 'bob@example.com' })
 
     const first = await sendNewsletterWorkflow(SLUG)
-    expect(first).toEqual({ batches: 1, sent: 2, failed: 0 })
+    expect(first).toEqual(workflowResult({ batches: 1, sent: 2, failed: 0 }))
     const rowsAfterFirst = await allRows()
     mockedSes.mockClear()
 
     const second = await sendNewsletterWorkflow(SLUG)
 
-    expect(second).toEqual({ batches: 0, sent: 0, failed: 0 })
+    expect(second).toEqual(workflowResult({ batches: 0, sent: 0, failed: 0 }))
     const rowsAfterSecond = await allRows()
     expect(rowsAfterSecond.map((r) => r.id)).toEqual(
       rowsAfterFirst.map((r) => r.id)
@@ -315,7 +384,7 @@ describe('sendNewsletterWorkflow', () => {
 
     const result = await sendNewsletterWorkflow(SLUG)
 
-    expect(result).toEqual({ batches: 1, sent: 1, failed: 1 })
+    expect(result).toEqual(workflowResult({ batches: 1, sent: 1, failed: 1 }))
     const rows = await allRows()
     const aliceRow = rowFor(rows, alice.id)
     expect(aliceRow.sentAt).not.toBeNull()
@@ -350,7 +419,7 @@ describe('sendNewsletterWorkflow', () => {
     mockedSes.mockReset()
     mockedSes.mockResolvedValue(undefined)
     const result = await sendNewsletterWorkflow(SLUG)
-    expect(result).toEqual({ batches: 1, sent: 1, failed: 0 })
+    expect(result).toEqual(workflowResult({ batches: 1, sent: 1, failed: 0 }))
     const healed = await allRows()
     expect(healed.map((r) => r.id)).toEqual([bobRow.id])
     expect(healed[0].sentAt).not.toBeNull()
@@ -367,7 +436,7 @@ describe('sendNewsletterWorkflow', () => {
 
     const result = await sendNewsletterWorkflow(SLUG)
 
-    expect(result).toEqual({ batches: 1, sent: 1, failed: 1 })
+    expect(result).toEqual(workflowResult({ batches: 1, sent: 1, failed: 1 }))
     const rows = await allRows()
     const bobRow = rowFor(rows, bob.id)
     expect(bobRow.sentAt).toBeNull()
@@ -389,7 +458,7 @@ describe('sendNewsletterWorkflow', () => {
     })
 
     const first = await sendNewsletterWorkflow(SLUG)
-    expect(first).toEqual({ batches: 1, sent: 1, failed: 1 })
+    expect(first).toEqual(workflowResult({ batches: 1, sent: 1, failed: 1 }))
 
     const rows = await allRows()
     expect(rows).toHaveLength(2)
@@ -404,7 +473,7 @@ describe('sendNewsletterWorkflow', () => {
     mockedSes.mockResolvedValue(undefined)
     expect(await resetFailedBySlug(SLUG)).toBe(1)
     const second = await sendNewsletterWorkflow(SLUG)
-    expect(second).toEqual({ batches: 1, sent: 1, failed: 0 })
+    expect(second).toEqual(workflowResult({ batches: 1, sent: 1, failed: 0 }))
 
     // The same two rows: the errored one was reused, nobody got a duplicate,
     // and the original delivery is untouched.
@@ -418,5 +487,94 @@ describe('sendNewsletterWorkflow', () => {
     expect(mockedSes).toHaveBeenCalledWith(
       expect.objectContaining({ to: 'bob@example.com' })
     )
+  })
+
+  it('sends eligible SMS subscribers once and records outbound text history', async () => {
+    await seedSubscriber({ email: 'alice@example.com' })
+    const smsSubscriber = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+    })
+
+    const result = await sendNewsletterWorkflow(SLUG)
+
+    expect(result).toEqual(
+      workflowResult({
+        batches: 1,
+        sent: 1,
+        failed: 0,
+        smsBatches: 1,
+        smsSent: 1,
+        smsFailed: 0,
+      })
+    )
+
+    const rows = await allSmsRows()
+    expect(rows).toHaveLength(1)
+    const smsRow = smsRowFor(rows, smsSubscriber.id)
+    expect(smsRow.sentAt).not.toBeNull()
+    expect(smsRow.sendError).toBeNull()
+    expect(smsRow.twilioSid).toBe('SM_test')
+    expect(smsRow.body).toContain('Contraption: Hello world')
+    expect(smsRow.body).toContain('https://www.philipithomas.com/hello-world')
+    expect(smsRow.body).toContain('Reply STOP to unsubscribe.')
+
+    const outboundTexts = await db.select().from(textMessages)
+    expect(outboundTexts).toHaveLength(1)
+    expect(outboundTexts[0]).toMatchObject({
+      fromNumber: '+12123473190',
+      toNumber: '+15551234567',
+      direction: 'outbound',
+      twilioSid: 'SM_test',
+      status: 'queued',
+    })
+
+    vi.mocked(fetch).mockClear()
+    const second = await sendNewsletterWorkflow(SLUG)
+
+    expect(second).toEqual(
+      workflowResult({
+        batches: 0,
+        sent: 0,
+        failed: 0,
+        smsBatches: 0,
+        smsSent: 0,
+        smsFailed: 0,
+      })
+    )
+    expect(await allSmsRows()).toHaveLength(1)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('marks a failed SMS row and keeps the email send complete', async () => {
+    await seedSubscriber({ email: 'alice@example.com' })
+    const smsSubscriber = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ message: 'not a valid number' }), {
+            status: 400,
+          })
+      )
+    )
+
+    const result = await sendNewsletterWorkflow(SLUG)
+
+    expect(result).toEqual(
+      workflowResult({
+        batches: 1,
+        sent: 1,
+        failed: 0,
+        smsBatches: 1,
+        smsSent: 0,
+        smsFailed: 1,
+      })
+    )
+    const smsRow = smsRowFor(await allSmsRows(), smsSubscriber.id)
+    expect(smsRow.sentAt).toBeNull()
+    expect(smsRow.sendError).toContain('Twilio send failed')
+    expect(await db.select().from(textMessages)).toHaveLength(0)
   })
 })

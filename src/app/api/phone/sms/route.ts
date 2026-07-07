@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server'
+import {
+  subscribeSmsNumber,
+  unsubscribeSmsNumber,
+} from '@/lib/db/queries/sms-subscribers'
 import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
+import { numberLabel } from '@/lib/phone/config'
 import { sendIncomingSmsNotification } from '@/lib/phone/notifications'
-import { emptyTwiml, twimlResponse } from '@/lib/phone/twiml'
+import { smsCommandForBody } from '@/lib/phone/sms-commands'
+import { emptyTwiml, messageTwiml, twimlResponse } from '@/lib/phone/twiml'
 
 /**
  * Twilio SMS webhook. Stores the inbound message (deduplicated by MessageSid,
@@ -19,6 +25,7 @@ export async function POST(request: Request) {
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
   const body = String(form.get('Body') ?? '')
+  const command = smsCommandForBody(body)
 
   await createTextMessage({
     fromNumber: from,
@@ -28,6 +35,23 @@ export async function POST(request: Request) {
     twilioSid: form.get('MessageSid') ? String(form.get('MessageSid')) : null,
     status: form.get('SmsStatus') ? String(form.get('SmsStatus')) : 'received',
   })
+
+  if (command === 'subscribe') {
+    await subscribeSmsNumber({
+      phoneNumber: from,
+      source: `sms:${numberLabel(to).toLowerCase()}`,
+    })
+    return twimlResponse(
+      messageTwiml(
+        'You are subscribed to new posts from philipithomas.com. Reply STOP to unsubscribe.'
+      )
+    )
+  }
+
+  if (command === 'unsubscribe') {
+    await unsubscribeSmsNumber(from)
+    return twimlResponse(messageTwiml('You are unsubscribed from SMS updates.'))
+  }
 
   await sendIncomingSmsNotification({ from, to, body })
 

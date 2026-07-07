@@ -191,6 +191,77 @@ export const textMessages = pgTable(
   ]
 )
 
+export const smsSubscribers = pgTable(
+  'sms_subscribers',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    phoneNumber: text('phone_number').notNull().unique(),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    subscribedPostcard: boolean('subscribed_postcard').notNull().default(true),
+    subscribedContraption: boolean('subscribed_contraption')
+      .notNull()
+      .default(true),
+    subscribedWorkshop: boolean('subscribed_workshop').notNull().default(true),
+    subscribedTsundoku: boolean('subscribed_tsundoku').notNull().default(true),
+    source: text('source'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('idx_sms_subscribers_phone_number').on(table.phoneNumber),
+    index('idx_sms_subscribers_confirmed_at').on(table.confirmedAt),
+    index('idx_sms_subscribers_postcard_created')
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.subscribedPostcard} = true`),
+    index('idx_sms_subscribers_contraption_created')
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.subscribedContraption} = true`),
+    index('idx_sms_subscribers_workshop_created')
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.subscribedWorkshop} = true`),
+    index('idx_sms_subscribers_tsundoku_created')
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.subscribedTsundoku} = true`),
+  ]
+)
+
+export const smsSends = pgTable(
+  'sms_sends',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    smsSubscriberId: bigint('sms_subscriber_id', { mode: 'number' })
+      .notNull()
+      .references(() => smsSubscribers.id),
+    postSlug: text('post_slug').notNull(),
+    newsletter: text('newsletter'),
+    body: text('body').notNull(),
+    twilioSid: text('twilio_sid').unique(),
+    twilioStatus: text('twilio_status'),
+    sendError: text('send_error'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('idx_sms_sends_subscriber').on(table.smsSubscriberId),
+    index('idx_sms_sends_post_slug').on(table.postSlug),
+    uniqueIndex('idx_sms_sends_subscriber_post').on(
+      table.smsSubscriberId,
+      table.postSlug
+    ),
+    index('idx_sms_sends_queue')
+      .on(table.nextAttemptAt)
+      .where(sql`sent_at IS NULL AND send_error IS NULL`),
+  ]
+)
+
 export type Subscriber = typeof subscribers.$inferSelect
 export type NewSubscriber = typeof subscribers.$inferInsert
 export type EmailSend = typeof emailSends.$inferSelect
@@ -202,3 +273,7 @@ export type SendRun = typeof sendRuns.$inferSelect
 export type NewSendRun = typeof sendRuns.$inferInsert
 export type TextMessage = typeof textMessages.$inferSelect
 export type NewTextMessage = typeof textMessages.$inferInsert
+export type SmsSubscriber = typeof smsSubscribers.$inferSelect
+export type NewSmsSubscriber = typeof smsSubscribers.$inferInsert
+export type SmsSend = typeof smsSends.$inferSelect
+export type NewSmsSend = typeof smsSends.$inferInsert

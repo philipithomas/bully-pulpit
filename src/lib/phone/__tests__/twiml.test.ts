@@ -4,6 +4,7 @@ import {
   emptyTwiml,
   escapeXml,
   goodbyeTwiml,
+  messageTwiml,
   twimlResponse,
   voicemailTwiml,
 } from '@/lib/phone/twiml'
@@ -59,6 +60,13 @@ describe('goodbyeTwiml', () => {
 describe('emptyTwiml', () => {
   it('returns an empty response document', () => {
     expect(emptyTwiml()).toContain('<Response></Response>')
+  })
+})
+
+describe('messageTwiml', () => {
+  it('replies with escaped SMS body text', () => {
+    const xml = messageTwiml('Subscribed & ready.')
+    expect(xml).toContain('<Message>Subscribed &amp; ready.</Message>')
   })
 })
 

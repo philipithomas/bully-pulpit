@@ -6,7 +6,7 @@ vi.mock('@/lib/email/ses', () =>
 )
 
 import { POST as smsPost } from '@/app/api/phone/sms/route'
-import { textMessages } from '@/lib/db/schema'
+import { smsSubscribers, textMessages } from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { db, resetDb } from '@/test/integration/db'
 
@@ -85,5 +85,60 @@ describe('POST /api/phone/sms', () => {
     await smsPost(smsRequest(form))
     await smsPost(smsRequest(form))
     expect(await db.select().from(textMessages)).toHaveLength(1)
+  })
+
+  it('subscribes an SMS sender without emailing an admin notification', async () => {
+    const response = await smsPost(
+      smsRequest({
+        From: '+15551234567',
+        To: '+12123473190',
+        Body: 'SUBSCRIBE',
+        MessageSid: 'SM_SUB',
+      })
+    )
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('You are subscribed')
+
+    const subscribers = await db.select().from(smsSubscribers)
+    expect(subscribers).toHaveLength(1)
+    expect(subscribers[0]).toMatchObject({
+      phoneNumber: '+15551234567',
+      subscribedPostcard: true,
+      subscribedContraption: true,
+      subscribedWorkshop: true,
+      subscribedTsundoku: true,
+      source: 'sms:nyc',
+    })
+    expect(subscribers[0].confirmedAt).toBeInstanceOf(Date)
+    expect(await db.select().from(textMessages)).toHaveLength(1)
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+  })
+
+  it('unsubscribes an SMS sender from local SMS eligibility', async () => {
+    await smsPost(
+      smsRequest({
+        From: '+15551234567',
+        To: '+12123473190',
+        Body: 'SUBSCRIBE',
+        MessageSid: 'SM_SUB',
+      })
+    )
+    vi.mocked(sendSimpleEmail).mockClear()
+
+    const response = await smsPost(
+      smsRequest({
+        From: '+15551234567',
+        To: '+12123473190',
+        Body: 'STOP',
+        MessageSid: 'SM_STOP',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('You are unsubscribed')
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.confirmedAt).toBeNull()
+    expect(subscriber.subscribedContraption).toBe(false)
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
   })
 })

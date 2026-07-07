@@ -373,6 +373,7 @@ describe('GET send status', () => {
       pending: 0,
       failed: 0,
       eligible: 0,
+      smsEligible: 0,
       active: true,
     })
   })

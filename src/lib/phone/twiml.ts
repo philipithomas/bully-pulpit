@@ -45,6 +45,14 @@ export function emptyTwiml(): string {
 <Response></Response>`
 }
 
+/** Replies to an inbound SMS with a short message. */
+export function messageTwiml(body: string): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>${escapeXml(body)}</Message>
+</Response>`
+}
+
 /**
  * Bridges a click-to-call: spoken once the owner's phone answers, it dials the
  * destination presenting `callerId` (an owned Twilio number). Ported from

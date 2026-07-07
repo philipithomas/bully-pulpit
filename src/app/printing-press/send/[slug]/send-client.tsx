@@ -33,6 +33,7 @@ interface Props {
   newsletter: string
   previewHtml: string
   initialEligible: number
+  initialSmsEligible: number
   initialStats: SendStats
   initialActive: boolean
 }
@@ -45,6 +46,7 @@ export function SendClient({
   newsletter,
   previewHtml,
   initialEligible,
+  initialSmsEligible,
   initialStats,
   initialActive,
 }: Props) {
@@ -54,6 +56,7 @@ export function SendClient({
   const [starting, setStarting] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [eligible, setEligible] = useState(initialEligible)
+  const [smsEligible, setSmsEligible] = useState(initialSmsEligible)
   const [stats, setStats] = useState<SendStats>(initialStats)
   const [active, setActive] = useState(initialActive)
 
@@ -92,6 +95,7 @@ export function SendClient({
           failed: data.failed,
         })
         setEligible(data.eligible)
+        setSmsEligible(data.smsEligible ?? 0)
         const runActive = Boolean(data.active)
         setActive(runActive)
         if (runActive) {
@@ -189,7 +193,17 @@ export function SendClient({
     active && stats.total === 0
       ? 'Preparing send'
       : `${processed} of ${stats.total} processed${active ? ' · sending' : ''}`
-  const canSend = eligible > 0 && !active && !starting
+  const sendAudienceParts = [
+    eligible > 0
+      ? `${eligible} email subscriber${eligible === 1 ? '' : 's'}`
+      : null,
+    smsEligible > 0
+      ? `${smsEligible} SMS subscriber${smsEligible === 1 ? '' : 's'}`
+      : null,
+  ].filter(Boolean)
+  const sendAudience =
+    sendAudienceParts.length > 0 ? sendAudienceParts.join(' + ') : '0 people'
+  const canSend = (eligible > 0 || smsEligible > 0) && !active && !starting
   const canRetry =
     (stats.failed > 0 || stats.pending > 0) && !active && !starting
 
@@ -203,7 +217,10 @@ export function SendClient({
 
       {/* Status */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <Badge variant="outline">{eligible} eligible</Badge>
+        <Badge variant="outline">{eligible} email eligible</Badge>
+        {smsEligible > 0 ? (
+          <Badge variant="outline">{smsEligible} SMS</Badge>
+        ) : null}
         {stats.sent > 0 && <Badge variant="success">{stats.sent} sent</Badge>}
         {stats.pending > 0 && (
           <Badge variant="warning">{stats.pending} pending</Badge>
@@ -233,7 +250,7 @@ export function SendClient({
           {starting ? (
             <Spinner className="h-4 w-4" />
           ) : (
-            `Send to ${eligible} subscriber${eligible === 1 ? '' : 's'}`
+            `Send to ${sendAudience}`
           )}
         </Button>
         {canRetry ? (
@@ -311,10 +328,11 @@ export function SendClient({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send to {eligible} subscribers?</DialogTitle>
+            <DialogTitle>Send to {sendAudience}?</DialogTitle>
             <DialogDescription>
               This emails “{subject}” to every confirmed {newsletter} subscriber
-              who has not received it yet. This cannot be undone.
+              and texts every SMS subscriber who has not received it yet. This
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 mt-4">
