@@ -1,6 +1,54 @@
 {
-  "generatedAt": "2026-07-07T16:27:00.064Z",
+  "generatedAt": "2026-07-07T17:56:38.763Z",
   "posts": {
+    "farewell": {
+      "related": [
+        {
+          "slug": "introducing-tsundoku",
+          "score": 0.1648478
+        },
+        {
+          "slug": "almost-perfect",
+          "score": 0.2075955
+        },
+        {
+          "slug": "2026-07",
+          "score": 0.2101345
+        }
+      ]
+    },
+    "more-geisha": {
+      "related": [
+        {
+          "slug": "geisha",
+          "score": 0.1130464
+        },
+        {
+          "slug": "leaves-coffee",
+          "score": 0.1577005
+        },
+        {
+          "slug": "morning-coffee",
+          "score": 0.1797314
+        }
+      ]
+    },
+    "leaves-coffee": {
+      "related": [
+        {
+          "slug": "more-geisha",
+          "score": 0.1577005
+        },
+        {
+          "slug": "morning-coffee",
+          "score": 0.1952199
+        },
+        {
+          "slug": "pourover",
+          "score": 0.2041657
+        }
+      ]
+    },
     "bamboo": {
       "related": [
         {
@@ -76,8 +124,8 @@
           "score": 0.2214326
         },
         {
-          "slug": "morning-coffee",
-          "score": 0.2753449
+          "slug": "more-geisha",
+          "score": 0.2671301
         }
       ]
     },
@@ -88,12 +136,12 @@
           "score": 0.14423
         },
         {
-          "slug": "espresso",
-          "score": 0.1875463
+          "slug": "more-geisha",
+          "score": 0.1817087
         },
         {
-          "slug": "geisha",
-          "score": 0.1879281
+          "slug": "espresso",
+          "score": 0.1875463
         }
       ]
     },
@@ -148,16 +196,16 @@
     "morning-coffee": {
       "related": [
         {
+          "slug": "more-geisha",
+          "score": 0.1797314
+        },
+        {
           "slug": "espresso",
           "score": 0.1893695
         },
         {
           "slug": "avant-garde-coffee",
           "score": 0.190941
-        },
-        {
-          "slug": "weekenders-coffee",
-          "score": 0.1922688
         }
       ]
     },
@@ -376,12 +424,12 @@
           "score": 0.1922688
         },
         {
-          "slug": "pourover",
-          "score": 0.2387389
+          "slug": "leaves-coffee",
+          "score": 0.2117043
         },
         {
-          "slug": "avant-garde-coffee",
-          "score": 0.2546108
+          "slug": "more-geisha",
+          "score": 0.2346246
         }
       ]
     },
@@ -424,12 +472,12 @@
           "score": 0.2412634
         },
         {
-          "slug": "build-and-tinker",
-          "score": 0.2567717
+          "slug": "farewell",
+          "score": 0.2495529
         },
         {
-          "slug": "carrera",
-          "score": 0.2639174
+          "slug": "build-and-tinker",
+          "score": 0.2567717
         }
       ]
     },
@@ -468,16 +516,16 @@
     "geisha": {
       "related": [
         {
+          "slug": "more-geisha",
+          "score": 0.1130464
+        },
+        {
           "slug": "pourover",
           "score": 0.1879281
         },
         {
           "slug": "roastery",
           "score": 0.1930119
-        },
-        {
-          "slug": "avant-garde-coffee",
-          "score": 0.1940792
         }
       ]
     },
@@ -492,8 +540,8 @@
           "score": 0.2645676
         },
         {
-          "slug": "torii",
-          "score": 0.2841989
+          "slug": "farewell",
+          "score": 0.2670629
         }
       ]
     },
