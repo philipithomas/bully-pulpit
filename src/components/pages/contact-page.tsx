@@ -63,7 +63,7 @@ export function ContactPage({ page }: { page: Page }) {
             <dl className="space-y-8">
               {contactItems.map((item) => (
                 <div key={item.label}>
-                  <dt className="mb-1 font-mono font-semibold text-gray-900 text-xs uppercase tracking-[0.12em]">
+                  <dt className="mb-1 font-sans font-semibold text-gray-900 text-sm">
                     {item.label}
                   </dt>
                   <dd className="font-serif text-gray-700 text-lg leading-relaxed">
