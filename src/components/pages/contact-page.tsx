@@ -43,33 +43,48 @@ const contactItems = [
   },
 ] as const
 
+const mapSrc =
+  'https://maps.google.com/maps?q=40.747157,-73.984165&z=12&output=embed'
+
 export function ContactPage({ page }: { page: Page }) {
   return (
     <article>
       <SetNewsletter newsletter={null} />
       <JsonLd type="webpage" page={page} />
-      <div className="container py-12 md:py-16">
-        <header className="mx-auto mb-10 flex max-w-3xl flex-col items-center text-center">
-          <h1 className="font-sans font-semibold text-3xl text-gray-950 leading-tight tracking-tight text-pretty sm:text-4xl md:text-5xl lg:text-6xl">
+      <div className="container pt-16 pb-20">
+        <div className="max-w-4xl">
+          <h1 className="font-sans font-semibold text-4xl text-gray-950 tracking-tight sm:text-5xl lg:text-6xl">
             {page.frontmatter.title}
           </h1>
-        </header>
+        </div>
 
-        <dl className="mx-auto max-w-2xl divide-y divide-gray-200 border-y border-gray-200">
-          {contactItems.map((item) => (
-            <div
-              className="grid gap-2 py-6 sm:grid-cols-[8rem_1fr]"
-              key={item.label}
-            >
-              <dt className="font-mono font-semibold text-gray-500 text-xs uppercase tracking-[0.12em] sm:pt-1">
-                {item.label}
-              </dt>
-              <dd className="font-sans text-gray-900 text-lg leading-relaxed">
-                {item.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <div className="mt-12 grid grid-cols-1 gap-12 md:grid-cols-2">
+          <div>
+            <dl className="space-y-8">
+              {contactItems.map((item) => (
+                <div key={item.label}>
+                  <dt className="mb-1 font-mono font-semibold text-gray-900 text-xs uppercase tracking-[0.12em]">
+                    {item.label}
+                  </dt>
+                  <dd className="font-serif text-gray-700 text-lg leading-relaxed">
+                    {item.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          <div className="min-h-[360px] w-full overflow-hidden bg-gray-100">
+            <iframe
+              allowFullScreen
+              className="h-full min-h-[360px] w-full border-0"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={mapSrc}
+              title="Map showing the Contraption Company address"
+            />
+          </div>
+        </div>
       </div>
     </article>
   )
