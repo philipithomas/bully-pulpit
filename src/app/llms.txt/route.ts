@@ -37,6 +37,11 @@ ${newsletterList}
 
 ${postList}
 
+## Search
+
+- Posts: ${siteConfig.url}/search?query=software
+- Photos: ${siteConfig.url}/search?query=coffee&scope=images
+
 ## Links
 
 - Website: ${siteConfig.url}

@@ -1,11 +1,12 @@
 import type { UIMessage } from 'ai'
 import Image from 'next/image'
 import Link from 'next/link'
-import type { ComponentPropsWithoutRef } from 'react'
+import { type ComponentPropsWithoutRef, useCallback } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Spinner } from '@/components/ui/spinner'
 import { scrubLeakedToolJson } from '@/lib/chat/scrub-leaked-tool-json'
+import { toolImageCardsFromOutput } from '@/lib/chat/tool-images'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -40,39 +41,6 @@ function ToolStatus({ label, done }: { label: string; done?: boolean }) {
   )
 }
 
-interface ToolImage {
-  id?: string
-  src: string
-  alt?: string
-  url?: string
-  description?: string
-}
-
-interface ToolResultWithImages {
-  title?: string
-  url?: string
-  coverImage?: string
-  image?: ToolImage
-  images?: ToolImage[]
-}
-
-function parseToolOutput(output: unknown): ToolResultWithImages[] {
-  const parsed =
-    typeof output === 'string'
-      ? (() => {
-          try {
-            return JSON.parse(output) as unknown
-          } catch {
-            return null
-          }
-        })()
-      : output
-  if (Array.isArray(parsed)) return parsed as ToolResultWithImages[]
-  if (parsed && typeof parsed === 'object')
-    return [parsed as ToolResultWithImages]
-  return []
-}
-
 function ToolImageResults({
   output,
   onLocalLinkClick,
@@ -80,36 +48,7 @@ function ToolImageResults({
   output: unknown
   onLocalLinkClick?: () => void
 }) {
-  const cards = parseToolOutput(output)
-    .flatMap((result) => {
-      const images =
-        result.image !== undefined
-          ? [result.image]
-          : result.images && result.images.length > 0
-            ? result.images
-            : result.coverImage
-              ? [
-                  {
-                    src: result.coverImage,
-                    alt: result.title,
-                    url: result.url,
-                    description: result.title,
-                  },
-                ]
-              : []
-      return images.map((image) => ({
-        src: image.src,
-        alt: image.alt || result.title || 'Search result image',
-        url: image.url || result.url || '/',
-        label: image.description || image.alt || result.title || 'Image',
-      }))
-    })
-    .filter((image) => image.src)
-    .filter(
-      (image, index, all) =>
-        all.findIndex((candidate) => candidate.src === image.src) === index
-    )
-    .slice(0, 4)
+  const cards = toolImageCardsFromOutput(output)
 
   if (cards.length === 0) return null
 
@@ -289,11 +228,11 @@ export function ChatMessage({
 }) {
   const isUser = message.role === 'user'
 
-  const handleLocalLinkClick = () => {
+  const handleLocalLinkClick = useCallback(() => {
     if (window.innerWidth >= 1024) {
       useChatSidebar.getState().setPinned(true)
     }
-  }
+  }, [])
 
   return (
     <div className={cn('flex', isUser ? 'justify-end' : '')}>
