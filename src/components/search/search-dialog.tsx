@@ -1,6 +1,6 @@
 'use client'
 
-import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { track } from '@vercel/analytics'
 import { Search } from 'lucide-react'
 import Image from 'next/image'
@@ -232,173 +232,166 @@ export function SearchDialog({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <DialogPrimitive.Content
-          className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) onOpenChange(false)
-          }}
-        >
-          <div className="w-[calc(100%-2rem)] max-w-lg bg-card shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
-            <DialogPrimitive.Title className="sr-only">
-              Search
-            </DialogPrimitive.Title>
-            <div className="flex items-center border-b border-gray-100 px-4">
-              <Search className="h-4 w-4 shrink-0 text-gray-400" />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => handleInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Search posts…"
-                aria-label="Search posts"
-                role="combobox"
-                aria-expanded={expanded}
-                aria-controls={expanded ? listboxId : undefined}
-                aria-activedescendant={activeOptionId}
-                aria-autocomplete="list"
-                // No focus affordance on the input itself: the global focus
-                // contract in globals.css excludes text-entry controls from
-                // the site ring, and this field is borderless so the
-                // border-darkening tier paints nothing. The dialog autofocuses
-                // it on open; the blinking cursor, placeholder, and distinct
-                // dialog frame signal focus.
-                className="flex-1 bg-transparent px-3 py-3 font-sans text-sm pointer-coarse:text-base text-gray-950 placeholder:text-gray-400"
-              />
-              {loading && <Spinner className="h-4 w-4 text-gray-400" />}
-            </div>
-
-            {(() => {
-              const isRecent = query.length < 2
-
-              if (displayResults.length > 0) {
-                return (
-                  <>
-                    {isRecent && (
-                      <p className="px-4 pt-3 pb-1 font-sans text-xs text-gray-500">
-                        Recent
-                      </p>
-                    )}
-                    <ul
-                      role="listbox"
-                      id={listboxId}
-                      aria-label={isRecent ? 'Recent posts' : 'Search results'}
-                      aria-owns={showAskAI ? askOptionId : undefined}
-                      className="max-h-80 overflow-y-auto p-2"
-                    >
-                      {displayResults.map((result, i) => {
-                        const snippet = result.excerpts[0]
-                        return (
-                          <li key={result.slug} role="presentation">
-                            <button
-                              type="button"
-                              role="option"
-                              id={`${baseId}-option-${i}`}
-                              aria-selected={i === activeIndex}
-                              tabIndex={-1}
-                              onClick={() => navigate(result.slug)}
-                              onMouseEnter={() => setActiveIndex(i)}
-                              className={cn(
-                                'flex w-full gap-3 px-3 py-2.5 text-left transition-colors',
-                                snippet ? 'items-start' : 'items-center',
-                                i === activeIndex
-                                  ? 'bg-gray-050'
-                                  : 'hover:bg-gray-050'
-                              )}
-                            >
-                              {result.coverImage ? (
-                                <Image
-                                  src={result.coverImage}
-                                  alt=""
-                                  width={40}
-                                  height={27}
-                                  className={cn(
-                                    'h-[27px] w-10 shrink-0 rounded-sm object-cover',
-                                    snippet && 'mt-0.5'
-                                  )}
-                                />
-                              ) : (
-                                <span
-                                  className={cn(
-                                    'h-[27px] w-10 shrink-0 rounded-sm',
-                                    snippet && 'mt-0.5',
-                                    NEWSLETTER_COLORS[result.newsletter] ??
-                                      'bg-gray-300'
-                                  )}
-                                />
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate font-sans text-sm font-semibold text-gray-950">
-                                  {highlightQuery(result.title, query)}
-                                </p>
-                                {snippet && (
-                                  <p className="mt-0.5 line-clamp-2 font-serif text-xs text-gray-500">
-                                    {highlightQuery(snippet, query)}
-                                  </p>
-                                )}
-                              </div>
-                            </button>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </>
-                )
-              }
-
-              if (query.length >= 2 && !loading) {
-                return (
-                  <div
-                    role="status"
-                    className="px-4 py-8 text-center font-sans text-sm text-gray-400"
-                  >
-                    {searchError ?? 'No results found'}
-                  </div>
-                )
-              }
-
-              return null
-            })()}
-
-            {showAskAI && (
-              <div
-                className="border-t border-gray-100 p-2"
-                {...(displayResults.length === 0
-                  ? {
-                      role: 'listbox',
-                      id: listboxId,
-                      'aria-label': 'Search results',
-                    }
-                  : {})}
-              >
-                <button
-                  type="button"
-                  role="option"
-                  id={askOptionId}
-                  aria-selected={activeIndex === displayResults.length}
-                  tabIndex={-1}
-                  onClick={handleAskAI}
-                  onMouseEnter={() => setActiveIndex(displayResults.length)}
-                  className={cn(
-                    'flex w-full items-center gap-2 px-3 py-2.5 text-left font-sans text-sm transition-colors',
-                    activeIndex === displayResults.length
-                      ? 'bg-gray-050'
-                      : 'hover:bg-gray-050'
-                  )}
-                >
-                  <Image
-                    src="/images/bell.svg"
-                    alt="Bell"
-                    width={18}
-                    height={18}
-                    className="shrink-0"
-                  />
-                  <span className="text-gray-950">Ask Bell: {query}</span>
-                </button>
-              </div>
-            )}
+        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/50 transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <DialogPrimitive.Popup className="fixed top-[15vh] left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 bg-card shadow-xl outline-none transition-[opacity,transform] duration-200 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0">
+          <DialogPrimitive.Title className="sr-only">
+            Search
+          </DialogPrimitive.Title>
+          <div className="flex items-center border-b border-gray-100 px-4">
+            <Search className="h-4 w-4 shrink-0 text-gray-400" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => handleInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Search posts…"
+              aria-label="Search posts"
+              role="combobox"
+              aria-expanded={expanded}
+              aria-controls={expanded ? listboxId : undefined}
+              aria-activedescendant={activeOptionId}
+              aria-autocomplete="list"
+              // No focus affordance on the input itself: the global focus
+              // contract in globals.css excludes text-entry controls from
+              // the site ring, and this field is borderless so the
+              // border-darkening tier paints nothing. The dialog autofocuses
+              // it on open; the blinking cursor, placeholder, and distinct
+              // dialog frame signal focus.
+              className="flex-1 bg-transparent px-3 py-3 font-sans text-sm pointer-coarse:text-base text-gray-950 placeholder:text-gray-400"
+            />
+            {loading && <Spinner className="h-4 w-4 text-gray-400" />}
           </div>
-        </DialogPrimitive.Content>
+
+          {(() => {
+            const isRecent = query.length < 2
+
+            if (displayResults.length > 0) {
+              return (
+                <>
+                  {isRecent && (
+                    <p className="px-4 pt-3 pb-1 font-sans text-xs text-gray-500">
+                      Recent
+                    </p>
+                  )}
+                  <ul
+                    role="listbox"
+                    id={listboxId}
+                    aria-label={isRecent ? 'Recent posts' : 'Search results'}
+                    aria-owns={showAskAI ? askOptionId : undefined}
+                    className="max-h-80 overflow-y-auto p-2"
+                  >
+                    {displayResults.map((result, i) => {
+                      const snippet = result.excerpts[0]
+                      return (
+                        <li key={result.slug} role="presentation">
+                          <button
+                            type="button"
+                            role="option"
+                            id={`${baseId}-option-${i}`}
+                            aria-selected={i === activeIndex}
+                            tabIndex={-1}
+                            onClick={() => navigate(result.slug)}
+                            onMouseEnter={() => setActiveIndex(i)}
+                            className={cn(
+                              'flex w-full gap-3 px-3 py-2.5 text-left transition-colors',
+                              snippet ? 'items-start' : 'items-center',
+                              i === activeIndex
+                                ? 'bg-gray-050'
+                                : 'hover:bg-gray-050'
+                            )}
+                          >
+                            {result.coverImage ? (
+                              <Image
+                                src={result.coverImage}
+                                alt=""
+                                width={40}
+                                height={27}
+                                className={cn(
+                                  'h-[27px] w-10 shrink-0 rounded-sm object-cover',
+                                  snippet && 'mt-0.5'
+                                )}
+                              />
+                            ) : (
+                              <span
+                                className={cn(
+                                  'h-[27px] w-10 shrink-0 rounded-sm',
+                                  snippet && 'mt-0.5',
+                                  NEWSLETTER_COLORS[result.newsletter] ??
+                                    'bg-gray-300'
+                                )}
+                              />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-sans text-sm font-semibold text-gray-950">
+                                {highlightQuery(result.title, query)}
+                              </p>
+                              {snippet && (
+                                <p className="mt-0.5 line-clamp-2 font-serif text-xs text-gray-500">
+                                  {highlightQuery(snippet, query)}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </>
+              )
+            }
+
+            if (query.length >= 2 && !loading) {
+              return (
+                <div
+                  role="status"
+                  className="px-4 py-8 text-center font-sans text-sm text-gray-400"
+                >
+                  {searchError ?? 'No results found'}
+                </div>
+              )
+            }
+
+            return null
+          })()}
+
+          {showAskAI && (
+            <div
+              className="border-t border-gray-100 p-2"
+              {...(displayResults.length === 0
+                ? {
+                    role: 'listbox',
+                    id: listboxId,
+                    'aria-label': 'Search results',
+                  }
+                : {})}
+            >
+              <button
+                type="button"
+                role="option"
+                id={askOptionId}
+                aria-selected={activeIndex === displayResults.length}
+                tabIndex={-1}
+                onClick={handleAskAI}
+                onMouseEnter={() => setActiveIndex(displayResults.length)}
+                className={cn(
+                  'flex w-full items-center gap-2 px-3 py-2.5 text-left font-sans text-sm transition-colors',
+                  activeIndex === displayResults.length
+                    ? 'bg-gray-050'
+                    : 'hover:bg-gray-050'
+                )}
+              >
+                <Image
+                  src="/images/bell.svg"
+                  alt="Bell"
+                  width={18}
+                  height={18}
+                  className="shrink-0"
+                />
+                <span className="text-gray-950">Ask Bell: {query}</span>
+              </button>
+            </div>
+          )}
+        </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   )

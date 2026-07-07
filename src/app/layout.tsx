@@ -98,7 +98,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans font-normal antialiased text-gray-900 bg-offwhite flex flex-col min-h-screen">
+      <body className="relative isolate font-sans font-normal antialiased text-gray-900 bg-offwhite flex flex-col min-h-screen">
         <AuthProvider>
           <NewsletterProvider>
             <a
