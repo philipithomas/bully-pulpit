@@ -181,7 +181,12 @@ export default function TsundokuPage() {
               </Link>
             </p>
           </div>
-          <SubscribeCta newsletter="tsundoku" align="center" className="mt-5" />
+          <SubscribeCta
+            newsletter="tsundoku"
+            align="center"
+            className="mt-5"
+            allowExistingSubscriberOptIn
+          />
         </div>
 
         <div className="flex flex-wrap gap-x-2 gap-y-5 [--row-h:160px] sm:gap-y-6 sm:[--row-h:220px] lg:[--row-h:260px]">

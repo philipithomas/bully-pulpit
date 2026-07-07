@@ -155,9 +155,10 @@ async function sendLoginOrRejectSuppressed(
  * when the call is actually a sign-in.
  *
  * `name` and `source` apply only when the row is created. New public signups
- * start on every newsletter. For existing subscribers, an explicit
- * `newsletters` list only opts them into those newsletters; no list means the
- * call is a pure sign-in and leaves preferences untouched.
+ * start on every newsletter. For existing confirmed subscribers, public forms
+ * sign them in without changing preferences unless the caller explicitly allows
+ * email-only opt-in. Existing unconfirmed rows may still update newsletter
+ * flags before the confirmation email is resent.
  */
 export async function createOrRetrieve(input: {
   email: string
@@ -165,6 +166,8 @@ export async function createOrRetrieve(input: {
   source?: string | null
   /** Newsletter slugs to opt an existing row into; new rows receive all newsletters. */
   newsletters?: string[]
+  /** Permit a confirmed existing subscriber to opt in by email without signing in. */
+  allowExistingSubscriberOptIn?: boolean
   googleVerified?: boolean
 }): Promise<CreateResult> {
   const email = input.email.trim().toLowerCase()
@@ -185,12 +188,17 @@ export async function createOrRetrieve(input: {
   const hasExplicitNewsletterOptIn = input.newsletters !== undefined
   const hasRequestedNewsletterOptIn =
     hasExplicitNewsletterOptIn && newsletters.length > 0
+  const allowExistingSubscriberOptIn =
+    input.allowExistingSubscriberOptIn === true
 
   const existing = await findByEmail(email)
   if (existing) {
     let subscriber = existing
 
-    if (hasRequestedNewsletterOptIn) {
+    if (
+      hasRequestedNewsletterOptIn &&
+      (existing.confirmedAt == null || allowExistingSubscriberOptIn)
+    ) {
       const updated = await updateSubscriber(
         existing.uuid,
         prefsForNewsletters(newsletters)
@@ -211,7 +219,7 @@ export async function createOrRetrieve(input: {
       await sendLoginOrRejectSuppressed(subscriber, 'confirm')
       return { subscriber, isNew: false, nextStep: 'verification_sent' }
     } else if (!googleVerified) {
-      if (hasRequestedNewsletterOptIn) {
+      if (hasRequestedNewsletterOptIn && allowExistingSubscriberOptIn) {
         return { subscriber, isNew: false, nextStep: 'confirmed' }
       }
       await sendLoginOrRejectSuppressed(subscriber, 'sign-in')

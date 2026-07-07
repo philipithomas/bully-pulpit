@@ -24,6 +24,8 @@ interface Props {
   newsletters?: Newsletter[]
   align?: 'start' | 'center'
   buttonClassName?: string
+  allowExistingSubscriberOptIn?: boolean
+  confirmedMessage?: string
   /**
    * When true, fetches the live subscriber count client-side and uses it as the
    * header text ("Join N other subscribers:"). Lets the host page stay static.
@@ -41,6 +43,8 @@ export function InlineSignupForm({
   newsletters = [...defaultSignupNewsletters],
   align = 'start',
   buttonClassName = 'btn btn-primary',
+  allowExistingSubscriberOptIn = false,
+  confirmedMessage = 'You are subscribed by email.',
   showSubscriberCount = false,
 }: Props) {
   const { user, hasSession, loading: authLoading } = useAuthContext()
@@ -89,6 +93,9 @@ export function InlineSignupForm({
             email,
             source: getExternalReferrer(),
             newsletters,
+            ...(allowExistingSubscriberOptIn
+              ? { allowExistingSubscriberOptIn: true }
+              : {}),
           }),
         })
         if (!res.ok) {
@@ -108,7 +115,7 @@ export function InlineSignupForm({
         setLoading(false)
       }
     },
-    [email, newsletters]
+    [allowExistingSubscriberOptIn, email, newsletters]
   )
 
   const verifyCode = useCallback(
@@ -160,7 +167,7 @@ export function InlineSignupForm({
           Confirmed
         </p>
         <p className="mt-1 max-w-md font-serif text-sm leading-relaxed text-gray-600">
-          You are subscribed to new photos by email.
+          {confirmedMessage}
         </p>
       </div>
     )

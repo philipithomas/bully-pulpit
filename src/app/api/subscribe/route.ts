@@ -15,7 +15,8 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { email, name, source, newsletters } = body
+  const { email, name, source, newsletters, allowExistingSubscriberOptIn } =
+    body
 
   if (!email) {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 })
@@ -33,14 +34,15 @@ export async function POST(request: Request) {
 
   try {
     // For a new email this creates the row (applying name, source, and the
-    // requested newsletters) and sends a confirmation code. For an existing
-    // confirmed subscriber with an explicit newsletter request, the preference
-    // update is enough: do not send an unnecessary sign-in code.
+    // default public newsletter set) and sends a confirmation code. Existing
+    // confirmed subscribers sign in by default; email-only opt-in is allowed
+    // only when a caller explicitly opts into that behavior.
     const result = await createOrRetrieve({
       email,
       name,
       source: source || undefined,
       newsletters: Array.isArray(newsletters) ? newsletters : undefined,
+      allowExistingSubscriberOptIn: allowExistingSubscriberOptIn === true,
     })
 
     return NextResponse.json({ ok: true, status: result.nextStep })

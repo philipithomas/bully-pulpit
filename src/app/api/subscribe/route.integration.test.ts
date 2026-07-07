@@ -252,7 +252,55 @@ describe('POST /api/subscribe', () => {
     expect(message.text).toContain('Your sign-in code for philipithomas.com')
   })
 
-  it('opts an existing confirmed subscriber into Tsundoku without sending a sign-in code', async () => {
+  it('signs in an existing confirmed subscriber without re-subscribing them when a public form requests newsletters', async () => {
+    await db.insert(subscribers).values({
+      email: 'reader@example.com',
+      name: 'Careful Reader',
+      source: 'https://original.example',
+      confirmedAt: new Date(),
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+    })
+
+    const res = await POST(
+      subscribeRequest({
+        email: 'reader@example.com',
+        name: 'Overwrite Attempt',
+        source: 'https://www.google.com',
+        newsletters: ['tsundoku'],
+      })
+    )
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      ok: true,
+      status: 'verification_sent',
+    })
+
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.email, 'reader@example.com'))
+    expect(row.subscribedContraption).toBe(false)
+    expect(row.subscribedWorkshop).toBe(false)
+    expect(row.subscribedPostcard).toBe(false)
+    expect(row.subscribedTsundoku).toBe(false)
+    expect(row.name).toBe('Careful Reader')
+    expect(row.source).toBe('https://original.example')
+
+    const loginRows = await db
+      .select()
+      .from(logins)
+      .where(eq(logins.subscriberId, row.id))
+    expect(loginRows).toHaveLength(2)
+    expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
+    const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
+    expect(message.subject).toBe('Your sign-in code for philipithomas.com')
+  })
+
+  it('opts an existing confirmed subscriber into Tsundoku when email-only opt-in is allowed', async () => {
     await db.insert(subscribers).values({
       email: 'japan@example.com',
       name: 'Japan Reader',
@@ -270,6 +318,7 @@ describe('POST /api/subscribe', () => {
         name: 'Overwrite Attempt',
         source: 'https://www.google.com',
         newsletters: ['tsundoku'],
+        allowExistingSubscriberOptIn: true,
       })
     )
 
