@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-07T17:56:38.763Z",
+  "generatedAt": "2026-07-07T18:21:18.861Z",
   "posts": {
     "farewell": {
       "related": [
@@ -437,15 +437,15 @@
       "related": [
         {
           "slug": "software-in-the-ai-era",
-          "score": 0.0982365
-        },
-        {
-          "slug": "maintenance",
-          "score": 0.1031068
+          "score": 0.096202
         },
         {
           "slug": "build-and-tinker",
-          "score": 0.1072707
+          "score": 0.0995568
+        },
+        {
+          "slug": "maintenance",
+          "score": 0.1007974
         }
       ]
     },
@@ -492,8 +492,8 @@
           "score": 0.249949
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.2627897
+          "slug": "shinkansen",
+          "score": 0.2639174
         }
       ]
     },
@@ -653,7 +653,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.0982365
+          "score": 0.096202
         }
       ]
     },
@@ -661,7 +661,7 @@
       "related": [
         {
           "slug": "spring-cleaning",
-          "score": 0.1105006
+          "score": 0.1082056
         },
         {
           "slug": "tacit-knowledge-in-software",
@@ -696,12 +696,12 @@
           "score": 0.126003
         },
         {
-          "slug": "workshop-welcome",
-          "score": 0.1391279
+          "slug": "spring-cleaning",
+          "score": 0.1390765
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.1426191
+          "slug": "workshop-welcome",
+          "score": 0.1391279
         }
       ]
     },
@@ -713,7 +713,7 @@
         },
         {
           "slug": "spring-cleaning",
-          "score": 0.129327
+          "score": 0.1257169
         },
         {
           "slug": "tacit-knowledge-in-software",
@@ -840,12 +840,12 @@
           "score": 0.1367655
         },
         {
-          "slug": "tacit-knowledge-in-software",
-          "score": 0.1458802
+          "slug": "spring-cleaning",
+          "score": 0.1434597
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.1485978
+          "slug": "tacit-knowledge-in-software",
+          "score": 0.1458802
         }
       ]
     },
@@ -868,16 +868,16 @@
     "build-and-tinker": {
       "related": [
         {
+          "slug": "spring-cleaning",
+          "score": 0.0995568
+        },
+        {
           "slug": "tacit-knowledge-in-software",
           "score": 0.1036427
         },
         {
           "slug": "code-as-content-and-digital-proprioception",
           "score": 0.1064556
-        },
-        {
-          "slug": "spring-cleaning",
-          "score": 0.1072707
         }
       ]
     },
@@ -965,7 +965,7 @@
       "related": [
         {
           "slug": "spring-cleaning",
-          "score": 0.1031068
+          "score": 0.1007974
         },
         {
           "slug": "introducing-workshop",
@@ -1180,8 +1180,8 @@
           "score": 0.1574966
         },
         {
-          "slug": "2024-11",
-          "score": 0.1615743
+          "slug": "spring-cleaning",
+          "score": 0.1586535
         }
       ]
     },

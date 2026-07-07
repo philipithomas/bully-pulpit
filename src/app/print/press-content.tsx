@@ -30,12 +30,12 @@ export function PressContent() {
                     The print edition began on 2025-12-10 and is no longer
                     available to order. The{' '}
                     <Link
-                      href="/introducing-the-print-edition"
+                      href="/spring-cleaning"
                       className="underline underline-offset-4 decoration-indigo hover:text-indigo transition-colors duration-300"
                     >
-                      launch essay
+                      Spring cleaning addendum
                     </Link>{' '}
-                    tells the full story.
+                    explains why I ended it.
                   </p>
                 </div>
 
