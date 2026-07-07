@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 import { useAuthModal } from '@/stores/auth-store'
 
-// dynamic() splits the sign-in modal (radix dialog, OTP input, Google
+// dynamic() splits the sign-in modal (Base UI dialog, OTP input, Google
 // sign-in) out of the first-load bundle — same pattern as the header's
 // search dialog and chat sidebar.
 const SignInModal = dynamic(
