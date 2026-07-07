@@ -45,7 +45,7 @@ export default function HomePage() {
   })
 
   return (
-    <div className="container pt-6 pb-12 sm:pt-8 sm:pb-14 md:pt-10 md:pb-16 lg:pt-12 lg:pb-20">
+    <div className="container pt-2 pb-12 sm:pt-8 sm:pb-14 md:pt-10 md:pb-16 lg:pt-12 lg:pb-20">
       <JsonLd type="website" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
         {/* Left: Portrait (desktop only) */}
