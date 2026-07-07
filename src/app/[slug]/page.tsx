@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import remarkGfm from 'remark-gfm'
 import { SetNewsletter } from '@/components/layout/newsletter-context'
+import { ContactPage } from '@/components/pages/contact-page'
 import {
   createHeadingComponents,
   mdxComponents,
@@ -199,6 +200,10 @@ export default async function SlugPage({ params }: Props) {
   const page = post ? null : getPageBySlug(slug)
 
   if (!post && !page) notFound()
+
+  if (page?.slug === 'contact') {
+    return <ContactPage page={page} />
+  }
 
   // Build-time syntax highlighting; the singleton resolves once per worker.
   const highlighter = await getHighlighter()
