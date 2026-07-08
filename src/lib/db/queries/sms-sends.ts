@@ -1,8 +1,10 @@
-import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { type SmsSend, smsSends, smsSubscribers } from '@/lib/db/schema'
 
 const INSERT_CHUNK = 500
+export const SMS_SEND_SKIPPED_UNSUBSCRIBED =
+  'Skipped: unsubscribed before SMS send'
 
 export async function bulkCreateQueuedSms(input: {
   smsSubscriberIds: number[]
@@ -123,7 +125,8 @@ export async function resetFailedSmsBySlug(slug: string): Promise<number> {
       and(
         eq(smsSends.postSlug, slug),
         isNull(smsSends.sentAt),
-        isNotNull(smsSends.sendError)
+        isNotNull(smsSends.sendError),
+        ne(smsSends.sendError, SMS_SEND_SKIPPED_UNSUBSCRIBED)
       )
     )
     .returning({ id: smsSends.id })

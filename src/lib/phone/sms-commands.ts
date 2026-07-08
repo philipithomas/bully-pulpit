@@ -8,9 +8,18 @@ const UNSUBSCRIBE_COMMANDS = new Set([
   'CANCEL',
   'END',
   'QUIT',
+  'REVOKE',
+  'OPTOUT',
 ])
 
-export function smsCommandForBody(body: string): SmsCommand | null {
+export function smsCommandForBody(
+  body: string,
+  optOutType?: string
+): SmsCommand | null {
+  const normalizedOptOutType = optOutType?.trim().toUpperCase()
+  if (normalizedOptOutType === 'START') return 'subscribe'
+  if (normalizedOptOutType === 'STOP') return 'unsubscribe'
+
   const normalized = body
     .trim()
     .toUpperCase()

@@ -1,5 +1,6 @@
-import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
+import { SMS_SEND_SKIPPED_UNSUBSCRIBED } from '@/lib/db/queries/sms-sends'
 import type { NewsletterSlug } from '@/lib/db/queries/subscribers'
 import { type SmsSubscriber, smsSends, smsSubscribers } from '@/lib/db/schema'
 
@@ -55,7 +56,8 @@ export async function findSmsSubscriberByPhoneNumber(
 export async function unsubscribeSmsNumber(
   phoneNumber: string
 ): Promise<SmsSubscriber | null> {
-  const rows = await getDb()
+  const db = getDb()
+  const rows = await db
     .update(smsSubscribers)
     .set({
       confirmedAt: null,
@@ -67,7 +69,23 @@ export async function unsubscribeSmsNumber(
     })
     .where(eq(smsSubscribers.phoneNumber, phoneNumber))
     .returning()
-  return rows[0] ?? null
+  const subscriber = rows[0] ?? null
+  if (subscriber) {
+    await db
+      .update(smsSends)
+      .set({
+        sendError: SMS_SEND_SKIPPED_UNSUBSCRIBED,
+        nextAttemptAt: null,
+      })
+      .where(
+        and(
+          eq(smsSends.smsSubscriberId, subscriber.id),
+          isNull(smsSends.sentAt),
+          isNull(smsSends.sendError)
+        )
+      )
+  }
+  return subscriber
 }
 
 function eligibilityWhere(newsletter: NewsletterSlug, postSlug: string) {
@@ -78,7 +96,11 @@ function eligibilityWhere(newsletter: NewsletterSlug, postSlug: string) {
       SELECT 1 FROM ${smsSends}
       WHERE ${smsSends.smsSubscriberId} = ${smsSubscribers.id}
         AND ${smsSends.postSlug} = ${postSlug}
-        AND (${smsSends.sentAt} IS NOT NULL OR ${smsSends.sendError} IS NULL)
+        AND (
+          ${smsSends.sentAt} IS NOT NULL
+          OR ${smsSends.sendError} IS NULL
+          OR ${smsSends.sendError} = ${SMS_SEND_SKIPPED_UNSUBSCRIBED}
+        )
     )`
   )
 }

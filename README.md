@@ -46,10 +46,20 @@ The voice webhook plays the generated greeting, then offers "press 1" for
 voicemail and "press 2" to subscribe the caller ID to SMS updates. No input
 falls through to voicemail. The SMS webhook stores inbound replies, handles
 `SUBSCRIBE` and `STOP`, and emails admins about normal replies.
+`SUBSCRIBE` replies with a written confirmation that includes the STOP
+instruction. Voice-menu signups send the same confirmation SMS when Twilio
+accepts it; if that confirmation send fails, the spoken confirmation still tells
+the caller to text STOP at any time.
 New SMS opt-ins, whether they come from a `SUBSCRIBE` text or the voice menu,
 also email admins with the source path, Twilio webhook metadata such as city,
 state, caller name, message SID, or call SID when Twilio provides it, and an
 area-code hint for common US/Canada numbers.
+STOP handling is both Twilio-aware and application-layer: Twilio may apply its
+own opt-out behavior and include `OptOutType=STOP`/`START` in the webhook. The
+app still syncs local `sms_subscribers` state, avoids sending a duplicate app
+reply when Twilio already sent one, and marks any pending unsent `sms_sends`
+rows for that number as skipped so retry cannot send an old post after someone
+opts out.
 
 Newsletter SMS delivery runs inside the same Vercel Workflow as email delivery:
 the admin send page enqueues `sms_sends` rows after the email pass, sends them
