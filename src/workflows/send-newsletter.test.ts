@@ -27,10 +27,12 @@ vi.mock('@/lib/db/queries/email-sends', () => ({
 
 vi.mock('@/lib/db/queries/sms-sends', () => ({
   bulkCreateQueuedSms: vi.fn(),
+  claimSendableSmsById: vi.fn(),
   findSendableSmsByIds: vi.fn(),
   findSentSmsByIds: vi.fn(),
   markSmsPermanentFailure: vi.fn(),
   markSmsSent: vi.fn(),
+  markUnsendableSmsSkippedById: vi.fn(),
   pendingSmsRowIdsBySlug: vi.fn(),
 }))
 
@@ -185,10 +187,11 @@ beforeEach(() => {
   mockedSmsEligible.mockResolvedValue([])
   mockedSmsSends.bulkCreateQueuedSms.mockResolvedValue([])
   mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([])
-  mockedSmsSends.markSmsSent.mockResolvedValue(undefined)
+  mockedSmsSends.markSmsSent.mockResolvedValue(true)
   mockedSmsSends.markSmsPermanentFailure.mockResolvedValue(undefined)
-  mockedSmsSends.findSendableSmsByIds.mockImplementation(async (ids) =>
-    ids.map((id) => claimedSms(id))
+  mockedSmsSends.markUnsendableSmsSkippedById.mockResolvedValue(undefined)
+  mockedSmsSends.claimSendableSmsById.mockImplementation(async (id) =>
+    claimedSms(id)
   )
   mockedSmsSends.findSentSmsByIds.mockResolvedValue([])
   mockedSendSms.mockResolvedValue({ sid: 'SM_test', status: 'queued' })
@@ -343,9 +346,9 @@ describe('sendNewsletterWorkflow', () => {
     mockedSmsEligible.mockResolvedValue([7])
     mockedSmsSends.bulkCreateQueuedSms.mockResolvedValue([701])
     mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([701])
-    mockedSmsSends.findSendableSmsByIds.mockResolvedValue([
-      claimedSms(701, '+15551234567'),
-    ])
+    mockedSmsSends.claimSendableSmsById.mockResolvedValue(
+      claimedSms(701, '+15551234567')
+    )
 
     const promise = sendNewsletterWorkflow('hello-world')
     await vi.runAllTimersAsync()
@@ -411,9 +414,9 @@ describe('sendNewsletterWorkflow', () => {
     mockedSmsEligible.mockResolvedValue([7])
     mockedSmsSends.bulkCreateQueuedSms.mockResolvedValue([701])
     mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([701])
-    mockedSmsSends.findSendableSmsByIds.mockResolvedValue([
-      claimedSms(701, '+15551234567'),
-    ])
+    mockedSmsSends.claimSendableSmsById.mockResolvedValue(
+      claimedSms(701, '+15551234567')
+    )
     mockedCreateTextMessage.mockRejectedValue(new Error('database unavailable'))
 
     const err = await sendNewsletterWorkflow('hello-world').catch((e) => e)
@@ -425,6 +428,30 @@ describe('sendNewsletterWorkflow', () => {
       twilioSid: 'SM_test',
       twilioStatus: 'queued',
     })
+    expect(mockedSmsSends.markSmsPermanentFailure).not.toHaveBeenCalled()
+  })
+
+  it('does not record SMS history when the row is skipped before mark-sent wins', async () => {
+    mockedEligible.mockResolvedValue([])
+    mockedSends.pendingRowIdsBySlug.mockResolvedValue([])
+    mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([701])
+    mockedSmsSends.claimSendableSmsById.mockResolvedValue(
+      claimedSms(701, '+15551234567')
+    )
+    mockedSmsSends.markSmsSent.mockResolvedValue(false)
+
+    const result = await sendNewsletterWorkflow('hello-world')
+
+    expect(result).toEqual({
+      batches: 0,
+      sent: 0,
+      failed: 0,
+      smsBatches: 1,
+      smsSent: 0,
+      smsFailed: 0,
+    })
+    expect(mockedSendSms).toHaveBeenCalledTimes(1)
+    expect(mockedCreateTextMessage).not.toHaveBeenCalled()
     expect(mockedSmsSends.markSmsPermanentFailure).not.toHaveBeenCalled()
   })
 
@@ -458,7 +485,7 @@ describe('sendNewsletterWorkflow', () => {
       smsFailed: 0,
     })
     expect(mockedSendSms).not.toHaveBeenCalled()
-    expect(mockedSmsSends.findSendableSmsByIds).not.toHaveBeenCalled()
+    expect(mockedSmsSends.claimSendableSmsById).not.toHaveBeenCalled()
     expect(mockedCreateTextMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         twilioSid: 'SM_existing',

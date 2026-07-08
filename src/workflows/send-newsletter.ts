@@ -10,10 +10,11 @@ import {
 import {
   bulkCreateQueuedSms,
   type ClaimedSmsSend,
-  findSendableSmsByIds,
+  claimSendableSmsById,
   findSentSmsByIds,
   markSmsPermanentFailure,
   markSmsSent,
+  markUnsendableSmsSkippedById,
   pendingSmsRowIdsBySlug,
 } from '@/lib/db/queries/sms-sends'
 import { findEligibleSmsIds } from '@/lib/db/queries/sms-subscribers'
@@ -221,9 +222,11 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
       continue
     }
 
-    const rows = await findSendableSmsByIds([rowId])
-    const row = rows[0]
-    if (!row) continue
+    const row = await claimSendableSmsById(rowId)
+    if (!row) {
+      await markUnsendableSmsSkippedById(rowId)
+      continue
+    }
 
     const { send, phoneNumber } = row
     let result: SentSms
@@ -245,11 +248,12 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
     }
 
     try {
-      await markSmsSent({
+      const markedSent = await markSmsSent({
         id: send.id,
         twilioSid: result.sid,
         twilioStatus: result.status,
       })
+      if (!markedSent) continue
       await recordSmsTextHistory(row, result)
       sent++
     } catch (err) {

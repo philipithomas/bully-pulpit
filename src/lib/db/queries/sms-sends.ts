@@ -6,6 +6,13 @@ const INSERT_CHUNK = 500
 export const SMS_SEND_SKIPPED_UNSUBSCRIBED =
   'Skipped: unsubscribed before SMS send'
 
+const newsletterColumns = {
+  postcard: smsSubscribers.subscribedPostcard,
+  contraption: smsSubscribers.subscribedContraption,
+  workshop: smsSubscribers.subscribedWorkshop,
+  tsundoku: smsSubscribers.subscribedTsundoku,
+} as const
+
 export async function bulkCreateQueuedSms(input: {
   smsSubscriberIds: number[]
   postSlug: string
@@ -15,27 +22,74 @@ export async function bulkCreateQueuedSms(input: {
   const ids: number[] = []
   for (let i = 0; i < input.smsSubscriberIds.length; i += INSERT_CHUNK) {
     const chunk = input.smsSubscriberIds.slice(i, i + INSERT_CHUNK)
-    const rows = await getDb()
-      .insert(smsSends)
-      .values(
-        chunk.map((smsSubscriberId) => ({
-          smsSubscriberId,
-          postSlug: input.postSlug,
-          newsletter: input.newsletter,
-          body: input.body,
-          nextAttemptAt: sql`NOW()`,
-        }))
-      )
-      .onConflictDoNothing({
-        target: [smsSends.smsSubscriberId, smsSends.postSlug],
-      })
-      .returning({ id: smsSends.id })
+    const newsletterColumn =
+      newsletterColumns[input.newsletter as keyof typeof newsletterColumns]
+    if (!newsletterColumn) continue
+    const result = await getDb().execute<{ id: number }>(sql`
+      INSERT INTO ${smsSends}
+        (sms_subscriber_id, post_slug, newsletter, body, next_attempt_at)
+      SELECT
+        ${smsSubscribers.id},
+        ${input.postSlug},
+        ${input.newsletter},
+        ${input.body},
+        NOW()
+      FROM ${smsSubscribers}
+      WHERE ${and(
+        inArray(smsSubscribers.id, chunk),
+        isNotNull(smsSubscribers.confirmedAt),
+        eq(newsletterColumn, true)
+      )}
+      ORDER BY ${smsSubscribers.id} DESC
+      ON CONFLICT (sms_subscriber_id, post_slug) DO NOTHING
+      RETURNING ${smsSends.id} AS id
+    `)
+    const rows = Array.isArray(result) ? result : result.rows
     ids.push(...rows.map((r) => r.id))
   }
   return ids
 }
 
 export type ClaimedSmsSend = { send: SmsSend; phoneNumber: string }
+
+export async function claimSendableSmsById(
+  id: number
+): Promise<ClaimedSmsSend | null> {
+  const rows = await getDb()
+    .update(smsSends)
+    .set({ nextAttemptAt: null })
+    .from(smsSubscribers)
+    .where(
+      and(
+        eq(smsSends.id, id),
+        eq(smsSends.smsSubscriberId, smsSubscribers.id),
+        isNull(smsSends.sentAt),
+        isNull(smsSends.sendError),
+        isNotNull(smsSubscribers.confirmedAt)
+      )
+    )
+    .returning({ send: smsSends, phoneNumber: smsSubscribers.phoneNumber })
+  return rows[0] ?? null
+}
+
+export async function markUnsendableSmsSkippedById(id: number): Promise<void> {
+  await getDb()
+    .update(smsSends)
+    .set({
+      sendError: SMS_SEND_SKIPPED_UNSUBSCRIBED,
+      nextAttemptAt: null,
+    })
+    .from(smsSubscribers)
+    .where(
+      and(
+        eq(smsSends.id, id),
+        eq(smsSends.smsSubscriberId, smsSubscribers.id),
+        isNull(smsSends.sentAt),
+        isNull(smsSends.sendError),
+        isNull(smsSubscribers.confirmedAt)
+      )
+    )
+}
 
 export async function findSendableSmsByIds(
   ids: number[]
@@ -78,8 +132,8 @@ export async function markSmsSent(input: {
   id: number
   twilioSid: string
   twilioStatus: string
-}): Promise<void> {
-  await getDb()
+}): Promise<boolean> {
+  const rows = await getDb()
     .update(smsSends)
     .set({
       sentAt: sql`NOW()`,
@@ -87,7 +141,15 @@ export async function markSmsSent(input: {
       twilioSid: input.twilioSid,
       twilioStatus: input.twilioStatus,
     })
-    .where(eq(smsSends.id, input.id))
+    .where(
+      and(
+        eq(smsSends.id, input.id),
+        isNull(smsSends.sentAt),
+        isNull(smsSends.sendError)
+      )
+    )
+    .returning({ id: smsSends.id })
+  return rows.length > 0
 }
 
 export async function markSmsPermanentFailure(

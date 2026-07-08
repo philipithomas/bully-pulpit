@@ -48,7 +48,10 @@ import {
   pendingRowIdsBySlug,
   resetFailedBySlug,
 } from '@/lib/db/queries/email-sends'
-import { SMS_SEND_SKIPPED_UNSUBSCRIBED } from '@/lib/db/queries/sms-sends'
+import {
+  bulkCreateQueuedSms,
+  SMS_SEND_SKIPPED_UNSUBSCRIBED,
+} from '@/lib/db/queries/sms-sends'
 import { unsubscribeSmsNumber } from '@/lib/db/queries/sms-subscribers'
 import {
   type EmailSend,
@@ -658,5 +661,54 @@ describe('sendNewsletterWorkflow', () => {
       toNumber: '+15551234567',
       twilioSid: 'SM_1',
     })
+  })
+
+  it('does not queue SMS rows for ids that opted out after eligibility was read', async () => {
+    const subscriber = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+    })
+    await unsubscribeSmsNumber(subscriber.phoneNumber)
+
+    const ids = await bulkCreateQueuedSms({
+      smsSubscriberIds: [subscriber.id],
+      postSlug: SLUG,
+      newsletter: 'contraption',
+      body: 'Contraption: Hello world',
+    })
+
+    expect(ids).toEqual([])
+    expect(await allSmsRows()).toHaveLength(0)
+  })
+
+  it('marks stale unconfirmed pending SMS rows skipped while draining the queue', async () => {
+    const subscriber = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+      confirmed: false,
+    })
+    await db.insert(smsSends).values({
+      smsSubscriberId: subscriber.id,
+      postSlug: SLUG,
+      newsletter: 'contraption',
+      body: 'Contraption: Hello world',
+      nextAttemptAt: new Date(),
+    })
+
+    const result = await sendNewsletterWorkflow(SLUG)
+
+    expect(result).toEqual(
+      workflowResult({
+        batches: 0,
+        sent: 0,
+        failed: 0,
+        smsBatches: 1,
+        smsSent: 0,
+        smsFailed: 0,
+      })
+    )
+    expect(fetch).not.toHaveBeenCalled()
+    const row = smsRowFor(await allSmsRows(), subscriber.id)
+    expect(row.sentAt).toBeNull()
+    expect(row.sendError).toBe(SMS_SEND_SKIPPED_UNSUBSCRIBED)
+    expect(row.nextAttemptAt).toBeNull()
   })
 })
