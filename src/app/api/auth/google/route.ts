@@ -2,7 +2,10 @@ import { checkBotId } from 'botid/server'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { NextResponse } from 'next/server'
 import { setSessionCookies, signSession } from '@/lib/auth/jwt'
-import { createOrRetrieve } from '@/lib/auth/subscriber-service'
+import {
+  createOrRetrieve,
+  normalizedNewsletters,
+} from '@/lib/auth/subscriber-service'
 import { siteConfig } from '@/lib/config'
 import { serializeSubscriber } from '@/lib/db/queries/subscribers'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -21,7 +24,7 @@ export async function POST(request: Request) {
   if (!body) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
-  const { code } = body
+  const { code, newsletters } = body
 
   if (!code) {
     return NextResponse.json(
@@ -73,6 +76,9 @@ export async function POST(request: Request) {
 
     const email = payload.email as string
     const name = payload.name as string | undefined
+    const requestedNewsletters = normalizedNewsletters(
+      Array.isArray(newsletters) ? newsletters : undefined
+    )
 
     if (!email || !payload.email_verified) {
       return NextResponse.json(
@@ -86,6 +92,8 @@ export async function POST(request: Request) {
       email,
       name: name || undefined,
       googleVerified: true,
+      newsletters: requestedNewsletters,
+      allowExistingSubscriberOptIn: requestedNewsletters.length > 0,
     })
 
     const jwt = await signSession(subscriber)

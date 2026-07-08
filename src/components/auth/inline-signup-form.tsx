@@ -5,8 +5,10 @@ import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import {
   GoogleSignInButton,
+  type GoogleSignInUser,
   useGoogleSignInAvailable,
 } from '@/components/auth/google-sign-in'
+import { matchesSubmittedEmail } from '@/components/auth/signup-completion'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import {
   Dialog,
@@ -45,16 +47,6 @@ interface Props {
 }
 
 type Step = 'email' | 'code' | 'confirmed'
-
-function matchesSubmittedEmail(
-  sessionEmail: unknown,
-  submittedEmail: string
-): boolean {
-  return (
-    typeof sessionEmail === 'string' &&
-    sessionEmail.trim().toLowerCase() === submittedEmail.trim().toLowerCase()
-  )
-}
 
 export function InlineSignupForm({
   hideWhenLoggedIn = false,
@@ -273,6 +265,7 @@ export function InlineSignupForm({
           code={code}
           email={email}
           loading={loading}
+          newsletters={newsletters}
           onCodeChange={setCode}
           onDifferentEmail={handleDifferentEmail}
           onSignedIn={finishSignedIn}
@@ -287,6 +280,7 @@ function SignupConfirmationDialog({
   code,
   email,
   loading,
+  newsletters,
   onCodeChange,
   onDifferentEmail,
   onSignedIn,
@@ -295,12 +289,25 @@ function SignupConfirmationDialog({
   code: string
   email: string
   loading: boolean
+  newsletters: Newsletter[]
   onCodeChange: (value: string) => void
   onDifferentEmail: () => void
   onSignedIn: () => void
   onVerifyCode: (value: string) => void
 }) {
   const googleAvailable = useGoogleSignInAvailable()
+  const handleGoogleSuccess = useCallback(
+    (googleUser: GoogleSignInUser) => {
+      // If the visitor chooses a different Google account, that account is the
+      // authenticated identity. The server applies these pending opt-ins to the
+      // Google account only, so the originally typed email is not confirmed.
+      if (!matchesSubmittedEmail(googleUser.email, email)) return true
+
+      onSignedIn()
+      return false
+    },
+    [email, onSignedIn]
+  )
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (!open) onDifferentEmail()
@@ -348,7 +355,10 @@ function SignupConfirmationDialog({
           {googleAvailable ? (
             <>
               <p className="text-center font-sans text-xs text-gray-400">or</p>
-              <GoogleSignInButton onSuccess={onSignedIn} />
+              <GoogleSignInButton
+                newsletters={newsletters}
+                onSuccess={handleGoogleSuccess}
+              />
             </>
           ) : null}
           <button
