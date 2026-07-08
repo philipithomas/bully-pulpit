@@ -25,7 +25,10 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import type { Newsletter } from '@/lib/content/types'
 import { formatMemberCount } from '@/lib/format-member-count'
-import { defaultSignupNewsletters } from '@/lib/newsletters'
+import {
+  defaultSignupNewsletters,
+  newsletterPreferenceKeys,
+} from '@/lib/newsletters'
 import { getExternalReferrer } from '@/lib/referrer'
 
 interface Props {
@@ -47,6 +50,18 @@ interface Props {
 }
 
 type Step = 'email' | 'code' | 'confirmed'
+
+function hasRequestedNewsletterOptIns(
+  preferences: unknown,
+  newsletters: readonly Newsletter[]
+): boolean {
+  if (newsletters.length === 0) return true
+  if (!preferences || typeof preferences !== 'object') return false
+  const values = preferences as Record<string, unknown>
+  return newsletters.every(
+    (newsletter) => values[newsletterPreferenceKeys[newsletter]] === true
+  )
+}
 
 export function InlineSignupForm({
   hideWhenLoggedIn = false,
@@ -182,7 +197,11 @@ export function InlineSignupForm({
         const res = await fetch('/api/auth/me', { cache: 'no-store' })
         if (!res.ok) return
         const data = await res.json()
-        if (!cancelled && matchesSubmittedEmail(data.user?.email, email)) {
+        if (
+          !cancelled &&
+          matchesSubmittedEmail(data.user?.email, email) &&
+          hasRequestedNewsletterOptIns(data.preferences, newsletters)
+        ) {
           finishSignedIn()
         }
       } catch {}
@@ -197,7 +216,7 @@ export function InlineSignupForm({
       window.clearInterval(interval)
       window.removeEventListener('focus', checkSession)
     }
-  }, [email, step, finishSignedIn])
+  }, [email, newsletters, step, finishSignedIn])
 
   if (hideWhenLoggedIn && hasSession && authLoading) return null
   if (hideWhenLoggedIn && user) return null
@@ -289,7 +308,7 @@ function SignupConfirmationDialog({
   code: string
   email: string
   loading: boolean
-  newsletters: Newsletter[]
+  newsletters: readonly Newsletter[]
   onCodeChange: (value: string) => void
   onDifferentEmail: () => void
   onSignedIn: () => void
@@ -298,9 +317,6 @@ function SignupConfirmationDialog({
   const googleAvailable = useGoogleSignInAvailable()
   const handleGoogleSuccess = useCallback(
     (googleUser: GoogleSignInUser) => {
-      // If the visitor chooses a different Google account, that account is the
-      // authenticated identity. The server applies these pending opt-ins to the
-      // Google account only, so the originally typed email is not confirmed.
       if (!matchesSubmittedEmail(googleUser.email, email)) return true
 
       onSignedIn()
@@ -356,6 +372,7 @@ function SignupConfirmationDialog({
             <>
               <p className="text-center font-sans text-xs text-gray-400">or</p>
               <GoogleSignInButton
+                expectedEmail={email}
                 loginHint={email}
                 newsletters={newsletters}
                 onSuccess={handleGoogleSuccess}

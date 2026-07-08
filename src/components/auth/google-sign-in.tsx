@@ -146,20 +146,25 @@ export async function handleGoogleSignInSuccess(
 }
 
 function useGoogleAuth({
+  expectedEmail,
   loginHint,
   newsletters,
   onSuccess,
 }: {
+  expectedEmail?: string
   loginHint?: string
   newsletters?: readonly string[]
   onSuccess?: GoogleSignInSuccessHandler
 } = {}) {
   const available = useGoogleSignInAvailable()
   const normalizedLoginHint = normalizeGoogleLoginHint(loginHint)
+  const normalizedExpectedEmail = normalizeGoogleLoginHint(expectedEmail)
   const [loading, setLoading] = useState(false)
   const clientRef = useRef<{ requestCode: () => void } | null>(null)
+  const expectedEmailRef = useRef(normalizedExpectedEmail)
   const onSuccessRef = useRef(onSuccess)
   const newslettersRef = useRef(newsletters)
+  expectedEmailRef.current = normalizedExpectedEmail
   onSuccessRef.current = onSuccess
   newslettersRef.current = newsletters
 
@@ -187,6 +192,9 @@ function useGoogleAuth({
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 code: response.code,
+                ...(expectedEmailRef.current
+                  ? { expectedEmail: expectedEmailRef.current }
+                  : {}),
                 ...(newslettersRef.current?.length
                   ? { newsletters: newslettersRef.current }
                   : {}),
@@ -226,7 +234,7 @@ function useGoogleAuth({
       cancelled = true
       clientRef.current = null
     }
-  }, [normalizedLoginHint])
+  }, [normalizedExpectedEmail, normalizedLoginHint])
 
   const requestSignIn = useCallback(() => {
     if (loading || !clientRef.current) return
@@ -238,15 +246,18 @@ function useGoogleAuth({
 }
 
 export function GoogleSignInButton({
+  expectedEmail,
   loginHint,
   newsletters,
   onSuccess,
 }: {
+  expectedEmail?: string
   loginHint?: string
   newsletters?: readonly string[]
   onSuccess?: GoogleSignInSuccessHandler
 }) {
   const { requestSignIn, loading, available } = useGoogleAuth({
+    expectedEmail,
     loginHint,
     newsletters,
     onSuccess,
