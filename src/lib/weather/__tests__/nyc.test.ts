@@ -17,14 +17,15 @@ describe('describeWeatherCode', () => {
 })
 
 describe('openMeteoUrl', () => {
-  it('requests current NYC weather in US units', () => {
+  it('requests current NYC weather in metric units', () => {
     const url = new URL(openMeteoUrl())
 
     expect(url.hostname).toBe('api.open-meteo.com')
     expect(url.searchParams.get('latitude')).toBe('40.7128')
     expect(url.searchParams.get('longitude')).toBe('-74.006')
-    expect(url.searchParams.get('temperature_unit')).toBe('fahrenheit')
-    expect(url.searchParams.get('wind_speed_unit')).toBe('mph')
+    expect(url.searchParams.get('temperature_unit')).toBe('celsius')
+    expect(url.searchParams.get('wind_speed_unit')).toBe('kmh')
+    expect(url.searchParams.get('precipitation_unit')).toBe('mm')
     expect(url.searchParams.get('timezone')).toBe('America/New_York')
   })
 })
@@ -35,13 +36,13 @@ describe('parseOpenMeteoResponse', () => {
       {
         current: {
           time: '2026-07-08T16:00',
-          temperature_2m: 83.4,
-          apparent_temperature: 87.2,
+          temperature_2m: 28.4,
+          apparent_temperature: 30.2,
           relative_humidity_2m: 61,
-          precipitation: 0.004,
+          precipitation: 0.04,
           weather_code: 2,
           cloud_cover: 40,
-          wind_speed_10m: 7.4,
+          wind_speed_10m: 12.4,
           is_day: 1,
         },
       },
@@ -49,18 +50,18 @@ describe('parseOpenMeteoResponse', () => {
     )
 
     expect(snapshot).toEqual({
-      location: 'New York',
+      location: 'NYC',
       timeZone: 'America/New_York',
       source: 'open-meteo',
       observedAt: '2026-07-08T16:00',
       fetchedAt: '2026-07-08T20:00:00.000Z',
       current: {
-        temperatureF: 83,
-        apparentTemperatureF: 87,
+        temperatureC: 28,
+        apparentTemperatureC: 30,
         relativeHumidity: 61,
-        precipitationIn: 0,
+        precipitationMm: 0,
         cloudCover: 40,
-        windSpeedMph: 7,
+        windSpeedKph: 12,
         weatherCode: 2,
         description: 'partly cloudy',
         isDay: true,
@@ -83,13 +84,13 @@ describe('fetchNycWeatherSnapshot', () => {
         Response.json({
           current: {
             time: '2026-07-08T16:00',
-            temperature_2m: 83,
-            apparent_temperature: 87,
+            temperature_2m: 28,
+            apparent_temperature: 30,
             relative_humidity_2m: 61,
             precipitation: 0,
             weather_code: 1,
             cloud_cover: 20,
-            wind_speed_10m: 7,
+            wind_speed_10m: 12,
             is_day: 1,
           },
         })
@@ -98,7 +99,7 @@ describe('fetchNycWeatherSnapshot', () => {
 
     await expect(fetchNycWeatherSnapshot()).resolves.toMatchObject({
       current: {
-        temperatureF: 83,
+        temperatureC: 28,
         description: 'mostly sunny',
       },
     })

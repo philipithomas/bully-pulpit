@@ -16,18 +16,18 @@ describe('GET /api/nyc-weather', () => {
 
   it('returns cached weather context', async () => {
     mockedFetchNycWeatherSnapshot.mockResolvedValue({
-      location: 'New York',
+      location: 'NYC',
       timeZone: 'America/New_York',
       source: 'open-meteo',
       observedAt: '2026-07-08T16:00',
       fetchedAt: '2026-07-08T20:00:00.000Z',
       current: {
-        temperatureF: 83,
-        apparentTemperatureF: 87,
+        temperatureC: 28,
+        apparentTemperatureC: 30,
         relativeHumidity: 61,
-        precipitationIn: 0,
+        precipitationMm: 0,
         cloudCover: 40,
-        windSpeedMph: 7,
+        windSpeedKph: 12,
         weatherCode: 2,
         description: 'partly cloudy',
         isDay: true,
@@ -41,7 +41,7 @@ describe('GET /api/nyc-weather', () => {
       'public, max-age=60, s-maxage=600, stale-while-revalidate=1800'
     )
     await expect(response.json()).resolves.toMatchObject({
-      current: { temperatureF: 83, description: 'partly cloudy' },
+      current: { temperatureC: 28, description: 'partly cloudy' },
     })
   })
 

@@ -5,26 +5,26 @@ import type { NycWeatherSnapshot } from '@/lib/weather/nyc'
 
 const NYC_TIME_ZONE = 'America/New_York'
 
-function formatNycTime(date: Date): string {
+export function formatNycTime(date: Date): string {
   return new Intl.DateTimeFormat('en-US', {
     timeZone: NYC_TIME_ZONE,
-    hour: 'numeric',
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: true,
+    hourCycle: 'h23',
   }).format(date)
 }
 
-function footerText(
+export function footerText(
   now: Date | null,
   weather: NycWeatherSnapshot | null
 ): string {
-  if (!now) return 'New York'
+  if (!now) return 'NYC'
 
   const time = formatNycTime(now)
 
-  if (!weather) return `New York: ${time}.`
+  if (!weather) return `NYC: ${time}.`
 
-  return `New York: ${time}, ${weather.current.temperatureF}\u00b0F and ${weather.current.description}.`
+  return `NYC: ${time}, ${weather.current.temperatureC}\u00b0C and ${weather.current.description}.`
 }
 
 export function FooterNycStatus() {

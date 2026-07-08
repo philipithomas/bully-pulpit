@@ -21,6 +21,7 @@ export function Footer() {
               >
                 The Contraption Company LLC
               </Link>
+              . All rights reserved.
             </p>
           </div>
           <div className="flex flex-col gap-4 md:items-end">

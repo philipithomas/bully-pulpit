@@ -4,18 +4,18 @@ const NYC_TIME_ZONE = 'America/New_York'
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast'
 
 export interface NycWeatherSnapshot {
-  location: 'New York'
+  location: 'NYC'
   timeZone: typeof NYC_TIME_ZONE
   source: 'open-meteo'
   observedAt: string
   fetchedAt: string
   current: {
-    temperatureF: number
-    apparentTemperatureF: number
+    temperatureC: number
+    apparentTemperatureC: number
     relativeHumidity: number
-    precipitationIn: number
+    precipitationMm: number
     cloudCover: number
-    windSpeedMph: number
+    windSpeedKph: number
     weatherCode: number
     description: string
     isDay: boolean
@@ -90,9 +90,9 @@ export function openMeteoUrl(): string {
       'is_day',
     ].join(',')
   )
-  url.searchParams.set('temperature_unit', 'fahrenheit')
-  url.searchParams.set('wind_speed_unit', 'mph')
-  url.searchParams.set('precipitation_unit', 'inch')
+  url.searchParams.set('temperature_unit', 'celsius')
+  url.searchParams.set('wind_speed_unit', 'kmh')
+  url.searchParams.set('precipitation_unit', 'mm')
   url.searchParams.set('timezone', NYC_TIME_ZONE)
 
   return url.toString()
@@ -112,25 +112,25 @@ export function parseOpenMeteoResponse(
   const isDay = numberFrom(current.is_day, 'is_day') === 1
 
   return {
-    location: 'New York',
+    location: 'NYC',
     timeZone: NYC_TIME_ZONE,
     source: 'open-meteo',
     observedAt: stringFrom(current.time, 'time'),
     fetchedAt: fetchedAt.toISOString(),
     current: {
-      temperatureF: round(numberFrom(current.temperature_2m, 'temperature_2m')),
-      apparentTemperatureF: round(
+      temperatureC: round(numberFrom(current.temperature_2m, 'temperature_2m')),
+      apparentTemperatureC: round(
         numberFrom(current.apparent_temperature, 'apparent_temperature')
       ),
       relativeHumidity: round(
         numberFrom(current.relative_humidity_2m, 'relative_humidity_2m')
       ),
-      precipitationIn: round(
+      precipitationMm: round(
         numberFrom(current.precipitation, 'precipitation'),
-        2
+        1
       ),
       cloudCover: round(numberFrom(current.cloud_cover, 'cloud_cover')),
-      windSpeedMph: round(numberFrom(current.wind_speed_10m, 'wind_speed_10m')),
+      windSpeedKph: round(numberFrom(current.wind_speed_10m, 'wind_speed_10m')),
       weatherCode,
       description: describeWeatherCode(weatherCode, isDay),
       isDay,
