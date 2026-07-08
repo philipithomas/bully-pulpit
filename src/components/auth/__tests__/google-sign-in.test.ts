@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { handleGoogleSignInSuccess } from '@/components/auth/google-sign-in'
+import {
+  handleGoogleSignInSuccess,
+  normalizeGoogleLoginHint,
+} from '@/components/auth/google-sign-in'
 import { matchesSubmittedEmail } from '@/components/auth/signup-completion'
 
 describe('handleGoogleSignInSuccess', () => {
@@ -39,5 +42,15 @@ describe('matchesSubmittedEmail', () => {
 
   it('does not treat a different Google account as the submitted email', () => {
     expect(matchesSubmittedEmail('bar@gmail.com', 'foo@gmail.com')).toBe(false)
+  })
+})
+
+describe('normalizeGoogleLoginHint', () => {
+  it('trims the expected email before passing it to Google', () => {
+    expect(normalizeGoogleLoginHint(' foo@gmail.com ')).toBe('foo@gmail.com')
+  })
+
+  it('omits blank hints', () => {
+    expect(normalizeGoogleLoginHint('   ')).toBeUndefined()
   })
 })
