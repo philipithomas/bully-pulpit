@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   if (!body) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
-  const { code, newsletters } = body
+  const { code, expectedEmail, newsletters } = body
 
   if (!code) {
     return NextResponse.json(
@@ -74,16 +74,30 @@ export async function POST(request: Request) {
       audience: siteConfig.googleClientId,
     })
 
-    const email = payload.email as string
-    const name = payload.name as string | undefined
+    const email =
+      typeof payload.email === 'string'
+        ? payload.email.trim().toLowerCase()
+        : ''
+    const name = typeof payload.name === 'string' ? payload.name : undefined
     const requestedNewsletters = normalizedNewsletters(
       Array.isArray(newsletters) ? newsletters : undefined
     )
+    const normalizedExpectedEmail =
+      typeof expectedEmail === 'string'
+        ? expectedEmail.trim().toLowerCase()
+        : null
 
     if (!email || !payload.email_verified) {
       return NextResponse.json(
         { error: 'Email not verified by Google' },
         { status: 400 }
+      )
+    }
+
+    if (normalizedExpectedEmail && normalizedExpectedEmail !== email) {
+      return NextResponse.json(
+        { error: `Use the Google account for ${normalizedExpectedEmail}.` },
+        { status: 409 }
       )
     }
 

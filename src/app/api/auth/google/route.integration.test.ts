@@ -1,23 +1,28 @@
 import { eq } from 'drizzle-orm'
+import { jwtVerify } from 'jose'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('botid/server', () =>
   import('@/test/integration/mocks').then((m) => m.botidMock())
 )
+vi.mock('@/lib/email/ses', () =>
+  import('@/test/integration/mocks').then((m) => m.sesMock())
+)
 vi.mock('jose', async (importOriginal) => {
   const actual = await importOriginal<typeof import('jose')>()
   return {
     ...actual,
-    createRemoteJWKSet: vi.fn(() => ({})),
+    createRemoteJWKSet: vi.fn(() => vi.fn()),
     jwtVerify: vi.fn(),
   }
 })
 
-import { jwtVerify } from 'jose'
 import { POST } from '@/app/api/auth/google/route'
 import { subscribers } from '@/lib/db/schema'
 import { db, resetDb } from '@/test/integration/db'
+
+const mockedJwtVerify = vi.mocked(jwtVerify)
 
 function googlePost(body: unknown): Request {
   return new Request('http://localhost/api/auth/google', {
@@ -35,8 +40,24 @@ async function subscriberByEmail(email: string) {
     .select()
     .from(subscribers)
     .where(eq(subscribers.email, email))
-  expect(rows).toHaveLength(1)
-  return rows[0]
+  return rows[0] ?? null
+}
+
+async function expectSubscriberByEmail(email: string) {
+  const subscriber = await subscriberByEmail(email)
+  expect(subscriber).not.toBeNull()
+  return subscriber as NonNullable<typeof subscriber>
+}
+
+function mockGooglePayload(email: string, name = 'Reader') {
+  mockedJwtVerify.mockResolvedValueOnce({
+    payload: {
+      email,
+      email_verified: true,
+      name,
+    },
+    protectedHeader: { alg: 'RS256' },
+  } as unknown as Awaited<ReturnType<typeof jwtVerify>>)
 }
 
 beforeEach(async () => {
@@ -52,15 +73,7 @@ beforeEach(async () => {
       })
     )
   )
-  vi.mocked(jwtVerify).mockReset()
-  vi.mocked(jwtVerify).mockResolvedValue({
-    payload: {
-      email: 'bar@gmail.com',
-      email_verified: true,
-      name: 'Bar',
-    },
-    protectedHeader: { alg: 'RS256' },
-  } as unknown as Awaited<ReturnType<typeof jwtVerify>>)
+  mockedJwtVerify.mockReset()
 })
 
 afterEach(() => {
@@ -86,6 +99,7 @@ describe('POST /api/auth/google', () => {
         subscribedTsundoku: false,
       },
     ])
+    mockGooglePayload('bar@gmail.com', 'Bar')
 
     const response = await POST(
       googlePost({
@@ -101,15 +115,60 @@ describe('POST /api/auth/google', () => {
     expect(body.user.subscribed_workshop).toBe(true)
     expect(response.cookies.get('bp_has_session')?.value).toBe('1')
 
-    const typedEmail = await subscriberByEmail('foo@gmail.com')
+    const typedEmail = await expectSubscriberByEmail('foo@gmail.com')
     expect(typedEmail.confirmedAt).toBeNull()
     expect(typedEmail.subscribedWorkshop).toBe(false)
 
-    const googleAccount = await subscriberByEmail('bar@gmail.com')
+    const googleAccount = await expectSubscriberByEmail('bar@gmail.com')
     expect(googleAccount.confirmedAt).not.toBeNull()
     expect(googleAccount.subscribedWorkshop).toBe(true)
     expect(googleAccount.subscribedContraption).toBe(false)
     expect(googleAccount.subscribedPostcard).toBe(false)
     expect(googleAccount.subscribedTsundoku).toBe(false)
+  })
+
+  it('rejects an expected email mismatch before creating a subscriber', async () => {
+    mockGooglePayload('wrong@example.com', 'Wrong account')
+
+    const response = await POST(
+      googlePost({
+        code: 'google-code',
+        expectedEmail: 'reader@example.com',
+        newsletters: ['tsundoku'],
+      })
+    )
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Use the Google account for reader@example.com.',
+    })
+    expect(await subscriberByEmail('wrong@example.com')).toBeNull()
+    expect(response.headers.getSetCookie()).toHaveLength(0)
+  })
+
+  it('applies requested opt-ins for a matching expected Google account', async () => {
+    await db.insert(subscribers).values({
+      email: 'reader@example.com',
+      confirmedAt: new Date(),
+      subscribedTsundoku: false,
+    })
+    mockGooglePayload('reader@example.com')
+
+    const response = await POST(
+      googlePost({
+        code: 'google-code',
+        expectedEmail: 'reader@example.com',
+        newsletters: ['tsundoku'],
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.user.email).toBe('reader@example.com')
+    expect(body.user.subscribed_tsundoku).toBe(true)
+    expect(
+      (await subscriberByEmail('reader@example.com'))?.subscribedTsundoku
+    ).toBe(true)
+    expect(response.headers.getSetCookie().join('\n')).toContain('bp_token=')
   })
 })

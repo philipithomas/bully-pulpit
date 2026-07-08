@@ -22,7 +22,7 @@ export type GoogleSignInUser = {
 
 export type GoogleSignInSuccessHandler = (
   user: GoogleSignInUser
-) => void | boolean | Promise<void | boolean>
+) => unknown | Promise<unknown>
 
 declare global {
   interface Window {
@@ -234,7 +234,7 @@ function useGoogleAuth({
       cancelled = true
       clientRef.current = null
     }
-  }, [normalizedExpectedEmail, normalizedLoginHint])
+  }, [normalizedLoginHint])
 
   const requestSignIn = useCallback(() => {
     if (loading || !clientRef.current) return
