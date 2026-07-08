@@ -3,8 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
-import { GoogleSignInLink } from '@/components/auth/google-sign-in'
+import {
+  GoogleSignInButton,
+  useGoogleSignInAvailable,
+} from '@/components/auth/google-sign-in'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   InputOTP,
   InputOTPGroup,
@@ -35,6 +45,16 @@ interface Props {
 }
 
 type Step = 'email' | 'code' | 'confirmed'
+
+function matchesSubmittedEmail(
+  sessionEmail: unknown,
+  submittedEmail: string
+): boolean {
+  return (
+    typeof sessionEmail === 'string' &&
+    sessionEmail.trim().toLowerCase() === submittedEmail.trim().toLowerCase()
+  )
+}
 
 export function InlineSignupForm({
   hideWhenLoggedIn = false,
@@ -154,6 +174,39 @@ export function InlineSignupForm({
     hideWhenLoggedIn && hasSession === null ? '[[data-member]_&]:hidden' : ''
   const rootClassName = `${initialMemberClassName} ${className ?? ''}`
 
+  const finishSignedIn = useCallback(() => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('signed-in', '1')
+    window.location.assign(url.toString())
+  }, [])
+
+  useEffect(() => {
+    if (step !== 'code') return
+
+    let cancelled = false
+
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled && matchesSubmittedEmail(data.user?.email, email)) {
+          finishSignedIn()
+        }
+      } catch {}
+    }
+
+    const interval = window.setInterval(checkSession, 2000)
+    window.addEventListener('focus', checkSession)
+    void checkSession()
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener('focus', checkSession)
+    }
+  }, [email, step, finishSignedIn])
+
   if (hideWhenLoggedIn && hasSession && authLoading) return null
   if (hideWhenLoggedIn && user) return null
 
@@ -174,33 +227,108 @@ export function InlineSignupForm({
     )
   }
 
-  if (step === 'code') {
-    return (
-      <div
+  return (
+    <>
+      <form
+        onSubmit={handleEmailSubmit}
         className={`flex flex-col ${
-          align === 'center' ? 'items-center text-center' : 'items-start'
+          align === 'center' ? 'items-center' : 'items-start'
         } ${rootClassName}`}
       >
-        <p className="font-sans text-sm font-semibold text-gray-800">
-          Check your email
-        </p>
-        <p className="mt-1 max-w-md font-serif text-sm leading-relaxed text-gray-600">
-          Enter the 6-digit code sent to{' '}
-          <span className="font-sans text-gray-800">{email}</span>.
-        </p>
-        <div
-          className={`mt-4 flex flex-col ${
-            align === 'center' ? 'items-center' : 'items-start'
-          }`}
-        >
+        {resolvedHeaderText ? (
+          <p className="font-sans text-lg font-medium mb-3 text-gray-800">
+            {resolvedHeaderText}
+          </p>
+        ) : null}
+        <div className="flex items-center w-full max-w-md">
+          <input
+            type="email"
+            name="email"
+            autoComplete="email"
+            value={email}
+            onChange={handleEmailChange}
+            placeholder="Your email"
+            aria-label="Email address"
+            required
+            autoFocus={autoFocus}
+            className="border border-gray-300 bg-white px-3 py-2 flex-grow w-full text-sm pointer-coarse:text-base h-10 font-sans"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className={`${buttonClassName} h-10 shrink-0`}
+          >
+            <span className="btn-text">
+              {loading ? <Spinner className="h-4 w-4" /> : 'Subscribe'}
+            </span>
+            <span className="btn-arrow">
+              {loading ? null : <ArrowIcon className="w-4 h-4" />}
+            </span>
+          </button>
+        </div>
+      </form>
+
+      {step === 'code' ? (
+        <SignupConfirmationDialog
+          code={code}
+          email={email}
+          loading={loading}
+          onCodeChange={setCode}
+          onDifferentEmail={handleDifferentEmail}
+          onSignedIn={finishSignedIn}
+          onVerifyCode={verifyCode}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function SignupConfirmationDialog({
+  code,
+  email,
+  loading,
+  onCodeChange,
+  onDifferentEmail,
+  onSignedIn,
+  onVerifyCode,
+}: {
+  code: string
+  email: string
+  loading: boolean
+  onCodeChange: (value: string) => void
+  onDifferentEmail: () => void
+  onSignedIn: () => void
+  onVerifyCode: (value: string) => void
+}) {
+  const googleAvailable = useGoogleSignInAvailable()
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) onDifferentEmail()
+    },
+    [onDifferentEmail]
+  )
+
+  return (
+    <Dialog open onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Check your email</DialogTitle>
+          <DialogDescription>
+            {googleAvailable
+              ? `Check ${email} for a 6-digit code, or finish with Google.`
+              : `Check ${email} for a 6-digit code.`}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="mt-6 space-y-4">
           <InputOTP
             maxLength={6}
             value={code}
-            onChange={setCode}
-            onComplete={verifyCode}
+            onChange={onCodeChange}
+            onComplete={onVerifyCode}
             disabled={loading}
             autoFocus
             aria-label="6-digit code"
+            containerClassName="justify-center"
           >
             <InputOTPGroup>
               <InputOTPSlot index={0} />
@@ -212,64 +340,26 @@ export function InlineSignupForm({
             </InputOTPGroup>
           </InputOTP>
           {loading ? (
-            <div className="mt-3 flex items-center gap-2">
-              <Spinner className="h-3 w-3 text-gray-500" />
-              <p className="text-xs text-gray-500 font-sans">Verifying</p>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Spinner className="h-3.5 w-3.5" />
+              <span>Verifying</span>
             </div>
           ) : null}
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-            <button
-              type="button"
-              onClick={handleDifferentEmail}
-              className="text-xs text-gray-500 underline underline-offset-2 decoration-gray-300 hover:text-gray-700 cursor-pointer transition-colors font-sans"
-            >
-              Use a different email
-            </button>
-            <GoogleSignInLink />
-          </div>
+          {googleAvailable ? (
+            <>
+              <p className="text-center font-sans text-xs text-gray-400">or</p>
+              <GoogleSignInButton onSuccess={onSignedIn} />
+            </>
+          ) : null}
+          <button
+            type="button"
+            onClick={onDifferentEmail}
+            className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Use a different email
+          </button>
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <form
-      onSubmit={handleEmailSubmit}
-      className={`flex flex-col ${
-        align === 'center' ? 'items-center' : 'items-start'
-      } ${rootClassName}`}
-    >
-      {resolvedHeaderText ? (
-        <p className="font-sans text-lg font-medium mb-3 text-gray-800">
-          {resolvedHeaderText}
-        </p>
-      ) : null}
-      <div className="flex items-center w-full max-w-md">
-        <input
-          type="email"
-          name="email"
-          autoComplete="email"
-          value={email}
-          onChange={handleEmailChange}
-          placeholder="Your email"
-          aria-label="Email address"
-          required
-          autoFocus={autoFocus}
-          className="border border-gray-300 bg-white px-3 py-2 flex-grow w-full text-sm pointer-coarse:text-base h-10 font-sans"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className={`${buttonClassName} h-10 shrink-0`}
-        >
-          <span className="btn-text">
-            {loading ? <Spinner className="h-4 w-4" /> : 'Subscribe'}
-          </span>
-          <span className="btn-arrow">
-            {loading ? null : <ArrowIcon className="w-4 h-4" />}
-          </span>
-        </button>
-      </div>
-    </form>
+      </DialogContent>
+    </Dialog>
   )
 }
