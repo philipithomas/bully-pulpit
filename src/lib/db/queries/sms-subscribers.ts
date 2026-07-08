@@ -80,8 +80,7 @@ export async function unsubscribeSmsNumber(
       .where(
         and(
           eq(smsSends.smsSubscriberId, subscriber.id),
-          isNull(smsSends.sentAt),
-          isNull(smsSends.sendError)
+          isNull(smsSends.sentAt)
         )
       )
   }

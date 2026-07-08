@@ -87,6 +87,7 @@ export type SmsSendStats = {
   sent: number
   pending: number
   failed: number
+  skipped: number
 }
 
 export async function smsSendStatsBySlug(slug: string): Promise<SmsSendStats> {
@@ -94,12 +95,13 @@ export async function smsSendStatsBySlug(slug: string): Promise<SmsSendStats> {
     .select({
       total: sql<number>`count(*)::int`,
       sent: sql<number>`(count(*) FILTER (WHERE ${smsSends.sentAt} IS NOT NULL))::int`,
-      failed: sql<number>`(count(*) FILTER (WHERE ${smsSends.sendError} IS NOT NULL AND ${smsSends.sentAt} IS NULL))::int`,
+      failed: sql<number>`(count(*) FILTER (WHERE ${smsSends.sendError} IS NOT NULL AND ${smsSends.sendError} <> ${SMS_SEND_SKIPPED_UNSUBSCRIBED} AND ${smsSends.sentAt} IS NULL))::int`,
+      skipped: sql<number>`(count(*) FILTER (WHERE ${smsSends.sendError} = ${SMS_SEND_SKIPPED_UNSUBSCRIBED} AND ${smsSends.sentAt} IS NULL))::int`,
       pending: sql<number>`(count(*) FILTER (WHERE ${smsSends.sentAt} IS NULL AND ${smsSends.sendError} IS NULL))::int`,
     })
     .from(smsSends)
     .where(eq(smsSends.postSlug, slug))
-  return rows[0] ?? { total: 0, sent: 0, pending: 0, failed: 0 }
+  return rows[0] ?? { total: 0, sent: 0, pending: 0, failed: 0, skipped: 0 }
 }
 
 export async function pendingSmsRowIdsBySlug(slug: string): Promise<number[]> {

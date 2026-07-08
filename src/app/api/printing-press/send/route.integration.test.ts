@@ -35,6 +35,7 @@ import {
   pendingRowIdsBySlug,
 } from '@/lib/db/queries/email-sends'
 import { latestRunIdBySlug, recordSendRun } from '@/lib/db/queries/send-runs'
+import { SMS_SEND_SKIPPED_UNSUBSCRIBED } from '@/lib/db/queries/sms-sends'
 import {
   emailSends,
   smsSends,
@@ -401,6 +402,7 @@ describe('GET send status', () => {
       sent: 0,
       pending: 0,
       failed: 0,
+      skipped: 0,
       emailStats: {
         total: 0,
         sent: 0,
@@ -412,6 +414,7 @@ describe('GET send status', () => {
         sent: 0,
         pending: 0,
         failed: 0,
+        skipped: 0,
       },
       eligible: 0,
       smsEligible: 0,
@@ -427,6 +430,10 @@ describe('GET send status', () => {
     await seedSmsSendRow(bob.id)
     const carol = await seedSmsSubscriber('+15557654321')
     await seedSmsSendRow(carol.id, { sendError: 'Twilio rejected the message' })
+    const dave = await seedSmsSubscriber('+15550000000')
+    await seedSmsSendRow(dave.id, {
+      sendError: SMS_SEND_SKIPPED_UNSUBSCRIBED,
+    })
 
     const res = await statusGet(statusRequest(), {
       params: Promise.resolve({ slug: SLUG }),
@@ -434,10 +441,11 @@ describe('GET send status', () => {
 
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({
-      total: 3,
+      total: 4,
       sent: 1,
       pending: 1,
       failed: 1,
+      skipped: 1,
       emailStats: {
         total: 1,
         sent: 1,
@@ -445,10 +453,11 @@ describe('GET send status', () => {
         failed: 0,
       },
       smsStats: {
-        total: 2,
+        total: 3,
         sent: 0,
         pending: 1,
         failed: 1,
+        skipped: 1,
       },
       eligible: 0,
       smsEligible: 1,

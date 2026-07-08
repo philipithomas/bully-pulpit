@@ -7,12 +7,16 @@ import { countEligibleSms } from '@/lib/db/queries/sms-subscribers'
 import { countEligible, isNewsletter } from '@/lib/db/queries/subscribers'
 import { isSendRunActive } from '@/lib/email/send-guard'
 
-function combineSendStats(email: SendStats, sms: SendStats): SendStats {
+type CombinedSendStats = SendStats & { skipped: number }
+type SmsStats = SendStats & { skipped: number }
+
+function combineSendStats(email: SendStats, sms: SmsStats): CombinedSendStats {
   return {
     total: email.total + sms.total,
     sent: email.sent + sms.sent,
     pending: email.pending + sms.pending,
     failed: email.failed + sms.failed,
+    skipped: sms.skipped,
   }
 }
 

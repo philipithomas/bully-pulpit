@@ -23,6 +23,7 @@ type SendStats = {
   sent: number
   pending: number
   failed: number
+  skipped: number
 }
 
 interface Props {
@@ -93,6 +94,7 @@ export function SendClient({
           sent: data.sent,
           pending: data.pending,
           failed: data.failed,
+          skipped: data.skipped ?? 0,
         })
         setEligible(data.eligible)
         setSmsEligible(data.smsEligible ?? 0)
@@ -107,7 +109,7 @@ export function SendClient({
           setActive(false)
           return
         }
-        const processed = data.sent + data.failed
+        const processed = data.sent + data.failed + (data.skipped ?? 0)
         if (data.pending > 0 && processed === lastProcessed) {
           stalledPolls += 1
           if (stalledPolls >= STALL_POLLS) setActive(false)
@@ -187,7 +189,7 @@ export function SendClient({
     }
   }, [slug])
 
-  const processed = stats.sent + stats.failed
+  const processed = stats.sent + stats.failed + stats.skipped
   const progress = stats.total > 0 ? (processed / stats.total) * 100 : 0
   const progressText =
     active && stats.total === 0
@@ -227,6 +229,9 @@ export function SendClient({
         )}
         {stats.failed > 0 && (
           <Badge variant="destructive">{stats.failed} failed</Badge>
+        )}
+        {stats.skipped > 0 && (
+          <Badge variant="secondary">{stats.skipped} skipped</Badge>
         )}
         {active ? <Badge variant="warning">Sending</Badge> : null}
       </div>

@@ -205,13 +205,23 @@ describe('POST /api/phone/sms', () => {
       })
     )
     const [subscriber] = await db.select().from(smsSubscribers)
-    await db.insert(smsSends).values({
-      smsSubscriberId: subscriber.id,
-      postSlug: 'post-a',
-      newsletter: 'postcard',
-      body: 'new post',
-      nextAttemptAt: new Date(),
-    })
+    await db.insert(smsSends).values([
+      {
+        smsSubscriberId: subscriber.id,
+        postSlug: 'post-a',
+        newsletter: 'postcard',
+        body: 'new post',
+        nextAttemptAt: new Date(),
+      },
+      {
+        smsSubscriberId: subscriber.id,
+        postSlug: 'post-b',
+        newsletter: 'postcard',
+        body: 'retryable old post',
+        sendError: 'Twilio rejected the message',
+        nextAttemptAt: new Date(),
+      },
+    ])
 
     await smsPost(
       smsRequest({
@@ -222,13 +232,23 @@ describe('POST /api/phone/sms', () => {
       })
     )
 
-    const [send] = await db.select().from(smsSends)
-    expect(send).toMatchObject({
-      postSlug: 'post-a',
-      sendError: SMS_SEND_SKIPPED_UNSUBSCRIBED,
-      sentAt: null,
-      nextAttemptAt: null,
-    })
+    const sends = (await db.select().from(smsSends)).sort((a, b) =>
+      a.postSlug.localeCompare(b.postSlug)
+    )
+    expect(sends).toMatchObject([
+      {
+        postSlug: 'post-a',
+        sendError: SMS_SEND_SKIPPED_UNSUBSCRIBED,
+        sentAt: null,
+        nextAttemptAt: null,
+      },
+      {
+        postSlug: 'post-b',
+        sendError: SMS_SEND_SKIPPED_UNSUBSCRIBED,
+        sentAt: null,
+        nextAttemptAt: null,
+      },
+    ])
 
     await smsPost(
       smsRequest({
@@ -240,7 +260,9 @@ describe('POST /api/phone/sms', () => {
     )
 
     expect(await resetFailedSmsBySlug('post-a')).toBe(0)
+    expect(await resetFailedSmsBySlug('post-b')).toBe(0)
     expect(await countEligibleSms('postcard', 'post-a')).toBe(0)
+    expect(await countEligibleSms('postcard', 'post-b')).toBe(0)
   })
 
   it('syncs Twilio-managed STOP webhooks without a duplicate reply', async () => {
