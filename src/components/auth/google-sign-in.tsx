@@ -141,7 +141,12 @@ function useGoogleAuth(onSuccess?: GoogleSignInSuccessHandler) {
             }
             const data = (await res.json()) as GoogleSignInResult
             const shouldContinue = await onSuccessRef.current?.(data)
-            if (shouldContinue === false) return
+            if (shouldContinue === false) {
+              await fetch('/api/auth/logout', { method: 'POST' }).catch(
+                () => {}
+              )
+              return
+            }
             toast.success('Signed in successfully')
             window.location.reload()
           } catch (err) {
