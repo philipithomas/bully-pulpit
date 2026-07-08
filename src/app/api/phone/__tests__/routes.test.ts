@@ -49,6 +49,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.PHONE_WEBHOOK_SECRET
+  delete process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED
   vi.clearAllMocks()
 })
 
@@ -60,7 +61,7 @@ describe('POST /api/phone/voice', () => {
     expect(response.status).toBe(401)
   })
 
-  it('returns greeting TwiML with secret-bearing callbacks and notifies', async () => {
+  it('defaults to voicemail-only TwiML and notifies', async () => {
     const response = await voicePost(
       twilioPost('/api/phone/voice', {
         From: '+15551234567',
@@ -71,8 +72,8 @@ describe('POST /api/phone/voice', () => {
     expect(response.headers.get('Content-Type')).toContain('text/xml')
     const xml = await response.text()
     expect(xml).toContain('You have reached the test suite.')
-    expect(xml).toContain('<Gather')
-    expect(xml).toContain('/api/phone/voice-menu?secret=test-webhook-secret')
+    expect(xml).not.toContain('<Gather')
+    expect(xml).not.toContain('/api/phone/voice-menu')
     expect(xml).toContain(
       '/api/phone/recording-status?secret=test-webhook-secret'
     )
@@ -85,6 +86,23 @@ describe('POST /api/phone/voice', () => {
       to: '+12123473190',
       greeting: 'You have reached the test suite.',
     })
+  })
+
+  it('offers the SMS signup menu when the flag is enabled', async () => {
+    process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED = 'true'
+
+    const response = await voicePost(
+      twilioPost('/api/phone/voice', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(xml).toContain('<Gather')
+    expect(xml).toContain('/api/phone/voice-menu?secret=test-webhook-secret')
+    expect(xml).toContain('Press 2 to subscribe to text message updates.')
   })
 })
 

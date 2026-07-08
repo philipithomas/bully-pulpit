@@ -1,3 +1,4 @@
+import { isSmsSignupUiEnabled } from '@/lib/feature-flags'
 import {
   smsSubscribeDisplayNumber,
   smsSubscribeNumber,
@@ -10,6 +11,8 @@ export function SmsSubscribePrompt({
   align?: 'start' | 'center'
   className?: string
 }) {
+  if (!isSmsSignupUiEnabled()) return null
+
   return (
     <p
       className={`${className} max-w-md font-serif text-gray-500 text-sm leading-relaxed ${

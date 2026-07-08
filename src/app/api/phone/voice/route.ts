@@ -1,10 +1,15 @@
 import { after, NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
+import { isSmsSignupUiEnabled } from '@/lib/feature-flags'
 import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
 import { phoneWebhookSecret } from '@/lib/phone/config'
 import { generateGreeting } from '@/lib/phone/greeting'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
-import { twimlResponse, voiceMenuTwiml } from '@/lib/phone/twiml'
+import {
+  twimlResponse,
+  voiceMenuTwiml,
+  voicemailTwiml,
+} from '@/lib/phone/twiml'
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
 
 /**
@@ -38,6 +43,10 @@ export async function POST(request: Request) {
   const secret = phoneWebhookSecret() ?? ''
   const menuParams = new URLSearchParams({ secret })
   const callbackUrls = voicemailCallbackUrls({ from, to })
+
+  if (!isSmsSignupUiEnabled()) {
+    return twimlResponse(voicemailTwiml({ greeting, ...callbackUrls }))
+  }
 
   return twimlResponse(
     voiceMenuTwiml({

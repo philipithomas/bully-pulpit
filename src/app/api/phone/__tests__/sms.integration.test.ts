@@ -55,6 +55,7 @@ beforeEach(async () => {
 afterEach(() => {
   delete process.env.PHONE_WEBHOOK_SECRET
   delete process.env.ADMIN_EMAILS
+  delete process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED
   vi.clearAllMocks()
 })
 
@@ -277,6 +278,8 @@ describe('POST /api/phone/sms', () => {
 
 describe('POST /api/phone/voice-menu', () => {
   it('subscribes a caller that presses 2', async () => {
+    process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED = 'true'
+
     const response = await voiceMenuPost(
       voiceMenuRequest({
         From: '+14155551234',
@@ -326,7 +329,25 @@ describe('POST /api/phone/voice-menu', () => {
     })
   })
 
+  it('falls back to voicemail when the SMS signup UI flag is off', async () => {
+    const response = await voiceMenuPost(
+      voiceMenuRequest({
+        From: '+14155551234',
+        To: '+12123473190',
+        Digits: '2',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(xml).toContain('Leave a message after the tone.')
+    expect(xml).toContain('<Record maxLength="120"')
+    expect(await db.select().from(smsSubscribers)).toHaveLength(0)
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+  })
+
   it('still gives spoken STOP instructions when voice confirmation SMS fails', async () => {
+    process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED = 'true'
     vi.mocked(sendSms).mockRejectedValueOnce(new Error('Twilio rejected it'))
 
     const response = await voiceMenuPost(

@@ -32,6 +32,7 @@ Set these environment variables in Vercel before cutover:
 
 ```bash
 PHONE_WEBHOOK_SECRET=
+NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED=false
 TWILIO_SID=
 TWILIO_SECRET=
 OWNER_PHONE_NUMBER=
@@ -42,10 +43,14 @@ Configure each Twilio number:
 - Voice, "A call comes in": `https://www.philipithomas.com/api/phone/voice?secret=$PHONE_WEBHOOK_SECRET`
 - Messaging, "A message comes in": `https://www.philipithomas.com/api/phone/sms?secret=$PHONE_WEBHOOK_SECRET`
 
-The voice webhook plays the generated greeting, then offers "press 1" for
-voicemail and "press 2" to subscribe the caller ID to SMS updates. No input
-falls through to voicemail. The SMS webhook stores inbound replies, handles
-`SUBSCRIBE` and `STOP`, and emails admins about normal replies.
+The public SMS signup affordances are gated by
+`NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED`: when it is false or unset, web subscribe
+prompts do not show the SMS option and the voice webhook records voicemail
+without offering "press 2" SMS signup. When the flag is true, the voice webhook
+plays the generated greeting, then offers "press 1" for voicemail and "press 2"
+to subscribe the caller ID to SMS updates. No input falls through to voicemail.
+The SMS webhook stores inbound replies, handles `SUBSCRIBE` and `STOP`, and
+emails admins about normal replies.
 `SUBSCRIBE` replies with a written confirmation that includes the STOP
 instruction. Voice-menu signups send the same confirmation SMS when Twilio
 accepts it; if that confirmation send fails, the spoken confirmation still tells
@@ -73,8 +78,9 @@ After deploy, verify:
 WORKFLOW_SMOKE_BASE_URL=https://www.philipithomas.com CRON_SECRET=$CRON_SECRET pnpm workflow:smoke
 ```
 
-Then send `SUBSCRIBE` and `STOP` to the 212 number, call it and press both menu
-options, and confirm `/printing-press/phone` shows the inbound and outbound
+Then confirm the production flag is still off before launch. With the flag on in
+preview, send `SUBSCRIBE` and `STOP` to the 212 number, call it and press both
+menu options, and confirm `/printing-press/phone` shows the inbound and outbound
 thread history.
 
 ## Content

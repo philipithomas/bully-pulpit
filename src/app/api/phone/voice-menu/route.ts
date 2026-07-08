@@ -4,6 +4,7 @@ import {
   subscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
 import { createTextMessage } from '@/lib/db/queries/text-messages'
+import { isSmsSignupUiEnabled } from '@/lib/feature-flags'
 import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
 import { isE164, numberLabel } from '@/lib/phone/config'
 import { sendSmsSignupNotification } from '@/lib/phone/notifications'
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
   const to = String(form.get('To') ?? 'Unknown')
   const metadata = twilioWebhookMetadataFromForm(form, from)
 
-  if (digits === '2') {
+  if (isSmsSignupUiEnabled() && digits === '2') {
     if (!isE164(from)) {
       return twimlResponse(
         sayAndHangupTwiml(
