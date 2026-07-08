@@ -5,76 +5,71 @@ export function Footer() {
   return (
     <footer className="bg-gray-950 text-gray-400 mt-16">
       <div className="container py-12 md:py-16">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
-          <div>
+        <div className="grid gap-y-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-baseline md:gap-x-8">
+          <Link
+            href="/"
+            className="text-white font-semibold text-sm tracking-[0.04em] uppercase hover:text-gray-300 transition-colors"
+          >
+            Philip I. Thomas
+          </Link>
+          <p className="order-2 text-xs text-gray-500 md:order-none md:col-start-1 md:row-start-2">
+            &copy; {new Date().getFullYear()}{' '}
             <Link
-              href="/"
-              className="text-white font-semibold text-sm tracking-[0.04em] uppercase hover:text-gray-300 transition-colors"
+              href="/contact"
+              className="text-inherit no-underline hover:underline"
             >
-              Philip I. Thomas
+              The Contraption Company LLC
             </Link>
-            <p className="mt-3 text-xs text-gray-500">
-              &copy; {new Date().getFullYear()}{' '}
-              <Link
-                href="/contact"
-                className="text-inherit no-underline hover:underline"
-              >
-                The Contraption Company LLC
-              </Link>
-              . All rights reserved.
-            </p>
-          </div>
-          <div className="flex flex-col gap-4 md:items-end">
-            <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm md:justify-end">
-              <Link
-                href="/contraption"
-                className="hover:text-white transition-colors"
-              >
-                Contraption
-              </Link>
-              <Link
-                href="/workshop"
-                className="hover:text-white transition-colors"
-              >
-                Workshop
-              </Link>
-              <Link
-                href="/postcard"
-                className="hover:text-white transition-colors"
-              >
-                Postcard
-              </Link>
-              <Link
-                href="/tsundoku"
-                className="hover:text-white transition-colors"
-              >
-                Tsundoku
-              </Link>
-              <Link
-                href="/terms"
-                className="hover:text-white transition-colors"
-              >
-                Terms
-              </Link>
-              <Link
-                href="/privacy"
-                className="hover:text-white transition-colors"
-              >
-                Privacy
-              </Link>
-              <Link
-                href="/colophon"
-                className="hover:text-white transition-colors"
-              >
-                Colophon
-              </Link>
-              <Link
-                href="/sitemap"
-                className="hover:text-white transition-colors"
-              >
-                Sitemap
-              </Link>
-            </nav>
+            . All rights reserved.
+          </p>
+          <nav className="order-3 mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm md:order-none md:col-start-2 md:row-start-1 md:mt-0 md:justify-end">
+            <Link
+              href="/contraption"
+              className="hover:text-white transition-colors"
+            >
+              Contraption
+            </Link>
+            <Link
+              href="/workshop"
+              className="hover:text-white transition-colors"
+            >
+              Workshop
+            </Link>
+            <Link
+              href="/postcard"
+              className="hover:text-white transition-colors"
+            >
+              Postcard
+            </Link>
+            <Link
+              href="/tsundoku"
+              className="hover:text-white transition-colors"
+            >
+              Tsundoku
+            </Link>
+            <Link href="/terms" className="hover:text-white transition-colors">
+              Terms
+            </Link>
+            <Link
+              href="/privacy"
+              className="hover:text-white transition-colors"
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/colophon"
+              className="hover:text-white transition-colors"
+            >
+              Colophon
+            </Link>
+            <Link
+              href="/sitemap"
+              className="hover:text-white transition-colors"
+            >
+              Sitemap
+            </Link>
+          </nav>
+          <div className="order-4 md:order-none md:col-start-2 md:row-start-2 md:justify-self-end">
             <FooterNycStatus />
           </div>
         </div>
