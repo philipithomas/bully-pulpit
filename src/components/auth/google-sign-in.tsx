@@ -32,6 +32,7 @@ declare global {
           initCodeClient: (config: {
             client_id: string
             scope: string
+            login_hint?: string
             ux_mode: 'popup' | 'redirect'
             callback: (response: GoogleCodeResponse) => void
             error_callback?: (error: GoogleErrorResponse) => void
@@ -106,6 +107,13 @@ export function useGoogleSignInAvailable() {
   return Boolean(GOOGLE_CLIENT_ID) && !failed
 }
 
+export function normalizeGoogleLoginHint(
+  loginHint: string | undefined
+): string | undefined {
+  const trimmed = loginHint?.trim()
+  return trimmed ? trimmed : undefined
+}
+
 function googleSignInUserFromPayload(payload: unknown): GoogleSignInUser {
   if (!payload || typeof payload !== 'object') {
     throw new Error('Google sign-in failed')
@@ -138,13 +146,16 @@ export async function handleGoogleSignInSuccess(
 }
 
 function useGoogleAuth({
+  loginHint,
   newsletters,
   onSuccess,
 }: {
+  loginHint?: string
   newsletters?: readonly string[]
   onSuccess?: GoogleSignInSuccessHandler
 } = {}) {
   const available = useGoogleSignInAvailable()
+  const normalizedLoginHint = normalizeGoogleLoginHint(loginHint)
   const [loading, setLoading] = useState(false)
   const clientRef = useRef<{ requestCode: () => void } | null>(null)
   const onSuccessRef = useRef(onSuccess)
@@ -163,6 +174,7 @@ function useGoogleAuth({
       clientRef.current = window.google!.accounts.oauth2.initCodeClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: 'openid email profile',
+        ...(normalizedLoginHint ? { login_hint: normalizedLoginHint } : {}),
         ux_mode: 'popup',
         callback: async (response: GoogleCodeResponse) => {
           if (response.error) {
@@ -214,7 +226,7 @@ function useGoogleAuth({
       cancelled = true
       clientRef.current = null
     }
-  }, [])
+  }, [normalizedLoginHint])
 
   const requestSignIn = useCallback(() => {
     if (loading || !clientRef.current) return
@@ -226,13 +238,16 @@ function useGoogleAuth({
 }
 
 export function GoogleSignInButton({
+  loginHint,
   newsletters,
   onSuccess,
 }: {
+  loginHint?: string
   newsletters?: readonly string[]
   onSuccess?: GoogleSignInSuccessHandler
 }) {
   const { requestSignIn, loading, available } = useGoogleAuth({
+    loginHint,
     newsletters,
     onSuccess,
   })

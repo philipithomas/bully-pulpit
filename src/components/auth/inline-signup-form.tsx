@@ -356,6 +356,7 @@ function SignupConfirmationDialog({
             <>
               <p className="text-center font-sans text-xs text-gray-400">or</p>
               <GoogleSignInButton
+                loginHint={email}
                 newsletters={newsletters}
                 onSuccess={handleGoogleSuccess}
               />
