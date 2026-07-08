@@ -103,6 +103,7 @@ export function Header() {
                 width={160}
                 height={20}
                 className={`dark-viewport-invert ${logo.className}`}
+                style={{ width: 'auto' }}
               />
             </Link>
           ))}

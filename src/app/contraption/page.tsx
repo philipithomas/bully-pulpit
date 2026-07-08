@@ -100,6 +100,7 @@ export default function ContraptionPage() {
             width={300}
             height={48}
             className="h-10 md:h-12 w-auto"
+            style={{ width: 'auto' }}
             priority
           />
           <h1 className="sr-only">Contraption</h1>
