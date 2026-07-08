@@ -13,6 +13,7 @@ function makeCorpusPost(
     ...body.map((text, i) => ({ seq: i + 1, kind: 'body' as const, text })),
   ]
   return {
+    contentType: 'post',
     slug,
     title,
     url: `/${slug}`,

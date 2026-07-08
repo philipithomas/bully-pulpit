@@ -16,7 +16,7 @@ import {
  */
 
 export interface PostResult {
-  type: 'post' | 'image'
+  type: 'post' | 'page' | 'image'
   title: string
   url: string
   newsletter: string
@@ -28,14 +28,14 @@ export interface PostResult {
 
 export const searchPosts = tool({
   description:
-    'Search Philip\'s posts and images by query. Use scope "posts" for writing, projects, and post-level answers. Use scope "images" when the visitor asks what a photo shows or asks for photos/images. Returns titles, URLs, content excerpts, and image metadata. Excerpts and images may carry section URLs for citation.',
+    'Search Philip\'s posts, site pages, and images by query. Use scope "posts" for writing, projects, informational pages, and site-level answers. Use scope "images" when the visitor asks what a photo shows or asks for photos/images. Returns titles, URLs, content excerpts, and image metadata. Excerpts and images may carry section URLs for citation.',
   inputSchema: z.object({
     query: z.string().describe('The search query'),
     scope: z
       .enum(['posts', 'images'])
       .default('posts')
       .describe(
-        'Search posts by default, or only image assets for photo questions'
+        'Search posts and pages by default, or only image assets for photo questions'
       ),
   }),
   execute: async ({ query, scope }) => {

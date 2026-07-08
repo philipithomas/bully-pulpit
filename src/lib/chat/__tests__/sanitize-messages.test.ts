@@ -180,6 +180,27 @@ describe('sanitizeChatMessages', () => {
     expect(result[0]?.parts).toHaveLength(2)
   })
 
+  it('keeps completed fetchPage calls in assistant history', () => {
+    const input = [
+      {
+        id: 'a1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-fetchPage',
+            toolCallId: 'c1',
+            state: 'output-available',
+            input: { path: '/contact' },
+            output: 'Contact\n\nEmail: mail@philipithomas.com',
+          },
+          { type: 'text', text: 'The contact page lists an email address.' },
+        ],
+      },
+    ]
+    const result = sanitizeChatMessages(input)
+    expect(result[0]?.parts).toEqual(input[0].parts)
+  })
+
   it('drops messages with malformed text, missing parts, or non-object shape', () => {
     const input = [
       null,

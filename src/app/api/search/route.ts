@@ -11,7 +11,7 @@ import { hybridSearchPosts, type SearchScope } from '@/lib/search/hybrid'
  */
 
 interface SearchResult {
-  type: 'post' | 'image'
+  type: 'post' | 'page' | 'image'
   id: string
   slug: string
   title: string

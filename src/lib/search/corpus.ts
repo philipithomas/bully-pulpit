@@ -1,5 +1,5 @@
-import { getAllPosts } from '@/lib/content/loader'
-import type { Post } from '@/lib/content/types'
+import { getAllPosts, getPages } from '@/lib/content/loader'
+import type { Frontmatter, Page, Post } from '@/lib/content/types'
 import { createHeadingSlugger } from '@/lib/search/heading-anchor'
 
 /**
@@ -17,6 +17,7 @@ import { createHeadingSlugger } from '@/lib/search/heading-anchor'
 
 export type ChunkKind = 'title' | 'body' | 'cover-alt'
 export type ImageAssetKind = 'cover-image' | 'body-image'
+export type SearchContentType = 'post' | 'page'
 
 /** The heading a chunk sits under, for /slug#anchor section citations. */
 export interface ChunkHeading {
@@ -51,6 +52,7 @@ export interface CorpusImageAsset {
 }
 
 export interface CorpusPost {
+  contentType: SearchContentType
   slug: string
   title: string
   url: string
@@ -60,6 +62,11 @@ export interface CorpusPost {
   coverAlt: string
   chunks: PostChunk[]
   images: CorpusImageAsset[]
+}
+
+interface ChunkableContent {
+  frontmatter: Frontmatter
+  content: string
 }
 
 /** Soft maximum chunk size; single oversize paragraphs are split on sentences. */
@@ -399,22 +406,21 @@ function groupBlocks(blocks: Block[], headings: PostHeading[]): BodyChunk[] {
   return chunks
 }
 
-/** Builds the deterministic chunk list for one post. */
-export function chunkPost(post: Post): PostChunk[] {
+function chunkContent(item: ChunkableContent): PostChunk[] {
   const chunks: PostChunk[] = []
   let seq = 0
 
   const titleText = [
-    post.frontmatter.title,
-    post.frontmatter.subtitle ?? post.frontmatter.description ?? '',
+    item.frontmatter.title,
+    item.frontmatter.subtitle ?? item.frontmatter.description ?? '',
   ]
     .filter(Boolean)
     .join('. ')
   chunks.push({ seq: seq++, kind: 'title', text: titleText })
 
   for (const { text, heading } of groupBlocks(
-    splitBlocks(post.content),
-    extractHeadings(post.content)
+    splitBlocks(item.content),
+    extractHeadings(item.content)
   )) {
     chunks.push(
       heading
@@ -423,15 +429,25 @@ export function chunkPost(post: Post): PostChunk[] {
     )
   }
 
-  if (post.frontmatter.coverImageAlt) {
+  if (item.frontmatter.coverImageAlt) {
     chunks.push({
       seq: seq++,
       kind: 'cover-alt',
-      text: post.frontmatter.coverImageAlt,
+      text: item.frontmatter.coverImageAlt,
     })
   }
 
   return chunks
+}
+
+/** Builds the deterministic chunk list for one post. */
+export function chunkPost(post: Post): PostChunk[] {
+  return chunkContent(post)
+}
+
+/** Builds the deterministic chunk list for one content page. */
+export function chunkPage(page: Page): PostChunk[] {
+  return chunkContent(page)
 }
 
 export function buildCorpusFromPosts(
@@ -439,6 +455,7 @@ export function buildCorpusFromPosts(
   options: CorpusOptions = {}
 ): CorpusPost[] {
   return posts.map((post) => ({
+    contentType: 'post',
     slug: post.slug,
     title: post.frontmatter.title,
     url: `/${post.slug}`,
@@ -452,7 +469,26 @@ export function buildCorpusFromPosts(
   }))
 }
 
-/** Builds the corpus for all published posts across configured newsletters. */
+export function buildCorpusFromPages(pages: Page[]): CorpusPost[] {
+  return pages.map((page) => ({
+    contentType: 'page',
+    slug: page.slug,
+    title: page.frontmatter.title,
+    url: `/${page.slug}`,
+    newsletter: 'page',
+    description:
+      page.frontmatter.subtitle ?? page.frontmatter.description ?? '',
+    coverImage: page.frontmatter.coverImage ?? '',
+    coverAlt: page.frontmatter.coverImageAlt ?? '',
+    chunks: chunkPage(page),
+    images: [],
+  }))
+}
+
+/** Builds the corpus for all searchable posts and content pages. */
 export function buildCorpus(options: CorpusOptions = {}): CorpusPost[] {
-  return buildCorpusFromPosts(getAllPosts(), options)
+  return [
+    ...buildCorpusFromPosts(getAllPosts(), options),
+    ...buildCorpusFromPages(getPages()),
+  ]
 }

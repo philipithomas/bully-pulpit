@@ -3,11 +3,11 @@ import type { CorpusPost } from '@/lib/search/corpus'
 import { buildCorpus } from '@/lib/search/corpus'
 
 /**
- * BM25 keyword search over posts via MiniSearch. One document per post (not
- * per chunk): title, description, concatenated body text, and cover alt, with
- * title boosted hard so a post titled "Foo" always outranks a post that
- * merely mentions "foo" in the body. Powers the BM25 side of shared hybrid
- * search for both typeahead and the agent.
+ * BM25 keyword search over searchable content via MiniSearch. One document per
+ * post or page (not per chunk): title, description, concatenated body text,
+ * and cover alt, with title boosted hard so a page titled "Foo" always
+ * outranks an entry that merely mentions "foo" in the body. Powers the BM25
+ * side of shared hybrid search for both typeahead and the agent.
  */
 
 export interface LexicalResult {

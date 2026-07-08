@@ -370,6 +370,23 @@ export function ChatMessage({
               )
             }
 
+            if (part.type === 'tool-fetchPage') {
+              return (
+                <div key={key}>
+                  <ToolStatus
+                    done={done}
+                    label={
+                      input?.path
+                        ? `${done ? 'Read' : 'Reading'} ${input.path}`
+                        : done
+                          ? 'Read page'
+                          : 'Reading page…'
+                    }
+                  />
+                </div>
+              )
+            }
+
             // searchPosts (default)
             const query = input?.query
             const truncated =

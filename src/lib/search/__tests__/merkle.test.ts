@@ -17,6 +17,7 @@ const DIMS = 256
 
 function makeCorpusPost(slug: string, texts: string[]): CorpusPost {
   return {
+    contentType: 'post',
     slug,
     title: slug,
     url: `/${slug}`,

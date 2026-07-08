@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { getPageBySlug } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
 import {
   buildCorpus,
+  chunkPage,
   chunkPost,
   extractHeadings,
   extractImageAssets,
@@ -145,6 +147,23 @@ describe('chunkPost', () => {
     expect(all).toContain('pnpm search:index')
     expect(all).not.toContain('```')
     expect(all).not.toContain('bash\n')
+  })
+})
+
+describe('chunkPage', () => {
+  it('chunks content pages with the same title and body rules as posts', () => {
+    const page = getPageBySlug('contact')
+    expect(page).not.toBeNull()
+
+    const chunks = chunkPage(page!)
+    expect(chunks[0]).toEqual({
+      seq: 0,
+      kind: 'title',
+      text: 'Contact',
+    })
+    expect(chunks.map((chunk) => chunk.text).join('\n')).toContain(
+      'mail@philipithomas.com'
+    )
   })
 })
 
@@ -331,5 +350,19 @@ describe('buildCorpus', () => {
       expect(Array.isArray(post.images)).toBe(true)
       expect(post.url).toBe(`/${post.slug}`)
     }
+  })
+
+  it('includes content pages as searchable page entries', () => {
+    const contact = buildCorpus().find((entry) => entry.slug === 'contact')
+    expect(contact).toMatchObject({
+      contentType: 'page',
+      title: 'Contact',
+      url: '/contact',
+      newsletter: 'page',
+      coverImage: '',
+    })
+    expect(contact?.chunks.map((chunk) => chunk.text).join('\n')).toContain(
+      '+1 212 347 3190'
+    )
   })
 })

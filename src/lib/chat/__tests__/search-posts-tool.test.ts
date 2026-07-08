@@ -36,7 +36,7 @@ describe('searchPosts tool output', () => {
 
     for (const result of results) {
       expect(typeof result.title).toBe('string')
-      expect(result.type).toMatch(/^(post|image)$/)
+      expect(result.type).toMatch(/^(post|page|image)$/)
       expect(result.url).toMatch(/^\/[a-z0-9-]+$/)
       expect(typeof result.newsletter).toBe('string')
       expect(typeof result.coverImage).toBe('string')
@@ -61,6 +61,21 @@ describe('searchPosts tool output', () => {
     expect(results[0].type).toBe('image')
     expect(results[0].image?.src).toMatch(/^\/images\//)
     expect(results[0].images[0]?.src).toBe(results[0].image?.src)
+  })
+
+  it('returns content pages for site-page queries', async () => {
+    const results = await run('contact telephone')
+    const contact = results.find((result) => result.url === '/contact')
+
+    expect(contact).toMatchObject({
+      type: 'page',
+      title: 'Contact',
+      newsletter: 'page',
+      coverImage: '',
+    })
+    expect(
+      contact?.excerpts.map((excerpt) => excerpt.text).join(' ')
+    ).toContain('+1 212 347 3190')
   })
 
   it('cites the section for excerpts that sit under a heading', async () => {

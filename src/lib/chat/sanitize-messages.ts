@@ -7,11 +7,15 @@ import type { UIMessage } from 'ai'
  * copies providerMetadata fields from parts into provider options. This
  * rebuilds the history from only the shapes the Bell client can legitimately
  * produce: user and assistant roles, text and step-start parts, and completed
- * calls to the two known tools. Everything else is dropped, including
+ * calls to the known Bell tools. Everything else is dropped, including
  * messages left with no parts.
  */
 
-const TOOL_PART_TYPES = new Set(['tool-searchPosts', 'tool-fetchPost'])
+const TOOL_PART_TYPES = new Set([
+  'tool-searchPosts',
+  'tool-fetchPost',
+  'tool-fetchPage',
+])
 
 type SanitizedPart = UIMessage['parts'][number]
 

@@ -8,10 +8,10 @@ import {
   MAX_PUBLIC_IMAGE_BYTES,
   MAX_PUBLIC_IMAGE_EDGE,
 } from '@/lib/content/image-policy'
-import { getAllPosts } from '@/lib/content/loader'
+import { getAllPosts, getPages } from '@/lib/content/loader'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { renderFullNewsletter } from '@/lib/email/send'
-import { buildCorpusFromPosts } from '@/lib/search/corpus'
+import { buildCorpus } from '@/lib/search/corpus'
 import { EMBEDDING_DIMS, EMBEDDING_MODEL } from '@/lib/search/embedding'
 import { publicImageDigest } from '@/lib/search/image-source'
 import { loadSearchIndex, SEARCH_INDEX_VERSION } from '@/lib/search/index-file'
@@ -19,15 +19,17 @@ import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
 
 /**
  * Fast, offline validation that the content pipeline's generated artifacts are
- * in sync with the posts — the things that silently degrade when a manual step
- * is forgotten. Runs in pre-commit, CI, and the Vercel build (it needs only the
- * repo, no network or API keys), and fails loudly with the command to run.
+ * in sync with posts and pages — the things that silently degrade when a manual
+ * step is forgotten. Runs in pre-commit, CI, and the Vercel build (it needs
+ * only the repo, no network or API keys), and fails loudly with the command to
+ * run.
  *
  *   1. Cover images referenced by frontmatter exist on disk.
  *   2. Public web images fit the local deployment policy: web-sized sources
  *      only, no camera originals or LFS pointers in the Vercel artifact.
  *   3. The committed search index matches the recomputed merkle tree over the
- *      post corpus, and related-posts.json covers every post (pnpm search:index).
+ *      searchable corpus, and related-posts.json covers every post (pnpm
+ *      search:index).
  *   4. In-article image sources are covered by the same public image policy.
  *   5. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
  *      with non-empty alt text — a missing or empty alt fails the build.
@@ -78,6 +80,7 @@ async function checkPublicImagePolicy(filePath: string) {
 
 async function main() {
   const posts = getAllPosts()
+  const pages = getPages()
 
   // 1: cover images referenced by frontmatter must exist
   for (const post of posts) {
@@ -123,7 +126,7 @@ async function main() {
     )
   } else {
     const tree = buildMerkleTree(
-      buildCorpusFromPosts(posts, { imageDigest: publicImageDigest }),
+      buildCorpus({ imageDigest: publicImageDigest }),
       EMBEDDING_MODEL,
       EMBEDDING_DIMS
     )
@@ -240,7 +243,7 @@ async function main() {
     process.exit(1)
   }
   console.log(
-    `Content check passed: ${posts.length} posts, images + search index in sync`
+    `Content check passed: ${posts.length} posts, ${pages.length} pages, images + search index in sync`
   )
 }
 

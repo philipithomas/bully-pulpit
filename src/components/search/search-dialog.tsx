@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
 interface SearchResult {
-  type?: 'post' | 'image'
+  type?: 'post' | 'page' | 'image'
   id?: string
   slug: string
   title: string
@@ -260,8 +260,8 @@ export function SearchDialog({
               value={query}
               onChange={(e) => handleInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Search posts…"
-              aria-label="Search posts"
+              placeholder="Search site…"
+              aria-label="Search site"
               role="combobox"
               aria-expanded={expanded}
               aria-controls={expanded ? listboxId : undefined}
