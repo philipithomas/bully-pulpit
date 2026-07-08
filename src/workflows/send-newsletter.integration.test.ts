@@ -50,6 +50,8 @@ import {
 } from '@/lib/db/queries/email-sends'
 import {
   bulkCreateQueuedSms,
+  markSmsPermanentFailure,
+  resetFailedSmsBySlug,
   SMS_SEND_SKIPPED_UNSUBSCRIBED,
 } from '@/lib/db/queries/sms-sends'
 import { unsubscribeSmsNumber } from '@/lib/db/queries/sms-subscribers'
@@ -710,5 +712,34 @@ describe('sendNewsletterWorkflow', () => {
     expect(row.sentAt).toBeNull()
     expect(row.sendError).toBe(SMS_SEND_SKIPPED_UNSUBSCRIBED)
     expect(row.nextAttemptAt).toBeNull()
+  })
+
+  it('preserves skipped opt-out markers when a permanent SMS failure races with STOP', async () => {
+    const subscriber = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+    })
+    const [queued] = await db
+      .insert(smsSends)
+      .values({
+        smsSubscriberId: subscriber.id,
+        postSlug: SLUG,
+        newsletter: 'contraption',
+        body: 'Contraption: Hello world',
+        nextAttemptAt: new Date(),
+      })
+      .returning()
+
+    await unsubscribeSmsNumber(subscriber.phoneNumber)
+    const markedFailed = await markSmsPermanentFailure(
+      queued.id,
+      'Twilio rejected this recipient'
+    )
+
+    expect(markedFailed).toBe(false)
+    const row = smsRowFor(await allSmsRows(), subscriber.id)
+    expect(row.sentAt).toBeNull()
+    expect(row.sendError).toBe(SMS_SEND_SKIPPED_UNSUBSCRIBED)
+    expect(row.attempts).toBe(0)
+    expect(await resetFailedSmsBySlug(SLUG)).toBe(0)
   })
 })

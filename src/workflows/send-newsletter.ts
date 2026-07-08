@@ -238,11 +238,11 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
       })
     } catch (err) {
       if (isRetryableTwilioError(err)) throw retryableStepError(err)
-      await markSmsPermanentFailure(
+      const markedFailed = await markSmsPermanentFailure(
         send.id,
         err instanceof Error ? err.message : String(err)
       )
-      failed++
+      if (markedFailed) failed++
       await new Promise((resolve) => setTimeout(resolve, SMS_SEND_SPACING_MS))
       continue
     }

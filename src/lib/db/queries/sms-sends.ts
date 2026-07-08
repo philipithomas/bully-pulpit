@@ -155,11 +155,19 @@ export async function markSmsSent(input: {
 export async function markSmsPermanentFailure(
   id: number,
   error: string
-): Promise<void> {
-  await getDb()
+): Promise<boolean> {
+  const rows = await getDb()
     .update(smsSends)
     .set({ sendError: error, attempts: sql`${smsSends.attempts} + 1` })
-    .where(eq(smsSends.id, id))
+    .where(
+      and(
+        eq(smsSends.id, id),
+        isNull(smsSends.sentAt),
+        isNull(smsSends.sendError)
+      )
+    )
+    .returning({ id: smsSends.id })
+  return rows.length > 0
 }
 
 export type SmsSendStats = {

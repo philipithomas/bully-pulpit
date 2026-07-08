@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import {
   findSmsSubscriberByPhoneNumber,
   subscribeSmsNumber,
@@ -94,16 +94,21 @@ export async function POST(request: Request) {
       to: from,
     })
     if (!existing?.confirmedAt) {
-      try {
-        await sendSmsSignupNotification({
-          phoneNumber: from,
-          to,
-          source: 'voice-menu',
-          metadata,
-        })
-      } catch (err) {
-        console.error('[phone/voice-menu] SMS signup notification failed:', err)
-      }
+      after(async () => {
+        try {
+          await sendSmsSignupNotification({
+            phoneNumber: from,
+            to,
+            source: 'voice-menu',
+            metadata,
+          })
+        } catch (err) {
+          console.error(
+            '[phone/voice-menu] SMS signup notification failed:',
+            err
+          )
+        }
+      })
     }
     return twimlResponse(
       sayAndHangupTwiml(

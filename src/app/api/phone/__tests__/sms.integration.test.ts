@@ -1,5 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+// after() runs the callback inline so route tests observe its side effects.
+vi.mock('next/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next/server')>()
+  return {
+    ...actual,
+    after: (task: (() => Promise<void>) | Promise<void>) => {
+      void (typeof task === 'function' ? task() : task)
+    },
+  }
+})
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('@/lib/email/ses', () =>
   import('@/test/integration/mocks').then((m) => m.sesMock())

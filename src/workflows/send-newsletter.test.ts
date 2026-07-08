@@ -188,7 +188,7 @@ beforeEach(() => {
   mockedSmsSends.bulkCreateQueuedSms.mockResolvedValue([])
   mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([])
   mockedSmsSends.markSmsSent.mockResolvedValue(true)
-  mockedSmsSends.markSmsPermanentFailure.mockResolvedValue(undefined)
+  mockedSmsSends.markSmsPermanentFailure.mockResolvedValue(true)
   mockedSmsSends.markUnsendableSmsSkippedById.mockResolvedValue(undefined)
   mockedSmsSends.claimSendableSmsById.mockImplementation(async (id) =>
     claimedSms(id)
@@ -403,6 +403,32 @@ describe('sendNewsletterWorkflow', () => {
     expect(err.message).toBe('rate limited')
     expect(err.retryAfter).toEqual(new Date(now.getTime() + 8_000))
     expect(mockedSmsSends.markSmsPermanentFailure).not.toHaveBeenCalled()
+    expect(mockedSmsSends.markSmsSent).not.toHaveBeenCalled()
+  })
+
+  it('does not count SMS failure when an opt-out marker wins the permanent-failure race', async () => {
+    mockedEligible.mockResolvedValue([])
+    mockedSends.pendingRowIdsBySlug.mockResolvedValue([])
+    mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([701])
+    mockedSendSms.mockRejectedValue(new TwilioApiError('number opted out', 400))
+    mockedSmsSends.markSmsPermanentFailure.mockResolvedValue(false)
+
+    const promise = sendNewsletterWorkflow('hello-world')
+    await vi.runAllTimersAsync()
+    const result = await promise
+
+    expect(result).toEqual({
+      batches: 0,
+      sent: 0,
+      failed: 0,
+      smsBatches: 1,
+      smsSent: 0,
+      smsFailed: 0,
+    })
+    expect(mockedSmsSends.markSmsPermanentFailure).toHaveBeenCalledWith(
+      701,
+      'number opted out'
+    )
     expect(mockedSmsSends.markSmsSent).not.toHaveBeenCalled()
   })
 
