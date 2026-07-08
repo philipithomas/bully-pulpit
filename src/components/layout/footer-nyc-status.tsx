@@ -18,13 +18,13 @@ export function footerText(
   now: Date | null,
   weather: NycWeatherSnapshot | null
 ): string {
-  if (!now) return 'NYC'
+  if (!now) return 'Currently in NYC'
 
   const time = formatNycTime(now)
 
-  if (!weather) return `NYC: ${time}.`
+  if (!weather) return `Currently in NYC: ${time}.`
 
-  return `NYC: ${time}, ${weather.current.temperatureC}\u00b0C and ${weather.current.description}.`
+  return `Currently in NYC: ${time}, ${weather.current.temperatureC}\u00b0C and ${weather.current.description}.`
 }
 
 export function FooterNycStatus() {
@@ -63,5 +63,5 @@ export function FooterNycStatus() {
 
   const text = useMemo(() => footerText(now, weather), [now, weather])
 
-  return <p className="text-xs text-gray-500 md:text-right">{text}</p>
+  return <p className="font-mono text-xs text-gray-500 md:text-right">{text}</p>
 }

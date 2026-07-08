@@ -1,152 +1,175 @@
 const NYC_LATITUDE = 40.7128
 const NYC_LONGITUDE = -74.006
 const NYC_TIME_ZONE = 'America/New_York'
-const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast'
+const NWS_API_URL = 'https://api.weather.gov'
+const NWS_USER_AGENT =
+  'philipithomas.com (https://www.philipithomas.com/contact)'
 
 export interface NycWeatherSnapshot {
   location: 'NYC'
   timeZone: typeof NYC_TIME_ZONE
-  source: 'open-meteo'
-  observedAt: string
+  source: 'weather.gov'
+  validAt: string
   fetchedAt: string
   current: {
     temperatureC: number
-    apparentTemperatureC: number
-    relativeHumidity: number
-    precipitationMm: number
-    cloudCover: number
-    windSpeedKph: number
-    weatherCode: number
+    relativeHumidity: number | null
+    precipitationChance: number | null
+    dewpointC: number | null
+    windSpeedKph: number | null
     description: string
     isDay: boolean
   }
 }
 
-interface OpenMeteoResponse {
-  current?: {
-    time?: unknown
-    temperature_2m?: unknown
-    apparent_temperature?: unknown
-    relative_humidity_2m?: unknown
-    precipitation?: unknown
-    weather_code?: unknown
-    cloud_cover?: unknown
-    wind_speed_10m?: unknown
-    is_day?: unknown
+interface NwsPointResponse {
+  properties?: {
+    forecastHourly?: unknown
+  }
+}
+
+interface NwsHourlyForecastResponse {
+  properties?: {
+    periods?: unknown
+  }
+}
+
+interface NwsForecastPeriod {
+  startTime?: unknown
+  temperature?: unknown
+  temperatureUnit?: unknown
+  shortForecast?: unknown
+  windSpeed?: unknown
+  isDaytime?: unknown
+  probabilityOfPrecipitation?: {
+    value?: unknown
+  }
+  relativeHumidity?: {
+    value?: unknown
+  }
+  dewpoint?: {
+    value?: unknown
   }
 }
 
 function numberFrom(value: unknown, name: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new Error(`Open-Meteo response is missing ${name}`)
+    throw new Error(`Weather.gov response is missing ${name}`)
   }
 
   return value
+}
+
+function optionalNumberFrom(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
 function stringFrom(value: unknown, name: string): string {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error(`Open-Meteo response is missing ${name}`)
+    throw new Error(`Weather.gov response is missing ${name}`)
   }
 
   return value
 }
 
-function round(value: number, digits = 0): number {
-  const scale = 10 ** digits
-  return Math.round(value * scale) / scale
-}
-
-export function describeWeatherCode(code: number, isDay: boolean): string {
-  if (code === 0) return isDay ? 'sunny' : 'clear'
-  if (code === 1) return isDay ? 'mostly sunny' : 'mostly clear'
-  if (code === 2) return 'partly cloudy'
-  if (code === 3) return 'overcast'
-  if (code === 45 || code === 48) return 'foggy'
-  if (code >= 51 && code <= 57) return 'drizzling'
-  if (code >= 61 && code <= 67) return 'rainy'
-  if (code >= 71 && code <= 77) return 'snowy'
-  if (code >= 80 && code <= 82) return 'showery'
-  if (code === 85 || code === 86) return 'snowy'
-  if (code >= 95 && code <= 99) return 'stormy'
-
-  return 'unsettled'
-}
-
-export function openMeteoUrl(): string {
-  const url = new URL(OPEN_METEO_URL)
-  url.searchParams.set('latitude', String(NYC_LATITUDE))
-  url.searchParams.set('longitude', String(NYC_LONGITUDE))
-  url.searchParams.set(
-    'current',
-    [
-      'temperature_2m',
-      'apparent_temperature',
-      'relative_humidity_2m',
-      'precipitation',
-      'weather_code',
-      'cloud_cover',
-      'wind_speed_10m',
-      'is_day',
-    ].join(',')
-  )
-  url.searchParams.set('temperature_unit', 'celsius')
-  url.searchParams.set('wind_speed_unit', 'kmh')
-  url.searchParams.set('precipitation_unit', 'mm')
-  url.searchParams.set('timezone', NYC_TIME_ZONE)
-
-  return url.toString()
-}
-
-export function parseOpenMeteoResponse(
-  payload: OpenMeteoResponse,
-  fetchedAt = new Date()
-): NycWeatherSnapshot {
-  const current = payload.current
-
-  if (!current) {
-    throw new Error('Open-Meteo response is missing current conditions')
+function booleanFrom(value: unknown, name: string): boolean {
+  if (typeof value !== 'boolean') {
+    throw new Error(`Weather.gov response is missing ${name}`)
   }
 
-  const weatherCode = numberFrom(current.weather_code, 'weather_code')
-  const isDay = numberFrom(current.is_day, 'is_day') === 1
+  return value
+}
+
+function round(value: number): number {
+  return Math.round(value)
+}
+
+function normalizeForecastDescription(value: string): string {
+  return value.trim().toLocaleLowerCase('en-US')
+}
+
+export function nwsPointUrl(): string {
+  return `${NWS_API_URL}/points/${NYC_LATITUDE},${NYC_LONGITUDE}`
+}
+
+export function nwsHourlyForecastUrl(url: string): string {
+  const forecastUrl = new URL(url)
+  forecastUrl.searchParams.set('units', 'si')
+
+  return forecastUrl.toString()
+}
+
+export function parseNwsPointResponse(payload: NwsPointResponse): string {
+  return stringFrom(payload.properties?.forecastHourly, 'forecastHourly')
+}
+
+export function parseNwsHourlyForecastResponse(
+  payload: NwsHourlyForecastResponse,
+  fetchedAt = new Date()
+): NycWeatherSnapshot {
+  const periods = payload.properties?.periods
+
+  if (!Array.isArray(periods) || periods.length === 0) {
+    throw new Error('Weather.gov response is missing hourly forecast periods')
+  }
+
+  const current = periods[0] as NwsForecastPeriod
+  const temperatureUnit = stringFrom(current.temperatureUnit, 'temperatureUnit')
+
+  if (temperatureUnit !== 'C') {
+    throw new Error(`Weather.gov returned unexpected unit ${temperatureUnit}`)
+  }
 
   return {
     location: 'NYC',
     timeZone: NYC_TIME_ZONE,
-    source: 'open-meteo',
-    observedAt: stringFrom(current.time, 'time'),
+    source: 'weather.gov',
+    validAt: stringFrom(current.startTime, 'startTime'),
     fetchedAt: fetchedAt.toISOString(),
     current: {
-      temperatureC: round(numberFrom(current.temperature_2m, 'temperature_2m')),
-      apparentTemperatureC: round(
-        numberFrom(current.apparent_temperature, 'apparent_temperature')
+      temperatureC: round(numberFrom(current.temperature, 'temperature')),
+      relativeHumidity: optionalNumberFrom(current.relativeHumidity?.value),
+      precipitationChance: optionalNumberFrom(
+        current.probabilityOfPrecipitation?.value
       ),
-      relativeHumidity: round(
-        numberFrom(current.relative_humidity_2m, 'relative_humidity_2m')
+      dewpointC: optionalNumberFrom(current.dewpoint?.value),
+      windSpeedKph: parseNwsWindSpeedKph(current.windSpeed),
+      description: normalizeForecastDescription(
+        stringFrom(current.shortForecast, 'shortForecast')
       ),
-      precipitationMm: round(
-        numberFrom(current.precipitation, 'precipitation'),
-        1
-      ),
-      cloudCover: round(numberFrom(current.cloud_cover, 'cloud_cover')),
-      windSpeedKph: round(numberFrom(current.wind_speed_10m, 'wind_speed_10m')),
-      weatherCode,
-      description: describeWeatherCode(weatherCode, isDay),
-      isDay,
+      isDay: booleanFrom(current.isDaytime, 'isDaytime'),
     },
   }
 }
 
-export async function fetchNycWeatherSnapshot(): Promise<NycWeatherSnapshot> {
-  const response = await fetch(openMeteoUrl(), {
+export function parseNwsWindSpeedKph(value: unknown): number | null {
+  if (typeof value !== 'string') return null
+
+  const match = value.match(/\d+/)
+  return match ? Number(match[0]) : null
+}
+
+async function fetchNwsJson<T>(url: string): Promise<T> {
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/geo+json',
+      'User-Agent': NWS_USER_AGENT,
+    },
     next: { revalidate: 600 },
     signal: AbortSignal.timeout(2_000),
   })
 
   if (!response.ok) {
-    throw new Error(`Open-Meteo returned ${response.status}`)
+    throw new Error(`Weather.gov returned ${response.status}`)
   }
 
-  return parseOpenMeteoResponse(await response.json())
+  return response.json() as Promise<T>
+}
+
+export async function fetchNycWeatherSnapshot(): Promise<NycWeatherSnapshot> {
+  const point = await fetchNwsJson<NwsPointResponse>(nwsPointUrl())
+  const forecastUrl = nwsHourlyForecastUrl(parseNwsPointResponse(point))
+  const forecast = await fetchNwsJson<NwsHourlyForecastResponse>(forecastUrl)
+
+  return parseNwsHourlyForecastResponse(forecast)
 }

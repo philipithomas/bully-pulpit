@@ -1,112 +1,174 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  describeWeatherCode,
   fetchNycWeatherSnapshot,
-  openMeteoUrl,
-  parseOpenMeteoResponse,
+  nwsHourlyForecastUrl,
+  nwsPointUrl,
+  parseNwsHourlyForecastResponse,
+  parseNwsPointResponse,
+  parseNwsWindSpeedKph,
 } from '@/lib/weather/nyc'
 
-describe('describeWeatherCode', () => {
-  it('maps common WMO weather codes to footer-friendly prose', () => {
-    expect(describeWeatherCode(0, true)).toBe('sunny')
-    expect(describeWeatherCode(0, false)).toBe('clear')
-    expect(describeWeatherCode(2, true)).toBe('partly cloudy')
-    expect(describeWeatherCode(61, true)).toBe('rainy')
-    expect(describeWeatherCode(95, false)).toBe('stormy')
+describe('nwsPointUrl', () => {
+  it('requests the NYC Weather.gov point metadata', () => {
+    const url = new URL(nwsPointUrl())
+
+    expect(url.hostname).toBe('api.weather.gov')
+    expect(url.pathname).toBe('/points/40.7128,-74.006')
   })
 })
 
-describe('openMeteoUrl', () => {
-  it('requests current NYC weather in metric units', () => {
-    const url = new URL(openMeteoUrl())
-
-    expect(url.hostname).toBe('api.open-meteo.com')
-    expect(url.searchParams.get('latitude')).toBe('40.7128')
-    expect(url.searchParams.get('longitude')).toBe('-74.006')
-    expect(url.searchParams.get('temperature_unit')).toBe('celsius')
-    expect(url.searchParams.get('wind_speed_unit')).toBe('kmh')
-    expect(url.searchParams.get('precipitation_unit')).toBe('mm')
-    expect(url.searchParams.get('timezone')).toBe('America/New_York')
+describe('nwsHourlyForecastUrl', () => {
+  it('requests metric hourly forecast data', () => {
+    expect(
+      nwsHourlyForecastUrl(
+        'https://api.weather.gov/gridpoints/OKX/33,42/forecast/hourly'
+      )
+    ).toBe(
+      'https://api.weather.gov/gridpoints/OKX/33,42/forecast/hourly?units=si'
+    )
   })
 })
 
-describe('parseOpenMeteoResponse', () => {
-  it('normalizes the Open-Meteo current conditions payload', () => {
-    const snapshot = parseOpenMeteoResponse(
+describe('parseNwsPointResponse', () => {
+  it('extracts the hourly forecast URL', () => {
+    expect(
+      parseNwsPointResponse({
+        properties: {
+          forecastHourly:
+            'https://api.weather.gov/gridpoints/OKX/33,42/forecast/hourly',
+        },
+      })
+    ).toBe('https://api.weather.gov/gridpoints/OKX/33,42/forecast/hourly')
+  })
+})
+
+describe('parseNwsHourlyForecastResponse', () => {
+  it('normalizes the Weather.gov current hourly period', () => {
+    const snapshot = parseNwsHourlyForecastResponse(
       {
-        current: {
-          time: '2026-07-08T16:00',
-          temperature_2m: 28.4,
-          apparent_temperature: 30.2,
-          relative_humidity_2m: 61,
-          precipitation: 0.04,
-          weather_code: 2,
-          cloud_cover: 40,
-          wind_speed_10m: 12.4,
-          is_day: 1,
+        properties: {
+          periods: [
+            {
+              startTime: '2026-07-08T19:00:00-04:00',
+              temperature: 25,
+              temperatureUnit: 'C',
+              probabilityOfPrecipitation: { value: 0 },
+              dewpoint: { value: 20 },
+              relativeHumidity: { value: 74 },
+              windSpeed: '17 km/h',
+              shortForecast: 'Clear',
+              isDaytime: false,
+            },
+          ],
         },
       },
-      new Date('2026-07-08T20:00:00Z')
+      new Date('2026-07-08T23:13:44Z')
     )
 
     expect(snapshot).toEqual({
       location: 'NYC',
       timeZone: 'America/New_York',
-      source: 'open-meteo',
-      observedAt: '2026-07-08T16:00',
-      fetchedAt: '2026-07-08T20:00:00.000Z',
+      source: 'weather.gov',
+      validAt: '2026-07-08T19:00:00-04:00',
+      fetchedAt: '2026-07-08T23:13:44.000Z',
       current: {
-        temperatureC: 28,
-        apparentTemperatureC: 30,
-        relativeHumidity: 61,
-        precipitationMm: 0,
-        cloudCover: 40,
-        windSpeedKph: 12,
-        weatherCode: 2,
-        description: 'partly cloudy',
-        isDay: true,
+        temperatureC: 25,
+        relativeHumidity: 74,
+        precipitationChance: 0,
+        dewpointC: 20,
+        windSpeedKph: 17,
+        description: 'clear',
+        isDay: false,
       },
     })
   })
 
-  it('rejects incomplete current conditions', () => {
-    expect(() => parseOpenMeteoResponse({ current: {} })).toThrow(
-      'Open-Meteo response is missing weather_code'
-    )
+  it('rejects non-metric temperatures', () => {
+    expect(() =>
+      parseNwsHourlyForecastResponse({
+        properties: {
+          periods: [
+            {
+              startTime: '2026-07-08T19:00:00-04:00',
+              temperature: 77,
+              temperatureUnit: 'F',
+              shortForecast: 'Clear',
+              isDaytime: false,
+            },
+          ],
+        },
+      })
+    ).toThrow('Weather.gov returned unexpected unit F')
+  })
+})
+
+describe('parseNwsWindSpeedKph', () => {
+  it('extracts the numeric km/h wind speed', () => {
+    expect(parseNwsWindSpeedKph('17 km/h')).toBe(17)
+    expect(parseNwsWindSpeedKph('')).toBeNull()
   })
 })
 
 describe('fetchNycWeatherSnapshot', () => {
-  it('fetches and parses current conditions', async () => {
+  it('fetches point metadata and then the metric hourly forecast', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () =>
-        Response.json({
-          current: {
-            time: '2026-07-08T16:00',
-            temperature_2m: 28,
-            apparent_temperature: 30,
-            relative_humidity_2m: 61,
-            precipitation: 0,
-            weather_code: 1,
-            cloud_cover: 20,
-            wind_speed_10m: 12,
-            is_day: 1,
-          },
-        })
-      )
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json({
+            properties: {
+              forecastHourly:
+                'https://api.weather.gov/gridpoints/OKX/33,42/forecast/hourly',
+            },
+          })
+        )
+        .mockResolvedValueOnce(
+          Response.json({
+            properties: {
+              periods: [
+                {
+                  startTime: '2026-07-08T19:00:00-04:00',
+                  temperature: 25,
+                  temperatureUnit: 'C',
+                  shortForecast: 'Clear',
+                  windSpeed: '17 km/h',
+                  isDaytime: false,
+                },
+              ],
+            },
+          })
+        )
     )
 
     await expect(fetchNycWeatherSnapshot()).resolves.toMatchObject({
+      source: 'weather.gov',
       current: {
-        temperatureC: 28,
-        description: 'mostly sunny',
+        temperatureC: 25,
+        description: 'clear',
       },
     })
 
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('api.open-meteo.com'),
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      'https://api.weather.gov/points/40.7128,-74.006',
       expect.objectContaining({
+        headers: expect.objectContaining({
+          Accept: 'application/geo+json',
+          'User-Agent': expect.stringContaining('philipithomas.com'),
+        }),
+        next: { revalidate: 600 },
+        signal: expect.any(AbortSignal),
+      })
+    )
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.weather.gov/gridpoints/OKX/33,42/forecast/hourly?units=si',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Accept: 'application/geo+json',
+          'User-Agent': expect.stringContaining('philipithomas.com'),
+        }),
         next: { revalidate: 600 },
         signal: expect.any(AbortSignal),
       })
