@@ -35,6 +35,7 @@ PHONE_WEBHOOK_SECRET=
 NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED=false
 TWILIO_SID=
 TWILIO_SECRET=
+TEST_SMS_RECIPIENT_PHONE_NUMBER=
 OWNER_PHONE_NUMBER=
 ```
 
@@ -71,6 +72,10 @@ the admin send page enqueues `sms_sends` rows after the email pass, sends them
 through Twilio's REST API from the NYC number, and records outbound texts in the
 Phone panel. SMS subscribers are separate from email subscribers and are opted
 into every newsletter as one list.
+
+`TEST_SMS_RECIPIENT_PHONE_NUMBER` is the private E.164 recipient for the admin
+"Send test text to me" button. It is separate from `OWNER_PHONE_NUMBER` so test
+newsletter texts do not require committing a personal number.
 
 After deploy, verify:
 

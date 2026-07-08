@@ -56,6 +56,14 @@ export function ownerPhoneNumber(): string | null {
   return process.env.OWNER_PHONE_NUMBER || null
 }
 
+/**
+ * Private test recipient for the newsletter "send test text to me" action.
+ * Kept out of source control because it is a personal phone number.
+ */
+export function testSmsRecipientPhoneNumber(): string | null {
+  return process.env.TEST_SMS_RECIPIENT_PHONE_NUMBER || null
+}
+
 /** Validates a string as an E.164 phone number ("+" then 7–15 digits). */
 export function isE164(value: string): boolean {
   return /^\+[1-9]\d{6,14}$/.test(value)

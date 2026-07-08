@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { guardAdmin } from '@/lib/auth/admin'
-import { sendNewsletterToOne } from '@/lib/email/send'
+import {
+  sendNewsletterSmsToTestRecipient,
+  sendNewsletterToOne,
+} from '@/lib/email/send'
 
 export async function POST(request: Request) {
   const session = await guardAdmin()
@@ -16,15 +19,29 @@ export async function POST(request: Request) {
   if (!slug || typeof slug !== 'string') {
     return NextResponse.json({ error: 'slug is required' }, { status: 400 })
   }
+  const channel = body.channel ?? 'email'
+  if (channel !== 'email' && channel !== 'sms') {
+    return NextResponse.json(
+      { error: 'channel must be email or sms' },
+      { status: 400 }
+    )
+  }
 
   try {
+    if (channel === 'sms') {
+      const result = await sendNewsletterSmsToTestRecipient({ slug })
+      return NextResponse.json({
+        ok: true,
+        channel,
+        sentTo: result.sentTo,
+      })
+    }
+
     await sendNewsletterToOne({ email: session.email, slug })
-    return NextResponse.json({ ok: true, sentTo: session.email })
+    return NextResponse.json({ ok: true, channel, sentTo: session.email })
   } catch (err) {
     console.error('[admin/send-test] error:', err)
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Test send failed' },
-      { status: 500 }
-    )
+    const message = err instanceof Error ? err.message : 'Test send failed'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
