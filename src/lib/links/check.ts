@@ -7,8 +7,7 @@ import path from 'node:path'
  * real content directory, app routes, and public files.
  *
  * Scope: internal references only (`/slug`, `/images/...`). External URLs are
- * the weekly lychee workflow's job (.github/workflows/links.yml), so PR CI
- * stays offline and deterministic.
+ * intentionally out of scope so PR CI stays offline and deterministic.
  */
 
 export type LinkRef = {

@@ -46,7 +46,7 @@ pnpm db:studio    # Open Drizzle Studio against the DB
 - Single quotes, no semicolons (biome config)
 - Integration tests are `*.integration.test.ts`, colocated, and run real SQL against an in-memory PGlite Postgres (no Docker/network) in the same `pnpm test` run. Harness at `src/test/integration/`: swap the Neon client with `vi.mock('@/lib/db/client', () => import('@/test/integration/db'))` (applies the real migrations, fresh DB per file, `resetDb()` per test), `session.ts` replaces `next/headers` for real-JWT sessions, `mocks.ts` has SES/BotID factories. Mock only external I/O — never `@/lib/db/queries/*`
 - Fonts loaded from fonts.philipithomas.com CDN
-- GitHub workflows (`.github/workflows/`): `check.yml` is CI (every push/PR to main: Biome, tsc, tests, `content:check`, `links:check`, build); `links.yml` checks external links weekly via lychee and files an issue instead of failing CI; `postcard-draft.yml` opens a draft postcard PR monthly. There are no Claude automation workflows
+- GitHub workflows (`.github/workflows/`): `check.yml` is CI (every push/PR to main: Biome, tsc, tests, `content:check`, `links:check`, build); `postcard-draft.yml` opens a draft postcard PR monthly. External links are not checked automatically because historical references, paywalls, bot blocking, and rate limits make automated reports noisy. There are no Claude automation workflows
 - Repo-local Codex skills live in `.codex/skills/`. `copyedit` and `critique` replace the old Claude skills for MDX editorial workflows
 - Pre-commit hook runs lint-staged, `pnpm content:check`, and `pnpm build` — no need to build manually before pushing
 

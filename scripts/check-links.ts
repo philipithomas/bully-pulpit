@@ -16,7 +16,7 @@ import { getRedirects } from '@/lib/redirects'
  * resolve to a published post or page, a real app route (static or dynamic),
  * a file under public/, or a next.config redirect whose destination resolves.
  * Query strings and fragments are stripped; fragment-only and external links
- * are skipped (external URLs are checked by the weekly lychee workflow).
+ * are skipped so this check stays offline and deterministic.
  *
  * Runs in CI after the content pipeline check. Deliberately not in the
  * pre-commit hook: commits stay fast, CI catches the breakage.
