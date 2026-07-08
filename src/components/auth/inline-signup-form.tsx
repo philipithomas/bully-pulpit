@@ -26,9 +26,10 @@ interface Props {
   buttonClassName?: string
   subscribeEndpoint?: string
   confirmedMessage?: string
+  initialSubscriberCount?: number | null
   /**
-   * When true, fetches the live subscriber count client-side and uses it as the
-   * header text ("Join N other subscribers:"). Lets the host page stay static.
+   * When true and no initial count was provided, fetches the live subscriber
+   * count client-side and uses it as the header text ("Join N other subscribers:").
    */
   showSubscriberCount?: boolean
 }
@@ -45,6 +46,7 @@ export function InlineSignupForm({
   buttonClassName = 'btn btn-primary',
   subscribeEndpoint = '/api/subscribe',
   confirmedMessage = 'You are subscribed by email.',
+  initialSubscriberCount = null,
   showSubscriberCount = false,
 }: Props) {
   const { user, hasSession, loading: authLoading } = useAuthContext()
@@ -52,20 +54,22 @@ export function InlineSignupForm({
   const [code, setCode] = useState('')
   const [step, setStep] = useState<Step>('email')
   const [loading, setLoading] = useState(false)
-  const [subscriberCount, setSubscriberCount] = useState<number | null>(null)
+  const [subscriberCount, setSubscriberCount] = useState<number | null>(
+    initialSubscriberCount
+  )
   const submittingRef = useRef(false)
 
   useEffect(() => {
-    if (!showSubscriberCount) return
+    if (!showSubscriberCount || initialSubscriberCount !== null) return
     fetch('/api/stats/subscribers/count')
       .then((res) => res.json())
       .then((data) => setSubscriberCount(data.count ?? null))
       .catch(() => {})
-  }, [showSubscriberCount])
+  }, [initialSubscriberCount, showSubscriberCount])
 
   const resolvedHeaderText =
     headerText ??
-    (subscriberCount && subscriberCount > 0
+    (subscriberCount !== null && subscriberCount > 0
       ? `Join ${formatMemberCount(subscriberCount)} other subscribers:`
       : undefined)
 
