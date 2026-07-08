@@ -48,6 +48,8 @@ import {
   pendingRowIdsBySlug,
   resetFailedBySlug,
 } from '@/lib/db/queries/email-sends'
+import { SMS_SEND_SKIPPED_UNSUBSCRIBED } from '@/lib/db/queries/sms-sends'
+import { unsubscribeSmsNumber } from '@/lib/db/queries/sms-subscribers'
 import {
   type EmailSend,
   emailSends,
@@ -603,5 +605,58 @@ describe('sendNewsletterWorkflow', () => {
     expect(smsRow.sentAt).toBeNull()
     expect(smsRow.sendError).toBeNull()
     expect(await db.select().from(textMessages)).toHaveLength(0)
+  })
+
+  it('honors an SMS opt-out that arrives before the recipient turn in a paced batch', async () => {
+    const bob = await seedSmsSubscriber({
+      phoneNumber: '+15557654321',
+    })
+    const alice = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+    })
+    let sendCount = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        sendCount += 1
+        await unsubscribeSmsNumber(bob.phoneNumber)
+        return new Response(
+          JSON.stringify({ sid: `SM_${sendCount}`, status: 'queued' }),
+          { status: 201 }
+        )
+      })
+    )
+
+    const result = await sendNewsletterWorkflow(SLUG)
+
+    expect(result).toEqual(
+      workflowResult({
+        batches: 0,
+        sent: 0,
+        failed: 0,
+        smsBatches: 1,
+        smsSent: 1,
+        smsFailed: 0,
+      })
+    )
+    expect(fetch).toHaveBeenCalledTimes(1)
+
+    const rows = await allSmsRows()
+    const aliceRow = smsRowFor(rows, alice.id)
+    expect(aliceRow.sentAt).not.toBeNull()
+    expect(aliceRow.sendError).toBeNull()
+    expect(aliceRow.twilioSid).toBe('SM_1')
+
+    const bobRow = smsRowFor(rows, bob.id)
+    expect(bobRow.sentAt).toBeNull()
+    expect(bobRow.sendError).toBe(SMS_SEND_SKIPPED_UNSUBSCRIBED)
+    expect(bobRow.twilioSid).toBeNull()
+
+    const outboundTexts = await db.select().from(textMessages)
+    expect(outboundTexts).toHaveLength(1)
+    expect(outboundTexts[0]).toMatchObject({
+      toNumber: '+15551234567',
+      twilioSid: 'SM_1',
+    })
   })
 })

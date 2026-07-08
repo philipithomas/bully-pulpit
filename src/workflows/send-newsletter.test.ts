@@ -28,6 +28,7 @@ vi.mock('@/lib/db/queries/email-sends', () => ({
 vi.mock('@/lib/db/queries/sms-sends', () => ({
   bulkCreateQueuedSms: vi.fn(),
   findSendableSmsByIds: vi.fn(),
+  findSentSmsByIds: vi.fn(),
   markSmsPermanentFailure: vi.fn(),
   markSmsSent: vi.fn(),
   pendingSmsRowIdsBySlug: vi.fn(),
@@ -189,6 +190,7 @@ beforeEach(() => {
   mockedSmsSends.findSendableSmsByIds.mockImplementation(async (ids) =>
     ids.map((id) => claimedSms(id))
   )
+  mockedSmsSends.findSentSmsByIds.mockResolvedValue([])
   mockedSendSms.mockResolvedValue({ sid: 'SM_test', status: 'queued' })
   mockedCreateTextMessage.mockResolvedValue({} as never)
 })
@@ -399,5 +401,69 @@ describe('sendNewsletterWorkflow', () => {
     expect(err.retryAfter).toEqual(new Date(now.getTime() + 8_000))
     expect(mockedSmsSends.markSmsPermanentFailure).not.toHaveBeenCalled()
     expect(mockedSmsSends.markSmsSent).not.toHaveBeenCalled()
+  })
+
+  it('throws RetryableError instead of marking accepted SMS persistence failures permanent', async () => {
+    const now = new Date('2026-06-09T12:00:00Z')
+    vi.setSystemTime(now)
+    mockedEligible.mockResolvedValue([])
+    mockedSends.pendingRowIdsBySlug.mockResolvedValue([])
+    mockedSmsEligible.mockResolvedValue([7])
+    mockedSmsSends.bulkCreateQueuedSms.mockResolvedValue([701])
+    mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([701])
+    mockedSmsSends.findSendableSmsByIds.mockResolvedValue([
+      claimedSms(701, '+15551234567'),
+    ])
+    mockedCreateTextMessage.mockRejectedValue(new Error('database unavailable'))
+
+    const err = await sendNewsletterWorkflow('hello-world').catch((e) => e)
+
+    expect(err).toBeInstanceOf(RetryableError)
+    expect(err.message).toBe('database unavailable')
+    expect(mockedSmsSends.markSmsSent).toHaveBeenCalledWith({
+      id: 701,
+      twilioSid: 'SM_test',
+      twilioStatus: 'queued',
+    })
+    expect(mockedSmsSends.markSmsPermanentFailure).not.toHaveBeenCalled()
+  })
+
+  it('records history for an already-accepted SMS row without sending it again', async () => {
+    mockedEligible.mockResolvedValue([])
+    mockedSends.pendingRowIdsBySlug.mockResolvedValue([])
+    mockedSmsEligible.mockResolvedValue([])
+    mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([701])
+    mockedSmsSends.findSentSmsByIds.mockResolvedValue([
+      {
+        ...claimedSms(701, '+15551234567'),
+        send: {
+          ...claimedSms(701).send,
+          sentAt: new Date('2026-06-09T12:00:00Z'),
+          twilioSid: 'SM_existing',
+          twilioStatus: 'queued',
+        },
+      },
+    ])
+
+    const promise = sendNewsletterWorkflow('hello-world')
+    await vi.runAllTimersAsync()
+    const result = await promise
+
+    expect(result).toEqual({
+      batches: 0,
+      sent: 0,
+      failed: 0,
+      smsBatches: 1,
+      smsSent: 1,
+      smsFailed: 0,
+    })
+    expect(mockedSendSms).not.toHaveBeenCalled()
+    expect(mockedSmsSends.findSendableSmsByIds).not.toHaveBeenCalled()
+    expect(mockedCreateTextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        twilioSid: 'SM_existing',
+        toNumber: '+15551234567',
+      })
+    )
   })
 })

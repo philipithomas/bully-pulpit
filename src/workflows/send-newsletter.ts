@@ -9,7 +9,9 @@ import {
 } from '@/lib/db/queries/email-sends'
 import {
   bulkCreateQueuedSms,
+  type ClaimedSmsSend,
   findSendableSmsByIds,
+  findSentSmsByIds,
   markSmsPermanentFailure,
   markSmsSent,
   pendingSmsRowIdsBySlug,
@@ -23,13 +25,24 @@ import { sendQueuedEmail } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { phoneNumbers } from '@/lib/phone/config'
 import { renderNewsletterSms } from '@/lib/phone/newsletter-sms'
-import { isRetryableTwilioError, sendSms } from '@/lib/phone/twilio'
+import {
+  isRetryableTwilioError,
+  type SentSms,
+  sendSms,
+} from '@/lib/phone/twilio'
 
 // ~12-13/sec, comfortably under SES's default 14/sec. Paced inside the step
 // (steps have full Node.js access, so setTimeout is fine).
 const BATCH_SIZE = 50
 const SEND_SPACING_MS = 80
 const SMS_SEND_SPACING_MS = 1000
+
+function retryableStepError(err: unknown): RetryableError {
+  const { attempt } = getStepMetadata()
+  return new RetryableError(err instanceof Error ? err.message : String(err), {
+    retryAfter: Math.min(60_000, 2 ** attempt * 1000),
+  })
+}
 
 function chunk(ids: number[]): number[][] {
   const chunks: number[][] = []
@@ -169,50 +182,78 @@ export async function enqueueSmsRecipients(slug: string): Promise<number[][]> {
   return chunk(await pendingSmsRowIdsBySlug(slug))
 }
 
+async function recordSmsTextHistory(
+  row: ClaimedSmsSend,
+  result?: SentSms
+): Promise<void> {
+  const twilioSid = result?.sid ?? row.send.twilioSid
+  if (!twilioSid) {
+    throw new Error(`SMS send ${row.send.id} has no Twilio sid`)
+  }
+  await createTextMessage({
+    fromNumber: phoneNumbers.NYC,
+    toNumber: row.phoneNumber,
+    body: row.send.body,
+    direction: 'outbound',
+    twilioSid,
+    status: result?.status ?? row.send.twilioStatus ?? 'queued',
+  })
+}
+
 export async function sendSmsBatch(rowIds: number[]): Promise<{
   sent: number
   failed: number
 }> {
   'use step'
-  const rows = await findSendableSmsByIds(rowIds)
   let sent = 0
   let failed = 0
 
-  for (const { send, phoneNumber } of rows) {
+  for (const rowId of rowIds) {
+    const recovered = await findSentSmsByIds([rowId])
+    if (recovered[0]) {
+      try {
+        await recordSmsTextHistory(recovered[0])
+        sent++
+      } catch (err) {
+        throw retryableStepError(err)
+      }
+      await new Promise((resolve) => setTimeout(resolve, SMS_SEND_SPACING_MS))
+      continue
+    }
+
+    const rows = await findSendableSmsByIds([rowId])
+    const row = rows[0]
+    if (!row) continue
+
+    const { send, phoneNumber } = row
+    let result: SentSms
     try {
-      const result = await sendSms({
+      result = await sendSms({
         from: phoneNumbers.NYC,
         to: phoneNumber,
         body: send.body,
       })
+    } catch (err) {
+      if (isRetryableTwilioError(err)) throw retryableStepError(err)
+      await markSmsPermanentFailure(
+        send.id,
+        err instanceof Error ? err.message : String(err)
+      )
+      failed++
+      await new Promise((resolve) => setTimeout(resolve, SMS_SEND_SPACING_MS))
+      continue
+    }
+
+    try {
       await markSmsSent({
         id: send.id,
         twilioSid: result.sid,
         twilioStatus: result.status,
       })
-      await createTextMessage({
-        fromNumber: phoneNumbers.NYC,
-        toNumber: phoneNumber,
-        body: send.body,
-        direction: 'outbound',
-        twilioSid: result.sid,
-        status: result.status,
-      })
+      await recordSmsTextHistory(row, result)
       sent++
     } catch (err) {
-      if (isRetryableTwilioError(err)) {
-        const { attempt } = getStepMetadata()
-        throw new RetryableError(
-          err instanceof Error ? err.message : String(err),
-          { retryAfter: Math.min(60_000, 2 ** attempt * 1000) }
-        )
-      } else {
-        await markSmsPermanentFailure(
-          send.id,
-          err instanceof Error ? err.message : String(err)
-        )
-        failed++
-      }
+      throw retryableStepError(err)
     }
 
     await new Promise((resolve) => setTimeout(resolve, SMS_SEND_SPACING_MS))

@@ -56,6 +56,24 @@ export async function findSendableSmsByIds(
   return rows
 }
 
+export async function findSentSmsByIds(
+  ids: number[]
+): Promise<ClaimedSmsSend[]> {
+  if (ids.length === 0) return []
+  const rows = await getDb()
+    .select({ send: smsSends, phoneNumber: smsSubscribers.phoneNumber })
+    .from(smsSends)
+    .innerJoin(smsSubscribers, eq(smsSends.smsSubscriberId, smsSubscribers.id))
+    .where(
+      and(
+        inArray(smsSends.id, ids),
+        isNotNull(smsSends.sentAt),
+        isNotNull(smsSends.twilioSid)
+      )
+    )
+  return rows
+}
+
 export async function markSmsSent(input: {
   id: number
   twilioSid: string
