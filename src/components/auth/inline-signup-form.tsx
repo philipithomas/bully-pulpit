@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import {
   GoogleSignInButton,
+  type GoogleSignInResult,
   useGoogleSignInAvailable,
 } from '@/components/auth/google-sign-in'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
@@ -23,7 +24,10 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import type { Newsletter } from '@/lib/content/types'
 import { formatMemberCount } from '@/lib/format-member-count'
-import { defaultSignupNewsletters } from '@/lib/newsletters'
+import {
+  defaultSignupNewsletters,
+  newsletterPreferenceKeys,
+} from '@/lib/newsletters'
 import { getExternalReferrer } from '@/lib/referrer'
 
 interface Props {
@@ -53,6 +57,18 @@ function matchesSubmittedEmail(
   return (
     typeof sessionEmail === 'string' &&
     sessionEmail.trim().toLowerCase() === submittedEmail.trim().toLowerCase()
+  )
+}
+
+function hasRequestedNewsletterOptIns(
+  preferences: unknown,
+  newsletters: readonly Newsletter[]
+): boolean {
+  if (newsletters.length === 0) return true
+  if (!preferences || typeof preferences !== 'object') return false
+  const values = preferences as Record<string, unknown>
+  return newsletters.every(
+    (newsletter) => values[newsletterPreferenceKeys[newsletter]] === true
   )
 }
 
@@ -190,7 +206,11 @@ export function InlineSignupForm({
         const res = await fetch('/api/auth/me', { cache: 'no-store' })
         if (!res.ok) return
         const data = await res.json()
-        if (!cancelled && matchesSubmittedEmail(data.user?.email, email)) {
+        if (
+          !cancelled &&
+          matchesSubmittedEmail(data.user?.email, email) &&
+          hasRequestedNewsletterOptIns(data.preferences, newsletters)
+        ) {
           finishSignedIn()
         }
       } catch {}
@@ -205,7 +225,7 @@ export function InlineSignupForm({
       window.clearInterval(interval)
       window.removeEventListener('focus', checkSession)
     }
-  }, [email, step, finishSignedIn])
+  }, [email, newsletters, step, finishSignedIn])
 
   if (hideWhenLoggedIn && hasSession && authLoading) return null
   if (hideWhenLoggedIn && user) return null
@@ -273,6 +293,7 @@ export function InlineSignupForm({
           code={code}
           email={email}
           loading={loading}
+          newsletters={newsletters}
           onCodeChange={setCode}
           onDifferentEmail={handleDifferentEmail}
           onSignedIn={finishSignedIn}
@@ -287,6 +308,7 @@ function SignupConfirmationDialog({
   code,
   email,
   loading,
+  newsletters,
   onCodeChange,
   onDifferentEmail,
   onSignedIn,
@@ -295,6 +317,7 @@ function SignupConfirmationDialog({
   code: string
   email: string
   loading: boolean
+  newsletters: readonly Newsletter[]
   onCodeChange: (value: string) => void
   onDifferentEmail: () => void
   onSignedIn: () => void
@@ -306,6 +329,20 @@ function SignupConfirmationDialog({
       if (!open) onDifferentEmail()
     },
     [onDifferentEmail]
+  )
+  const handleGoogleSuccess = useCallback(
+    (result: GoogleSignInResult) => {
+      if (!matchesSubmittedEmail(result.user?.email, email)) {
+        toast.error(`Use the Google account for ${email}.`)
+        return false
+      }
+      if (!hasRequestedNewsletterOptIns(result.user, newsletters)) {
+        toast.error('Check your email for the code to finish subscribing.')
+        return false
+      }
+      onSignedIn()
+    },
+    [email, newsletters, onSignedIn]
   )
 
   return (
@@ -348,7 +385,7 @@ function SignupConfirmationDialog({
           {googleAvailable ? (
             <>
               <p className="text-center font-sans text-xs text-gray-400">or</p>
-              <GoogleSignInButton onSuccess={onSignedIn} />
+              <GoogleSignInButton onSuccess={handleGoogleSuccess} />
             </>
           ) : null}
           <button

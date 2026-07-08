@@ -15,6 +15,14 @@ interface GoogleErrorResponse {
   type: string
 }
 
+export type GoogleSignInResult = {
+  user?: ({ email?: string | null } & Record<string, unknown>) | null
+}
+
+type GoogleSignInSuccessHandler = (
+  result: GoogleSignInResult
+) => unknown | Promise<unknown>
+
 declare global {
   interface Window {
     google?: {
@@ -97,7 +105,7 @@ export function useGoogleSignInAvailable() {
   return Boolean(GOOGLE_CLIENT_ID) && !failed
 }
 
-function useGoogleAuth(onSuccess?: () => void) {
+function useGoogleAuth(onSuccess?: GoogleSignInSuccessHandler) {
   const available = useGoogleSignInAvailable()
   const [loading, setLoading] = useState(false)
   const clientRef = useRef<{ requestCode: () => void } | null>(null)
@@ -131,8 +139,10 @@ function useGoogleAuth(onSuccess?: () => void) {
               const data = await res.json()
               throw new Error(data.error ?? 'Google sign-in failed')
             }
+            const data = (await res.json()) as GoogleSignInResult
+            const shouldContinue = await onSuccessRef.current?.(data)
+            if (shouldContinue === false) return
             toast.success('Signed in successfully')
-            onSuccessRef.current?.()
             window.location.reload()
           } catch (err) {
             toast.error(
@@ -169,7 +179,11 @@ function useGoogleAuth(onSuccess?: () => void) {
   return { requestSignIn, loading, available }
 }
 
-export function GoogleSignInButton({ onSuccess }: { onSuccess?: () => void }) {
+export function GoogleSignInButton({
+  onSuccess,
+}: {
+  onSuccess?: GoogleSignInSuccessHandler
+}) {
   const { requestSignIn, loading, available } = useGoogleAuth(onSuccess)
 
   if (!available) return null
