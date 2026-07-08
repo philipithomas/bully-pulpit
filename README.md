@@ -46,6 +46,10 @@ The voice webhook plays the generated greeting, then offers "press 1" for
 voicemail and "press 2" to subscribe the caller ID to SMS updates. No input
 falls through to voicemail. The SMS webhook stores inbound replies, handles
 `SUBSCRIBE` and `STOP`, and emails admins about normal replies.
+New SMS opt-ins, whether they come from a `SUBSCRIBE` text or the voice menu,
+also email admins with the source path, Twilio webhook metadata such as city,
+state, caller name, message SID, or call SID when Twilio provides it, and an
+area-code hint for common US/Canada numbers.
 
 Newsletter SMS delivery runs inside the same Vercel Workflow as email delivery:
 the admin send page enqueues `sms_sends` rows after the email pass, sends them

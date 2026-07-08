@@ -99,13 +99,16 @@ describe('POST /api/phone/sms', () => {
     expect(await db.select().from(textMessages)).toHaveLength(1)
   })
 
-  it('subscribes an SMS sender without emailing an admin notification', async () => {
+  it('subscribes an SMS sender and emails an admin notification with Twilio metadata', async () => {
     const response = await smsPost(
       smsRequest({
-        From: '+15551234567',
+        From: '+14155551234',
         To: '+12123473190',
         Body: 'SUBSCRIBE',
         MessageSid: 'SM_SUB',
+        FromCity: 'SAN FRANCISCO',
+        FromState: 'CA',
+        FromCountry: 'US',
       })
     )
     expect(response.status).toBe(200)
@@ -114,7 +117,7 @@ describe('POST /api/phone/sms', () => {
     const subscribers = await db.select().from(smsSubscribers)
     expect(subscribers).toHaveLength(1)
     expect(subscribers[0]).toMatchObject({
-      phoneNumber: '+15551234567',
+      phoneNumber: '+14155551234',
       subscribedPostcard: true,
       subscribedContraption: true,
       subscribedWorkshop: true,
@@ -123,6 +126,30 @@ describe('POST /api/phone/sms', () => {
     })
     expect(subscribers[0].confirmedAt).toBeInstanceOf(Date)
     expect(await db.select().from(textMessages)).toHaveLength(1)
+    expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
+    const email = vi.mocked(sendSimpleEmail).mock.calls[0][0]
+    expect(email.to).toEqual(['one@example.com', 'two@example.com'])
+    expect(email.subject).toBe('SMS signup from +14155551234 via text')
+    expect(email.html).toContain('Texted SUBSCRIBE')
+    expect(email.html).toContain('SAN FRANCISCO, CA')
+    expect(email.html).toContain('SM_SUB')
+  })
+
+  it('does not send another signup notification for a repeated subscribe command', async () => {
+    const form = {
+      From: '+14155551234',
+      To: '+12123473190',
+      Body: 'SUBSCRIBE',
+      MessageSid: 'SM_SUB',
+    }
+    await smsPost(smsRequest(form))
+    vi.mocked(sendSimpleEmail).mockClear()
+
+    const response = await smsPost(
+      smsRequest({ ...form, MessageSid: 'SM_SUB_AGAIN' })
+    )
+
+    expect(response.status).toBe(200)
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
   })
 
@@ -159,9 +186,11 @@ describe('POST /api/phone/voice-menu', () => {
   it('subscribes a caller that presses 2', async () => {
     const response = await voiceMenuPost(
       voiceMenuRequest({
-        From: '+15551234567',
+        From: '+14155551234',
         To: '+12123473190',
         Digits: '2',
+        CallSid: 'CA_SUB',
+        CallerName: 'Jane Caller',
       })
     )
 
@@ -170,13 +199,20 @@ describe('POST /api/phone/voice-menu', () => {
     const subscribers = await db.select().from(smsSubscribers)
     expect(subscribers).toHaveLength(1)
     expect(subscribers[0]).toMatchObject({
-      phoneNumber: '+15551234567',
+      phoneNumber: '+14155551234',
       subscribedPostcard: true,
       subscribedContraption: true,
       subscribedWorkshop: true,
       subscribedTsundoku: true,
       source: 'call:nyc',
     })
+    expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
+    const email = vi.mocked(sendSimpleEmail).mock.calls[0][0]
+    expect(email.subject).toBe('SMS signup from +14155551234 via voice menu')
+    expect(email.html).toContain('Pressed 2 during a phone call')
+    expect(email.html).toContain('Area code 415: San Francisco, CA')
+    expect(email.html).toContain('Jane Caller')
+    expect(email.html).toContain('CA_SUB')
   })
 
   it('falls back to voicemail when the caller presses 1', async () => {

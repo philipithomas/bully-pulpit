@@ -41,6 +41,17 @@ export async function subscribeSmsNumber(input: {
   return rows[0]
 }
 
+export async function findSmsSubscriberByPhoneNumber(
+  phoneNumber: string
+): Promise<SmsSubscriber | null> {
+  const rows = await getDb()
+    .select()
+    .from(smsSubscribers)
+    .where(eq(smsSubscribers.phoneNumber, phoneNumber))
+    .limit(1)
+  return rows[0] ?? null
+}
+
 export async function unsubscribeSmsNumber(
   phoneNumber: string
 ): Promise<SmsSubscriber | null> {
