@@ -1,5 +1,6 @@
 import { and, desc, eq } from 'drizzle-orm'
 import { jwtVerify } from 'jose'
+import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
@@ -20,6 +21,7 @@ vi.mock('node:dns/promises', () => ({
 
 import { POST as verifyPost } from '@/app/api/auth/verify/route'
 import { POST as subscribePost } from '@/app/api/subscribe/route'
+import { GET as verifyMagicLinkGet } from '@/app/auth/verify/route'
 import { siteConfig } from '@/lib/config'
 import { MAX_VERIFICATION_ATTEMPTS } from '@/lib/db/queries/logins'
 import { logins, subscribers } from '@/lib/db/schema'
@@ -37,16 +39,23 @@ function jsonPost(url: string, body: unknown): Request {
 }
 
 /** Runs the real subscribe handler, which mints the code + magic-link logins. */
-async function subscribe(email: string): Promise<void> {
+async function subscribe(
+  email: string,
+  body: Record<string, unknown> = {}
+): Promise<void> {
   const res = await subscribePost(
-    jsonPost('http://localhost/api/subscribe', { email })
+    jsonPost('http://localhost/api/subscribe', { email, ...body })
   )
   expect(res.status).toBe(200)
 }
 
-function verify(email: string, code: string) {
+function verify(email: string, code: string, newsletters?: string[]) {
   return verifyPost(
-    jsonPost('http://localhost/api/auth/verify', { email, code })
+    jsonPost('http://localhost/api/auth/verify', {
+      email,
+      code,
+      ...(newsletters ? { newsletters } : {}),
+    })
   )
 }
 
@@ -66,6 +75,23 @@ async function latestCodeLogin(subscriberId: number) {
     .from(logins)
     .where(
       and(eq(logins.subscriberId, subscriberId), eq(logins.tokenType, 'code'))
+    )
+    .orderBy(desc(logins.id))
+    .limit(1)
+  expect(rows).toHaveLength(1)
+  return rows[0]
+}
+
+/** The most recently minted magic-link login row for a subscriber. */
+async function latestMagicLogin(subscriberId: number) {
+  const rows = await db
+    .select()
+    .from(logins)
+    .where(
+      and(
+        eq(logins.subscriberId, subscriberId),
+        eq(logins.tokenType, 'magic_link')
+      )
     )
     .orderBy(desc(logins.id))
     .limit(1)
@@ -226,5 +252,72 @@ describe('POST /api/auth/verify', () => {
       (await subscriberByEmail('alice@example.com')).confirmedAt
     ).toBeNull()
     expect((await subscriberByEmail('bob@example.com')).confirmedAt).toBeNull()
+  })
+
+  it('applies requested newsletter opt-ins after a code sign-in', async () => {
+    await db.insert(subscribers).values({
+      email: 'workshop-reader@example.com',
+      confirmedAt: new Date(),
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+    })
+
+    await subscribe('workshop-reader@example.com', {
+      newsletters: ['workshop'],
+    })
+
+    const before = await subscriberByEmail('workshop-reader@example.com')
+    expect(before.subscribedWorkshop).toBe(false)
+    const { token: code } = await latestCodeLogin(before.id)
+
+    const res = await verify('workshop-reader@example.com', code, ['workshop'])
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.user.subscribed_workshop).toBe(true)
+
+    const after = await subscriberByEmail('workshop-reader@example.com')
+    expect(after.subscribedContraption).toBe(false)
+    expect(after.subscribedWorkshop).toBe(true)
+    expect(after.subscribedPostcard).toBe(false)
+    expect(after.subscribedTsundoku).toBe(false)
+    expect(adminNotificationCalls()).toHaveLength(0)
+  })
+
+  it('applies requested newsletter opt-ins from a magic-link sign-in', async () => {
+    await db.insert(subscribers).values({
+      email: 'contraption-reader@example.com',
+      confirmedAt: new Date(),
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+    })
+
+    await subscribe('contraption-reader@example.com', {
+      newsletters: ['contraption'],
+    })
+
+    const before = await subscriberByEmail('contraption-reader@example.com')
+    expect(before.subscribedContraption).toBe(false)
+    const { token } = await latestMagicLogin(before.id)
+
+    const res = await verifyMagicLinkGet(
+      new NextRequest(
+        `https://www.philipithomas.com/auth/verify?token=${token}&newsletter=contraption`
+      )
+    )
+    expect(res.headers.get('location')).toBe(
+      'https://www.philipithomas.com/?signed-in=1'
+    )
+    expect(res.cookies.get('bp_has_session')?.value).toBe('1')
+
+    const after = await subscriberByEmail('contraption-reader@example.com')
+    expect(after.subscribedContraption).toBe(true)
+    expect(after.subscribedWorkshop).toBe(false)
+    expect(after.subscribedPostcard).toBe(false)
+    expect(after.subscribedTsundoku).toBe(false)
+    expect(adminNotificationCalls()).toHaveLength(0)
   })
 })

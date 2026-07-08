@@ -62,7 +62,7 @@ export type CreateResult = {
   nextStep: 'confirmed' | 'verification_sent'
 }
 
-function normalizedNewsletters(
+export function normalizedNewsletters(
   newsletters: string[] | undefined
 ): Newsletter[] {
   if (!newsletters) return []
@@ -74,7 +74,9 @@ function normalizedNewsletters(
   return [...seen]
 }
 
-function prefsForNewsletters(newsletters: Newsletter[]): SubscriberPrefs {
+export function prefsForNewsletters(
+  newsletters: Newsletter[]
+): SubscriberPrefs {
   return {
     ...(newsletters.includes('contraption')
       ? { subscribedContraption: true }
@@ -83,6 +85,20 @@ function prefsForNewsletters(newsletters: Newsletter[]): SubscriberPrefs {
     ...(newsletters.includes('postcard') ? { subscribedPostcard: true } : {}),
     ...(newsletters.includes('tsundoku') ? { subscribedTsundoku: true } : {}),
   }
+}
+
+export async function applyNewsletterOptIns(
+  subscriber: Subscriber,
+  newsletters: Newsletter[]
+): Promise<Subscriber> {
+  if (newsletters.length === 0) return subscriber
+  const updated = await updateSubscriber(
+    subscriber.uuid,
+    prefsForNewsletters(newsletters)
+  )
+  if (!updated) return subscriber
+  await notifyTsundokuOptInBestEffort(subscriber, updated)
+  return updated
 }
 
 function creationPrefsForNewSubscriber() {
@@ -123,10 +139,11 @@ async function notifyTsundokuOptInBestEffort(
 
 async function sendLoginBestEffort(
   subscriber: Subscriber,
-  purpose: ConfirmationPurpose
+  purpose: ConfirmationPurpose,
+  pendingNewsletters?: Newsletter[]
 ): Promise<void> {
   try {
-    await createAndSendLogin(subscriber, purpose)
+    await createAndSendLogin(subscriber, purpose, { pendingNewsletters })
   } catch (err) {
     console.error('[subscriber] confirmation/sign-in email failed:', err)
   }
@@ -139,13 +156,14 @@ async function sendLoginBestEffort(
  */
 async function sendLoginOrRejectSuppressed(
   subscriber: Subscriber,
-  purpose: ConfirmationPurpose
+  purpose: ConfirmationPurpose,
+  pendingNewsletters?: Newsletter[]
 ): Promise<void> {
   if (await isSuppressed(subscriber.email)) {
     console.warn(`[subscriber] suppressed address blocked: ${subscriber.email}`)
     throw new SuppressedEmailError()
   }
-  await sendLoginBestEffort(subscriber, purpose)
+  await sendLoginBestEffort(subscriber, purpose, pendingNewsletters)
 }
 
 /**
@@ -199,14 +217,7 @@ export async function createOrRetrieve(input: {
       hasRequestedNewsletterOptIn &&
       (existing.confirmedAt == null || allowExistingSubscriberOptIn)
     ) {
-      const updated = await updateSubscriber(
-        existing.uuid,
-        prefsForNewsletters(newsletters)
-      )
-      if (updated) {
-        await notifyTsundokuOptInBestEffort(existing, updated)
-        subscriber = updated
-      }
+      subscriber = await applyNewsletterOptIns(existing, newsletters)
     }
 
     if (googleVerified && existing.confirmedAt == null) {
@@ -222,7 +233,11 @@ export async function createOrRetrieve(input: {
       if (hasRequestedNewsletterOptIn && allowExistingSubscriberOptIn) {
         return { subscriber, isNew: false, nextStep: 'confirmed' }
       }
-      await sendLoginOrRejectSuppressed(subscriber, 'sign-in')
+      await sendLoginOrRejectSuppressed(
+        subscriber,
+        'sign-in',
+        hasRequestedNewsletterOptIn ? newsletters : undefined
+      )
       return { subscriber, isNew: false, nextStep: 'verification_sent' }
     }
 

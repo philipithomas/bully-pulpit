@@ -2,6 +2,10 @@ import { checkBotId } from 'botid/server'
 import { NextResponse } from 'next/server'
 import { setSessionCookies, signSession } from '@/lib/auth/jwt'
 import { InvalidTokenError, verifyToken } from '@/lib/auth/login-service'
+import {
+  applyNewsletterOptIns,
+  normalizedNewsletters,
+} from '@/lib/auth/subscriber-service'
 import { serializeSubscriber } from '@/lib/db/queries/subscribers'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -15,7 +19,7 @@ export async function POST(request: Request) {
   if (!body) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
-  const { email, code } = body
+  const { email, code, newsletters } = body
 
   if (!email || !code) {
     return NextResponse.json(
@@ -35,7 +39,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const subscriber = await verifyToken(code, email)
+    let subscriber = await verifyToken(code, email)
+    subscriber = await applyNewsletterOptIns(
+      subscriber,
+      normalizedNewsletters(
+        Array.isArray(newsletters) ? newsletters : undefined
+      )
+    )
     const jwt = await signSession(subscriber)
     const response = NextResponse.json({
       user: serializeSubscriber(subscriber),

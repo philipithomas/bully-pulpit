@@ -253,7 +253,7 @@ describe('POST /api/subscribe', () => {
     expect(message.text).toContain('Your sign-in code for philipithomas.com')
   })
 
-  it('signs in an existing confirmed subscriber without re-subscribing them when a public form requests newsletters', async () => {
+  it('signs in an existing confirmed subscriber without re-subscribing them before verification', async () => {
     await db.insert(subscribers).values({
       email: 'reader@example.com',
       name: 'Careful Reader',
@@ -296,9 +296,13 @@ describe('POST /api/subscribe', () => {
       .from(logins)
       .where(eq(logins.subscriberId, row.id))
     expect(loginRows).toHaveLength(2)
+    const magicLogin = loginRows.find((l) => l.tokenType === 'magic_link')
     expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
     const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
     expect(message.subject).toBe('Your sign-in code for philipithomas.com')
+    expect(message.text).toContain(
+      `https://www.philipithomas.com/auth/verify?token=${magicLogin?.token}&newsletter=tsundoku`
+    )
   })
 
   it('does not trust client-provided email-only opt-in on the public route', async () => {

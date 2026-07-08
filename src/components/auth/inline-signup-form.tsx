@@ -128,7 +128,7 @@ export function InlineSignupForm({
         const res = await fetch('/api/auth/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, code: value }),
+          body: JSON.stringify({ email, code: value, newsletters }),
         })
         if (!res.ok) {
           const data = await res.json()
@@ -147,7 +147,7 @@ export function InlineSignupForm({
         submittingRef.current = false
       }
     },
-    [email]
+    [email, newsletters]
   )
 
   const initialMemberClassName =
