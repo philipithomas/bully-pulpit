@@ -11,6 +11,10 @@ initBotId({
       method: 'POST',
     },
     {
+      path: '/api/subscribe/tsundoku',
+      method: 'POST',
+    },
+    {
       path: '/api/auth/google',
       method: 'POST',
     },
