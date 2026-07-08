@@ -1,5 +1,9 @@
 import { after, NextResponse } from 'next/server'
 import {
+  findOrCreatePhoneWebhookEvent,
+  markPhoneWebhookEventProcessed,
+} from '@/lib/db/queries/phone-webhook-events'
+import {
   findSmsSubscriberByPhoneNumber,
   subscribeSmsNumber,
   unsubscribeSmsNumber,
@@ -32,28 +36,38 @@ export async function POST(request: Request) {
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
   const body = String(form.get('Body') ?? '')
+  const messageSid = form.get('MessageSid')
+    ? String(form.get('MessageSid'))
+    : ''
   const optOutType = String(form.get('OptOutType') ?? '')
   const command = smsCommandForBody(body, optOutType)
   const twilioAlreadyReplied =
     optOutType.trim().toUpperCase() === 'START' ||
     optOutType.trim().toUpperCase() === 'STOP'
   const metadata = twilioWebhookMetadataFromForm(form, from)
+  const webhookEvent = messageSid
+    ? await findOrCreatePhoneWebhookEvent({
+        eventKey: `sms:${messageSid}`,
+        eventType: 'sms',
+      })
+    : null
+  if (webhookEvent?.event.processedAt) return twimlResponse(emptyTwiml())
 
-  const { inserted } = await createTextMessageWithStatus({
+  await createTextMessageWithStatus({
     fromNumber: from,
     toNumber: to,
     body,
     direction: 'inbound',
-    twilioSid: form.get('MessageSid') ? String(form.get('MessageSid')) : null,
+    twilioSid: messageSid || null,
     status: form.get('SmsStatus') ? String(form.get('SmsStatus')) : 'received',
   })
-  if (!inserted) return twimlResponse(emptyTwiml())
 
   if (command === 'subscribe') {
     const existing = await findSmsSubscriberByPhoneNumber(from)
     await subscribeSmsNumber({
       phoneNumber: from,
       source: `sms:${numberLabel(to).toLowerCase()}`,
+      processedPhoneWebhookEventId: webhookEvent?.event.id,
     })
     if (!existing?.confirmedAt) {
       after(async () => {
@@ -77,7 +91,9 @@ export async function POST(request: Request) {
   }
 
   if (command === 'unsubscribe') {
-    await unsubscribeSmsNumber(from)
+    await unsubscribeSmsNumber(from, {
+      processedPhoneWebhookEventId: webhookEvent?.event.id,
+    })
     return twimlResponse(
       twilioAlreadyReplied
         ? emptyTwiml()
@@ -86,6 +102,9 @@ export async function POST(request: Request) {
   }
 
   await sendIncomingSmsNotification({ from, to, body })
+  if (webhookEvent) {
+    await markPhoneWebhookEventProcessed(webhookEvent.event.id)
+  }
 
   return twimlResponse(emptyTwiml())
 }

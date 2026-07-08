@@ -1,4 +1,5 @@
 import { after, NextResponse } from 'next/server'
+import { findOrCreatePhoneWebhookEvent } from '@/lib/db/queries/phone-webhook-events'
 import {
   findSmsSubscriberByPhoneNumber,
   subscribeSmsNumber,
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
   const digits = String(form.get('Digits') ?? '')
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
+  const callSid = form.get('CallSid') ? String(form.get('CallSid')) : ''
   const metadata = twilioWebhookMetadataFromForm(form, from)
 
   if (isSmsSignupUiEnabled() && digits === '2') {
@@ -84,10 +86,25 @@ export async function POST(request: Request) {
       )
     }
 
+    const webhookEvent = callSid
+      ? await findOrCreatePhoneWebhookEvent({
+          eventKey: `voice-menu:${callSid}:2`,
+          eventType: 'voice-menu',
+        })
+      : null
+    if (webhookEvent?.event.processedAt) {
+      return twimlResponse(
+        sayAndHangupTwiml(
+          'This phone menu request was already handled. Goodbye.'
+        )
+      )
+    }
+
     const existing = await findSmsSubscriberByPhoneNumber(from)
     await subscribeSmsNumber({
       phoneNumber: from,
       source: `call:${numberLabel(to).toLowerCase()}`,
+      processedPhoneWebhookEventId: webhookEvent?.event.id,
     })
     after(async () => {
       const tasks: Promise<unknown>[] = [

@@ -191,6 +191,22 @@ export const textMessages = pgTable(
   ]
 )
 
+export const phoneWebhookEvents = pgTable(
+  'phone_webhook_events',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    eventKey: text('event_key').notNull().unique(),
+    eventType: text('event_type').notNull(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('idx_phone_webhook_events_processed_at').on(table.processedAt),
+  ]
+)
+
 export const smsSubscribers = pgTable(
   'sms_subscribers',
   {
@@ -273,6 +289,8 @@ export type SendRun = typeof sendRuns.$inferSelect
 export type NewSendRun = typeof sendRuns.$inferInsert
 export type TextMessage = typeof textMessages.$inferSelect
 export type NewTextMessage = typeof textMessages.$inferInsert
+export type PhoneWebhookEvent = typeof phoneWebhookEvents.$inferSelect
+export type NewPhoneWebhookEvent = typeof phoneWebhookEvents.$inferInsert
 export type SmsSubscriber = typeof smsSubscribers.$inferSelect
 export type NewSmsSubscriber = typeof smsSubscribers.$inferInsert
 export type SmsSend = typeof smsSends.$inferSelect

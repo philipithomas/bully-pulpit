@@ -132,6 +132,26 @@ describe('POST /api/phone/sms', () => {
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
   })
 
+  it('retries side effects for unprocessed duplicate SMS webhooks', async () => {
+    vi.mocked(sendSimpleEmail).mockRejectedValueOnce(new Error('SES offline'))
+    const form = {
+      From: '+15551234567',
+      To: '+12123473190',
+      Body: 'Running late',
+      MessageSid: 'SM123',
+    }
+
+    await expect(smsPost(smsRequest(form))).rejects.toThrow('SES offline')
+    expect(await db.select().from(textMessages)).toHaveLength(1)
+
+    const response = await smsPost(smsRequest(form))
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('<Response></Response>')
+    expect(await db.select().from(textMessages)).toHaveLength(1)
+    expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(2)
+  })
+
   it('subscribes an SMS sender and emails an admin notification with Twilio metadata', async () => {
     const response = await smsPost(
       smsRequest({
@@ -436,6 +456,39 @@ describe('POST /api/phone/voice-menu', () => {
     expect(xml).toContain('<Record maxLength="120"')
     expect(await db.select().from(smsSubscribers)).toHaveLength(0)
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+  })
+
+  it('ignores duplicate voice-menu CallSid after the caller has opted out', async () => {
+    process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED = 'true'
+    const voiceForm = {
+      From: '+14155551234',
+      To: '+12123473190',
+      Digits: '2',
+      CallSid: 'CA_SUB',
+    }
+
+    await voiceMenuPost(voiceMenuRequest(voiceForm))
+    await flushAfterTasks()
+    expect(vi.mocked(sendSms)).toHaveBeenCalledTimes(1)
+
+    await smsPost(
+      smsRequest({
+        From: '+14155551234',
+        To: '+12123473190',
+        Body: 'STOP',
+        MessageSid: 'SM_STOP',
+      })
+    )
+    vi.mocked(sendSms).mockClear()
+
+    const duplicate = await voiceMenuPost(voiceMenuRequest(voiceForm))
+    const xml = await duplicate.text()
+
+    expect(xml).toContain('already handled')
+    await flushAfterTasks()
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.confirmedAt).toBeNull()
   })
 
   it('still gives spoken STOP instructions when voice confirmation SMS fails', async () => {
