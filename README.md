@@ -22,6 +22,47 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Phone and SMS deployment
+
+Inbound Twilio traffic is webhook-based. The app does not poll Twilio for new
+calls or messages. Vercel must expose the production routes below, and each
+Twilio number must point to them with HTTP `POST`.
+
+Set these environment variables in Vercel before cutover:
+
+```bash
+PHONE_WEBHOOK_SECRET=
+TWILIO_SID=
+TWILIO_SECRET=
+OWNER_PHONE_NUMBER=
+```
+
+Configure each Twilio number:
+
+- Voice, "A call comes in": `https://www.philipithomas.com/api/phone/voice?secret=$PHONE_WEBHOOK_SECRET`
+- Messaging, "A message comes in": `https://www.philipithomas.com/api/phone/sms?secret=$PHONE_WEBHOOK_SECRET`
+
+The voice webhook plays the generated greeting, then offers "press 1" for
+voicemail and "press 2" to subscribe the caller ID to SMS updates. No input
+falls through to voicemail. The SMS webhook stores inbound replies, handles
+`SUBSCRIBE` and `STOP`, and emails admins about normal replies.
+
+Newsletter SMS delivery runs inside the same Vercel Workflow as email delivery:
+the admin send page enqueues `sms_sends` rows after the email pass, sends them
+through Twilio's REST API from the NYC number, and records outbound texts in the
+Phone panel. SMS subscribers are separate from email subscribers and are opted
+into every newsletter as one list.
+
+After deploy, verify:
+
+```bash
+WORKFLOW_SMOKE_BASE_URL=https://www.philipithomas.com CRON_SECRET=$CRON_SECRET pnpm workflow:smoke
+```
+
+Then send `SUBSCRIBE` and `STOP` to the 212 number, call it and press both menu
+options, and confirm `/printing-press/phone` shows the inbound and outbound
+thread history.
+
 ## Content
 
 Posts live in `content/` as MDX files:

@@ -2,11 +2,21 @@ import { notFound } from 'next/navigation'
 import { SendClient } from '@/app/printing-press/send/[slug]/send-client'
 import { requireAdmin } from '@/lib/auth/admin'
 import { getPostBySlug } from '@/lib/content/loader'
-import { sendStatsBySlug } from '@/lib/db/queries/email-sends'
+import { type SendStats, sendStatsBySlug } from '@/lib/db/queries/email-sends'
+import { smsSendStatsBySlug } from '@/lib/db/queries/sms-sends'
 import { countEligibleSms } from '@/lib/db/queries/sms-subscribers'
 import { countEligible, isNewsletter } from '@/lib/db/queries/subscribers'
 import { renderNewsletterPreview } from '@/lib/email/send'
 import { isSendRunActive } from '@/lib/email/send-guard'
+
+function combineSendStats(email: SendStats, sms: SendStats): SendStats {
+  return {
+    total: email.total + sms.total,
+    sent: email.sent + sms.sent,
+    pending: email.pending + sms.pending,
+    failed: email.failed + sms.failed,
+  }
+}
 
 export default async function SendPage({
   params,
@@ -26,12 +36,14 @@ export default async function SendPage({
     notFound()
   }
 
-  const [eligible, smsEligible, stats, active] = await Promise.all([
-    countEligible(post.newsletter, slug),
-    countEligibleSms(post.newsletter, slug),
-    sendStatsBySlug(slug),
-    isSendRunActive(slug),
-  ])
+  const [eligible, smsEligible, emailStats, smsStats, active] =
+    await Promise.all([
+      countEligible(post.newsletter, slug),
+      countEligibleSms(post.newsletter, slug),
+      sendStatsBySlug(slug),
+      smsSendStatsBySlug(slug),
+      isSendRunActive(slug),
+    ])
 
   return (
     <SendClient
@@ -43,7 +55,7 @@ export default async function SendPage({
       previewHtml={preview.html}
       initialEligible={eligible}
       initialSmsEligible={smsEligible}
-      initialStats={stats}
+      initialStats={combineSendStats(emailStats, smsStats)}
       initialActive={active}
     />
   )

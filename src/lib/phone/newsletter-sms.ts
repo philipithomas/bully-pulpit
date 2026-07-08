@@ -10,9 +10,18 @@ function trimForSms(value: string, maxLength: number): string {
   return `${value.slice(0, maxLength - 3).trimEnd()}...`
 }
 
+function postUrl(post: Post): string {
+  const url = new URL(`/${post.slug}`, siteConfig.url)
+  url.searchParams.set('utm_source', 'sms')
+  url.searchParams.set('utm_medium', 'sms')
+  url.searchParams.set('utm_campaign', post.newsletter)
+  url.searchParams.set('utm_content', post.slug)
+  return url.toString()
+}
+
 export function renderNewsletterSms(post: Post): string {
   const newsletter = siteConfig.newsletters[post.newsletter].name
-  const url = `${siteConfig.url}/${post.slug}`
+  const url = postUrl(post)
   const suffix = `\n${url}\n\n${STOP_FOOTER}`
   const prefix = `${newsletter}: `
   const title = trimForSms(

@@ -30,11 +30,37 @@ export function voicemailTwiml(input: {
 </Response>`
 }
 
+/** Greets the caller and asks whether to leave voicemail or subscribe by SMS. */
+export function voiceMenuTwiml(input: {
+  greeting: string
+  menuActionUrl: string
+  recordingStatusUrl: string
+  recordingCompleteUrl: string
+}): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="${SAY_VOICE}">${escapeXml(input.greeting)}</Say>
+  <Gather action="${escapeXml(input.menuActionUrl)}" method="POST" input="dtmf" numDigits="1" timeout="6">
+    <Say voice="${SAY_VOICE}">Press 1 to leave a voicemail. Press 2 to subscribe to text message updates.</Say>
+  </Gather>
+  <Say voice="${SAY_VOICE}">Leave a message after the tone.</Say>
+  <Record maxLength="120" recordingStatusCallback="${escapeXml(input.recordingStatusUrl)}" recordingStatusCallbackMethod="POST" action="${escapeXml(input.recordingCompleteUrl)}" method="POST" />
+</Response>`
+}
+
 /** Played after the caller finishes recording. */
 export function goodbyeTwiml(): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="${SAY_VOICE}">Thank you. Goodbye.</Say>
+  <Hangup/>
+</Response>`
+}
+
+export function sayAndHangupTwiml(message: string): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="${SAY_VOICE}">${escapeXml(message)}</Say>
   <Hangup/>
 </Response>`
 }

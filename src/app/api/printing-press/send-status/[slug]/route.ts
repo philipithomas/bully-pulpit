@@ -1,10 +1,20 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { guardAdmin } from '@/lib/auth/admin'
 import { getPostBySlug } from '@/lib/content/loader'
-import { sendStatsBySlug } from '@/lib/db/queries/email-sends'
+import { type SendStats, sendStatsBySlug } from '@/lib/db/queries/email-sends'
+import { smsSendStatsBySlug } from '@/lib/db/queries/sms-sends'
 import { countEligibleSms } from '@/lib/db/queries/sms-subscribers'
 import { countEligible, isNewsletter } from '@/lib/db/queries/subscribers'
 import { isSendRunActive } from '@/lib/email/send-guard'
+
+function combineSendStats(email: SendStats, sms: SendStats): SendStats {
+  return {
+    total: email.total + sms.total,
+    sent: email.sent + sms.sent,
+    pending: email.pending + sms.pending,
+    failed: email.failed + sms.failed,
+  }
+}
 
 export async function GET(
   _request: NextRequest,
@@ -20,12 +30,22 @@ export async function GET(
   const newsletter =
     post && isNewsletter(post.newsletter) ? post.newsletter : null
 
-  const [stats, eligible, smsEligible, active] = await Promise.all([
-    sendStatsBySlug(slug),
-    newsletter ? countEligible(newsletter, slug) : Promise.resolve(0),
-    newsletter ? countEligibleSms(newsletter, slug) : Promise.resolve(0),
-    isSendRunActive(slug),
-  ])
+  const [emailStats, smsStats, eligible, smsEligible, active] =
+    await Promise.all([
+      sendStatsBySlug(slug),
+      smsSendStatsBySlug(slug),
+      newsletter ? countEligible(newsletter, slug) : Promise.resolve(0),
+      newsletter ? countEligibleSms(newsletter, slug) : Promise.resolve(0),
+      isSendRunActive(slug),
+    ])
+  const stats = combineSendStats(emailStats, smsStats)
 
-  return NextResponse.json({ ...stats, eligible, smsEligible, active })
+  return NextResponse.json({
+    ...stats,
+    emailStats,
+    smsStats,
+    eligible,
+    smsEligible,
+    active,
+  })
 }

@@ -23,13 +23,13 @@ import { sendQueuedEmail } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { phoneNumbers } from '@/lib/phone/config'
 import { renderNewsletterSms } from '@/lib/phone/newsletter-sms'
-import { sendSms } from '@/lib/phone/twilio'
+import { isRetryableTwilioError, sendSms } from '@/lib/phone/twilio'
 
 // ~12-13/sec, comfortably under SES's default 14/sec. Paced inside the step
 // (steps have full Node.js access, so setTimeout is fine).
 const BATCH_SIZE = 50
 const SEND_SPACING_MS = 80
-const SMS_SEND_SPACING_MS = 250
+const SMS_SEND_SPACING_MS = 1000
 
 function chunk(ids: number[]): number[][] {
   const chunks: number[][] = []
@@ -200,11 +200,19 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
       })
       sent++
     } catch (err) {
-      await markSmsPermanentFailure(
-        send.id,
-        err instanceof Error ? err.message : String(err)
-      )
-      failed++
+      if (isRetryableTwilioError(err)) {
+        const { attempt } = getStepMetadata()
+        throw new RetryableError(
+          err instanceof Error ? err.message : String(err),
+          { retryAfter: Math.min(60_000, 2 ** attempt * 1000) }
+        )
+      } else {
+        await markSmsPermanentFailure(
+          send.id,
+          err instanceof Error ? err.message : String(err)
+        )
+        failed++
+      }
     }
 
     await new Promise((resolve) => setTimeout(resolve, SMS_SEND_SPACING_MS))
@@ -212,6 +220,8 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
 
   return { sent, failed }
 }
+
+sendSmsBatch.maxRetries = 6
 
 /**
  * Durable newsletter send. Enqueues eligible recipients and sends them in paced,

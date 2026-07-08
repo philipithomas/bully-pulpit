@@ -515,7 +515,9 @@ describe('sendNewsletterWorkflow', () => {
     expect(smsRow.sendError).toBeNull()
     expect(smsRow.twilioSid).toBe('SM_test')
     expect(smsRow.body).toContain('Contraption: Hello world')
-    expect(smsRow.body).toContain('https://www.philipithomas.com/hello-world')
+    expect(smsRow.body).toContain(
+      'https://www.philipithomas.com/hello-world?utm_source=sms&utm_medium=sms&utm_campaign=contraption&utm_content=hello-world'
+    )
     expect(smsRow.body).toContain('Reply STOP to unsubscribe.')
 
     const outboundTexts = await db.select().from(textMessages)
@@ -575,6 +577,31 @@ describe('sendNewsletterWorkflow', () => {
     const smsRow = smsRowFor(await allSmsRows(), smsSubscriber.id)
     expect(smsRow.sentAt).toBeNull()
     expect(smsRow.sendError).toContain('Twilio send failed')
+    expect(await db.select().from(textMessages)).toHaveLength(0)
+  })
+
+  it('keeps a transient SMS failure retryable and leaves the row sendable', async () => {
+    await seedSubscriber({ email: 'alice@example.com' })
+    const smsSubscriber = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ message: 'rate limited' }), {
+            status: 429,
+          })
+      )
+    )
+
+    const err = await sendNewsletterWorkflow(SLUG).catch((e) => e)
+
+    expect(err).toBeInstanceOf(RetryableError)
+    expect(err.message).toContain('rate limited')
+    const smsRow = smsRowFor(await allSmsRows(), smsSubscriber.id)
+    expect(smsRow.sentAt).toBeNull()
+    expect(smsRow.sendError).toBeNull()
     expect(await db.select().from(textMessages)).toHaveLength(0)
   })
 })

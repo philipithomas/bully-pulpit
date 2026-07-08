@@ -71,6 +71,8 @@ describe('POST /api/phone/voice', () => {
     expect(response.headers.get('Content-Type')).toContain('text/xml')
     const xml = await response.text()
     expect(xml).toContain('You have reached the test suite.')
+    expect(xml).toContain('<Gather')
+    expect(xml).toContain('/api/phone/voice-menu?secret=test-webhook-secret')
     expect(xml).toContain(
       '/api/phone/recording-status?secret=test-webhook-secret'
     )

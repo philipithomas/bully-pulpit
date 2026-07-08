@@ -62,9 +62,13 @@ vi.mock('@/lib/email/queued-send', () => ({
   sendQueuedEmail: vi.fn(),
 }))
 
-vi.mock('@/lib/phone/twilio', () => ({
-  sendSms: vi.fn(),
-}))
+vi.mock('@/lib/phone/twilio', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/phone/twilio')>()
+  return {
+    ...actual,
+    sendSms: vi.fn(),
+  }
+})
 
 import { getStepMetadata, RetryableError } from 'workflow'
 import { getPostBySlugWithoutImages } from '@/lib/content/loader-without-images'
@@ -76,7 +80,7 @@ import { isSuppressed } from '@/lib/db/queries/suppressions'
 import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { sendQueuedEmail } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
-import { sendSms } from '@/lib/phone/twilio'
+import { sendSms, TwilioApiError } from '@/lib/phone/twilio'
 import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
 
 const mockedSends = vi.mocked(emailSends)
@@ -149,7 +153,7 @@ function claimedSms(id: number, phoneNumber = `+1555123000${id}`) {
       smsSubscriberId: id,
       postSlug: 'hello-world',
       newsletter: 'contraption',
-      body: 'Contraption: Hello world\nhttps://www.philipithomas.com/hello-world\n\nReply STOP to unsubscribe.',
+      body: 'Contraption: Hello world\nhttps://www.philipithomas.com/hello-world?utm_source=sms&utm_medium=sms&utm_campaign=contraption&utm_content=hello-world\n\nReply STOP to unsubscribe.',
       twilioSid: null,
       twilioStatus: null,
       sendError: null,
@@ -377,5 +381,23 @@ describe('sendNewsletterWorkflow', () => {
         twilioSid: 'SM_test',
       })
     )
+  })
+
+  it('throws RetryableError on a retryable Twilio SMS error', async () => {
+    const now = new Date('2026-06-09T12:00:00Z')
+    vi.setSystemTime(now)
+    mockedEligible.mockResolvedValue([])
+    mockedSends.pendingRowIdsBySlug.mockResolvedValue([])
+    mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([701])
+    mockedSendSms.mockRejectedValue(new TwilioApiError('rate limited', 429))
+    mockedStepMetadata.mockReturnValue(stepMeta(3))
+
+    const err = await sendNewsletterWorkflow('hello-world').catch((e) => e)
+
+    expect(err).toBeInstanceOf(RetryableError)
+    expect(err.message).toBe('rate limited')
+    expect(err.retryAfter).toEqual(new Date(now.getTime() + 8_000))
+    expect(mockedSmsSends.markSmsPermanentFailure).not.toHaveBeenCalled()
+    expect(mockedSmsSends.markSmsSent).not.toHaveBeenCalled()
   })
 })

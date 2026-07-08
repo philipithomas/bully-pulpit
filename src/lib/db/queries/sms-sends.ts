@@ -80,6 +80,26 @@ export async function markSmsPermanentFailure(
     .where(eq(smsSends.id, id))
 }
 
+export type SmsSendStats = {
+  total: number
+  sent: number
+  pending: number
+  failed: number
+}
+
+export async function smsSendStatsBySlug(slug: string): Promise<SmsSendStats> {
+  const rows = await getDb()
+    .select({
+      total: sql<number>`count(*)::int`,
+      sent: sql<number>`(count(*) FILTER (WHERE ${smsSends.sentAt} IS NOT NULL))::int`,
+      failed: sql<number>`(count(*) FILTER (WHERE ${smsSends.sendError} IS NOT NULL AND ${smsSends.sentAt} IS NULL))::int`,
+      pending: sql<number>`(count(*) FILTER (WHERE ${smsSends.sentAt} IS NULL AND ${smsSends.sendError} IS NULL))::int`,
+    })
+    .from(smsSends)
+    .where(eq(smsSends.postSlug, slug))
+  return rows[0] ?? { total: 0, sent: 0, pending: 0, failed: 0 }
+}
+
 export async function pendingSmsRowIdsBySlug(slug: string): Promise<number[]> {
   const rows = await getDb()
     .select({ id: smsSends.id })

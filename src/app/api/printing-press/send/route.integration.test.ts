@@ -35,7 +35,12 @@ import {
   pendingRowIdsBySlug,
 } from '@/lib/db/queries/email-sends'
 import { latestRunIdBySlug, recordSendRun } from '@/lib/db/queries/send-runs'
-import { emailSends, subscribers } from '@/lib/db/schema'
+import {
+  emailSends,
+  smsSends,
+  smsSubscribers,
+  subscribers,
+} from '@/lib/db/schema'
 import { db, resetDb } from '@/test/integration/db'
 import { clearSessionStore, setSessionCookie } from '@/test/integration/session'
 import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
@@ -100,6 +105,14 @@ async function seedSubscriber(email: string) {
   return row
 }
 
+async function seedSmsSubscriber(phoneNumber: string) {
+  const [row] = await db
+    .insert(smsSubscribers)
+    .values({ phoneNumber, confirmedAt: new Date() })
+    .returning()
+  return row
+}
+
 /** Direct insert of a pre-existing email_sends row (leftover from a prior run). */
 async function seedSendRow(
   subscriberId: number,
@@ -108,6 +121,22 @@ async function seedSendRow(
   const [row] = await db
     .insert(emailSends)
     .values({ subscriberId, postSlug: SLUG, ...overrides })
+    .returning()
+  return row
+}
+
+async function seedSmsSendRow(
+  smsSubscriberId: number,
+  overrides: Partial<typeof smsSends.$inferInsert> = {}
+) {
+  const [row] = await db
+    .insert(smsSends)
+    .values({
+      smsSubscriberId,
+      postSlug: SLUG,
+      body: 'Contraption: Hello world',
+      ...overrides,
+    })
     .returning()
   return row
 }
@@ -372,9 +401,58 @@ describe('GET send status', () => {
       sent: 0,
       pending: 0,
       failed: 0,
+      emailStats: {
+        total: 0,
+        sent: 0,
+        pending: 0,
+        failed: 0,
+      },
+      smsStats: {
+        total: 0,
+        sent: 0,
+        pending: 0,
+        failed: 0,
+      },
       eligible: 0,
       smsEligible: 0,
       active: true,
+    })
+  })
+
+  it('includes pending and failed SMS rows in aggregate progress', async () => {
+    await signInAsAdmin()
+    const alice = await seedSubscriber('alice@example.com')
+    await seedSendRow(alice.id, { sentAt: new Date() })
+    const bob = await seedSmsSubscriber('+15551234567')
+    await seedSmsSendRow(bob.id)
+    const carol = await seedSmsSubscriber('+15557654321')
+    await seedSmsSendRow(carol.id, { sendError: 'Twilio rejected the message' })
+
+    const res = await statusGet(statusRequest(), {
+      params: Promise.resolve({ slug: SLUG }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({
+      total: 3,
+      sent: 1,
+      pending: 1,
+      failed: 1,
+      emailStats: {
+        total: 1,
+        sent: 1,
+        pending: 0,
+        failed: 0,
+      },
+      smsStats: {
+        total: 2,
+        sent: 0,
+        pending: 1,
+        failed: 1,
+      },
+      eligible: 0,
+      smsEligible: 1,
+      active: false,
     })
   })
 

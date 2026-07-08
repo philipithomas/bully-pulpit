@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createCall, sendSms } from '@/lib/phone/twilio'
+import {
+  createCall,
+  isRetryableTwilioError,
+  sendSms,
+  TwilioApiError,
+} from '@/lib/phone/twilio'
 
 const smsInput = { from: '+12123473190', to: '+15551234567', body: 'hi' }
 const callInput = {
@@ -71,6 +76,25 @@ describe('sendSms', () => {
       vi.fn(async () => new Response('{}', { status: 200 }))
     )
     await expect(sendSms(smsInput)).rejects.toThrow('no sid returned')
+  })
+})
+
+describe('isRetryableTwilioError', () => {
+  it('treats rate limits, 5xx responses, and network errors as retryable', () => {
+    expect(
+      isRetryableTwilioError(new TwilioApiError('rate limited', 429))
+    ).toBe(true)
+    expect(
+      isRetryableTwilioError(new TwilioApiError('server error', 503))
+    ).toBe(true)
+    expect(isRetryableTwilioError(new TypeError('fetch failed'))).toBe(true)
+  })
+
+  it('treats recipient and credential errors as permanent', () => {
+    expect(
+      isRetryableTwilioError(new TwilioApiError('not a valid number', 400))
+    ).toBe(false)
+    expect(isRetryableTwilioError(new Error('missing credentials'))).toBe(false)
   })
 })
 

@@ -5,7 +5,9 @@ import {
   escapeXml,
   goodbyeTwiml,
   messageTwiml,
+  sayAndHangupTwiml,
   twimlResponse,
+  voiceMenuTwiml,
   voicemailTwiml,
 } from '@/lib/phone/twiml'
 
@@ -49,10 +51,38 @@ describe('voicemailTwiml', () => {
   })
 })
 
+describe('voiceMenuTwiml', () => {
+  const xml = voiceMenuTwiml({
+    greeting: 'You have reached the Contraption Company.',
+    menuActionUrl: 'https://philipithomas.com/api/phone/voice-menu?secret=s',
+    recordingStatusUrl:
+      'https://philipithomas.com/api/phone/recording-status?secret=s&caller=%2B15551234567',
+    recordingCompleteUrl:
+      'https://philipithomas.com/api/phone/recording-complete?secret=s',
+  })
+
+  it('collects a single keypad choice before the voicemail fallback', () => {
+    expect(xml).toContain(
+      '<Gather action="https://philipithomas.com/api/phone/voice-menu?secret=s" method="POST" input="dtmf" numDigits="1" timeout="6">'
+    )
+    expect(xml).toContain('Press 1 to leave a voicemail.')
+    expect(xml).toContain('Press 2 to subscribe to text message updates.')
+    expect(xml).toContain('<Record maxLength="120"')
+  })
+})
+
 describe('goodbyeTwiml', () => {
   it('thanks the caller and hangs up', () => {
     const xml = goodbyeTwiml()
     expect(xml).toContain('Thank you. Goodbye.')
+    expect(xml).toContain('<Hangup/>')
+  })
+})
+
+describe('sayAndHangupTwiml', () => {
+  it('speaks escaped text and hangs up', () => {
+    const xml = sayAndHangupTwiml('Subscribed & ready.')
+    expect(xml).toContain('Subscribed &amp; ready.')
     expect(xml).toContain('<Hangup/>')
   })
 })
