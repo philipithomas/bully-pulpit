@@ -1,12 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-// after() runs the callback inline so route tests observe its side effects.
+const afterTasks = vi.hoisted(() => [] as Promise<void>[])
+
+async function flushAfterTasks() {
+  await Promise.all(afterTasks.splice(0))
+}
+
+// Capture after() callbacks so tests can assert post-response side effects.
 vi.mock('next/server', async (importOriginal) => {
   const actual = await importOriginal<typeof import('next/server')>()
   return {
     ...actual,
     after: (task: (() => Promise<void>) | Promise<void>) => {
-      void (typeof task === 'function' ? task() : task)
+      afterTasks.push(
+        Promise.resolve(typeof task === 'function' ? task() : task)
+      )
     },
   }
 })
@@ -56,13 +64,15 @@ function voiceMenuRequest(form: Record<string, string>, secret = SECRET) {
 }
 
 beforeEach(async () => {
+  afterTasks.length = 0
   await resetDb()
   process.env.PHONE_WEBHOOK_SECRET = SECRET
   process.env.ADMIN_EMAILS = 'one@example.com, two@example.com'
   vi.mocked(sendSms).mockResolvedValue({ sid: 'SM_CONFIRM', status: 'queued' })
 })
 
-afterEach(() => {
+afterEach(async () => {
+  await flushAfterTasks()
   delete process.env.PHONE_WEBHOOK_SECRET
   delete process.env.ADMIN_EMAILS
   delete process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED
@@ -119,6 +129,7 @@ describe('POST /api/phone/sms', () => {
     await smsPost(smsRequest(form))
     await smsPost(smsRequest(form))
     expect(await db.select().from(textMessages)).toHaveLength(1)
+    expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
   })
 
   it('subscribes an SMS sender and emails an admin notification with Twilio metadata', async () => {
@@ -150,6 +161,7 @@ describe('POST /api/phone/sms', () => {
     })
     expect(subscribers[0].confirmedAt).toBeInstanceOf(Date)
     expect(await db.select().from(textMessages)).toHaveLength(1)
+    await flushAfterTasks()
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
     const email = vi.mocked(sendSimpleEmail).mock.calls[0][0]
     expect(email.to).toEqual(['one@example.com', 'two@example.com'])
@@ -167,6 +179,7 @@ describe('POST /api/phone/sms', () => {
       MessageSid: 'SM_SUB',
     }
     await smsPost(smsRequest(form))
+    await flushAfterTasks()
     vi.mocked(sendSimpleEmail).mockClear()
 
     const response = await smsPost(
@@ -186,6 +199,7 @@ describe('POST /api/phone/sms', () => {
         MessageSid: 'SM_SUB',
       })
     )
+    await flushAfterTasks()
     vi.mocked(sendSimpleEmail).mockClear()
 
     const response = await smsPost(
@@ -203,6 +217,51 @@ describe('POST /api/phone/sms', () => {
     expect(subscriber.confirmedAt).toBeNull()
     expect(subscriber.subscribedContraption).toBe(false)
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+  })
+
+  it('ignores duplicate command webhooks after MessageSid dedupe', async () => {
+    const subscribeForm = {
+      From: '+15551234567',
+      To: '+12123473190',
+      Body: 'SUBSCRIBE',
+      MessageSid: 'SM_SUB',
+    }
+    const stopForm = {
+      From: '+15551234567',
+      To: '+12123473190',
+      Body: 'STOP',
+      MessageSid: 'SM_STOP',
+    }
+
+    await smsPost(smsRequest(subscribeForm))
+    await flushAfterTasks()
+    await smsPost(smsRequest(stopForm))
+    vi.mocked(sendSimpleEmail).mockClear()
+
+    const duplicateSubscribe = await smsPost(smsRequest(subscribeForm))
+    expect(await duplicateSubscribe.text()).toContain('<Response></Response>')
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.confirmedAt).toBeNull()
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+    expect(await db.select().from(textMessages)).toHaveLength(2)
+
+    await smsPost(
+      smsRequest({
+        ...subscribeForm,
+        MessageSid: 'SM_RESUB',
+      })
+    )
+    await flushAfterTasks()
+    vi.mocked(sendSimpleEmail).mockClear()
+
+    const duplicateStop = await smsPost(smsRequest(stopForm))
+    expect(await duplicateStop.text()).toContain('<Response></Response>')
+    const [subscriberAfterDuplicateStop] = await db
+      .select()
+      .from(smsSubscribers)
+    expect(subscriberAfterDuplicateStop.confirmedAt).toBeInstanceOf(Date)
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+    expect(await db.select().from(textMessages)).toHaveLength(3)
   })
 
   it('marks pending SMS send rows skipped when a number unsubscribes', async () => {
@@ -284,6 +343,7 @@ describe('POST /api/phone/sms', () => {
         MessageSid: 'SM_SUB',
       })
     )
+    await flushAfterTasks()
     vi.mocked(sendSimpleEmail).mockClear()
 
     const response = await smsPost(
@@ -325,8 +385,7 @@ describe('POST /api/phone/voice-menu', () => {
     expect(response.status).toBe(200)
     const xml = await response.text()
     expect(xml).toContain('You are subscribed')
-    expect(xml).toContain('I sent a confirmation text')
-    expect(xml).toContain('Reply STOP')
+    expect(xml).toContain('Text STOP at any time to unsubscribe')
     const subscribers = await db.select().from(smsSubscribers)
     expect(subscribers).toHaveLength(1)
     expect(subscribers[0]).toMatchObject({
@@ -337,6 +396,7 @@ describe('POST /api/phone/voice-menu', () => {
       subscribedTsundoku: true,
       source: 'call:nyc',
     })
+    await flushAfterTasks()
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
     const email = vi.mocked(sendSimpleEmail).mock.calls[0][0]
     expect(email.subject).toBe('SMS signup from +14155551234 via voice menu')
@@ -394,6 +454,7 @@ describe('POST /api/phone/voice-menu', () => {
     const xml = await response.text()
     expect(xml).toContain('You are subscribed')
     expect(xml).toContain('Text STOP at any time to unsubscribe')
+    await flushAfterTasks()
     const messages = await db.select().from(textMessages)
     expect(messages).toHaveLength(1)
     expect(messages[0]).toMatchObject({

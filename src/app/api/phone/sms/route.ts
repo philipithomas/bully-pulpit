@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import {
   findSmsSubscriberByPhoneNumber,
   subscribeSmsNumber,
   unsubscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
-import { createTextMessage } from '@/lib/db/queries/text-messages'
+import { createTextMessageWithStatus } from '@/lib/db/queries/text-messages'
 import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
 import { numberLabel } from '@/lib/phone/config'
 import {
@@ -20,10 +20,8 @@ import { emptyTwiml, messageTwiml, twimlResponse } from '@/lib/phone/twiml'
 import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
 
 /**
- * Twilio SMS webhook. Stores the inbound message (deduplicated by MessageSid,
- * so a webhook retry cannot double-insert), forwards it by email, and sends
- * no reply. Both effects run synchronously so a failure surfaces as a webhook
- * error in the Twilio console instead of disappearing.
+ * Twilio SMS webhook. Stores the inbound message and ignores duplicate
+ * MessageSid redeliveries before applying command side effects.
  */
 export async function POST(request: Request) {
   if (!isAuthorizedPhoneWebhook(request)) {
@@ -41,7 +39,7 @@ export async function POST(request: Request) {
     optOutType.trim().toUpperCase() === 'STOP'
   const metadata = twilioWebhookMetadataFromForm(form, from)
 
-  await createTextMessage({
+  const { inserted } = await createTextMessageWithStatus({
     fromNumber: from,
     toNumber: to,
     body,
@@ -49,6 +47,7 @@ export async function POST(request: Request) {
     twilioSid: form.get('MessageSid') ? String(form.get('MessageSid')) : null,
     status: form.get('SmsStatus') ? String(form.get('SmsStatus')) : 'received',
   })
+  if (!inserted) return twimlResponse(emptyTwiml())
 
   if (command === 'subscribe') {
     const existing = await findSmsSubscriberByPhoneNumber(from)
@@ -57,16 +56,18 @@ export async function POST(request: Request) {
       source: `sms:${numberLabel(to).toLowerCase()}`,
     })
     if (!existing?.confirmedAt) {
-      try {
-        await sendSmsSignupNotification({
-          phoneNumber: from,
-          to,
-          source: 'sms',
-          metadata,
-        })
-      } catch (err) {
-        console.error('[phone/sms] SMS signup notification failed:', err)
-      }
+      after(async () => {
+        try {
+          await sendSmsSignupNotification({
+            phoneNumber: from,
+            to,
+            source: 'sms',
+            metadata,
+          })
+        } catch (err) {
+          console.error('[phone/sms] SMS signup notification failed:', err)
+        }
+      })
     }
     return twimlResponse(
       twilioAlreadyReplied

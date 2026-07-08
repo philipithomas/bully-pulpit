@@ -89,32 +89,33 @@ export async function POST(request: Request) {
       phoneNumber: from,
       source: `call:${numberLabel(to).toLowerCase()}`,
     })
-    const confirmationSent = await sendVoiceSignupConfirmationSms({
-      from: to,
-      to: from,
-    })
-    if (!existing?.confirmedAt) {
-      after(async () => {
-        try {
-          await sendSmsSignupNotification({
+    after(async () => {
+      const tasks: Promise<unknown>[] = [
+        sendVoiceSignupConfirmationSms({
+          from: to,
+          to: from,
+        }),
+      ]
+      if (!existing?.confirmedAt) {
+        tasks.push(
+          sendSmsSignupNotification({
             phoneNumber: from,
             to,
             source: 'voice-menu',
             metadata,
+          }).catch((err) => {
+            console.error(
+              '[phone/voice-menu] SMS signup notification failed:',
+              err
+            )
           })
-        } catch (err) {
-          console.error(
-            '[phone/voice-menu] SMS signup notification failed:',
-            err
-          )
-        }
-      })
-    }
+        )
+      }
+      await Promise.all(tasks)
+    })
     return twimlResponse(
       sayAndHangupTwiml(
-        confirmationSent
-          ? 'You are subscribed to text message updates from philipithomas.com. I sent a confirmation text. Reply STOP to that text at any time to unsubscribe. Goodbye.'
-          : 'You are subscribed to text message updates from philipithomas.com. Text STOP at any time to unsubscribe. Goodbye.'
+        'You are subscribed to text message updates from philipithomas.com. Text STOP at any time to unsubscribe. Goodbye.'
       )
     )
   }

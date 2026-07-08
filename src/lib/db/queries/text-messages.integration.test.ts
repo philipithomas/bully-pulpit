@@ -5,6 +5,7 @@ vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 import {
   conversationWith,
   createTextMessage,
+  createTextMessageWithStatus,
   listConversations,
 } from '@/lib/db/queries/text-messages'
 import { textMessages } from '@/lib/db/schema'
@@ -62,6 +63,15 @@ describe('createTextMessage', () => {
     const second = await createTextMessage(inbound(ALICE, 'SM1', 'hello'))
     expect(second.id).toBe(first.id)
     expect(await db.select().from(textMessages)).toHaveLength(1)
+  })
+
+  it('reports whether the Twilio sid was newly inserted', async () => {
+    const first = await createTextMessageWithStatus(inbound(ALICE, 'SM1'))
+    const second = await createTextMessageWithStatus(inbound(ALICE, 'SM1'))
+
+    expect(first.inserted).toBe(true)
+    expect(second.inserted).toBe(false)
+    expect(second.message.id).toBe(first.message.id)
   })
 
   it('allows multiple rows without a sid (failed outbound attempts)', async () => {
