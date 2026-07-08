@@ -385,7 +385,10 @@ function SignupConfirmationDialog({
           {googleAvailable ? (
             <>
               <p className="text-center font-sans text-xs text-gray-400">or</p>
-              <GoogleSignInButton onSuccess={handleGoogleSuccess} />
+              <GoogleSignInButton
+                onSuccess={handleGoogleSuccess}
+                requestContext={{ expectedEmail: email, newsletters }}
+              />
             </>
           ) : null}
           <button

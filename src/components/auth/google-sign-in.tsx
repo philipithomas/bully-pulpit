@@ -23,6 +23,8 @@ type GoogleSignInSuccessHandler = (
   result: GoogleSignInResult
 ) => unknown | Promise<unknown>
 
+type GoogleSignInRequestContext = Record<string, unknown>
+
 declare global {
   interface Window {
     google?: {
@@ -105,12 +107,17 @@ export function useGoogleSignInAvailable() {
   return Boolean(GOOGLE_CLIENT_ID) && !failed
 }
 
-function useGoogleAuth(onSuccess?: GoogleSignInSuccessHandler) {
+function useGoogleAuth(
+  onSuccess?: GoogleSignInSuccessHandler,
+  requestContext?: GoogleSignInRequestContext
+) {
   const available = useGoogleSignInAvailable()
   const [loading, setLoading] = useState(false)
   const clientRef = useRef<{ requestCode: () => void } | null>(null)
   const onSuccessRef = useRef(onSuccess)
+  const requestContextRef = useRef(requestContext)
   onSuccessRef.current = onSuccess
+  requestContextRef.current = requestContext
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return
@@ -133,7 +140,10 @@ function useGoogleAuth(onSuccess?: GoogleSignInSuccessHandler) {
             const res = await fetch('/api/auth/google', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code: response.code }),
+              body: JSON.stringify({
+                code: response.code,
+                ...(requestContextRef.current ?? {}),
+              }),
             })
             if (!res.ok) {
               const data = await res.json()
@@ -186,10 +196,15 @@ function useGoogleAuth(onSuccess?: GoogleSignInSuccessHandler) {
 
 export function GoogleSignInButton({
   onSuccess,
+  requestContext,
 }: {
   onSuccess?: GoogleSignInSuccessHandler
+  requestContext?: GoogleSignInRequestContext
 }) {
-  const { requestSignIn, loading, available } = useGoogleAuth(onSuccess)
+  const { requestSignIn, loading, available } = useGoogleAuth(
+    onSuccess,
+    requestContext
+  )
 
   if (!available) return null
 

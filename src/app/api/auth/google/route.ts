@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   if (!body) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
-  const { code } = body
+  const { code, expectedEmail, newsletters } = body
 
   if (!code) {
     return NextResponse.json(
@@ -71,8 +71,15 @@ export async function POST(request: Request) {
       audience: siteConfig.googleClientId,
     })
 
-    const email = payload.email as string
-    const name = payload.name as string | undefined
+    const email =
+      typeof payload.email === 'string'
+        ? payload.email.trim().toLowerCase()
+        : ''
+    const name = typeof payload.name === 'string' ? payload.name : undefined
+    const normalizedExpectedEmail =
+      typeof expectedEmail === 'string'
+        ? expectedEmail.trim().toLowerCase()
+        : null
 
     if (!email || !payload.email_verified) {
       return NextResponse.json(
@@ -81,11 +88,23 @@ export async function POST(request: Request) {
       )
     }
 
+    if (normalizedExpectedEmail && normalizedExpectedEmail !== email) {
+      return NextResponse.json(
+        { error: `Use the Google account for ${normalizedExpectedEmail}.` },
+        { status: 409 }
+      )
+    }
+
     // Google-verified emails skip the OTP and are confirmed immediately.
     const { subscriber } = await createOrRetrieve({
       email,
       name: name || undefined,
       googleVerified: true,
+      newsletters:
+        normalizedExpectedEmail && Array.isArray(newsletters)
+          ? newsletters
+          : undefined,
+      allowExistingSubscriberOptIn: Boolean(normalizedExpectedEmail),
     })
 
     const jwt = await signSession(subscriber)
