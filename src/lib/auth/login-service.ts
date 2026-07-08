@@ -1,4 +1,5 @@
 import { siteConfig } from '@/lib/config'
+import type { Newsletter } from '@/lib/content/types'
 import {
   createLogin,
   findValidByToken,
@@ -85,6 +86,18 @@ function subscribedNewsletterNames(subscriber: Subscriber): string[] {
   return names
 }
 
+function verificationUrl(
+  token: string,
+  pendingNewsletters: Newsletter[] | undefined
+): string {
+  const url = new URL('/auth/verify', siteConfig.url)
+  url.searchParams.set('token', token)
+  for (const newsletter of pendingNewsletters ?? []) {
+    url.searchParams.append('newsletter', newsletter)
+  }
+  return url.toString()
+}
+
 /**
  * Creates a 6-digit code login AND a magic-link login (both 15-min expiry) and
  * emails them. Ported from printing-press's create_and_send_login. `purpose`
@@ -93,7 +106,8 @@ function subscribedNewsletterNames(subscriber: Subscriber): string[] {
  */
 export async function createAndSendLogin(
   subscriber: Subscriber,
-  purpose: ConfirmationPurpose = 'sign-in'
+  purpose: ConfirmationPurpose = 'sign-in',
+  options: { pendingNewsletters?: Newsletter[] } = {}
 ): Promise<void> {
   const expiredAt = new Date(Date.now() + FIFTEEN_MINUTES_MS)
 
@@ -110,7 +124,7 @@ export async function createAndSendLogin(
     expiredAt,
   })
 
-  const magicLink = `${siteConfig.url}/auth/verify?token=${magicToken}`
+  const magicLink = verificationUrl(magicToken, options.pendingNewsletters)
   await sendConfirmation(subscriber.email, code, magicLink, {
     purpose,
     newsletters: subscribedNewsletterNames(subscriber),

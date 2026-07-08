@@ -62,7 +62,7 @@ export type CreateResult = {
   nextStep: 'confirmed' | 'verification_sent'
 }
 
-function normalizedNewsletters(
+export function normalizedNewsletters(
   newsletters: string[] | undefined
 ): Newsletter[] {
   if (!newsletters) return []
@@ -74,7 +74,9 @@ function normalizedNewsletters(
   return [...seen]
 }
 
-function prefsForNewsletters(newsletters: Newsletter[]): SubscriberPrefs {
+export function prefsForNewsletters(
+  newsletters: Newsletter[]
+): SubscriberPrefs {
   return {
     ...(newsletters.includes('contraption')
       ? { subscribedContraption: true }
@@ -83,6 +85,20 @@ function prefsForNewsletters(newsletters: Newsletter[]): SubscriberPrefs {
     ...(newsletters.includes('postcard') ? { subscribedPostcard: true } : {}),
     ...(newsletters.includes('tsundoku') ? { subscribedTsundoku: true } : {}),
   }
+}
+
+export async function applyNewsletterOptIns(
+  subscriber: Subscriber,
+  newsletters: Newsletter[]
+): Promise<Subscriber> {
+  if (newsletters.length === 0) return subscriber
+  const updated = await updateSubscriber(
+    subscriber.uuid,
+    prefsForNewsletters(newsletters)
+  )
+  if (!updated) return subscriber
+  await notifyTsundokuOptInBestEffort(subscriber, updated)
+  return updated
 }
 
 function creationPrefsForNewSubscriber() {
@@ -123,10 +139,11 @@ async function notifyTsundokuOptInBestEffort(
 
 async function sendLoginBestEffort(
   subscriber: Subscriber,
-  purpose: ConfirmationPurpose
+  purpose: ConfirmationPurpose,
+  pendingNewsletters?: Newsletter[]
 ): Promise<void> {
   try {
-    await createAndSendLogin(subscriber, purpose)
+    await createAndSendLogin(subscriber, purpose, { pendingNewsletters })
   } catch (err) {
     console.error('[subscriber] confirmation/sign-in email failed:', err)
   }
@@ -139,13 +156,14 @@ async function sendLoginBestEffort(
  */
 async function sendLoginOrRejectSuppressed(
   subscriber: Subscriber,
-  purpose: ConfirmationPurpose
+  purpose: ConfirmationPurpose,
+  pendingNewsletters?: Newsletter[]
 ): Promise<void> {
   if (await isSuppressed(subscriber.email)) {
     console.warn(`[subscriber] suppressed address blocked: ${subscriber.email}`)
     throw new SuppressedEmailError()
   }
-  await sendLoginBestEffort(subscriber, purpose)
+  await sendLoginBestEffort(subscriber, purpose, pendingNewsletters)
 }
 
 /**
@@ -155,9 +173,10 @@ async function sendLoginOrRejectSuppressed(
  * when the call is actually a sign-in.
  *
  * `name` and `source` apply only when the row is created. New public signups
- * start on every newsletter. For existing subscribers, an explicit
- * `newsletters` list only opts them into those newsletters; no list means the
- * call is a pure sign-in and leaves preferences untouched.
+ * start on every newsletter. For existing confirmed subscribers, public forms
+ * sign them in without changing preferences unless the caller explicitly allows
+ * email-only opt-in. Existing unconfirmed rows may still update newsletter
+ * flags before the confirmation email is resent.
  */
 export async function createOrRetrieve(input: {
   email: string
@@ -165,6 +184,8 @@ export async function createOrRetrieve(input: {
   source?: string | null
   /** Newsletter slugs to opt an existing row into; new rows receive all newsletters. */
   newsletters?: string[]
+  /** Permit a confirmed existing subscriber to opt in by email without signing in. */
+  allowExistingSubscriberOptIn?: boolean
   googleVerified?: boolean
 }): Promise<CreateResult> {
   const email = input.email.trim().toLowerCase()
@@ -185,20 +206,18 @@ export async function createOrRetrieve(input: {
   const hasExplicitNewsletterOptIn = input.newsletters !== undefined
   const hasRequestedNewsletterOptIn =
     hasExplicitNewsletterOptIn && newsletters.length > 0
+  const allowExistingSubscriberOptIn =
+    input.allowExistingSubscriberOptIn === true
 
   const existing = await findByEmail(email)
   if (existing) {
     let subscriber = existing
 
-    if (hasRequestedNewsletterOptIn) {
-      const updated = await updateSubscriber(
-        existing.uuid,
-        prefsForNewsletters(newsletters)
-      )
-      if (updated) {
-        await notifyTsundokuOptInBestEffort(existing, updated)
-        subscriber = updated
-      }
+    if (
+      hasRequestedNewsletterOptIn &&
+      (existing.confirmedAt == null || allowExistingSubscriberOptIn)
+    ) {
+      subscriber = await applyNewsletterOptIns(existing, newsletters)
     }
 
     if (googleVerified && existing.confirmedAt == null) {
@@ -211,10 +230,14 @@ export async function createOrRetrieve(input: {
       await sendLoginOrRejectSuppressed(subscriber, 'confirm')
       return { subscriber, isNew: false, nextStep: 'verification_sent' }
     } else if (!googleVerified) {
-      if (hasRequestedNewsletterOptIn) {
+      if (hasRequestedNewsletterOptIn && allowExistingSubscriberOptIn) {
         return { subscriber, isNew: false, nextStep: 'confirmed' }
       }
-      await sendLoginOrRejectSuppressed(subscriber, 'sign-in')
+      await sendLoginOrRejectSuppressed(
+        subscriber,
+        'sign-in',
+        hasRequestedNewsletterOptIn ? newsletters : undefined
+      )
       return { subscriber, isNew: false, nextStep: 'verification_sent' }
     }
 

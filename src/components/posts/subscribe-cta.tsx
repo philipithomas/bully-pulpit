@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { InlineSignupForm } from '@/components/auth/inline-signup-form'
@@ -22,10 +22,12 @@ export function SubscribeCta({
   newsletter,
   className = 'mt-16',
   align = 'start',
+  subscribeEndpoint,
 }: {
   newsletter: Newsletter
   className?: string
   align?: 'start' | 'center'
+  subscribeEndpoint?: string
 }) {
   const { user, preferences, setPreferences, hasSession, loading } =
     useAuthContext()
@@ -38,7 +40,7 @@ export function SubscribeCta({
   const initialMemberClassName =
     hasSession === null ? '[[data-member]_&]:hidden' : ''
 
-  async function subscribeSignedIn() {
+  const subscribeSignedIn = useCallback(async () => {
     setSaving(true)
     try {
       const res = await fetch('/api/auth/preferences', {
@@ -61,7 +63,7 @@ export function SubscribeCta({
     } finally {
       setSaving(false)
     }
-  }
+  }, [config.name, key, setPreferences])
 
   if (hasSession && loading) return null
   if (user && (!preferences || subscribed)) return null
@@ -92,7 +94,9 @@ export function SubscribeCta({
         <InlineSignupForm
           align={align}
           buttonClassName={buttonClassName}
+          confirmedMessage={`You are subscribed to new ${newsletterNoun[newsletter]} by email.`}
           newsletters={[newsletter]}
+          subscribeEndpoint={subscribeEndpoint}
         />
       )}
     </div>

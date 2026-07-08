@@ -24,9 +24,12 @@ interface Props {
   newsletters?: Newsletter[]
   align?: 'start' | 'center'
   buttonClassName?: string
+  subscribeEndpoint?: string
+  confirmedMessage?: string
+  initialSubscriberCount?: number | null
   /**
-   * When true, fetches the live subscriber count client-side and uses it as the
-   * header text ("Join N other subscribers:"). Lets the host page stay static.
+   * When true and no initial count was provided, fetches the live subscriber
+   * count client-side and uses it as the header text ("Join N other subscribers:").
    */
   showSubscriberCount?: boolean
 }
@@ -41,6 +44,9 @@ export function InlineSignupForm({
   newsletters = [...defaultSignupNewsletters],
   align = 'start',
   buttonClassName = 'btn btn-primary',
+  subscribeEndpoint = '/api/subscribe',
+  confirmedMessage = 'You are subscribed by email.',
+  initialSubscriberCount = null,
   showSubscriberCount = false,
 }: Props) {
   const { user, hasSession, loading: authLoading } = useAuthContext()
@@ -48,20 +54,22 @@ export function InlineSignupForm({
   const [code, setCode] = useState('')
   const [step, setStep] = useState<Step>('email')
   const [loading, setLoading] = useState(false)
-  const [subscriberCount, setSubscriberCount] = useState<number | null>(null)
+  const [subscriberCount, setSubscriberCount] = useState<number | null>(
+    initialSubscriberCount
+  )
   const submittingRef = useRef(false)
 
   useEffect(() => {
-    if (!showSubscriberCount) return
+    if (!showSubscriberCount || initialSubscriberCount !== null) return
     fetch('/api/stats/subscribers/count')
       .then((res) => res.json())
       .then((data) => setSubscriberCount(data.count ?? null))
       .catch(() => {})
-  }, [showSubscriberCount])
+  }, [initialSubscriberCount, showSubscriberCount])
 
   const resolvedHeaderText =
     headerText ??
-    (subscriberCount && subscriberCount > 0
+    (subscriberCount !== null && subscriberCount > 0
       ? `Join ${formatMemberCount(subscriberCount)} other subscribers:`
       : undefined)
 
@@ -82,7 +90,7 @@ export function InlineSignupForm({
 
       setLoading(true)
       try {
-        const res = await fetch('/api/subscribe', {
+        const res = await fetch(subscribeEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -108,7 +116,7 @@ export function InlineSignupForm({
         setLoading(false)
       }
     },
-    [email, newsletters]
+    [email, newsletters, subscribeEndpoint]
   )
 
   const verifyCode = useCallback(
@@ -120,7 +128,7 @@ export function InlineSignupForm({
         const res = await fetch('/api/auth/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, code: value }),
+          body: JSON.stringify({ email, code: value, newsletters }),
         })
         if (!res.ok) {
           const data = await res.json()
@@ -139,7 +147,7 @@ export function InlineSignupForm({
         submittingRef.current = false
       }
     },
-    [email]
+    [email, newsletters]
   )
 
   const initialMemberClassName =
@@ -160,7 +168,7 @@ export function InlineSignupForm({
           Confirmed
         </p>
         <p className="mt-1 max-w-md font-serif text-sm leading-relaxed text-gray-600">
-          You are subscribed to new photos by email.
+          {confirmedMessage}
         </p>
       </div>
     )

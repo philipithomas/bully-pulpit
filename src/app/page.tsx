@@ -6,6 +6,7 @@ import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
 import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
+import { countActive } from '@/lib/db/queries/subscribers'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 
 // Auth redirects land on /?signed-in=1 and /?error=invalid-token; the
@@ -14,7 +15,17 @@ export const metadata: Metadata = {
   alternates: { canonical: '/', types: feedDiscovery() },
 }
 
-export default function HomePage() {
+async function buildTimeSubscriberCount(): Promise<number | null> {
+  try {
+    return await countActive()
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.warn(`[home] build-time subscriber count unavailable: ${message}`)
+    return null
+  }
+}
+
+export default async function HomePage() {
   const newsletters = [
     siteConfig.newsletters.postcard,
     siteConfig.newsletters.contraption,
@@ -34,6 +45,7 @@ export default function HomePage() {
     priority: true,
     fetchPriority: 'high',
   })
+  const subscriberCount = await buildTimeSubscriberCount()
   const { props: mobilePortrait } = getImageProps({
     alt: 'Philip I. Thomas',
     src: '/images/philip-horizontal.jpg',
@@ -155,7 +167,10 @@ export default function HomePage() {
           </div>
 
           {/* Subscribe (hidden when logged in) */}
-          <InlineSignupForm hideWhenLoggedIn showSubscriberCount />
+          <InlineSignupForm
+            hideWhenLoggedIn
+            initialSubscriberCount={subscriberCount}
+          />
 
           {/* Newsletter directory */}
           <div className="mt-8">

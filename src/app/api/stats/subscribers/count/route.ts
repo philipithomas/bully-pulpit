@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { countActive } from '@/lib/db/queries/subscribers'
 
-// Read at request time only (route handlers are never prerendered), so the
-// homepage can stay static and `next build` never touches the database.
+// Read at request time only. The homepage now bakes a best-effort count into
+// static HTML at build time; this route remains available for client-only forms.
 export async function GET() {
   try {
     const count = await countActive()
