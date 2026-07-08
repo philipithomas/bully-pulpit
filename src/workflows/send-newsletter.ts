@@ -16,6 +16,7 @@ import {
   markSmsSent,
   markUnsendableSmsSkippedById,
   pendingSmsRowIdsBySlug,
+  releaseSmsClaim,
 } from '@/lib/db/queries/sms-sends'
 import { findEligibleSmsIds } from '@/lib/db/queries/sms-subscribers'
 import { findEligibleIds, isNewsletter } from '@/lib/db/queries/subscribers'
@@ -237,7 +238,10 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
         body: send.body,
       })
     } catch (err) {
-      if (isRetryableTwilioError(err)) throw retryableStepError(err)
+      if (isRetryableTwilioError(err)) {
+        await releaseSmsClaim(send.id)
+        throw retryableStepError(err)
+      }
       const markedFailed = await markSmsPermanentFailure(
         send.id,
         err instanceof Error ? err.message : String(err)

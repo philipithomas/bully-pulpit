@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull, lte, ne, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { type SmsSend, smsSends, smsSubscribers } from '@/lib/db/schema'
 
@@ -57,7 +57,7 @@ export async function claimSendableSmsById(
 ): Promise<ClaimedSmsSend | null> {
   const rows = await getDb()
     .update(smsSends)
-    .set({ nextAttemptAt: null })
+    .set({ nextAttemptAt: sql`NOW() + INTERVAL '10 minutes'` })
     .from(smsSubscribers)
     .where(
       and(
@@ -65,11 +65,27 @@ export async function claimSendableSmsById(
         eq(smsSends.smsSubscriberId, smsSubscribers.id),
         isNull(smsSends.sentAt),
         isNull(smsSends.sendError),
+        isNotNull(smsSends.nextAttemptAt),
+        lte(smsSends.nextAttemptAt, sql`NOW()`),
         isNotNull(smsSubscribers.confirmedAt)
       )
     )
     .returning({ send: smsSends, phoneNumber: smsSubscribers.phoneNumber })
   return rows[0] ?? null
+}
+
+export async function releaseSmsClaim(id: number): Promise<void> {
+  await getDb()
+    .update(smsSends)
+    .set({ nextAttemptAt: sql`NOW()` })
+    .where(
+      and(
+        eq(smsSends.id, id),
+        isNull(smsSends.sentAt),
+        isNull(smsSends.sendError),
+        isNotNull(smsSends.nextAttemptAt)
+      )
+    )
 }
 
 export async function markUnsendableSmsSkippedById(id: number): Promise<void> {
@@ -104,6 +120,8 @@ export async function findSendableSmsByIds(
         inArray(smsSends.id, ids),
         isNull(smsSends.sentAt),
         isNull(smsSends.sendError),
+        isNotNull(smsSends.nextAttemptAt),
+        lte(smsSends.nextAttemptAt, sql`NOW()`),
         isNotNull(smsSubscribers.confirmedAt)
       )
     )
@@ -138,6 +156,7 @@ export async function markSmsSent(input: {
     .set({
       sentAt: sql`NOW()`,
       sendError: null,
+      nextAttemptAt: null,
       twilioSid: input.twilioSid,
       twilioStatus: input.twilioStatus,
     })
@@ -158,7 +177,11 @@ export async function markSmsPermanentFailure(
 ): Promise<boolean> {
   const rows = await getDb()
     .update(smsSends)
-    .set({ sendError: error, attempts: sql`${smsSends.attempts} + 1` })
+    .set({
+      sendError: error,
+      attempts: sql`${smsSends.attempts} + 1`,
+      nextAttemptAt: null,
+    })
     .where(
       and(
         eq(smsSends.id, id),
@@ -200,7 +223,9 @@ export async function pendingSmsRowIdsBySlug(slug: string): Promise<number[]> {
       and(
         eq(smsSends.postSlug, slug),
         isNull(smsSends.sentAt),
-        isNull(smsSends.sendError)
+        isNull(smsSends.sendError),
+        isNotNull(smsSends.nextAttemptAt),
+        lte(smsSends.nextAttemptAt, sql`NOW()`)
       )
     )
     .orderBy(smsSends.id)

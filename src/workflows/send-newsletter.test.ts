@@ -34,6 +34,7 @@ vi.mock('@/lib/db/queries/sms-sends', () => ({
   markSmsSent: vi.fn(),
   markUnsendableSmsSkippedById: vi.fn(),
   pendingSmsRowIdsBySlug: vi.fn(),
+  releaseSmsClaim: vi.fn(),
 }))
 
 vi.mock('@/lib/db/queries/subscribers', async (importActual) => {
@@ -190,6 +191,7 @@ beforeEach(() => {
   mockedSmsSends.markSmsSent.mockResolvedValue(true)
   mockedSmsSends.markSmsPermanentFailure.mockResolvedValue(true)
   mockedSmsSends.markUnsendableSmsSkippedById.mockResolvedValue(undefined)
+  mockedSmsSends.releaseSmsClaim.mockResolvedValue(undefined)
   mockedSmsSends.claimSendableSmsById.mockImplementation(async (id) =>
     claimedSms(id)
   )
@@ -402,6 +404,7 @@ describe('sendNewsletterWorkflow', () => {
     expect(err).toBeInstanceOf(RetryableError)
     expect(err.message).toBe('rate limited')
     expect(err.retryAfter).toEqual(new Date(now.getTime() + 8_000))
+    expect(mockedSmsSends.releaseSmsClaim).toHaveBeenCalledWith(701)
     expect(mockedSmsSends.markSmsPermanentFailure).not.toHaveBeenCalled()
     expect(mockedSmsSends.markSmsSent).not.toHaveBeenCalled()
   })

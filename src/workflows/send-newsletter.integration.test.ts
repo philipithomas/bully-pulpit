@@ -50,7 +50,9 @@ import {
 } from '@/lib/db/queries/email-sends'
 import {
   bulkCreateQueuedSms,
+  claimSendableSmsById,
   markSmsPermanentFailure,
+  pendingSmsRowIdsBySlug,
   resetFailedSmsBySlug,
   SMS_SEND_SKIPPED_UNSUBSCRIBED,
 } from '@/lib/db/queries/sms-sends'
@@ -609,6 +611,8 @@ describe('sendNewsletterWorkflow', () => {
     const smsRow = smsRowFor(await allSmsRows(), smsSubscriber.id)
     expect(smsRow.sentAt).toBeNull()
     expect(smsRow.sendError).toBeNull()
+    expect(smsRow.nextAttemptAt).toBeInstanceOf(Date)
+    expect(await pendingSmsRowIdsBySlug(SLUG)).toEqual([smsRow.id])
     expect(await db.select().from(textMessages)).toHaveLength(0)
   })
 
@@ -680,6 +684,31 @@ describe('sendNewsletterWorkflow', () => {
 
     expect(ids).toEqual([])
     expect(await allSmsRows()).toHaveLength(0)
+  })
+
+  it('removes claimed SMS rows from the sendable set until the claim expires', async () => {
+    const subscriber = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+    })
+    const [rowId] = await bulkCreateQueuedSms({
+      smsSubscriberIds: [subscriber.id],
+      postSlug: SLUG,
+      newsletter: 'contraption',
+      body: 'Contraption: Hello world',
+    })
+
+    expect(await pendingSmsRowIdsBySlug(SLUG)).toEqual([rowId])
+
+    const firstClaim = await claimSendableSmsById(rowId)
+
+    expect(firstClaim?.phoneNumber).toBe(subscriber.phoneNumber)
+    expect(await claimSendableSmsById(rowId)).toBeNull()
+    expect(await pendingSmsRowIdsBySlug(SLUG)).toEqual([])
+    const row = smsRowFor(await allSmsRows(), subscriber.id)
+    expect(row.sentAt).toBeNull()
+    expect(row.sendError).toBeNull()
+    expect(row.nextAttemptAt).toBeInstanceOf(Date)
+    expect(row.nextAttemptAt?.getTime()).toBeGreaterThan(Date.now())
   })
 
   it('marks stale unconfirmed pending SMS rows skipped while draining the queue', async () => {
