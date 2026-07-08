@@ -22,12 +22,12 @@ export function SubscribeCta({
   newsletter,
   className = 'mt-16',
   align = 'start',
-  allowExistingSubscriberOptIn = false,
+  subscribeEndpoint,
 }: {
   newsletter: Newsletter
   className?: string
   align?: 'start' | 'center'
-  allowExistingSubscriberOptIn?: boolean
+  subscribeEndpoint?: string
 }) {
   const { user, preferences, setPreferences, hasSession, loading } =
     useAuthContext()
@@ -93,10 +93,10 @@ export function SubscribeCta({
       ) : (
         <InlineSignupForm
           align={align}
-          allowExistingSubscriberOptIn={allowExistingSubscriberOptIn}
           buttonClassName={buttonClassName}
           confirmedMessage={`You are subscribed to new ${newsletterNoun[newsletter]} by email.`}
           newsletters={[newsletter]}
+          subscribeEndpoint={subscribeEndpoint}
         />
       )}
     </div>

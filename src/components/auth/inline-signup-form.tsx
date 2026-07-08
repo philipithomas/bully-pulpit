@@ -24,7 +24,7 @@ interface Props {
   newsletters?: Newsletter[]
   align?: 'start' | 'center'
   buttonClassName?: string
-  allowExistingSubscriberOptIn?: boolean
+  subscribeEndpoint?: string
   confirmedMessage?: string
   /**
    * When true, fetches the live subscriber count client-side and uses it as the
@@ -43,7 +43,7 @@ export function InlineSignupForm({
   newsletters = [...defaultSignupNewsletters],
   align = 'start',
   buttonClassName = 'btn btn-primary',
-  allowExistingSubscriberOptIn = false,
+  subscribeEndpoint = '/api/subscribe',
   confirmedMessage = 'You are subscribed by email.',
   showSubscriberCount = false,
 }: Props) {
@@ -86,16 +86,13 @@ export function InlineSignupForm({
 
       setLoading(true)
       try {
-        const res = await fetch('/api/subscribe', {
+        const res = await fetch(subscribeEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email,
             source: getExternalReferrer(),
             newsletters,
-            ...(allowExistingSubscriberOptIn
-              ? { allowExistingSubscriberOptIn: true }
-              : {}),
           }),
         })
         if (!res.ok) {
@@ -115,7 +112,7 @@ export function InlineSignupForm({
         setLoading(false)
       }
     },
-    [allowExistingSubscriberOptIn, email, newsletters]
+    [email, newsletters, subscribeEndpoint]
   )
 
   const verifyCode = useCallback(

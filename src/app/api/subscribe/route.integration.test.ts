@@ -20,6 +20,7 @@ vi.mock('node:dns/promises', () => ({
 
 import { resolve4, resolve6, resolveMx } from 'node:dns/promises'
 import { POST } from '@/app/api/subscribe/route'
+import { POST as POST_TSUNDOKU } from '@/app/api/subscribe/tsundoku/route'
 import { clearDeliverabilityCache } from '@/lib/email/deliverability'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { db, resetDb } from '@/test/integration/db'
@@ -300,7 +301,47 @@ describe('POST /api/subscribe', () => {
     expect(message.subject).toBe('Your sign-in code for philipithomas.com')
   })
 
-  it('opts an existing confirmed subscriber into Tsundoku when email-only opt-in is allowed', async () => {
+  it('does not trust client-provided email-only opt-in on the public route', async () => {
+    await db.insert(subscribers).values({
+      email: 'guarded@example.com',
+      name: 'Guarded Reader',
+      source: 'https://original.example',
+      confirmedAt: new Date(),
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+    })
+
+    const res = await POST(
+      subscribeRequest({
+        email: 'guarded@example.com',
+        newsletters: ['contraption'],
+        allowExistingSubscriberOptIn: true,
+      })
+    )
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      ok: true,
+      status: 'verification_sent',
+    })
+
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.email, 'guarded@example.com'))
+    expect(row.subscribedContraption).toBe(false)
+    expect(row.subscribedWorkshop).toBe(false)
+    expect(row.subscribedPostcard).toBe(false)
+    expect(row.subscribedTsundoku).toBe(false)
+
+    expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
+    const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
+    expect(message.subject).toBe('Your sign-in code for philipithomas.com')
+  })
+
+  it('opts an existing confirmed subscriber into Tsundoku through the Tsundoku endpoint', async () => {
     await db.insert(subscribers).values({
       email: 'japan@example.com',
       name: 'Japan Reader',
@@ -312,12 +353,12 @@ describe('POST /api/subscribe', () => {
       subscribedTsundoku: false,
     })
 
-    const res = await POST(
+    const res = await POST_TSUNDOKU(
       subscribeRequest({
         email: 'japan@example.com',
         name: 'Overwrite Attempt',
         source: 'https://www.google.com',
-        newsletters: ['tsundoku'],
+        newsletters: ['contraption'],
         allowExistingSubscriberOptIn: true,
       })
     )

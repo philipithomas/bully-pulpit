@@ -185,7 +185,7 @@ export default function TsundokuPage() {
             newsletter="tsundoku"
             align="center"
             className="mt-5"
-            allowExistingSubscriberOptIn
+            subscribeEndpoint="/api/subscribe/tsundoku"
           />
         </div>
 
