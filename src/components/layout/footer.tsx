@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { FooterNycStatus } from '@/components/layout/footer-nyc-status'
 
 export function Footer() {
   return (
@@ -22,53 +23,59 @@ export function Footer() {
               </Link>
             </p>
           </div>
-          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <Link
-              href="/contraption"
-              className="hover:text-white transition-colors"
-            >
-              Contraption
-            </Link>
-            <Link
-              href="/workshop"
-              className="hover:text-white transition-colors"
-            >
-              Workshop
-            </Link>
-            <Link
-              href="/postcard"
-              className="hover:text-white transition-colors"
-            >
-              Postcard
-            </Link>
-            <Link
-              href="/tsundoku"
-              className="hover:text-white transition-colors"
-            >
-              Tsundoku
-            </Link>
-            <Link href="/terms" className="hover:text-white transition-colors">
-              Terms
-            </Link>
-            <Link
-              href="/privacy"
-              className="hover:text-white transition-colors"
-            >
-              Privacy
-            </Link>
-            <Link
-              href="/colophon"
-              className="hover:text-white transition-colors"
-            >
-              Colophon
-            </Link>
-            <Link
-              href="/sitemap"
-              className="hover:text-white transition-colors"
-            >
-              Sitemap
-            </Link>
-          </nav>
+          <div className="flex flex-col gap-4 md:items-end">
+            <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm md:justify-end">
+              <Link
+                href="/contraption"
+                className="hover:text-white transition-colors"
+              >
+                Contraption
+              </Link>
+              <Link
+                href="/workshop"
+                className="hover:text-white transition-colors"
+              >
+                Workshop
+              </Link>
+              <Link
+                href="/postcard"
+                className="hover:text-white transition-colors"
+              >
+                Postcard
+              </Link>
+              <Link
+                href="/tsundoku"
+                className="hover:text-white transition-colors"
+              >
+                Tsundoku
+              </Link>
+              <Link
+                href="/terms"
+                className="hover:text-white transition-colors"
+              >
+                Terms
+              </Link>
+              <Link
+                href="/privacy"
+                className="hover:text-white transition-colors"
+              >
+                Privacy
+              </Link>
+              <Link
+                href="/colophon"
+                className="hover:text-white transition-colors"
+              >
+                Colophon
+              </Link>
+              <Link
+                href="/sitemap"
+                className="hover:text-white transition-colors"
+              >
+                Sitemap
+              </Link>
+            </nav>
+            <FooterNycStatus />
+          </div>
         </div>
       </div>
     </footer>
