@@ -38,6 +38,20 @@ describe('hybridSearchPosts', () => {
     expect(results[0].excerpts.length).toBeGreaterThan(0)
   })
 
+  it('can run BM25-only without attempting query embedding', async () => {
+    const mockedEmbedQuery = vi.mocked(embedQuery)
+    mockedEmbedQuery.mockClear()
+
+    const { mode, results } = await hybridSearchPosts(
+      'software engineering job search timeline',
+      { useVector: false }
+    )
+
+    expect(mode).toBe('lexical')
+    expect(results.length).toBeGreaterThan(0)
+    expect(mockedEmbedQuery).not.toHaveBeenCalled()
+  })
+
   it('falls back to BM25 results when query embedding times out', async () => {
     const mockedEmbedQuery = vi.mocked(embedQuery)
     mockedEmbedQuery.mockClear()
