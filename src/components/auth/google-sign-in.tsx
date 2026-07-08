@@ -15,6 +15,15 @@ interface GoogleErrorResponse {
   type: string
 }
 
+export type GoogleSignInUser = {
+  email: string
+  name?: string | null
+}
+
+export type GoogleSignInSuccessHandler = (
+  user: GoogleSignInUser
+) => void | boolean | Promise<void | boolean>
+
 declare global {
   interface Window {
     google?: {
@@ -97,12 +106,51 @@ export function useGoogleSignInAvailable() {
   return Boolean(GOOGLE_CLIENT_ID) && !failed
 }
 
-function useGoogleAuth(onSuccess?: () => void) {
+function googleSignInUserFromPayload(payload: unknown): GoogleSignInUser {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Google sign-in failed')
+  }
+
+  const user = (payload as { user?: unknown }).user
+  if (!user || typeof user !== 'object') {
+    throw new Error('Google sign-in failed')
+  }
+
+  const email = (user as { email?: unknown }).email
+  if (typeof email !== 'string' || email.trim() === '') {
+    throw new Error('Google sign-in failed')
+  }
+
+  const name = (user as { name?: unknown }).name
+  return {
+    email,
+    name: typeof name === 'string' ? name : null,
+  }
+}
+
+export async function handleGoogleSignInSuccess(
+  payload: unknown,
+  onSuccess?: GoogleSignInSuccessHandler
+): Promise<boolean> {
+  const user = googleSignInUserFromPayload(payload)
+  const result = await onSuccess?.(user)
+  return result !== false
+}
+
+function useGoogleAuth({
+  newsletters,
+  onSuccess,
+}: {
+  newsletters?: readonly string[]
+  onSuccess?: GoogleSignInSuccessHandler
+} = {}) {
   const available = useGoogleSignInAvailable()
   const [loading, setLoading] = useState(false)
   const clientRef = useRef<{ requestCode: () => void } | null>(null)
   const onSuccessRef = useRef(onSuccess)
+  const newslettersRef = useRef(newsletters)
   onSuccessRef.current = onSuccess
+  newslettersRef.current = newsletters
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return
@@ -125,15 +173,23 @@ function useGoogleAuth(onSuccess?: () => void) {
             const res = await fetch('/api/auth/google', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code: response.code }),
+              body: JSON.stringify({
+                code: response.code,
+                ...(newslettersRef.current?.length
+                  ? { newsletters: newslettersRef.current }
+                  : {}),
+              }),
             })
+            const data = await res.json()
             if (!res.ok) {
-              const data = await res.json()
               throw new Error(data.error ?? 'Google sign-in failed')
             }
+            const shouldReload = await handleGoogleSignInSuccess(
+              data,
+              onSuccessRef.current
+            )
             toast.success('Signed in successfully')
-            onSuccessRef.current?.()
-            window.location.reload()
+            if (shouldReload) window.location.reload()
           } catch (err) {
             toast.error(
               err instanceof Error ? err.message : 'Google sign-in failed'
@@ -169,8 +225,17 @@ function useGoogleAuth(onSuccess?: () => void) {
   return { requestSignIn, loading, available }
 }
 
-export function GoogleSignInButton({ onSuccess }: { onSuccess?: () => void }) {
-  const { requestSignIn, loading, available } = useGoogleAuth(onSuccess)
+export function GoogleSignInButton({
+  newsletters,
+  onSuccess,
+}: {
+  newsletters?: readonly string[]
+  onSuccess?: GoogleSignInSuccessHandler
+}) {
+  const { requestSignIn, loading, available } = useGoogleAuth({
+    newsletters,
+    onSuccess,
+  })
 
   if (!available) return null
 
