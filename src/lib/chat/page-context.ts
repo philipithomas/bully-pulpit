@@ -1,5 +1,10 @@
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
-import type { Page, Post } from '@/lib/content/types'
+import {
+  NEWSLETTERS,
+  type Newsletter,
+  type Page,
+  type Post,
+} from '@/lib/content/types'
 import { sitePhoneDisplayNumber } from '@/lib/phone/config'
 import { findPublicAppPage, publicAppPageBellText } from '@/lib/public-pages'
 import { stargazingPageContent } from '@/lib/stargazing/restaurants'
@@ -7,13 +12,30 @@ import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 /** Character budget for injected page content. Roughly 1k tokens. */
 export const PAGE_CONTENT_MAX_CHARS = 4000
 
+export interface PageContextSource {
+  type: 'post' | 'page'
+  title: string
+  url: string
+  publishedAt: string | null
+  newsletter: Newsletter | 'page'
+}
+
 export interface PageContextContent {
   slug: string
   title: string
   content: string
   truncated: boolean
-  /** App pages use fetchPage, rather than fetchPost, when context is truncated. */
+  /** Server-resolved metadata used for a deterministic client-side source. */
+  source: PageContextSource
+  /** App pages use fetchPage, rather than fetchPost, for trusted provenance. */
   fetchPath?: string
+}
+
+function appPageNewsletter(path: string): Newsletter | 'page' {
+  const slug = path.replace(/^\//, '')
+  return (NEWSLETTERS as readonly string[]).includes(slug)
+    ? (slug as Newsletter)
+    : 'page'
 }
 
 /**
@@ -53,8 +75,9 @@ export function toPagePlaintext(
 
 /**
  * Resolves the visitor's current path to a registered app page, post, or
- * content page and returns readable text for system-prompt injection, so
- * questions about "this page" answer without tool calls.
+ * content page and returns readable text for system-prompt injection. This
+ * improves answer quality while the system prompt still requires a trusted
+ * fetchPage or fetchPost call before prose that relies on the page.
  */
 export function getPageContextContent(
   path: unknown,
@@ -69,6 +92,13 @@ export function getPageContextContent(
       title: appPage.title,
       content: plain.slice(0, maxChars),
       truncated: plain.length > maxChars,
+      source: {
+        type: 'page',
+        title: appPage.title,
+        url: appPage.path,
+        publishedAt: null,
+        newsletter: appPageNewsletter(appPage.path),
+      },
       fetchPath: appPage.path,
     }
   }
@@ -78,7 +108,8 @@ export function getPageContextContent(
   // newsletter indexes, feeds, or app routes.
   if (!slug || slug.includes('/')) return null
 
-  const item = getPostBySlug(slug) ?? getPageBySlug(slug)
+  const post = getPostBySlug(slug)
+  const item = post ?? getPageBySlug(slug)
   if (!item) return null
 
   const plain =
@@ -91,5 +122,12 @@ export function getPageContextContent(
     title: item.frontmatter.title,
     content: truncated ? plain.slice(0, maxChars) : plain,
     truncated,
+    source: {
+      type: post ? 'post' : 'page',
+      title: item.frontmatter.title,
+      url: `/${slug}`,
+      publishedAt: item.frontmatter.publishedAt ?? null,
+      newsletter: post?.newsletter ?? 'page',
+    },
   }
 }

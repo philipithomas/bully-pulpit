@@ -212,8 +212,10 @@ export async function POST(request: Request) {
     (message) => message.role === 'user'
   ).length
 
-  // When the visitor is on a known post or page, inject its content into the
-  // system prompt so on-page questions answer without tool calls.
+  // When the visitor is on a known post or page, inject its content for answer
+  // quality. Its separately resolved source metadata is attached only after a
+  // successful stream, so the client has deterministic provenance even when
+  // the model does not call the requested fetch tool.
   const pageContent = getPageContextContent(path)
   const system = getSystemPrompt({
     pageContext: { path, title },
@@ -329,6 +331,19 @@ export async function POST(request: Request) {
   return result.toUIMessageStreamResponse({
     originalMessages: sanitizedMessages,
     consumeSseStream: consumeStream,
+    messageMetadata: ({ part }) => {
+      if (
+        !pageContent ||
+        part.type !== 'finish' ||
+        part.finishReason === 'error' ||
+        request.signal.aborted ||
+        generationOutcome === 'aborted' ||
+        generationOutcome === 'error'
+      ) {
+        return undefined
+      }
+      return { currentPageSource: pageContent.source }
+    },
     onEnd: async ({ responseMessage, isAborted }) => {
       const messageStatus =
         isAborted || generationOutcome === 'aborted'

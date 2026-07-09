@@ -1,10 +1,12 @@
 import type { UIMessage } from 'ai'
+import { ThumbsDown, ThumbsUp } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
   type ComponentPropsWithoutRef,
   type MouseEvent,
   useCallback,
+  useState,
 } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -12,12 +14,18 @@ import { Spinner } from '@/components/ui/spinner'
 import {
   type AnalyticsNewsletter,
   analyticsPageType,
+  parseAnalyticsNewsletter,
   summarizeNewsletters,
+  type TurnBucket,
   trackClientEvent,
 } from '@/lib/analytics/events'
 import { scrubLeakedToolJson } from '@/lib/chat/scrub-leaked-tool-json'
+import {
+  type BellSource,
+  bellSourcesFromMessage,
+} from '@/lib/chat/source-results'
 import { cn } from '@/lib/utils'
-import { useChatSidebar } from '@/stores/chat-store'
+import { isScriptedChatMessage, useChatSidebar } from '@/stores/chat-store'
 
 function PulsingDots() {
   return (
@@ -113,9 +121,7 @@ function ToolImageResults({
         alt: image.alt || result.title || 'Search result image',
         url: image.url || result.url || '/',
         label: image.description || image.alt || result.title || 'Image',
-        newsletter: result.newsletter
-          ? summarizeNewsletters([result.newsletter])
-          : 'unknown',
+        newsletter: parseAnalyticsNewsletter(result.newsletter),
       }))
     })
     .filter((image) => image.src)
@@ -128,9 +134,7 @@ function ToolImageResults({
   const handleCitationClick = useCallback(
     (event: MouseEvent<HTMLAnchorElement>) => {
       onCitationClick?.(
-        summarizeNewsletters([
-          event.currentTarget.dataset.citationNewsletter ?? 'unknown',
-        ])
+        parseAnalyticsNewsletter(event.currentTarget.dataset.citationNewsletter)
       )
     },
     [onCitationClick]
@@ -161,6 +165,162 @@ function ToolImageResults({
           </span>
         </Link>
       ))}
+    </div>
+  )
+}
+
+type SourceCitationClick = (
+  destinationType: 'post' | 'page' | 'image',
+  newsletter: AnalyticsNewsletter
+) => void
+
+function sourceNewsletterLabel(newsletter: string | undefined): string | null {
+  if (!newsletter || newsletter === 'page') return null
+  if (
+    newsletter !== 'contraption' &&
+    newsletter !== 'workshop' &&
+    newsletter !== 'postcard' &&
+    newsletter !== 'tsundoku'
+  ) {
+    return null
+  }
+  return `${newsletter.charAt(0).toUpperCase()}${newsletter.slice(1)}`
+}
+
+function sourceTitle(source: BellSource): string {
+  return [
+    source.title,
+    source.publishedAt,
+    sourceNewsletterLabel(source.newsletter),
+    source.section ? `Section: ${source.section}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+function SourceChips({
+  sources,
+  onCitationClick,
+}: {
+  sources: BellSource[]
+  onCitationClick: SourceCitationClick
+}) {
+  const handleClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      const sourceType = event.currentTarget.dataset.sourceType
+      const destinationType =
+        sourceType === 'page' || sourceType === 'image' ? sourceType : 'post'
+      onCitationClick(
+        destinationType,
+        parseAnalyticsNewsletter(event.currentTarget.dataset.sourceNewsletter)
+      )
+    },
+    [onCitationClick]
+  )
+
+  if (sources.length === 0) return null
+
+  return (
+    <div className="mt-3 border-gray-100 border-t pt-2.5 font-sans">
+      <p className="mb-1.5 text-[11px] text-gray-400">Sources</p>
+      <div className="flex flex-wrap gap-1.5">
+        {sources.map((source) => {
+          const newsletter = sourceNewsletterLabel(source.newsletter)
+          return (
+            <Link
+              key={`${source.url}-${source.title}`}
+              href={source.url}
+              title={sourceTitle(source)}
+              data-source-type={source.type}
+              data-source-newsletter={source.newsletter}
+              onClick={handleClick}
+              className="group inline-flex max-w-full items-center gap-1.5 rounded-full border border-gray-100 px-2.5 py-1 text-[11px] text-gray-500 transition-colors hover:border-gray-200 hover:text-gray-950"
+            >
+              <span className="truncate font-medium">{source.title}</span>
+              {source.publishedAt ? (
+                <time className="shrink-0 text-gray-400">
+                  {source.publishedAt}
+                </time>
+              ) : null}
+              {newsletter ? (
+                <span className="shrink-0 text-gray-400">{newsletter}</span>
+              ) : null}
+              {source.section ? (
+                <span className="max-w-28 shrink truncate text-gray-400">
+                  § {source.section}
+                </span>
+              ) : null}
+            </Link>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+type FeedbackRating = 'helpful' | 'not_helpful'
+
+function BellFeedback({
+  turn,
+  hadSources,
+}: {
+  turn: TurnBucket
+  hadSources: boolean
+}) {
+  const [rating, setRating] = useState<FeedbackRating | null>(null)
+
+  const chooseRating = useCallback(
+    (nextRating: FeedbackRating) => {
+      if (rating) return
+      setRating(nextRating)
+      trackClientEvent('Bell feedback submitted', {
+        surface: 'web',
+        rating: nextRating,
+        turn,
+        had_sources: hadSources,
+      })
+    },
+    [hadSources, rating, turn]
+  )
+  const chooseHelpful = useCallback(
+    () => chooseRating('helpful'),
+    [chooseRating]
+  )
+  const chooseNotHelpful = useCallback(
+    () => chooseRating('not_helpful'),
+    [chooseRating]
+  )
+
+  return (
+    <div className="mt-2 flex items-center gap-1 font-sans text-[11px] text-gray-400">
+      <span className="mr-0.5">Helpful?</span>
+      <button
+        type="button"
+        aria-label="Helpful"
+        aria-pressed={rating === 'helpful'}
+        disabled={rating !== null}
+        onClick={chooseHelpful}
+        className={cn(
+          'p-1 transition-colors hover:text-gray-700 disabled:cursor-default',
+          rating === 'helpful' && 'text-gray-700'
+        )}
+      >
+        <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        aria-label="Not helpful"
+        aria-pressed={rating === 'not_helpful'}
+        disabled={rating !== null}
+        onClick={chooseNotHelpful}
+        className={cn(
+          'p-1 transition-colors hover:text-gray-700 disabled:cursor-default',
+          rating === 'not_helpful' && 'text-gray-700'
+        )}
+      >
+        <ThumbsDown className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+      {rating ? <span className="ml-1">Thank you.</span> : null}
     </div>
   )
 }
@@ -340,11 +500,20 @@ export function ThinkingIndicator() {
 export function ChatMessage({
   message,
   isStreaming,
+  turn,
 }: {
   message: UIMessage
   isStreaming: boolean
+  turn: TurnBucket
 }) {
   const isUser = message.role === 'user'
+  const isScripted = !isUser && isScriptedChatMessage(message)
+  const sources = isUser || isScripted ? [] : bellSourcesFromMessage(message)
+  const hasAssistantText =
+    !isUser &&
+    message.parts.some(
+      (part) => part.type === 'text' && part.text.trim().length > 0
+    )
 
   const handleCitationClick = useCallback(
     (
@@ -491,6 +660,15 @@ export function ChatMessage({
 
           return null
         })}
+        {!isUser && !isScripted && (
+          <SourceChips
+            sources={sources}
+            onCitationClick={handleCitationClick}
+          />
+        )}
+        {hasAssistantText && !isStreaming && !isScripted && (
+          <BellFeedback turn={turn} hadSources={sources.length > 0} />
+        )}
       </div>
     </div>
   )

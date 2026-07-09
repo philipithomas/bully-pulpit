@@ -21,6 +21,19 @@ export function isScriptedChatMessage(message: UIMessage): boolean {
   )
 }
 
+export function scriptedChatMessageShowsStarterPrompts(
+  message: UIMessage
+): boolean {
+  if (!isScriptedChatMessage(message)) return false
+  const metadata = message.metadata
+  return (
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    'showStarterPrompts' in metadata &&
+    metadata.showStarterPrompts === true
+  )
+}
+
 interface ChatSidebarState {
   open: boolean
   // True once the sidebar has ever been opened — gates the lazy chat bundle

@@ -67,6 +67,7 @@ export interface HybridSearchResult {
   title: string
   url: string
   newsletter: string
+  publishedAt?: string | null
   coverImage: string
   excerpts: SearchExcerpt[]
   images: SearchImageMatch[]
@@ -112,7 +113,12 @@ type VectorEntry = TextVectorEntry | ImageVectorEntry
 interface PostMeta
   extends Pick<
     CorpusPost,
-    'contentType' | 'title' | 'url' | 'newsletter' | 'coverImage'
+    | 'contentType'
+    | 'title'
+    | 'url'
+    | 'newsletter'
+    | 'publishedAt'
+    | 'coverImage'
   > {
   chunks: PostChunk[]
   images: CorpusImageAsset[]
@@ -145,6 +151,7 @@ function buildPostMeta(corpus: CorpusPost[]): Map<string, PostMeta> {
         url: post.url,
         contentType: post.contentType,
         newsletter: post.newsletter,
+        publishedAt: post.publishedAt,
         coverImage: post.coverImage,
         chunks: post.chunks,
         images: post.images,
@@ -346,6 +353,7 @@ export async function hybridSearchPosts(
         title: meta.title,
         url: image.url,
         newsletter: meta.newsletter,
+        publishedAt: meta.publishedAt,
         coverImage: image.src,
         excerpts: image.description
           ? [
@@ -460,6 +468,7 @@ export async function hybridSearchPosts(
       title: meta.title,
       url: meta.url,
       newsletter: meta.newsletter,
+      publishedAt: meta.publishedAt,
       coverImage: meta.coverImage,
       excerpts,
       images,

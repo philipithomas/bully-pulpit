@@ -20,6 +20,7 @@ export interface PostResult {
   title: string
   url: string
   newsletter: string
+  publishedAt?: string | null
   coverImage: string
   excerpts: SearchExcerpt[]
   images: SearchImageMatch[]
@@ -49,6 +50,7 @@ export const searchPosts = tool({
       title: result.title,
       url: result.url,
       newsletter: result.newsletter,
+      publishedAt: result.publishedAt,
       coverImage: result.coverImage,
       excerpts: result.excerpts,
       images: result.images,

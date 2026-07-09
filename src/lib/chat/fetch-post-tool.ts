@@ -6,7 +6,7 @@ import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 
 export const fetchPost = tool({
   description:
-    'Fetch the full text of a blog post or page by its slug. Use this when search excerpts are not enough and you need the complete content to answer in depth. The outline lists each heading with its /slug#anchor url for citing sections.',
+    'Fetch the full text and source metadata of a blog post or page by its slug. Use this when search excerpts are not enough and you need the complete content to answer in depth. The outline lists each heading with its /slug#anchor URL for citing sections.',
   inputSchema: z.object({
     slug: z
       .string()
@@ -57,7 +57,9 @@ export const fetchPost = tool({
       : []
 
     return JSON.stringify({
+      type: post ? 'post' : 'page',
       title: item.frontmatter.title,
+      url: `/${item.slug}`,
       description: item.frontmatter.description ?? null,
       publishedAt: item.frontmatter.publishedAt ?? null,
       newsletter: 'newsletter' in item ? item.newsletter : null,

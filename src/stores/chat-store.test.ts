@@ -1,4 +1,4 @@
-import type { UIMessage } from 'ai'
+import type { ChatTransport, UIMessage, UIMessageChunk } from 'ai'
 import {
   afterAll,
   beforeAll,
@@ -8,10 +8,12 @@ import {
   it,
   vi,
 } from 'vitest'
+import { createBellChat } from '@/lib/chat/bell-chat'
 import {
   isScriptedChatMessage,
   SUBSCRIBER_WELCOME_MESSAGE,
   SUBSCRIBER_WELCOME_METADATA,
+  scriptedChatMessageShowsStarterPrompts,
   useChatSidebar,
 } from '@/stores/chat-store'
 
@@ -60,6 +62,87 @@ describe('Bell chat boundaries', () => {
     const handoffId = handoff.chatId
     handoff.openSidebar()
     expect(useChatSidebar.getState().chatId).toBe(handoffId)
+  })
+
+  it('keeps an in-flight finish bound to its originating chat', async () => {
+    let releaseStream: () => void = () => {}
+    const streamReady = new Promise<void>((resolve) => {
+      releaseStream = resolve
+    })
+    const sendMessages = vi.fn(async () => {
+      await streamReady
+      const chunks: UIMessageChunk[] = [
+        {
+          type: 'start',
+          messageId: 'assistant-finished',
+          messageMetadata: {
+            currentPageSource: {
+              type: 'page',
+              title: 'Contact',
+              url: '/contact',
+              publishedAt: null,
+              newsletter: 'page',
+            },
+          },
+        },
+        { type: 'text-start', id: 'answer' },
+        {
+          type: 'text-delta',
+          id: 'answer',
+          delta: 'The finished answer.',
+        },
+        { type: 'text-end', id: 'answer' },
+        { type: 'finish', finishReason: 'stop' },
+      ]
+      return new ReadableStream<UIMessageChunk>({
+        start(controller) {
+          for (const chunk of chunks) controller.enqueue(chunk)
+          controller.close()
+        },
+      })
+    })
+    const transport: ChatTransport<UIMessage> = {
+      sendMessages,
+      reconnectToStream: async () => null,
+    }
+    const originalChatId = useChatSidebar.getState().chatId
+    const saveMessages = vi.fn(useChatSidebar.getState().saveMessages)
+    const originalChat = createBellChat({
+      chatId: originalChatId,
+      transport,
+      onFinish: ({ chatId, messages }) => saveMessages(chatId, messages),
+    })
+
+    const oldCompletion = originalChat.sendMessage({ text: 'Old question' })
+    await vi.waitFor(() => expect(sendMessages).toHaveBeenCalledOnce())
+
+    useChatSidebar.getState().openSidebar('New question')
+    const newChatId = useChatSidebar.getState().chatId
+    const newSnapshot: UIMessage[] = [
+      {
+        id: 'new-question',
+        role: 'user',
+        parts: [{ type: 'text', text: 'New question' }],
+      },
+    ]
+    useChatSidebar.getState().saveMessages(newChatId, newSnapshot)
+
+    releaseStream()
+    await oldCompletion
+
+    expect(saveMessages).toHaveBeenCalledOnce()
+    expect(saveMessages.mock.calls[0]?.[0]).toBe(originalChatId)
+    expect(saveMessages.mock.calls[0]?.[1][1]?.metadata).toEqual({
+      currentPageSource: {
+        type: 'page',
+        title: 'Contact',
+        url: '/contact',
+        publishedAt: null,
+        newsletter: 'page',
+      },
+    })
+    expect(useChatSidebar.getState().chatId).toBe(newChatId)
+    expect(useChatSidebar.getState().savedMessages).toBe(newSnapshot)
   })
 
   it('rotates and clears only when the resolved auth identity changes', () => {
@@ -127,7 +210,11 @@ describe('Bell chat boundaries', () => {
       parts: [{ type: 'text', text: SUBSCRIBER_WELCOME_MESSAGE }],
     })
     expect(isScriptedChatMessage(state.savedMessages[0])).toBe(true)
+    expect(scriptedChatMessageShowsStarterPrompts(state.savedMessages[0])).toBe(
+      true
+    )
     expect(isScriptedChatMessage(MESSAGE)).toBe(false)
+    expect(scriptedChatMessageShowsStarterPrompts(MESSAGE)).toBe(false)
     expect(state.syncConversationIdentity('subscriber:new-reader')).toBe(false)
     expect(useChatSidebar.getState().savedMessages).toHaveLength(1)
 

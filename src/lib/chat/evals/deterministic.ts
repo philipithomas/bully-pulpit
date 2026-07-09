@@ -196,6 +196,13 @@ async function evaluateCase(testCase: BellEvalCase): Promise<string> {
       title: testCase.page?.title ?? 'Evaluation fixture',
       content: fixtureContent,
       truncated: false,
+      source: {
+        type: 'page',
+        title: testCase.page?.title ?? 'Evaluation fixture',
+        url: testCase.page?.path ?? '/evaluation-fixture',
+        publishedAt: null,
+        newsletter: 'page',
+      },
     },
   })
   invariant(

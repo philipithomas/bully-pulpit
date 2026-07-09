@@ -1,4 +1,5 @@
 import { track } from '@vercel/analytics'
+import type { BellSuggestionKind } from '@/lib/chat/starter-questions'
 import type { Newsletter } from '@/lib/content/types'
 
 export type AnalyticsPrimitive = string | number | boolean | null | undefined
@@ -100,6 +101,10 @@ export interface AnalyticsEventProperties {
     signed_in: boolean
     turn: TurnBucket
   }
+  'Bell suggestion selected': {
+    page_type: AnalyticsPageType
+    suggestion: BellSuggestionKind
+  }
   'Bell stopped': {
     surface: 'web'
     turn: TurnBucket
@@ -116,6 +121,12 @@ export interface AnalyticsEventProperties {
     surface: 'web' | 'sms'
     destination_type: 'post' | 'page' | 'image' | 'external' | 'unknown'
     newsletter: AnalyticsNewsletter
+  }
+  'Bell feedback submitted': {
+    surface: 'web'
+    rating: 'helpful' | 'not_helpful'
+    turn: TurnBucket
+    had_sources: boolean
   }
   'Bell reply finished': {
     surface: 'web' | 'sms'

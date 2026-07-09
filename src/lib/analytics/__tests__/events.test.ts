@@ -38,6 +38,7 @@ describe('analytics dimensions', () => {
   it('accepts only the fixed newsletter vocabulary', () => {
     expect(parseAnalyticsNewsletter('all')).toBe('all')
     expect(parseAnalyticsNewsletter('contraption')).toBe('contraption')
+    expect(parseAnalyticsNewsletter('page')).toBe('page')
     expect(parseAnalyticsNewsletter('reader@example.com')).toBe('unknown')
   })
 
