@@ -122,6 +122,30 @@ assertExport(
   'smokeStep',
   'steps'
 )
+assertExport(
+  manifest.workflows,
+  'src/workflows/reply-to-sms.ts',
+  'replyToSmsWorkflow',
+  'workflows'
+)
+assertExport(
+  manifest.steps,
+  'src/workflows/reply-to-sms.ts',
+  'generateBellSmsStep',
+  'steps'
+)
+assertExport(
+  manifest.steps,
+  'src/workflows/reply-to-sms.ts',
+  'sendBellSmsStep',
+  'steps'
+)
+assertExport(
+  manifest.steps,
+  'src/workflows/reply-to-sms.ts',
+  'recordBellSmsStep',
+  'steps'
+)
 
 if (process.env.CHECK_VERCEL_WORKFLOW_OUTPUT === '1') {
   const outputDir = join(

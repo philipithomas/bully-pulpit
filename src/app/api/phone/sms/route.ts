@@ -1,14 +1,20 @@
 import { after, NextResponse } from 'next/server'
+import { start } from 'workflow/api'
 import {
+  claimPhoneWebhookEvent,
   findOrCreatePhoneWebhookEvent,
   markPhoneWebhookEventProcessed,
+  releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
 import {
   findSmsSubscriberByPhoneNumber,
   subscribeSmsNumber,
   unsubscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
-import { createTextMessageWithStatus } from '@/lib/db/queries/text-messages'
+import {
+  createTextMessage,
+  createTextMessageWithStatus,
+} from '@/lib/db/queries/text-messages'
 import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
 import { numberLabel } from '@/lib/phone/config'
 import {
@@ -22,6 +28,11 @@ import {
 } from '@/lib/phone/sms-subscription-copy'
 import { emptyTwiml, messageTwiml, twimlResponse } from '@/lib/phone/twiml'
 import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { replyToSmsWorkflow } from '@/workflows/reply-to-sms'
+
+const BELL_RATE_LIMIT_MESSAGE =
+  '[Bell AI] Too many messages. Please try again later.'
 
 /**
  * Twilio SMS webhook. Stores the inbound message and ignores duplicate
@@ -41,9 +52,7 @@ export async function POST(request: Request) {
     : ''
   const optOutType = String(form.get('OptOutType') ?? '')
   const command = smsCommandForBody(body, optOutType)
-  const twilioAlreadyReplied =
-    optOutType.trim().toUpperCase() === 'START' ||
-    optOutType.trim().toUpperCase() === 'STOP'
+  const twilioAlreadyReplied = Boolean(optOutType.trim())
   const metadata = twilioWebhookMetadataFromForm(form, from)
   const webhookEvent = messageSid
     ? await findOrCreatePhoneWebhookEvent({
@@ -53,7 +62,7 @@ export async function POST(request: Request) {
     : null
   if (webhookEvent?.event.processedAt) return twimlResponse(emptyTwiml())
 
-  await createTextMessageWithStatus({
+  const inbound = await createTextMessageWithStatus({
     fromNumber: from,
     toNumber: to,
     body,
@@ -101,10 +110,80 @@ export async function POST(request: Request) {
     )
   }
 
-  await sendIncomingSmsNotification({ from, to, body })
-  if (webhookEvent) {
-    await markPhoneWebhookEventProcessed(webhookEvent.event.id)
+  const lease = webhookEvent
+    ? await claimPhoneWebhookEvent(webhookEvent.event.id)
+    : null
+  if (webhookEvent && !lease) {
+    // Another invocation is still working. A 5xx asks Twilio to retry rather
+    // than acknowledging a request that may have died before enqueue.
+    return twimlResponse(emptyTwiml(), 503)
   }
+
+  // Advanced Opt-Out also emits HELP/INFO classifications. Twilio has already
+  // sent the required response, so do not add a Bell reply or duplicate it.
+  if (twilioAlreadyReplied) {
+    if (webhookEvent && lease) {
+      const marked = await markPhoneWebhookEventProcessed(
+        webhookEvent.event.id,
+        lease
+      )
+      if (!marked) return twimlResponse(emptyTwiml(), 503)
+    }
+    return twimlResponse(emptyTwiml())
+  }
+
+  if (!(await checkRateLimit('chat', `phone:${from}`, request))) {
+    await createTextMessage({
+      fromNumber: to,
+      toNumber: from,
+      body: BELL_RATE_LIMIT_MESSAGE,
+      direction: 'outbound',
+      twilioSid: null,
+      replyToMessageId: inbound.message.id,
+      status: 'queued',
+    })
+    if (webhookEvent && lease) {
+      const marked = await markPhoneWebhookEventProcessed(
+        webhookEvent.event.id,
+        lease
+      )
+      if (!marked) return twimlResponse(emptyTwiml(), 503)
+    }
+    return twimlResponse(messageTwiml(BELL_RATE_LIMIT_MESSAGE))
+  }
+
+  try {
+    // Twilio always supplies MessageSid for real messages. Without it there is
+    // no durable dedupe key, so keep the admin notification but do not risk
+    // sending duplicate AI replies to a malformed/replayed request.
+    if (body.trim() && messageSid) {
+      await start(replyToSmsWorkflow, [
+        { from, to, inboundMessageId: inbound.message.id },
+      ])
+    }
+    if (webhookEvent && lease) {
+      const marked = await markPhoneWebhookEventProcessed(
+        webhookEvent.event.id,
+        lease
+      )
+      if (!marked) {
+        throw new Error(`SMS webhook ${messageSid} lost its processing lease`)
+      }
+    }
+  } catch (err) {
+    if (webhookEvent && lease) {
+      await releasePhoneWebhookEvent(webhookEvent.event.id, lease)
+    }
+    throw err
+  }
+
+  after(async () => {
+    try {
+      await sendIncomingSmsNotification({ from, to, body })
+    } catch (err) {
+      console.error('[phone/sms] incoming SMS notification failed:', err)
+    }
+  })
 
   return twimlResponse(emptyTwiml())
 }

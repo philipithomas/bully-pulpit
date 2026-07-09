@@ -1,19 +1,17 @@
-import { type GatewayProviderOptions, gateway } from '@ai-sdk/gateway'
-import {
-  convertToModelMessages,
-  type ModelMessage,
-  stepCountIs,
-  streamText,
-} from 'ai'
+import { convertToModelMessages, type ModelMessage, streamText } from 'ai'
 import { checkBotId } from 'botid/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { fetchPage } from '@/lib/chat/fetch-page-tool'
-import { fetchPost } from '@/lib/chat/fetch-post-tool'
+import {
+  bellModel,
+  bellProviderOptions,
+  bellStopWhen,
+  bellTools,
+  prepareBellStep,
+} from '@/lib/chat/bell-generation'
 import { getPageContextContent } from '@/lib/chat/page-context'
 import { sanitizeChatMessages } from '@/lib/chat/sanitize-messages'
 import { sanitizePageTitle } from '@/lib/chat/sanitize-title'
-import { searchPosts } from '@/lib/chat/search-posts-tool'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -92,21 +90,8 @@ export async function POST(request: Request) {
     // Runs on AI Gateway credits — no BYOK. Replaced gpt-oss-120b/Cerebras:
     // it leaked unbound tool-call JSON into the visible reply and made
     // redundant duplicate tool calls.
-    model: gateway('anthropic/claude-haiku-4.5'),
-    providerOptions: {
-      gateway: {
-        // Haiku 4.5 is served by three upstreams with different latency
-        // profiles (Anthropic direct is the fastest to first token; Bedrock
-        // and Vertex are slower). Pin Anthropic first so the gateway never
-        // routes a healthy request to a slower upstream, and sort the
-        // remaining providers fastest-first for failover.
-        order: ['anthropic'],
-        sort: 'ttft',
-        // Gateway falls back to these models in order when the primary
-        // model or its providers are unavailable.
-        models: ['openai/gpt-5.4-mini'],
-      } satisfies GatewayProviderOptions,
-    },
+    model: bellModel,
+    providerOptions: bellProviderOptions,
     maxOutputTokens: 2048,
     // Stop upstream generation when the visitor hits Stop or disconnects.
     abortSignal: request.signal,
@@ -123,12 +108,9 @@ export async function POST(request: Request) {
     },
     system,
     messages,
-    tools: { searchPosts, fetchPost, fetchPage },
-    stopWhen: stepCountIs(7),
-    // The last step runs without tools so the loop always ends in prose
-    // instead of a dangling tool call.
-    prepareStep: ({ stepNumber }) =>
-      stepNumber >= 6 ? { activeTools: [] } : undefined,
+    tools: bellTools,
+    stopWhen: bellStopWhen,
+    prepareStep: prepareBellStep,
   })
 
   return result.toUIMessageStreamResponse({
