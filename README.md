@@ -39,8 +39,12 @@ OWNER_PHONE_NUMBER=
 
 Configure the Twilio number:
 
-- Voice, "A call comes in": `https://www.philipithomas.com/api/phone/voice?secret=$TWILIO_SECRET`
-- Messaging, "A message comes in": `https://www.philipithomas.com/api/phone/sms?secret=$TWILIO_SECRET`
+- Voice, "A call comes in": `https://www.philipithomas.com/api/phone/voice`
+- Messaging, "A message comes in": `https://www.philipithomas.com/api/phone/sms`
+
+Every inbound webhook must include Twilio's `X-Twilio-Signature` header. The
+app validates the exact public URL and all form parameters with
+`TWILIO_SECRET`, the account auth token. Never put that token in a webhook URL.
 
 The public SMS signup affordances are gated by the Vercel
 `sms-signup-ui` feature flag: when it is off, web subscribe prompts do not show

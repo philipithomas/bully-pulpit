@@ -32,23 +32,25 @@ import { POST as recordingStatusPost } from '@/app/api/phone/recording-status/ro
 import { POST as voicePost } from '@/app/api/phone/voice/route'
 import { smsSignupUi } from '@/lib/flags'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
+import { twilioPostRequest } from '@/test/twilio'
 
-const SECRET = 'test-webhook-secret'
+const AUTH_TOKEN = 'test-twilio-auth-token'
 
-function twilioPost(path: string, form: Record<string, string>): Request {
-  const url = new URL(`https://philipithomas.com${path}`)
-  if (!url.searchParams.has('secret')) {
-    url.searchParams.set('secret', SECRET)
-  }
-  return new Request(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams(form).toString(),
-  })
+function twilioPost(
+  path: string,
+  form: Record<string, string>,
+  options: { signature?: string } = {}
+): Request {
+  return twilioPostRequest(
+    `https://philipithomas.com${path}`,
+    form,
+    AUTH_TOKEN,
+    options
+  )
 }
 
 beforeEach(() => {
-  process.env.TWILIO_SECRET = SECRET
+  process.env.TWILIO_SECRET = AUTH_TOKEN
   vi.mocked(smsSignupUi).mockResolvedValue(false)
 })
 
@@ -58,9 +60,15 @@ afterEach(() => {
 })
 
 describe('POST /api/phone/voice', () => {
-  it('rejects a bad secret', async () => {
+  it('rejects an invalid signature', async () => {
     const response = await voicePost(
-      twilioPost('/api/phone/voice?secret=wrong', { From: '+1', To: '+2' })
+      twilioPost(
+        '/api/phone/voice',
+        { From: '+1', To: '+2' },
+        {
+          signature: 'invalid-signature',
+        }
+      )
     )
     expect(response.status).toBe(401)
   })
@@ -78,13 +86,10 @@ describe('POST /api/phone/voice', () => {
     expect(xml).toContain('You have reached the test suite.')
     expect(xml).not.toContain('<Gather')
     expect(xml).not.toContain('/api/phone/voice-menu')
-    expect(xml).toContain(
-      '/api/phone/recording-status?secret=test-webhook-secret'
-    )
+    expect(xml).toContain('/api/phone/recording-status?caller=')
     expect(xml).toContain('caller=%2B15551234567')
-    expect(xml).toContain(
-      '/api/phone/recording-complete?secret=test-webhook-secret'
-    )
+    expect(xml).toContain('/api/phone/recording-complete')
+    expect(xml).not.toContain('secret=')
     expect(vi.mocked(sendMissedCallNotification)).toHaveBeenCalledWith({
       from: '+15551234567',
       to: '+12123473190',
@@ -105,7 +110,8 @@ describe('POST /api/phone/voice', () => {
     expect(response.status).toBe(200)
     const xml = await response.text()
     expect(xml).toContain('<Gather')
-    expect(xml).toContain('/api/phone/voice-menu?secret=test-webhook-secret')
+    expect(xml).toContain('/api/phone/voice-menu')
+    expect(xml).not.toContain('secret=')
     expect(xml).toContain(
       'Press 2 to subscribe to recurring new-post texts from philipithomas.com.'
     )

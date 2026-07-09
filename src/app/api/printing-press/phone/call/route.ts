@@ -12,13 +12,13 @@ import { createCall } from '@/lib/phone/twilio'
 /**
  * Click-to-call trigger. Admin-only. Rings the owner's phone first (so the
  * owner is never connected to a line they did not initiate), then on answer
- * Twilio fetches the secret-validated /api/phone/connect callback, which
+ * Twilio sends the signed /api/phone/connect callback, which
  * <Dial>s the destination presenting the configured Twilio number as caller id.
  *
  * Hardening: admin-guarded; the destination is E.164-validated and the
- * caller_id comes from server config; the callback URL carries the shared
- * webhook secret (validated on the callback), and the values are re-validated
- * and XML-escaped there. The owner number is required (fail closed) so a
+ * caller_id comes from server config; Twilio signs the callback URL and form
+ * parameters, and the values are re-validated and XML-escaped there. The owner
+ * number is required (fail closed) so a
  * misconfigured deploy cannot dial an unintended phone.
  */
 export async function POST(request: Request) {
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const callbackParams = new URLSearchParams({ secret, target })
+  const callbackParams = new URLSearchParams({ target })
   const twimlUrl = `${siteConfig.url}/api/phone/connect?${callbackParams}`
 
   try {

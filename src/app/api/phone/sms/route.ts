@@ -15,7 +15,7 @@ import {
   createTextMessage,
   createTextMessageWithStatus,
 } from '@/lib/db/queries/text-messages'
-import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
+import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { sendBellContactOnboarding } from '@/lib/phone/bell-contact-onboarding'
 import { numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import {
@@ -41,11 +41,11 @@ const BELL_RATE_LIMIT_MESSAGE =
  * MessageSid redeliveries before applying command side effects.
  */
 export async function POST(request: Request) {
-  if (!isAuthorizedPhoneWebhook(request)) {
+  const form = await validatedPhoneWebhookForm(request)
+  if (!form) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const form = await request.formData()
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
   const body = String(form.get('Body') ?? '')

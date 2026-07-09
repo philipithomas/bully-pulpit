@@ -31,9 +31,9 @@ describe('voicemailTwiml', () => {
   const xml = voicemailTwiml({
     greeting: 'You have reached the Contraption Company & friends.',
     recordingStatusUrl:
-      'https://philipithomas.com/api/phone/recording-status?secret=s&caller=%2B15551234567',
+      'https://philipithomas.com/api/phone/recording-status?caller=%2B15551234567',
     recordingCompleteUrl:
-      'https://philipithomas.com/api/phone/recording-complete?secret=s',
+      'https://philipithomas.com/api/phone/recording-complete',
   })
 
   it('speaks the greeting with a Polly neural voice', () => {
@@ -45,10 +45,10 @@ describe('voicemailTwiml', () => {
   it('records with escaped callback urls', () => {
     expect(xml).toContain('maxLength="120"')
     expect(xml).toContain(
-      'recordingStatusCallback="https://philipithomas.com/api/phone/recording-status?secret=s&amp;caller=%2B15551234567"'
+      'recordingStatusCallback="https://philipithomas.com/api/phone/recording-status?caller=%2B15551234567"'
     )
     expect(xml).toContain(
-      'action="https://philipithomas.com/api/phone/recording-complete?secret=s"'
+      'action="https://philipithomas.com/api/phone/recording-complete"'
     )
   })
 })
@@ -56,16 +56,16 @@ describe('voicemailTwiml', () => {
 describe('voiceMenuTwiml', () => {
   const xml = voiceMenuTwiml({
     greeting: 'You have reached the Contraption Company.',
-    menuActionUrl: 'https://philipithomas.com/api/phone/voice-menu?secret=s',
+    menuActionUrl: 'https://philipithomas.com/api/phone/voice-menu',
     recordingStatusUrl:
-      'https://philipithomas.com/api/phone/recording-status?secret=s&caller=%2B15551234567',
+      'https://philipithomas.com/api/phone/recording-status?caller=%2B15551234567',
     recordingCompleteUrl:
-      'https://philipithomas.com/api/phone/recording-complete?secret=s',
+      'https://philipithomas.com/api/phone/recording-complete',
   })
 
   it('collects a single keypad choice before the voicemail fallback', () => {
     expect(xml).toContain(
-      '<Gather action="https://philipithomas.com/api/phone/voice-menu?secret=s" method="POST" input="dtmf" numDigits="1" timeout="6">'
+      '<Gather action="https://philipithomas.com/api/phone/voice-menu" method="POST" input="dtmf" numDigits="1" timeout="6">'
     )
     expect(xml).toContain('Press 1 to leave a voicemail.')
     expect(xml).toContain(
