@@ -5,13 +5,20 @@ import { fetchPost } from '@/lib/chat/fetch-post-tool'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 
 /** Shared Bell model and tool-loop settings for the web and SMS surfaces. */
-export const bellModel = gateway('anthropic/claude-haiku-4.5')
+export const bellModel = gateway('openai/gpt-5.6-luna')
+
+/** Disable reasoning latency for Bell's short, tool-oriented responses. */
+export const bellReasoning = 'none' as const
 
 export const bellProviderOptions = {
+  openai: {
+    // Bell does not render reasoning parts, so skip summary generation.
+    reasoningSummary: null,
+  },
   gateway: {
-    // Anthropic direct has the best time to first token for Haiku 4.5. Keep
-    // the remaining healthy providers fastest-first for failover.
-    order: ['anthropic'],
+    // Pin OpenAI direct and keep the fastest existing fallback for temporary
+    // GPT-5.6 availability issues.
+    order: ['openai'],
     sort: 'ttft',
     models: ['openai/gpt-5.4-mini'],
   } satisfies GatewayProviderOptions,

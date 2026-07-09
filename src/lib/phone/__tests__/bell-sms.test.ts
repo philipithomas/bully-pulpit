@@ -4,6 +4,7 @@ vi.mock('ai', () => ({ generateText: vi.fn() }))
 vi.mock('@/lib/chat/bell-generation', () => ({
   bellModel: 'test-model',
   bellProviderOptions: { gateway: {} },
+  bellReasoning: 'none',
   bellStopWhen: 'stop-condition',
   bellTools: { searchPosts: {} },
   prepareBellStep: vi.fn(),
@@ -190,6 +191,7 @@ describe('Bell SMS generation and delivery', () => {
     expect(call.prompt).toContain('Workshop: A new message')
     expect(call.system).toContain('Reply in one compact plain-text paragraph')
     expect(call.maxOutputTokens).toBe(256)
+    expect(call.reasoning).toBe('none')
     expect(call.tools).toEqual({ searchPosts: {} })
   })
 

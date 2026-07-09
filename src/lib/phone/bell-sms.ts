@@ -2,6 +2,7 @@ import { generateText } from 'ai'
 import {
   bellModel,
   bellProviderOptions,
+  bellReasoning,
   bellStopWhen,
   bellTools,
   prepareBellStep,
@@ -223,6 +224,7 @@ export async function generateBellSmsBody(
   )
   const { text } = await generateText({
     model: bellModel,
+    reasoning: bellReasoning,
     providerOptions: bellProviderOptions,
     maxOutputTokens: 256,
     maxRetries: 0,

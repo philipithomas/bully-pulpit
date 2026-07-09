@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import {
   bellModel,
   bellProviderOptions,
+  bellReasoning,
   bellStopWhen,
   bellTools,
   prepareBellStep,
@@ -87,10 +88,9 @@ export async function POST(request: Request) {
   })
 
   const result = streamText({
-    // Runs on AI Gateway credits — no BYOK. Replaced gpt-oss-120b/Cerebras:
-    // it leaked unbound tool-call JSON into the visible reply and made
-    // redundant duplicate tool calls.
+    // Shared with SMS so every Bell surface uses the same speed-first model.
     model: bellModel,
+    reasoning: bellReasoning,
     providerOptions: bellProviderOptions,
     maxOutputTokens: 2048,
     // Stop upstream generation when the visitor hits Stop or disconnects.
