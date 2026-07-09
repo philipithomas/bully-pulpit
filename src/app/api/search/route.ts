@@ -1,13 +1,12 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
+import { typeaheadEmbeddingSearch } from '@/lib/flags'
 import { hybridSearchPosts, type SearchScope } from '@/lib/search/hybrid'
 
 /**
- * Typeahead search uses the same hybrid BM25/vector path as Bell. The hybrid
- * arm adds one runtime query embedding plus local vector scoring, then falls
- * back to BM25 if embedding is unavailable or exceeds the shared timeout.
- * The UI keeps zero debounce, so this route returns timing and mode metadata
- * for analytics instead of adding client-side delay.
+ * Search serves typeahead and photography queries. Typeahead can disable the
+ * runtime embedding arm through a Vercel flag; other callers keep the full
+ * hybrid path.
  */
 
 interface SearchResult {
@@ -39,6 +38,7 @@ export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get('q')?.trim()
   const rawScope = request.nextUrl.searchParams.get('scope')
   const scope: SearchScope = rawScope === 'images' ? 'images' : 'posts'
+  const isTypeahead = request.nextUrl.searchParams.get('source') === 'typeahead'
 
   if (!q || q.length < 2) {
     return NextResponse.json({ results: [] })
@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const started = performance.now()
-    const search = await hybridSearchPosts(q, { scope })
+    const useVector = isTypeahead ? await typeaheadEmbeddingSearch() : true
+    const search = await hybridSearchPosts(q, { scope, useVector })
     const durationMs = Math.round(performance.now() - started)
     const results: SearchResult[] = search.results.map((result) => ({
       type: result.type,
