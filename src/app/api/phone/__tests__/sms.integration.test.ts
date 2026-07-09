@@ -43,7 +43,13 @@ import {
   resetFailedSmsBySlug,
   SMS_SEND_SKIPPED_UNSUBSCRIBED,
 } from '@/lib/db/queries/sms-sends'
-import { countEligibleSms } from '@/lib/db/queries/sms-subscribers'
+import {
+  claimBellContactCard,
+  countEligibleSms,
+  refreshBellContactCardClaim,
+  subscribeSmsNumber,
+  unsubscribeSmsNumber,
+} from '@/lib/db/queries/sms-subscribers'
 import { smsSends, smsSubscribers, textMessages } from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { smsSignupUi } from '@/lib/flags'
@@ -439,6 +445,23 @@ describe('POST /api/phone/sms', () => {
     const [subscriber] = await db.select().from(smsSubscribers)
     expect(subscriber.bellContactCardProcessingAt).toBeNull()
     expect(subscriber.bellContactCardSentAt).toBeInstanceOf(Date)
+  })
+
+  it('invalidates an old Bell claim across unsubscribe and reactivation', async () => {
+    const phoneNumber = '+14155551234'
+    await subscribeSmsNumber({ phoneNumber })
+    const oldClaim = await claimBellContactCard(phoneNumber)
+    expect(oldClaim).not.toBeNull()
+
+    await unsubscribeSmsNumber(phoneNumber)
+    await subscribeSmsNumber({ phoneNumber })
+    const newClaim = await claimBellContactCard(phoneNumber)
+    expect(newClaim).not.toBeNull()
+    if (!oldClaim || !newClaim) throw new Error('Expected Bell claims')
+    expect(newClaim.id).not.toBe(oldClaim.id)
+
+    expect(await refreshBellContactCardClaim(phoneNumber, oldClaim)).toBe(false)
+    expect(await refreshBellContactCardClaim(phoneNumber, newClaim)).toBe(true)
   })
 
   it('answers HELP without routing it to the admin inbox', async () => {

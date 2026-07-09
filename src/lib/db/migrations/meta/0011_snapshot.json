@@ -1,5 +1,5 @@
 {
-  "id": "316fd5f9-1357-4645-8dec-5daba900798b",
+  "id": "90ba30d1-4ba2-461b-b587-37a6a63df962",
   "prevId": "ba3d1407-1df2-4a63-99f5-c6e9998deb93",
   "version": "7",
   "dialect": "postgresql",
@@ -726,6 +726,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "bell_contact_card_claim_id": {
+          "name": "bell_contact_card_claim_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "bell_contact_card_processing_at": {
           "name": "bell_contact_card_processing_at",

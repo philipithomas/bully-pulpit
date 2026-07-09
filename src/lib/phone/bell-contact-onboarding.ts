@@ -2,12 +2,11 @@ import { siteConfig } from '@/lib/config'
 import {
   claimBellContactCard,
   completeBellContactCard,
+  failBellContactCard,
+  refreshBellContactCardClaim,
   releaseBellContactCard,
 } from '@/lib/db/queries/sms-subscribers'
-import {
-  createTextMessage,
-  updateTextMessageDelivery,
-} from '@/lib/db/queries/text-messages'
+import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { SMS_BELL_CONTACT_ONBOARDING } from '@/lib/phone/sms-subscription-copy'
 import { sendSms } from '@/lib/phone/twilio'
 
@@ -23,8 +22,8 @@ export async function sendBellContactOnboarding(input: {
   from: string
   to: string
 }): Promise<BellContactOnboardingResult> {
-  const processingAt = await claimBellContactCard(input.to)
-  if (!processingAt) return 'skipped'
+  const claim = await claimBellContactCard(input.to)
+  if (!claim) return 'skipped'
 
   let attemptId: number
   try {
@@ -38,8 +37,34 @@ export async function sendBellContactOnboarding(input: {
     })
     attemptId = attempt.id
   } catch (err) {
-    await releaseBellContactCard(input.to, processingAt)
+    await releaseBellContactCard(input.to, claim)
     throw err
+  }
+
+  let claimIsCurrent: boolean
+  try {
+    claimIsCurrent = await refreshBellContactCardClaim(input.to, claim)
+  } catch (err) {
+    await failBellContactCard({
+      phoneNumber: input.to,
+      claim,
+      attemptId,
+    }).catch((recordErr) => {
+      console.error(
+        '[phone] Failed to close Bell contact-card claim after revalidation error:',
+        recordErr
+      )
+    })
+    throw err
+  }
+  if (!claimIsCurrent) {
+    await failBellContactCard({
+      phoneNumber: input.to,
+      claim,
+      attemptId,
+      status: 'cancelled',
+    })
+    return 'skipped'
   }
 
   let result: Awaited<ReturnType<typeof sendSms>>
@@ -51,25 +76,25 @@ export async function sendBellContactOnboarding(input: {
       mediaUrl: `${siteConfig.url}/bell.vcf`,
     })
   } catch (err) {
-    await updateTextMessageDelivery(attemptId, { status: 'failed' }).catch(
-      (recordErr) => {
-        console.error(
-          '[phone] Failed to record Bell contact-card MMS failure:',
-          recordErr
-        )
-      }
-    )
-    await releaseBellContactCard(input.to, processingAt)
+    await failBellContactCard({
+      phoneNumber: input.to,
+      claim,
+      attemptId,
+    }).catch((recordErr) => {
+      console.error(
+        '[phone] Failed to record Bell contact-card MMS failure:',
+        recordErr
+      )
+    })
     throw err
   }
 
-  const completed = await completeBellContactCard(input.to, processingAt)
-  await updateTextMessageDelivery(attemptId, {
+  await completeBellContactCard({
+    phoneNumber: input.to,
+    claim,
+    attemptId,
     twilioSid: result.sid,
     status: result.status,
   })
-  if (!completed) {
-    throw new Error(`Bell contact-card claim for ${input.to} was lost`)
-  }
   return 'sent'
 }

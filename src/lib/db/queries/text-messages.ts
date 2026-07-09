@@ -57,21 +57,6 @@ export async function createTextMessageWithStatus(
   return { message: existing[0], inserted: false }
 }
 
-export async function updateTextMessageDelivery(
-  id: number,
-  input: { twilioSid?: string | null; status: string }
-): Promise<TextMessage | null> {
-  const rows = await getDb()
-    .update(textMessages)
-    .set({
-      ...(input.twilioSid !== undefined ? { twilioSid: input.twilioSid } : {}),
-      status: input.status,
-    })
-    .where(eq(textMessages.id, id))
-    .returning()
-  return rows[0] ?? null
-}
-
 export type Conversation = {
   number: string
   lastMessage: TextMessage

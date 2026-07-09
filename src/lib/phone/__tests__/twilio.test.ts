@@ -51,6 +51,7 @@ describe('sendSms', () => {
     expect(init?.headers).toMatchObject({
       Authorization: `Basic ${Buffer.from('AC_test:token_test').toString('base64')}`,
     })
+    expect(init?.signal).toBeInstanceOf(AbortSignal)
     expect(String(init?.body)).toContain('From=%2B12123473190')
     expect(String(init?.body)).toContain('Body=hi')
   })
@@ -125,6 +126,11 @@ describe('isRetryableTwilioError', () => {
       isRetryableTwilioError(new TwilioApiError('server error', 503))
     ).toBe(true)
     expect(isRetryableTwilioError(new TypeError('fetch failed'))).toBe(true)
+    expect(
+      isRetryableTwilioError(
+        new DOMException('request timed out', 'TimeoutError')
+      )
+    ).toBe(true)
   })
 
   it('treats recipient and credential errors as permanent', () => {

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { and, desc, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { SMS_SEND_SKIPPED_UNSUBSCRIBED } from '@/lib/db/queries/sms-sends'
@@ -12,6 +13,11 @@ const newsletterColumns = {
 } as const
 
 const BELL_CONTACT_CARD_CLAIM_MS = 2 * 60 * 1000
+
+export type BellContactCardClaim = {
+  id: string
+  processingAt: Date
+}
 
 export async function subscribeSmsNumber(input: {
   phoneNumber: string
@@ -106,12 +112,15 @@ export async function findSmsSubscriberByPhoneNumber(
  */
 export async function claimBellContactCard(
   phoneNumber: string
-): Promise<Date | null> {
+): Promise<BellContactCardClaim | null> {
   const staleBefore = new Date(Date.now() - BELL_CONTACT_CARD_CLAIM_MS)
-  const processingAt = new Date()
+  const claim = { id: randomUUID(), processingAt: new Date() }
   const rows = await getDb()
     .update(smsSubscribers)
-    .set({ bellContactCardProcessingAt: processingAt })
+    .set({
+      bellContactCardClaimId: claim.id,
+      bellContactCardProcessingAt: claim.processingAt,
+    })
     .where(
       and(
         eq(smsSubscribers.phoneNumber, phoneNumber),
@@ -124,24 +133,21 @@ export async function claimBellContactCard(
       )
     )
     .returning({ id: smsSubscribers.id })
-  return rows.length > 0 ? processingAt : null
+  return rows.length > 0 ? claim : null
 }
 
-/** Marks a Bell contact-card claim complete, but only for its current lease. */
-export async function completeBellContactCard(
+/** Revalidates ownership immediately before the provider request. */
+export async function refreshBellContactCardClaim(
   phoneNumber: string,
-  processingAt: Date
+  claim: BellContactCardClaim
 ): Promise<boolean> {
   const rows = await getDb()
     .update(smsSubscribers)
-    .set({
-      bellContactCardProcessingAt: null,
-      bellContactCardSentAt: sql`NOW()`,
-    })
+    .set({ bellContactCardProcessingAt: new Date() })
     .where(
       and(
         eq(smsSubscribers.phoneNumber, phoneNumber),
-        eq(smsSubscribers.bellContactCardProcessingAt, processingAt),
+        eq(smsSubscribers.bellContactCardClaimId, claim.id),
         isNotNull(smsSubscribers.confirmedAt),
         isNull(smsSubscribers.bellContactCardSentAt)
       )
@@ -150,18 +156,77 @@ export async function completeBellContactCard(
   return rows.length > 0
 }
 
-/** Releases a failed Bell contact-card claim so the next signup can retry. */
+/**
+ * Records provider acceptance and completes the claim in one SQL statement.
+ * A constraint or database failure rolls both changes back together.
+ */
+export async function completeBellContactCard(input: {
+  phoneNumber: string
+  claim: BellContactCardClaim
+  attemptId: number
+  twilioSid: string
+  status: string
+}): Promise<void> {
+  await getDb().execute(sql`
+    WITH completed AS (
+      UPDATE sms_subscribers
+      SET
+        bell_contact_card_claim_id = NULL,
+        bell_contact_card_processing_at = NULL,
+        bell_contact_card_sent_at = NOW()
+      WHERE phone_number = ${input.phoneNumber}
+        AND bell_contact_card_claim_id = ${input.claim.id}
+        AND confirmed_at IS NOT NULL
+        AND bell_contact_card_sent_at IS NULL
+      RETURNING id
+    )
+    UPDATE text_messages
+    SET
+      twilio_sid = ${input.twilioSid},
+      status = ${input.status}
+    WHERE id = ${input.attemptId}
+  `)
+}
+
+/** Releases a claim and records its attempt outcome atomically. */
+export async function failBellContactCard(input: {
+  phoneNumber: string
+  claim: BellContactCardClaim
+  attemptId: number
+  status?: 'cancelled' | 'failed'
+}): Promise<void> {
+  await getDb().execute(sql`
+    WITH released AS (
+      UPDATE sms_subscribers
+      SET
+        bell_contact_card_claim_id = NULL,
+        bell_contact_card_processing_at = NULL
+      WHERE phone_number = ${input.phoneNumber}
+        AND bell_contact_card_claim_id = ${input.claim.id}
+        AND bell_contact_card_sent_at IS NULL
+      RETURNING id
+    )
+    UPDATE text_messages
+    SET status = ${input.status ?? 'failed'}
+    WHERE id = ${input.attemptId}
+  `)
+}
+
+/** Releases a claim when no provider attempt was recorded. */
 export async function releaseBellContactCard(
   phoneNumber: string,
-  processingAt: Date
+  claim: BellContactCardClaim
 ): Promise<void> {
   await getDb()
     .update(smsSubscribers)
-    .set({ bellContactCardProcessingAt: null })
+    .set({
+      bellContactCardClaimId: null,
+      bellContactCardProcessingAt: null,
+    })
     .where(
       and(
         eq(smsSubscribers.phoneNumber, phoneNumber),
-        eq(smsSubscribers.bellContactCardProcessingAt, processingAt),
+        eq(smsSubscribers.bellContactCardClaimId, claim.id),
         isNull(smsSubscribers.bellContactCardSentAt)
       )
     )
@@ -182,6 +247,7 @@ export async function unsubscribeSmsNumber(
           subscribed_contraption = false,
           subscribed_workshop = false,
           subscribed_tsundoku = false,
+          bell_contact_card_claim_id = NULL,
           bell_contact_card_processing_at = NULL,
           bell_contact_card_sent_at = NULL,
           updated_at = NOW()
@@ -212,6 +278,7 @@ export async function unsubscribeSmsNumber(
       subscribedContraption: false,
       subscribedWorkshop: false,
       subscribedTsundoku: false,
+      bellContactCardClaimId: null,
       bellContactCardProcessingAt: null,
       bellContactCardSentAt: null,
       updatedAt: sql`NOW()`,

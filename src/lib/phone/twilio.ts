@@ -4,6 +4,8 @@
 
 import { twilioSecret } from '@/lib/phone/config'
 
+const TWILIO_REQUEST_TIMEOUT_MS = 30_000
+
 export type SentSms = {
   sid: string
   status: string
@@ -28,7 +30,11 @@ export function isRetryableTwilioError(error: unknown): boolean {
   if (error instanceof TwilioApiError) {
     return error.status === 429 || error.status >= 500
   }
-  return error instanceof TypeError
+  return (
+    error instanceof TypeError ||
+    (error instanceof Error &&
+      (error.name === 'AbortError' || error.name === 'TimeoutError'))
+  )
 }
 
 function twilioCredentials(): { accountSid: string; authToken: string } {
@@ -74,6 +80,7 @@ export async function sendSms(input: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: form,
+      signal: AbortSignal.timeout(TWILIO_REQUEST_TIMEOUT_MS),
     }
   )
 
