@@ -1,6 +1,9 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
+import { checkRateLimitStatus } from '@/lib/rate-limit'
 import { hybridSearchPosts, type SearchScope } from '@/lib/search/hybrid'
+
+export const MAX_SEARCH_QUERY_CHARACTERS = 300
 
 /**
  * Search serves typeahead and photography queries. Typeahead requests choose
@@ -44,10 +47,31 @@ export async function GET(request: NextRequest) {
   if (!q || q.length < 2) {
     return NextResponse.json({ results: [] })
   }
+  if (q.length > MAX_SEARCH_QUERY_CHARACTERS) {
+    return NextResponse.json(
+      { error: 'Search query is too long' },
+      { status: 400 }
+    )
+  }
+
+  const ip =
+    request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim() ??
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    'unknown'
+  const rateLimit = await checkRateLimitStatus('search', `ip:${ip}`, request)
+  if (rateLimit === 'limited') {
+    return NextResponse.json(
+      { error: 'Too many searches. Please try again later.' },
+      { status: 429 }
+    )
+  }
 
   try {
     const started = performance.now()
-    const useVector = !isTypeahead || isHybridTypeahead
+    // Search stays useful without spending provider tokens when the Firewall
+    // decision cannot be obtained. MiniSearch supplies the local BM25 path.
+    const useVector =
+      rateLimit === 'allowed' && (!isTypeahead || isHybridTypeahead)
     const search = await hybridSearchPosts(q, { scope, useVector })
     const durationMs = Math.round(performance.now() - started)
     const results: SearchResult[] = search.results.map((result) => ({

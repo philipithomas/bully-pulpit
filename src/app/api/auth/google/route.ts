@@ -1,6 +1,7 @@
 import { checkBotId } from 'botid/server'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { NextResponse } from 'next/server'
+import { z } from 'zod/v4'
 import {
   parseAnalyticsPlacement,
   summarizeNewsletters,
@@ -13,29 +14,47 @@ import {
 } from '@/lib/auth/subscriber-service'
 import { siteConfig } from '@/lib/config'
 import { serializeSubscriber } from '@/lib/db/queries/subscribers'
+import { PUBLIC_JSON_BODY_MAX_BYTES, readJsonBody } from '@/lib/http/json-body'
 import { checkRateLimit } from '@/lib/rate-limit'
+
+const googleAuthBodySchema = z.strictObject({
+  code: z.string().max(4_096).optional(),
+  // The email typed before opening the Google popup is deliberately ignored.
+  // It remains an accepted legacy field so identity always comes from the
+  // verified ID token without breaking an in-flight client.
+  email: z.string().max(320).optional(),
+  newsletters: z.array(z.string().max(32)).max(4).optional(),
+  analytics_placement: z.string().max(100).optional(),
+})
 
 const GOOGLE_JWKS = createRemoteJWKSet(
   new URL('https://www.googleapis.com/oauth2/v3/certs')
 )
 
 export async function POST(request: Request) {
-  const { isBot } = await checkBotId()
-  if (isBot) {
-    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+  const parsedBody = await readJsonBody(
+    request,
+    googleAuthBodySchema,
+    PUBLIC_JSON_BODY_MAX_BYTES
+  )
+  if (!parsedBody.ok) {
+    return NextResponse.json(
+      { error: parsedBody.error },
+      { status: parsedBody.status }
+    )
   }
 
-  const body = await request.json().catch(() => null)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-  }
-  const { code, newsletters, analytics_placement } = body
-
+  const { code, newsletters, analytics_placement } = parsedBody.data
   if (!code) {
     return NextResponse.json(
       { error: 'Authorization code is required' },
       { status: 400 }
     )
+  }
+
+  const { isBot } = await checkBotId()
+  if (isBot) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
@@ -81,9 +100,7 @@ export async function POST(request: Request) {
 
     const email = payload.email as string
     const name = payload.name as string | undefined
-    const requestedNewsletters = normalizedNewsletters(
-      Array.isArray(newsletters) ? newsletters : undefined
-    )
+    const requestedNewsletters = normalizedNewsletters(newsletters)
 
     if (!email || !payload.email_verified) {
       return NextResponse.json(

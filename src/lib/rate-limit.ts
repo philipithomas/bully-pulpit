@@ -1,5 +1,7 @@
 import { checkRateLimit as vercelCheckRateLimit } from '@vercel/firewall'
 
+export type RateLimitStatus = 'allowed' | 'limited' | 'unavailable'
+
 /**
  * Rate limiting backed by the Vercel Firewall.
  *
@@ -17,19 +19,32 @@ export async function checkRateLimit(
   key: string,
   request: Request
 ): Promise<boolean> {
-  if (!process.env.VERCEL) return true
+  const status = await checkRateLimitStatus(rule, key, request)
+  // Preserve the existing fail-open behavior for low-risk routes. Callers
+  // protecting paid provider work use the tri-state API and choose a safer
+  // fallback when the Firewall self-fetch is unavailable.
+  return status !== 'limited'
+}
+
+export async function checkRateLimitStatus(
+  rule: string,
+  key: string,
+  request: Request
+): Promise<RateLimitStatus> {
+  if (!process.env.VERCEL) return 'allowed'
 
   try {
-    const { rateLimited } = await vercelCheckRateLimit(rule, {
+    const { rateLimited, error } = await vercelCheckRateLimit(rule, {
       request,
       rateLimitKey: key,
     })
-    return !rateLimited
+    // A missing ID means the protection is not active. Treat it like an
+    // unavailable decision so paid callers take their safe fallback instead
+    // of silently spending without a live limit.
+    if (error === 'not-found') return 'unavailable'
+    return rateLimited ? 'limited' : 'allowed'
   } catch (err) {
-    // Fail open: @vercel/firewall throws on unexpected statuses from its
-    // self-fetch (e.g. preview deployment protection, transient 5xx) — that
-    // must not 500 the route the limit is protecting.
     console.error(`[rate-limit] check failed for rule "${rule}":`, err)
-    return true
+    return 'unavailable'
   }
 }

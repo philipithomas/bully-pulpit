@@ -1,3 +1,4 @@
+import { checkBotId } from 'botid/server'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { emailSuppressions, logins, subscribers } from '@/lib/db/schema'
@@ -39,6 +40,7 @@ function dnsError(code: string): Error {
 
 beforeEach(async () => {
   await resetDb()
+  vi.mocked(checkBotId).mockClear()
   vi.mocked(sendSimpleEmail).mockClear()
   // Default DNS answer: every domain has a working MX record. Tests that
   // exercise the deliverability check override these per domain.
@@ -51,6 +53,31 @@ beforeEach(async () => {
 })
 
 describe('POST /api/subscribe', () => {
+  it('rejects non-JSON and oversized bodies before BotID or database work', async () => {
+    const wrongType = await POST(
+      new Request('http://localhost/api/subscribe', {
+        method: 'POST',
+        headers: { 'content-type': 'text/plain' },
+        body: JSON.stringify({ email: 'reader@example.com' }),
+      })
+    )
+    expect(wrongType.status).toBe(415)
+
+    const oversized = await POST(
+      subscribeRequest({
+        email: 'reader@example.com',
+        source: 'x'.repeat(20_000),
+      })
+    )
+    expect(oversized.status).toBe(413)
+
+    const missingEmail = await POST(subscribeRequest({}))
+    expect(missingEmail.status).toBe(400)
+    expect(await missingEmail.json()).toEqual({ error: 'Email is required' })
+    expect(checkBotId).not.toHaveBeenCalled()
+    expect(await db.select().from(subscribers)).toEqual([])
+  })
+
   it('creates the subscriber, mints code + magic-link logins, and emails the code', async () => {
     const res = await POST(
       subscribeRequest({
@@ -121,6 +148,7 @@ describe('POST /api/subscribe', () => {
     const res = await POST(
       subscribeRequest({
         email: 'picky@example.com',
+        source: null,
         newsletters: ['tsundoku'],
       })
     )
@@ -139,6 +167,7 @@ describe('POST /api/subscribe', () => {
     expect(row.subscribedPostcard).toBe(true)
     expect(row.subscribedWorkshop).toBe(true)
     expect(row.subscribedTsundoku).toBe(true)
+    expect(row.source).toBeNull()
 
     // New subscribers get the full list in their confirmation email.
     const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]

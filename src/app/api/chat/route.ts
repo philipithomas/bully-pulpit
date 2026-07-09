@@ -6,8 +6,8 @@ import {
   streamText,
 } from 'ai'
 import { checkBotId } from 'botid/server'
-import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { z } from 'zod/v4'
 import { bucketDuration, bucketTurn } from '@/lib/analytics/events'
 import { trackServerEvent } from '@/lib/analytics/server'
 import { getSession } from '@/lib/auth/jwt'
@@ -45,67 +45,62 @@ import {
   textFromBellParts,
 } from '@/lib/db/queries/bell-messages'
 import { findByUuid } from '@/lib/db/queries/subscribers'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { readJsonBody } from '@/lib/http/json-body'
+import { checkRateLimitStatus } from '@/lib/rate-limit'
+
+export const CHAT_BODY_MAX_BYTES = 256 * 1024
+
+const chatBodySchema = z.strictObject({
+  id: z.string().max(200),
+  requestId: z.string().max(200),
+  // The byte cap bounds raw parsing. The sanitizer then examines only the
+  // newest bounded window, preserving long-lived browser conversations.
+  messages: z.array(z.unknown()).min(1),
+  trigger: z.enum(['submit-message', 'regenerate-message']).optional(),
+  messageId: z.string().max(200).optional(),
+  // Context is optional UX metadata, not request authority. Keep its
+  // long-standing fail-open behavior and sanitize recognized values below.
+  pageContext: z.unknown().optional(),
+})
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
 
 export async function POST(request: Request) {
-  const headersList = await headers()
-  const ip =
-    headersList.get('x-vercel-forwarded-for')?.split(',')[0]?.trim() ??
-    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    'unknown'
-
-  // The rate-limit check (a Vercel Firewall self-fetch), the BotID
-  // classification call, and body parsing are independent. Both checks read
-  // only request headers, so all three run concurrently instead of paying
-  // two sequential network round trips before the model call starts.
-  // Rejection precedence is unchanged: rate limit, then bot check, then body.
-  const [allowed, { isBot }, body, session] = await Promise.all([
-    checkRateLimit('chat', `ip:${ip}`, request),
-    checkBotId(),
-    request.json().catch(() => null),
-    getSession(),
-  ])
-
-  if (!allowed) {
+  // Reject malformed, mistyped, or oversized input before making any
+  // Firewall, BotID, database, or model/provider call.
+  const parsedBody = await readJsonBody(
+    request,
+    chatBodySchema,
+    CHAT_BODY_MAX_BYTES
+  )
+  if (!parsedBody.ok) {
     return NextResponse.json(
-      { error: 'Too many messages. Please try again later.' },
-      { status: 429 }
+      { error: parsedBody.error },
+      { status: parsedBody.status }
     )
   }
+  const body = parsedBody.data
 
-  if (isBot) {
-    return NextResponse.json({ error: 'Access denied.' }, { status: 403 })
-  }
-
-  if (!body || !Array.isArray(body.messages) || body.messages.length === 0) {
-    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
-  }
   if (!isClientConversationId(body.id)) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
   if (!isClientConversationId(body.requestId)) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
-  // Narrow client-supplied fields at the trust boundary — they are
-  // interpolated into the system prompt. The path must look like a site path
-  // (leading slash, then only letters, digits, hyphen, underscore, slash,
-  // length-bounded); the title is made inert by sanitizePageTitle. Anything
-  // invalid is silently dropped so the chat never fails over page context.
-  const rawPath = body.pageContext?.path
+  const rawPageContext = isRecord(body.pageContext)
+    ? body.pageContext
+    : undefined
+  const rawPath = rawPageContext?.path
   const path =
     typeof rawPath === 'string' &&
     rawPath.length <= 200 &&
     /^\/[a-zA-Z0-9/_-]*$/.test(rawPath)
       ? rawPath
       : undefined
-  const title = sanitizePageTitle(body.pageContext?.title)
-  // Sanitize before conversion: convertToModelMessages would turn a crafted
-  // { role: 'system' } message in the client payload into a real system
-  // message, so only user and assistant messages with expected part shapes
-  // survive. The slice caps the conversation the model sees — the client
-  // accumulates history in sessionStorage, and an unbounded array is an easy
-  // token-burn vector.
-  const sanitizedMessages = sanitizeChatMessages(body.messages.slice(-40))
+  const title = sanitizePageTitle(rawPageContext?.title)
+  const sanitizedMessages = sanitizeChatMessages(body.messages)
   if (sanitizedMessages.length === 0) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
@@ -115,12 +110,41 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
-
   const latestUserMessage = sanitizedMessages.findLast(
     (message) => message.role === 'user'
   )
   if (!latestUserMessage) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
+  }
+
+  const ip =
+    request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim() ??
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    'unknown'
+
+  // These checks read only request or cookie headers and can run together once
+  // the cheap local trust-boundary validation has succeeded.
+  const [rateLimit, { isBot }, session] = await Promise.all([
+    checkRateLimitStatus('chat', `ip:${ip}`, request),
+    checkBotId(),
+    getSession(),
+  ])
+
+  if (rateLimit === 'limited') {
+    return NextResponse.json(
+      { error: 'Too many messages. Please try again later.' },
+      { status: 429 }
+    )
+  }
+  if (rateLimit === 'unavailable') {
+    return NextResponse.json(
+      { error: 'Bell is temporarily unavailable. Please try again later.' },
+      { status: 503 }
+    )
+  }
+
+  if (isBot) {
+    return NextResponse.json({ error: 'Access denied.' }, { status: 403 })
   }
   const subscriber = session ? await findByUuid(session.uuid) : null
   const networkIdentity = subscriber ? null : networkIdentityForRequest(request)

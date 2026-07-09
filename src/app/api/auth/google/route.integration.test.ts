@@ -1,3 +1,4 @@
+import { checkBotId } from 'botid/server'
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -40,6 +41,7 @@ async function subscriberByEmail(email: string) {
 }
 
 beforeEach(async () => {
+  vi.clearAllMocks()
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID = 'google-client-id'
   process.env.GOOGLE_CLIENT_SECRET = 'google-client-secret'
 
@@ -68,6 +70,20 @@ afterEach(() => {
 })
 
 describe('POST /api/auth/google', () => {
+  it('rejects oversized JSON before BotID or the Google token exchange', async () => {
+    const response = await POST(googlePost({ code: 'x'.repeat(20_000) }))
+
+    expect(response.status).toBe(413)
+
+    const missingCode = await POST(googlePost({}))
+    expect(missingCode.status).toBe(400)
+    expect(await missingCode.json()).toEqual({
+      error: 'Authorization code is required',
+    })
+    expect(checkBotId).not.toHaveBeenCalled()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it('applies pending newsletter opt-ins to the Google account, not the typed email', async () => {
     await db.insert(subscribers).values([
       {
