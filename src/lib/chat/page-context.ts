@@ -1,6 +1,7 @@
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
 import type { Page, Post } from '@/lib/content/types'
 import { sitePhoneDisplayNumber } from '@/lib/phone/config'
+import { findPublicAppPage, publicAppPageBellText } from '@/lib/public-pages'
 import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 
 /** Character budget for injected page content. Roughly 1k tokens. */
@@ -11,6 +12,8 @@ export interface PageContextContent {
   title: string
   content: string
   truncated: boolean
+  /** App pages use fetchPage, rather than fetchPost, when context is truncated. */
+  fetchPath?: string
 }
 
 /**
@@ -49,17 +52,27 @@ export function toPagePlaintext(
 }
 
 /**
- * Resolves the visitor's current path to a known post or content page and
- * returns its title and plaintext content for system-prompt injection, so
- * questions about "this page" answer without tool calls. Returns null for
- * the homepage, newsletter indexes, and unknown paths, where the existing
- * search-based guidance applies instead.
+ * Resolves the visitor's current path to a registered app page, post, or
+ * content page and returns readable text for system-prompt injection, so
+ * questions about "this page" answer without tool calls.
  */
 export function getPageContextContent(
   path: unknown,
   maxChars: number = PAGE_CONTENT_MAX_CHARS
 ): PageContextContent | null {
   if (typeof path !== 'string') return null
+  const appPage = findPublicAppPage(path)
+  if (appPage) {
+    const plain = publicAppPageBellText(appPage)
+    return {
+      slug: appPage.id,
+      title: appPage.title,
+      content: plain.slice(0, maxChars),
+      truncated: plain.length > maxChars,
+      fetchPath: appPage.path,
+    }
+  }
+
   const slug = path.replace(/^\//, '').replace(/\/$/, '')
   // Posts and pages are served at root-level /[slug]; nested paths are
   // newsletter indexes, feeds, or app routes.

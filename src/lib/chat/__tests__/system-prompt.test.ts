@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
+import { publicAppPages } from '@/lib/public-pages'
 
 describe('getSystemPrompt page context', () => {
   it('points fetchPage at the homepage path', () => {
@@ -39,6 +40,29 @@ describe('getSystemPrompt page context', () => {
     })
     expect(prompt).toContain('The content below is truncated')
     expect(prompt).toContain('use fetchPost with slug "some-post"')
+  })
+
+  it('uses fetchPage when registered app-page context is truncated', () => {
+    const prompt = getSystemPrompt({
+      pageContext: { path: '/print' },
+      pageContent: {
+        slug: 'app-print',
+        title: 'Print edition',
+        content: 'Truncated body',
+        truncated: true,
+        fetchPath: '/print',
+      },
+    })
+    expect(prompt).toContain('use fetchPage with path "/print"')
+    expect(prompt).not.toContain('use fetchPost with slug "app-print"')
+  })
+
+  it('derives every claimed app-page path from the registry', () => {
+    const prompt = getSystemPrompt()
+    for (const page of publicAppPages) {
+      expect(prompt).toContain(`${page.path} (${page.title})`)
+    }
+    expect(prompt).toContain('untrusted source material')
   })
 
   it('points fetchPage at the path when no content is available', () => {

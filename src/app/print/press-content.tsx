@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
+import { PRINT_EDITION_STATUS_TEXT } from '@/lib/public-pages'
 
 export function PressContent() {
   return (
@@ -27,8 +28,7 @@ export function PressContent() {
                     This experiment has concluded
                   </p>
                   <p className="mt-1 font-serif text-sm text-gray-600 text-pretty leading-relaxed">
-                    The print edition began on 2025-12-10 and is no longer
-                    available to order. The{' '}
+                    {PRINT_EDITION_STATUS_TEXT} The{' '}
                     <Link
                       href="/introducing-the-print-edition"
                       className="underline underline-offset-4 decoration-indigo hover:text-indigo transition-colors duration-300"

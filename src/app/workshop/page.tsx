@@ -4,10 +4,13 @@ import { InfinitePostGrid } from '@/components/posts/infinite-post-grid'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { publicAppPage } from '@/lib/public-pages'
+
+const workshopPage = publicAppPage('/workshop')
 
 export const metadata: Metadata = {
-  title: 'Workshop',
-  description: siteConfig.newsletters.workshop.tagline,
+  title: workshopPage.title,
+  description: workshopPage.description,
   alternates: {
     canonical: '/workshop',
     types: feedDiscovery('workshop'),
