@@ -278,6 +278,13 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
   },
 ]
 
+export const stargazingFavorites = [
+  'Noma',
+  'Quintonil',
+  'Osteria Francescana',
+  'Le Bernardin',
+] as const
+
 export function michelinRecognition(restaurant: StargazingRestaurant): string {
   if (restaurant.stars > 0) {
     const stars = `${restaurant.stars} ${restaurant.stars === 1 ? 'star' : 'stars'}`
@@ -304,23 +311,33 @@ export const stargazingStats = {
 
 export const stargazingSummary = `I have eaten at ${stargazingStats.starredRestaurants} Michelin-starred restaurants, totaling ${stargazingStats.stars} stars. ${stargazingStats.numberOneRestaurants} were ranked No. 1 in the world when I visited.`
 
-export function stargazingPublicText(): string {
-  const rows = stargazingRestaurants.map((restaurant) => {
-    const ranking = restaurant.worldsBest
-      ? `; World's 50 Best at my visit: No. ${restaurant.worldsBest.rank}`
-      : ''
-    return `- ${restaurant.name} | ${restaurant.city} | Michelin: ${michelinRecognition(restaurant)}${ranking}`
-  })
+function stargazingRestaurantRowsText(): string {
+  return stargazingRestaurants
+    .map((restaurant) => {
+      const ranking = restaurant.worldsBest
+        ? `; World's 50 Best at my visit: No. ${restaurant.worldsBest.rank}`
+        : ''
+      return `- ${restaurant.name} | ${restaurant.city} | Michelin: ${michelinRecognition(restaurant)}${ranking}`
+    })
+    .join('\n')
+}
 
+function stargazingFavoritesText(): string {
+  return stargazingFavorites
+    .map((restaurant, index) => `${index + 1}. ${restaurant}`)
+    .join('\n')
+}
+
+export function stargazingPublicText(): string {
   return [
     stargazingSummary,
     'I enjoy fine dining as a lens to explore local culture and craftspeople performing at the highest level.',
     'I count each restaurant once. Michelin stars reflect the Michelin Guide rating at the time I visited, with some grace for nearby promotions and places the Guide reached later. World rankings reflect the World’s 50 Best list at the time I visited.',
     'Restaurants:',
-    ...rows,
+    stargazingRestaurantRowsText(),
   ].join('\n')
 }
 
 export function stargazingPageContent(content: string): string {
-  return `${content}\n\n## Restaurants\n\n${stargazingPublicText()}`
+  return `${content}\n\n${stargazingSummary}\n\n## Restaurants\n\n${stargazingRestaurantRowsText()}\n\n## My personal top list\n\n${stargazingFavoritesText()}`
 }

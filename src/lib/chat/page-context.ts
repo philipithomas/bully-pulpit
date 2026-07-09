@@ -1,7 +1,7 @@
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
 import type { Page, Post } from '@/lib/content/types'
 import { sitePhoneDisplayNumber } from '@/lib/phone/config'
-import { stargazingPublicText } from '@/lib/stargazing/restaurants'
+import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 
 /** Character budget for injected page content. Roughly 1k tokens. */
 export const PAGE_CONTENT_MAX_CHARS = 4000
@@ -40,7 +40,7 @@ export function toPagePlaintext(
 ): string {
   const plain = toPlaintext(item.content)
   if (item.slug === 'stargazing') {
-    return `${plain}\n\n${stargazingPublicText()}`
+    return toPlaintext(stargazingPageContent(item.content))
   }
   if (item.slug !== 'contact') return plain
 

@@ -66,6 +66,11 @@ describe('fetchPost tool outline', () => {
       anchor: 'restaurants',
       url: '/stargazing#restaurants',
     })
+    expect(result.outline).toContainEqual({
+      heading: 'My personal top list',
+      anchor: 'my-personal-top-list',
+      url: '/stargazing#my-personal-top-list',
+    })
   })
 
   it('returns an empty outline for content without headings', async () => {

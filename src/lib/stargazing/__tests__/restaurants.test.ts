@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  stargazingFavorites,
   stargazingPublicText,
   stargazingRestaurants,
   stargazingStats,
@@ -16,6 +17,15 @@ const PUBLIC_KEYS = new Set([
 const WORLD_KEYS = new Set(['rank', 'url', 'numberOneWhileVisited'])
 
 describe('stargazing restaurant data', () => {
+  it('keeps the personal ranking in public data', () => {
+    expect(stargazingFavorites).toEqual([
+      'Noma',
+      'Quintonil',
+      'Osteria Francescana',
+      'Le Bernardin',
+    ])
+  })
+
   it('keeps one public row per restaurant', () => {
     expect(stargazingRestaurants).toHaveLength(54)
     const names = stargazingRestaurants.map((restaurant) =>

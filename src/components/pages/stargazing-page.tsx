@@ -3,6 +3,7 @@ import { StargazingTable } from '@/components/pages/stargazing-table'
 import { JsonLd } from '@/components/seo/json-ld'
 import type { Page } from '@/lib/content/types'
 import {
+  stargazingFavorites,
   stargazingRestaurants,
   stargazingStats,
 } from '@/lib/stargazing/restaurants'
@@ -121,6 +122,28 @@ export function StargazingPage({ page }: { page: Page }) {
         <div id="restaurants" className="mt-14 scroll-mt-14 md:mt-20">
           <StargazingTable restaurants={stargazingRestaurants} />
         </div>
+
+        <section className="mt-16 max-w-3xl md:mt-24">
+          {/* biome-ignore lint/correctness/useUniqueElementIds: stable indexed section anchor */}
+          <h2
+            id="my-personal-top-list"
+            className="scroll-mt-14 font-sans font-semibold text-2xl text-gray-950 tracking-tight"
+          >
+            My personal top list
+          </h2>
+          <ol className="mt-6 grid gap-x-12 gap-y-4 sm:grid-cols-2">
+            {stargazingFavorites.map((restaurant, index) => (
+              <li key={restaurant} className="flex items-baseline gap-3">
+                <span className="font-mono text-brass text-xs">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span className="font-serif text-gray-700 text-lg">
+                  {restaurant}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
       </div>
     </article>
   )
