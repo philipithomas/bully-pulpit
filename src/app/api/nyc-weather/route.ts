@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
-import { fetchNycWeatherSnapshot } from '@/lib/weather/nyc'
+import {
+  fetchNycWeatherSnapshot,
+  WEATHER_REVALIDATE_SECONDS,
+} from '@/lib/weather/nyc'
 
-const WEATHER_CACHE_CONTROL =
-  'public, max-age=60, s-maxage=600, stale-while-revalidate=1800'
+const WEATHER_CACHE_CONTROL = `public, max-age=60, s-maxage=${WEATHER_REVALIDATE_SECONDS}, stale-while-revalidate=1800`
 
 export async function GET() {
   try {

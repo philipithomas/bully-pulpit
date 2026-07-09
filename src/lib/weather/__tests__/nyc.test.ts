@@ -153,6 +153,7 @@ describe('fetchNycWeatherSnapshot', () => {
       1,
       'https://api.weather.gov/points/40.7128,-74.006',
       expect.objectContaining({
+        cache: 'force-cache',
         headers: expect.objectContaining({
           Accept: 'application/geo+json',
           'User-Agent': expect.stringContaining('philipithomas.com'),
@@ -165,6 +166,7 @@ describe('fetchNycWeatherSnapshot', () => {
       2,
       'https://api.weather.gov/gridpoints/OKX/33,42/forecast/hourly?units=si',
       expect.objectContaining({
+        cache: 'force-cache',
         headers: expect.objectContaining({
           Accept: 'application/geo+json',
           'User-Agent': expect.stringContaining('philipithomas.com'),

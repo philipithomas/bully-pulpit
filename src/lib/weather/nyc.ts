@@ -4,6 +4,7 @@ const NYC_TIME_ZONE = 'America/New_York'
 const NWS_API_URL = 'https://api.weather.gov'
 const NWS_USER_AGENT =
   'philipithomas.com (https://www.philipithomas.com/contact)'
+export const WEATHER_REVALIDATE_SECONDS = 10 * 60
 
 export interface NycWeatherSnapshot {
   location: 'NYC'
@@ -151,11 +152,12 @@ export function parseNwsWindSpeedKph(value: unknown): number | null {
 
 async function fetchNwsJson<T>(url: string): Promise<T> {
   const response = await fetch(url, {
+    cache: 'force-cache',
     headers: {
       Accept: 'application/geo+json',
       'User-Agent': NWS_USER_AGENT,
     },
-    next: { revalidate: 600 },
+    next: { revalidate: WEATHER_REVALIDATE_SECONDS },
     signal: AbortSignal.timeout(2_000),
   })
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/weather/nyc', () => ({
   fetchNycWeatherSnapshot: vi.fn(),
+  WEATHER_REVALIDATE_SECONDS: 600,
 }))
 
 import { GET } from '@/app/api/nyc-weather/route'
