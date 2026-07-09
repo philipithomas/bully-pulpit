@@ -367,4 +367,20 @@ describe('buildCorpus', () => {
     expect(contactText).not.toContain('+1 212 347 3190')
     expect(contactText).not.toMatch(/\+\d[\d ]{6,}/)
   })
+
+  it('adds the public Stargazing ledger to page search', () => {
+    const stargazing = buildCorpus().find(
+      (entry) => entry.slug === 'stargazing'
+    )
+    expect(stargazing).toMatchObject({
+      contentType: 'page',
+      title: 'Stargazing',
+      url: '/stargazing',
+      newsletter: 'page',
+    })
+    const text = stargazing?.chunks.map((chunk) => chunk.text).join('\n')
+    expect(text).toContain('Silo | London')
+    expect(text).toContain('Eleven Madison Park')
+    expect(text).toContain('Osteria Francescana')
+  })
 })

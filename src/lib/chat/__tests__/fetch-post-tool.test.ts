@@ -51,6 +51,28 @@ describe('fetchPost tool outline', () => {
     }
   })
 
+  it('returns the same complete Stargazing content that search indexes', async () => {
+    const result = await run('stargazing')
+    expect(result.error).toBeUndefined()
+    expect(result.content).toContain('SingleThread | Healdsburg')
+    expect(result.content).toContain('Takumi Tatsuhiro | Tokyo')
+    expect(result.outline).toContainEqual({
+      heading: 'How I count',
+      anchor: 'how-i-count',
+      url: '/stargazing#how-i-count',
+    })
+    expect(result.outline).toContainEqual({
+      heading: 'Restaurants',
+      anchor: 'restaurants',
+      url: '/stargazing#restaurants',
+    })
+    expect(result.outline).toContainEqual({
+      heading: 'My personal top list',
+      anchor: 'my-personal-top-list',
+      url: '/stargazing#my-personal-top-list',
+    })
+  })
+
   it('returns an empty outline for content without headings', async () => {
     const result = await run('workshop-welcome')
     expect(result.error).toBeUndefined()
