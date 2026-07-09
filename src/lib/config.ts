@@ -3,7 +3,7 @@ import { requireEnv } from '@/lib/env'
 const staticConfig = {
   title: 'Philip I. Thomas',
   description:
-    'Philip Thomas is an engineer based in New York City, working at the intersection of math, software, and business.',
+    'Philip Thomas is an engineer living in New York City, working at the intersection of math, software, and business.',
   author: 'Philip I. Thomas',
   email: 'mail@philipithomas.com',
   image: '/og-image.png',

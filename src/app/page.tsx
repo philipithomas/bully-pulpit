@@ -92,9 +92,9 @@ export default async function HomePage() {
           </h1>
           <div className="font-serif text-lg text-gray-900 leading-relaxed mb-8 lg:mb-12 max-w-prose">
             <p className="mb-4">
-              I&apos;m an engineer based in New York City, working at the
-              intersection of math, software, and business. I am interested in
-              urbanism, coffee, and photography.
+              I&apos;m an engineer living in NYC, working at the intersection of
+              math, software, and business. I am interested in urbanism, coffee,
+              and photography.
             </p>
             <p className="mb-4">
               I don&apos;t use social media, so this website contains my writing
