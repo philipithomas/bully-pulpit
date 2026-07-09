@@ -36,6 +36,7 @@ import {
   zoomImageDataAttrs,
 } from '@/lib/content/zoom-image'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -207,6 +208,8 @@ export default async function SlugPage({ params }: Props) {
 
   // Build-time syntax highlighting; the singleton resolves once per worker.
   const highlighter = await getHighlighter()
+  const smsSignupPhoneNumber = sitePhoneNumber()
+  const smsSignupDisplayNumber = sitePhoneDisplayNumber()
 
   const item = post ?? page!
   const relatedPosts = post ? getRelatedPosts(post.slug) : []
@@ -356,7 +359,13 @@ export default async function SlugPage({ params }: Props) {
         </div>
 
         {/* Subscribe CTA for posts */}
-        {post && <SubscribeCta newsletter={post.newsletter} />}
+        {post && (
+          <SubscribeCta
+            newsletter={post.newsletter}
+            smsSignupDisplayNumber={smsSignupDisplayNumber}
+            smsSignupPhoneNumber={smsSignupPhoneNumber}
+          />
+        )}
 
         {/* Previous and next posts in the same newsletter */}
         {post && <PostNavigation previous={previous} next={next} />}

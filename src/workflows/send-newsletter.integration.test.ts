@@ -74,6 +74,7 @@ import {
   enqueueRecipients,
   sendBatch,
   sendNewsletterWorkflow,
+  sendSmsBatch,
 } from '@/workflows/send-newsletter'
 
 const mockedGetPost = vi.mocked(getPostBySlugWithoutImages)
@@ -184,6 +185,7 @@ function sesError(name: string, message: string) {
 
 beforeEach(async () => {
   await resetDb()
+  process.env.PHONE_NUMBER = '+12123473190'
   process.env.TWILIO_SID = 'AC_test'
   process.env.TWILIO_SECRET = 'token_test'
   vi.stubGlobal(
@@ -204,6 +206,7 @@ beforeEach(async () => {
 })
 
 afterEach(() => {
+  delete process.env.PHONE_NUMBER
   delete process.env.TWILIO_SID
   delete process.env.TWILIO_SECRET
   vi.unstubAllGlobals()
@@ -525,7 +528,7 @@ describe('sendNewsletterWorkflow', () => {
     expect(smsRow.twilioSid).toBe('SM_test')
     expect(smsRow.body).toContain('Contraption: Hello world')
     expect(smsRow.body).toContain(
-      'https://www.philipithomas.com/hello-world?utm_source=sms&utm_medium=sms&utm_campaign=contraption&utm_content=hello-world'
+      'https://www.philipithomas.com/hello-world?utm_source=sms'
     )
     expect(smsRow.body).toContain('Reply STOP to unsubscribe.')
 
@@ -741,6 +744,33 @@ describe('sendNewsletterWorkflow', () => {
     expect(row.sentAt).toBeNull()
     expect(row.sendError).toBe(SMS_SEND_SKIPPED_UNSUBSCRIBED)
     expect(row.nextAttemptAt).toBeNull()
+  })
+
+  it('retries instead of skipping SMS rows that are still reserved', async () => {
+    const subscriber = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+    })
+    const reservedUntil = new Date(Date.now() + 10 * 60 * 1000)
+    const [queued] = await db
+      .insert(smsSends)
+      .values({
+        smsSubscriberId: subscriber.id,
+        postSlug: SLUG,
+        newsletter: 'contraption',
+        body: 'Contraption: Hello world',
+        nextAttemptAt: reservedUntil,
+      })
+      .returning()
+
+    const err = await sendSmsBatch([queued.id]).catch((e) => e)
+
+    expect(err).toBeInstanceOf(RetryableError)
+    expect(err.message).toContain(`SMS send ${queued.id} is reserved`)
+    expect(fetch).not.toHaveBeenCalled()
+    const row = smsRowFor(await allSmsRows(), subscriber.id)
+    expect(row.sentAt).toBeNull()
+    expect(row.sendError).toBeNull()
+    expect(row.nextAttemptAt).toEqual(reservedUntil)
   })
 
   it('preserves skipped opt-out markers when a permanent SMS failure races with STOP', async () => {

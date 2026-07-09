@@ -20,6 +20,9 @@ vi.mock('@/lib/phone/notifications', () => ({
   sendMissedCallNotification: vi.fn(async () => undefined),
   sendIncomingSmsNotification: vi.fn(async () => undefined),
 }))
+vi.mock('@/lib/flags', () => ({
+  smsSignupUi: vi.fn(async () => false),
+}))
 
 // The SMS webhook writes to Postgres, so it is covered by the colocated
 // sms.integration.test.ts instead of this unit file.
@@ -27,6 +30,7 @@ import { start } from 'workflow/api'
 import { POST as recordingCompletePost } from '@/app/api/phone/recording-complete/route'
 import { POST as recordingStatusPost } from '@/app/api/phone/recording-status/route'
 import { POST as voicePost } from '@/app/api/phone/voice/route'
+import { smsSignupUi } from '@/lib/flags'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 
 const SECRET = 'test-webhook-secret'
@@ -44,12 +48,12 @@ function twilioPost(path: string, form: Record<string, string>): Request {
 }
 
 beforeEach(() => {
-  process.env.PHONE_WEBHOOK_SECRET = SECRET
+  process.env.TWILIO_SECRET = SECRET
+  vi.mocked(smsSignupUi).mockResolvedValue(false)
 })
 
 afterEach(() => {
-  delete process.env.PHONE_WEBHOOK_SECRET
-  delete process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED
+  delete process.env.TWILIO_SECRET
   vi.clearAllMocks()
 })
 
@@ -89,7 +93,7 @@ describe('POST /api/phone/voice', () => {
   })
 
   it('offers the SMS signup menu when the flag is enabled', async () => {
-    process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED = 'true'
+    vi.mocked(smsSignupUi).mockResolvedValue(true)
 
     const response = await voicePost(
       twilioPost('/api/phone/voice', {

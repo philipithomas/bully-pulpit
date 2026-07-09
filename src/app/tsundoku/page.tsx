@@ -12,6 +12,7 @@ import {
   zoomImageDataAttrs,
 } from '@/lib/content/zoom-image'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 
 export const metadata: Metadata = {
   title: 'Tsundoku',
@@ -134,8 +135,10 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
   )
 }
 
-export default function TsundokuPage() {
+export default async function TsundokuPage() {
   const posts = getPostsByNewsletter('tsundoku')
+  const smsSignupPhoneNumber = sitePhoneNumber()
+  const smsSignupDisplayNumber = sitePhoneDisplayNumber()
 
   return (
     <div className="bg-[#f4f4f2]" data-bg="tsundoku">
@@ -185,6 +188,8 @@ export default function TsundokuPage() {
             newsletter="tsundoku"
             align="center"
             className="mt-5"
+            smsSignupDisplayNumber={smsSignupDisplayNumber}
+            smsSignupPhoneNumber={smsSignupPhoneNumber}
             subscribeEndpoint="/api/subscribe/tsundoku"
           />
         </div>

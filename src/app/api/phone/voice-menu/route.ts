@@ -5,9 +5,9 @@ import {
   subscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
 import { createTextMessage } from '@/lib/db/queries/text-messages'
-import { isSmsSignupUiEnabled } from '@/lib/feature-flags'
+import { smsSignupUi } from '@/lib/flags'
 import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
-import { isE164, numberLabel } from '@/lib/phone/config'
+import { isE164, numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import { sendSmsSignupNotification } from '@/lib/phone/notifications'
 import { SMS_SUBSCRIBE_CONFIRMATION } from '@/lib/phone/sms-subscription-copy'
 import { sendSms } from '@/lib/phone/twilio'
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   const callSid = form.get('CallSid') ? String(form.get('CallSid')) : ''
   const metadata = twilioWebhookMetadataFromForm(form, from)
 
-  if (isSmsSignupUiEnabled() && digits === '2') {
+  if ((await smsSignupUi()) && digits === '2') {
     if (!isE164(from)) {
       return twimlResponse(
         sayAndHangupTwiml(
@@ -101,18 +101,22 @@ export async function POST(request: Request) {
     }
 
     const existing = await findSmsSubscriberByPhoneNumber(from)
+    const confirmationFrom = sitePhoneNumber()
     await subscribeSmsNumber({
       phoneNumber: from,
       source: `call:${numberLabel(to).toLowerCase()}`,
       processedPhoneWebhookEventId: webhookEvent?.event.id,
     })
     after(async () => {
-      const tasks: Promise<unknown>[] = [
-        sendVoiceSignupConfirmationSms({
-          from: to,
-          to: from,
-        }),
-      ]
+      const tasks: Promise<unknown>[] = []
+      if (confirmationFrom) {
+        tasks.push(
+          sendVoiceSignupConfirmationSms({
+            from: confirmationFrom,
+            to: from,
+          })
+        )
+      }
       if (!existing?.confirmedAt) {
         tasks.push(
           sendSmsSignupNotification({

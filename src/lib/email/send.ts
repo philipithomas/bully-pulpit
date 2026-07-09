@@ -16,8 +16,8 @@ import {
 } from '@/lib/email/templates/new-subscriber'
 import {
   isE164,
-  phoneNumbers,
-  testSmsRecipientPhoneNumber,
+  ownerPhoneNumber,
+  requireSitePhoneNumber,
 } from '@/lib/phone/config'
 import { renderNewsletterSms } from '@/lib/phone/newsletter-sms'
 import { sendSms } from '@/lib/phone/twilio'
@@ -124,16 +124,16 @@ export async function sendNewsletterToOne(input: {
   })
 }
 
-/** Sends a single test SMS copy of a post's newsletter to the private test number. */
+/** Sends a single test SMS copy of a post's newsletter to the owner phone. */
 export async function sendNewsletterSmsToTestRecipient(input: {
   slug: string
 }): Promise<{ sentTo: string }> {
-  const to = testSmsRecipientPhoneNumber()
+  const to = ownerPhoneNumber()
   if (!to) {
-    throw new Error('TEST_SMS_RECIPIENT_PHONE_NUMBER is not configured')
+    throw new Error('OWNER_PHONE_NUMBER is not configured')
   }
   if (!isE164(to)) {
-    throw new Error('TEST_SMS_RECIPIENT_PHONE_NUMBER must be an E.164 number')
+    throw new Error('OWNER_PHONE_NUMBER must be an E.164 number')
   }
 
   const post = getPostBySlug(input.slug)
@@ -143,7 +143,7 @@ export async function sendNewsletterSmsToTestRecipient(input: {
   }
 
   const body = renderNewsletterSms(post)
-  const from = phoneNumbers.NYC
+  const from = requireSitePhoneNumber()
   try {
     const result = await sendSms({ from, to, body })
     await createTextMessage({

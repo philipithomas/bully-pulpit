@@ -2,6 +2,8 @@
 // junk-drawer's TwilioClient.send_sms / create_call; dependency-free (plain
 // fetch with HTTP Basic auth and form-encoded params).
 
+import { twilioSecret } from '@/lib/phone/config'
+
 export type SentSms = {
   sid: string
   status: string
@@ -31,7 +33,7 @@ export function isRetryableTwilioError(error: unknown): boolean {
 
 function twilioCredentials(): { accountSid: string; authToken: string } {
   const accountSid = process.env.TWILIO_SID
-  const authToken = process.env.TWILIO_SECRET
+  const authToken = twilioSecret()
   if (!accountSid || !authToken) {
     throw new Error('Missing TWILIO_SID or TWILIO_SECRET')
   }

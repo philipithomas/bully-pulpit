@@ -12,3 +12,15 @@ export const typeaheadEmbeddingSearch = flag<boolean>({
   description:
     'Enable Gemini query embeddings for the public typeahead search.',
 })
+
+export const smsSignupUi = flag<boolean>({
+  key: 'sms-signup-ui',
+  adapter: vercelAdapter(),
+  defaultValue: false,
+  options: [
+    { value: false, label: 'Hidden' },
+    { value: true, label: 'Visible' },
+  ],
+  description:
+    'Show public SMS signup prompts and the phone menu SMS signup option.',
+})

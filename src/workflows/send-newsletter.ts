@@ -15,6 +15,7 @@ import {
   markSmsPermanentFailure,
   markSmsSent,
   markUnsendableSmsSkippedById,
+  pendingSmsReservationById,
   pendingSmsRowIdsBySlug,
   releaseSmsClaim,
 } from '@/lib/db/queries/sms-sends'
@@ -25,7 +26,7 @@ import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { isPermanentSesError } from '@/lib/email/errors'
 import { sendQueuedEmail } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
-import { phoneNumbers } from '@/lib/phone/config'
+import { requireSitePhoneNumber } from '@/lib/phone/config'
 import { renderNewsletterSms } from '@/lib/phone/newsletter-sms'
 import {
   isRetryableTwilioError,
@@ -44,6 +45,17 @@ function retryableStepError(err: unknown): RetryableError {
   return new RetryableError(err instanceof Error ? err.message : String(err), {
     retryAfter: Math.min(60_000, 2 ** attempt * 1000),
   })
+}
+
+function reservedSmsRetryableError(
+  rowId: number,
+  nextAttemptAt: Date
+): RetryableError {
+  const retryAfter = Math.max(1000, nextAttemptAt.getTime() - Date.now())
+  return new RetryableError(
+    `SMS send ${rowId} is reserved until ${nextAttemptAt.toISOString()}`,
+    { retryAfter }
+  )
 }
 
 function chunk(ids: number[]): number[][] {
@@ -186,6 +198,7 @@ export async function enqueueSmsRecipients(slug: string): Promise<number[][]> {
 
 async function recordSmsTextHistory(
   row: ClaimedSmsSend,
+  fromNumber: string,
   result?: SentSms
 ): Promise<void> {
   const twilioSid = result?.sid ?? row.send.twilioSid
@@ -193,7 +206,7 @@ async function recordSmsTextHistory(
     throw new Error(`SMS send ${row.send.id} has no Twilio sid`)
   }
   await createTextMessage({
-    fromNumber: phoneNumbers.NYC,
+    fromNumber,
     toNumber: row.phoneNumber,
     body: row.send.body,
     direction: 'outbound',
@@ -207,6 +220,7 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
   failed: number
 }> {
   'use step'
+  const fromNumber = requireSitePhoneNumber()
   let sent = 0
   let failed = 0
 
@@ -214,7 +228,7 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
     const recovered = await findSentSmsByIds([rowId])
     if (recovered[0]) {
       try {
-        await recordSmsTextHistory(recovered[0])
+        await recordSmsTextHistory(recovered[0], fromNumber)
         sent++
       } catch (err) {
         throw retryableStepError(err)
@@ -225,7 +239,10 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
 
     const row = await claimSendableSmsById(rowId)
     if (!row) {
-      await markUnsendableSmsSkippedById(rowId)
+      const skipped = await markUnsendableSmsSkippedById(rowId)
+      if (skipped) continue
+      const reservedUntil = await pendingSmsReservationById(rowId)
+      if (reservedUntil) throw reservedSmsRetryableError(rowId, reservedUntil)
       continue
     }
 
@@ -233,7 +250,7 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
     let result: SentSms
     try {
       result = await sendSms({
-        from: phoneNumbers.NYC,
+        from: fromNumber,
         to: phoneNumber,
         body: send.body,
       })
@@ -258,7 +275,7 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
         twilioStatus: result.status,
       })
       if (!markedSent) continue
-      await recordSmsTextHistory(row, result)
+      await recordSmsTextHistory(row, fromNumber, result)
       sent++
     } catch (err) {
       throw retryableStepError(err)

@@ -25,6 +25,9 @@ vi.mock('@/lib/email/ses', () =>
 vi.mock('@/lib/phone/twilio', () => ({
   sendSms: vi.fn(),
 }))
+vi.mock('@/lib/flags', () => ({
+  smsSignupUi: vi.fn(async () => false),
+}))
 
 import { POST as smsPost } from '@/app/api/phone/sms/route'
 import { POST as voiceMenuPost } from '@/app/api/phone/voice-menu/route'
@@ -35,6 +38,7 @@ import {
 import { countEligibleSms } from '@/lib/db/queries/sms-subscribers'
 import { smsSends, smsSubscribers, textMessages } from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
+import { smsSignupUi } from '@/lib/flags'
 import { SMS_SUBSCRIBE_CONFIRMATION } from '@/lib/phone/sms-subscription-copy'
 import { sendSms } from '@/lib/phone/twilio'
 import { db, resetDb } from '@/test/integration/db'
@@ -66,16 +70,18 @@ function voiceMenuRequest(form: Record<string, string>, secret = SECRET) {
 beforeEach(async () => {
   afterTasks.length = 0
   await resetDb()
-  process.env.PHONE_WEBHOOK_SECRET = SECRET
+  process.env.PHONE_NUMBER = '+12123473190'
+  process.env.TWILIO_SECRET = SECRET
   process.env.ADMIN_EMAILS = 'one@example.com, two@example.com'
+  vi.mocked(smsSignupUi).mockResolvedValue(false)
   vi.mocked(sendSms).mockResolvedValue({ sid: 'SM_CONFIRM', status: 'queued' })
 })
 
 afterEach(async () => {
   await flushAfterTasks()
-  delete process.env.PHONE_WEBHOOK_SECRET
+  delete process.env.PHONE_NUMBER
+  delete process.env.TWILIO_SECRET
   delete process.env.ADMIN_EMAILS
-  delete process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED
   vi.clearAllMocks()
 })
 
@@ -115,7 +121,7 @@ describe('POST /api/phone/sms', () => {
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
     const email = vi.mocked(sendSimpleEmail).mock.calls[0][0]
     expect(email.to).toEqual(['one@example.com', 'two@example.com'])
-    expect(email.subject).toBe('SMS from +15551234567 to NYC')
+    expect(email.subject).toBe('SMS from +15551234567 to Phone')
     expect(email.html).toContain('Running late')
   })
 
@@ -177,7 +183,7 @@ describe('POST /api/phone/sms', () => {
       subscribedContraption: true,
       subscribedWorkshop: true,
       subscribedTsundoku: true,
-      source: 'sms:nyc',
+      source: 'sms:phone',
     })
     expect(subscribers[0].confirmedAt).toBeInstanceOf(Date)
     expect(await db.select().from(textMessages)).toHaveLength(1)
@@ -390,7 +396,7 @@ describe('POST /api/phone/sms', () => {
 
 describe('POST /api/phone/voice-menu', () => {
   it('subscribes a caller that presses 2', async () => {
-    process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED = 'true'
+    vi.mocked(smsSignupUi).mockResolvedValue(true)
 
     const response = await voiceMenuPost(
       voiceMenuRequest({
@@ -414,7 +420,7 @@ describe('POST /api/phone/voice-menu', () => {
       subscribedContraption: true,
       subscribedWorkshop: true,
       subscribedTsundoku: true,
-      source: 'call:nyc',
+      source: 'call:phone',
     })
     await flushAfterTasks()
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
@@ -459,7 +465,7 @@ describe('POST /api/phone/voice-menu', () => {
   })
 
   it('ignores duplicate voice-menu CallSid after the caller has opted out', async () => {
-    process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED = 'true'
+    vi.mocked(smsSignupUi).mockResolvedValue(true)
     const voiceForm = {
       From: '+14155551234',
       To: '+12123473190',
@@ -492,7 +498,7 @@ describe('POST /api/phone/voice-menu', () => {
   })
 
   it('still gives spoken STOP instructions when voice confirmation SMS fails', async () => {
-    process.env.NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED = 'true'
+    vi.mocked(smsSignupUi).mockResolvedValue(true)
     vi.mocked(sendSms).mockRejectedValueOnce(new Error('Twilio rejected it'))
 
     const response = await voiceMenuPost(

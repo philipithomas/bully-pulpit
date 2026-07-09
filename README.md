@@ -25,31 +25,29 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Phone and SMS deployment
 
 Inbound Twilio traffic is webhook-based. The app does not poll Twilio for new
-calls or messages. Vercel must expose the production routes below, and each
+calls or messages. Vercel must expose the production routes below, and the
 Twilio number must point to them with HTTP `POST`.
 
 Set these environment variables in Vercel before cutover:
 
 ```bash
-PHONE_WEBHOOK_SECRET=
-NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED=false
+PHONE_NUMBER=
 TWILIO_SID=
 TWILIO_SECRET=
-TEST_SMS_RECIPIENT_PHONE_NUMBER=
 OWNER_PHONE_NUMBER=
 ```
 
-Configure each Twilio number:
+Configure the Twilio number:
 
-- Voice, "A call comes in": `https://www.philipithomas.com/api/phone/voice?secret=$PHONE_WEBHOOK_SECRET`
-- Messaging, "A message comes in": `https://www.philipithomas.com/api/phone/sms?secret=$PHONE_WEBHOOK_SECRET`
+- Voice, "A call comes in": `https://www.philipithomas.com/api/phone/voice?secret=$TWILIO_SECRET`
+- Messaging, "A message comes in": `https://www.philipithomas.com/api/phone/sms?secret=$TWILIO_SECRET`
 
-The public SMS signup affordances are gated by
-`NEXT_PUBLIC_SMS_SIGNUP_UI_ENABLED`: when it is false or unset, web subscribe
-prompts do not show the SMS option and the voice webhook records voicemail
-without offering "press 2" SMS signup. When the flag is true, the voice webhook
-plays the generated greeting, then offers "press 1" for voicemail and "press 2"
-to subscribe the caller ID to SMS updates. No input falls through to voicemail.
+The public SMS signup affordances are gated by the Vercel
+`sms-signup-ui` feature flag: when it is off, web subscribe prompts do not show
+the SMS option and the voice webhook records voicemail without offering
+"press 2" SMS signup. When the flag is on, the voice webhook plays the
+generated greeting, then offers "press 1" for voicemail and "press 2" to
+subscribe the caller ID to SMS updates. No input falls through to voicemail.
 The SMS webhook stores inbound replies, handles `SUBSCRIBE` and `STOP`, and
 emails admins about normal replies.
 `SUBSCRIBE` replies with a written confirmation that includes the STOP
@@ -69,13 +67,14 @@ opts out.
 
 Newsletter SMS delivery runs inside the same Vercel Workflow as email delivery:
 the admin send page enqueues `sms_sends` rows after the email pass, sends them
-through Twilio's REST API from the NYC number, and records outbound texts in the
+through Twilio's REST API from `PHONE_NUMBER`, and records outbound texts in the
 Phone panel. SMS subscribers are separate from email subscribers and are opted
 into every newsletter as one list.
 
-`TEST_SMS_RECIPIENT_PHONE_NUMBER` is the private E.164 recipient for the admin
-"Send test text to me" button. It is separate from `OWNER_PHONE_NUMBER` so test
-newsletter texts do not require committing a personal number.
+`PHONE_NUMBER` is the public E.164 Twilio number for the active environment. It
+appears on subscribe and contact surfaces, and is the caller ID for click-to-call.
+`OWNER_PHONE_NUMBER` is the private E.164 number that click-to-call rings first.
+The admin "Send test text to me" button also sends test newsletter texts there.
 
 After deploy, verify:
 
@@ -84,7 +83,7 @@ WORKFLOW_SMOKE_BASE_URL=https://www.philipithomas.com CRON_SECRET=$CRON_SECRET p
 ```
 
 Then confirm the production flag is still off before launch. With the flag on in
-preview, send `SUBSCRIBE` and `STOP` to the 212 number, call it and press both
+preview, send `SUBSCRIBE` and `STOP` to `PHONE_NUMBER`, call it and press both
 menu options, and confirm `/printing-press/phone` shows the inbound and outbound
 thread history.
 

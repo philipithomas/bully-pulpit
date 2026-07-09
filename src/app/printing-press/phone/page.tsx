@@ -2,11 +2,14 @@ import { PhoneClient } from '@/app/printing-press/phone/phone-client'
 import { PageHeader } from '@/components/printing-press/page-header'
 import { requireAdmin } from '@/lib/auth/admin'
 import { listConversations } from '@/lib/db/queries/text-messages'
+import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 import { serializeMessage } from '@/lib/phone/serialize'
 
 export default async function PhonePage() {
   await requireAdmin()
   const conversations = await listConversations()
+  const phoneNumber = sitePhoneNumber()
+  const phoneDisplayNumber = sitePhoneDisplayNumber()
 
   return (
     <div>
@@ -19,6 +22,8 @@ export default async function PhonePage() {
           number: c.number,
           lastMessage: serializeMessage(c.lastMessage),
         }))}
+        phoneDisplayNumber={phoneDisplayNumber}
+        phoneNumber={phoneNumber}
       />
     </div>
   )

@@ -34,6 +34,7 @@ vi.mock('@/lib/db/queries/sms-sends', () => ({
   markSmsSent: vi.fn(),
   markUnsendableSmsSkippedById: vi.fn(),
   pendingSmsRowIdsBySlug: vi.fn(),
+  pendingSmsReservationById: vi.fn(),
   releaseSmsClaim: vi.fn(),
 }))
 
@@ -157,7 +158,7 @@ function claimedSms(id: number, phoneNumber = `+1555123000${id}`) {
       smsSubscriberId: id,
       postSlug: 'hello-world',
       newsletter: 'contraption',
-      body: 'Contraption: Hello world\nhttps://www.philipithomas.com/hello-world?utm_source=sms&utm_medium=sms&utm_campaign=contraption&utm_content=hello-world\n\nReply STOP to unsubscribe.',
+      body: 'Contraption: Hello world\nhttps://www.philipithomas.com/hello-world?utm_source=sms\n\nReply STOP to unsubscribe.',
       twilioSid: null,
       twilioStatus: null,
       sendError: null,
@@ -172,6 +173,7 @@ function claimedSms(id: number, phoneNumber = `+1555123000${id}`) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  process.env.PHONE_NUMBER = '+12123473190'
   // Fake timers absorb the per-send pacing sleep so tests stay instant.
   vi.useFakeTimers()
   mockedGetPost.mockReturnValue(POST)
@@ -190,7 +192,8 @@ beforeEach(() => {
   mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([])
   mockedSmsSends.markSmsSent.mockResolvedValue(true)
   mockedSmsSends.markSmsPermanentFailure.mockResolvedValue(true)
-  mockedSmsSends.markUnsendableSmsSkippedById.mockResolvedValue(undefined)
+  mockedSmsSends.markUnsendableSmsSkippedById.mockResolvedValue(false)
+  mockedSmsSends.pendingSmsReservationById.mockResolvedValue(null)
   mockedSmsSends.releaseSmsClaim.mockResolvedValue(undefined)
   mockedSmsSends.claimSendableSmsById.mockImplementation(async (id) =>
     claimedSms(id)
@@ -201,6 +204,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  delete process.env.PHONE_NUMBER
   vi.useRealTimers()
 })
 
@@ -482,6 +486,27 @@ describe('sendNewsletterWorkflow', () => {
     expect(mockedSendSms).toHaveBeenCalledTimes(1)
     expect(mockedCreateTextMessage).not.toHaveBeenCalled()
     expect(mockedSmsSends.markSmsPermanentFailure).not.toHaveBeenCalled()
+  })
+
+  it('retries when an SMS row is still reserved by a live claim', async () => {
+    const now = new Date('2026-06-09T12:00:00Z')
+    const reservedUntil = new Date('2026-06-09T12:10:00Z')
+    vi.setSystemTime(now)
+    mockedEligible.mockResolvedValue([])
+    mockedSends.pendingRowIdsBySlug.mockResolvedValue([])
+    mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([701])
+    mockedSmsSends.claimSendableSmsById.mockResolvedValue(null)
+    mockedSmsSends.markUnsendableSmsSkippedById.mockResolvedValue(false)
+    mockedSmsSends.pendingSmsReservationById.mockResolvedValue(reservedUntil)
+
+    const err = await sendNewsletterWorkflow('hello-world').catch((e) => e)
+
+    expect(err).toBeInstanceOf(RetryableError)
+    expect(err.message).toContain('SMS send 701 is reserved')
+    expect(err.retryAfter).toEqual(reservedUntil)
+    expect(mockedSendSms).not.toHaveBeenCalled()
+    expect(mockedSmsSends.markSmsPermanentFailure).not.toHaveBeenCalled()
+    expect(mockedSmsSends.markSmsSent).not.toHaveBeenCalled()
   })
 
   it('records history for an already-accepted SMS row without sending it again', async () => {

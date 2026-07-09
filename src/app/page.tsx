@@ -8,6 +8,7 @@ import { siteConfig } from '@/lib/config'
 import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
 import { countActive } from '@/lib/db/queries/subscribers'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 
 // Auth redirects land on /?signed-in=1 and /?error=invalid-token; the
 // canonical collapses those variants.
@@ -46,6 +47,8 @@ export default async function HomePage() {
     fetchPriority: 'high',
   })
   const subscriberCount = await buildTimeSubscriberCount()
+  const smsSignupPhoneNumber = sitePhoneNumber()
+  const smsSignupDisplayNumber = sitePhoneDisplayNumber()
   const { props: mobilePortrait } = getImageProps({
     alt: 'Philip I. Thomas',
     src: '/images/philip-horizontal.jpg',
@@ -152,6 +155,8 @@ export default async function HomePage() {
           <InlineSignupForm
             hideWhenLoggedIn
             initialSubscriberCount={subscriberCount}
+            smsSignupDisplayNumber={smsSignupDisplayNumber}
+            smsSignupPhoneNumber={smsSignupPhoneNumber}
           />
 
           {/* Newsletter directory */}

@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
-import { isE164, phoneNumbers } from '@/lib/phone/config'
+import { isE164 } from '@/lib/phone/config'
 import type { SerializedMessage } from '@/lib/phone/serialize'
 import { cn } from '@/lib/utils'
 
@@ -21,9 +21,6 @@ type Conversation = {
   number: string
   lastMessage: SerializedMessage
 }
-
-// The 212 NYC line is the primary number; list it first.
-const FROM_OPTIONS = Object.entries(phoneNumbers) // [label, number]
 
 function timestampLabel(iso: string): string {
   return `${iso.slice(0, 16).replace('T', ' ')} UTC`
@@ -33,8 +30,12 @@ type Tab = 'messages' | 'call'
 
 export function PhoneClient({
   initialConversations,
+  phoneNumber,
+  phoneDisplayNumber,
 }: {
   initialConversations: Conversation[]
+  phoneNumber: string | null
+  phoneDisplayNumber: string | null
 }) {
   const [tab, setTab] = useState<Tab>('messages')
 
@@ -68,9 +69,16 @@ export function PhoneClient({
       </div>
 
       {tab === 'messages' ? (
-        <Messages initialConversations={initialConversations} />
+        <Messages
+          initialConversations={initialConversations}
+          phoneDisplayNumber={phoneDisplayNumber}
+          phoneNumber={phoneNumber}
+        />
       ) : (
-        <ConnectCall />
+        <ConnectCall
+          phoneDisplayNumber={phoneDisplayNumber}
+          phoneNumber={phoneNumber}
+        />
       )}
     </div>
   )
@@ -78,8 +86,12 @@ export function PhoneClient({
 
 function Messages({
   initialConversations,
+  phoneNumber,
+  phoneDisplayNumber,
 }: {
   initialConversations: Conversation[]
+  phoneNumber: string | null
+  phoneDisplayNumber: string | null
 }) {
   const [conversations, setConversations] = useState(initialConversations)
   const [selected, setSelected] = useState<string | null>(null)
@@ -87,10 +99,10 @@ function Messages({
   const [newTo, setNewTo] = useState('')
   const [messages, setMessages] = useState<SerializedMessage[]>([])
   const [loadingThread, setLoadingThread] = useState(false)
-  const [from, setFrom] = useState(FROM_OPTIONS[0][1])
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const threadEnd = useRef<HTMLDivElement>(null)
+  const displayNumber = phoneDisplayNumber ?? phoneNumber
 
   const loadThread = useCallback(async (number: string) => {
     setLoadingThread(true)
@@ -135,7 +147,7 @@ function Messages({
       const res = await fetch('/api/printing-press/phone/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to, body: text }),
+        body: JSON.stringify({ to, body: text }),
       })
       const data = await res.json().catch(() => null)
       if (data?.message) {
@@ -164,7 +176,7 @@ function Messages({
     } finally {
       setSending(false)
     }
-  }, [body, composingNew, from, newTo, selected])
+  }, [body, composingNew, newTo, selected])
 
   const threadOpen = selected !== null || composingNew
 
@@ -330,18 +342,11 @@ function Messages({
                 void send()
               }}
             >
-              <select
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                aria-label="Send from number"
-                className="h-9 border border-gray-200 bg-white px-2 text-gray-700 text-sm"
-              >
-                {FROM_OPTIONS.map(([label, number]) => (
-                  <option key={number} value={number}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              {displayNumber ? (
+                <span className="hidden h-9 shrink-0 items-center border border-gray-200 bg-gray-050 px-2 text-gray-600 text-xs sm:flex">
+                  {displayNumber}
+                </span>
+              ) : null}
               <textarea
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
@@ -354,7 +359,10 @@ function Messages({
                 type="submit"
                 size="sm"
                 disabled={
-                  sending || !body.trim() || (composingNew && !newTo.trim())
+                  sending ||
+                  !phoneNumber ||
+                  !body.trim() ||
+                  (composingNew && !newTo.trim())
                 }
               >
                 {sending ? <Spinner className="h-4 w-4" /> : 'Send'}
@@ -373,13 +381,18 @@ function Messages({
   )
 }
 
-function ConnectCall() {
-  const callerIdId = useId()
+function ConnectCall({
+  phoneNumber,
+  phoneDisplayNumber,
+}: {
+  phoneNumber: string | null
+  phoneDisplayNumber: string | null
+}) {
   const targetId = useId()
-  const [callerId, setCallerId] = useState(FROM_OPTIONS[0][1])
   const [target, setTarget] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [placing, setPlacing] = useState(false)
+  const displayNumber = phoneDisplayNumber ?? phoneNumber
 
   const trimmed = target.trim()
   const validTarget = isE164(trimmed)
@@ -390,7 +403,7 @@ function ConnectCall() {
       const res = await fetch('/api/printing-press/phone/call', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target: trimmed, callerId }),
+        body: JSON.stringify({ target: trimmed }),
       })
       const data = await res.json().catch(() => null)
       if (res.ok) {
@@ -405,42 +418,25 @@ function ConnectCall() {
     } finally {
       setPlacing(false)
     }
-  }, [callerId, trimmed])
+  }, [trimmed])
 
   return (
     <div className="max-w-md border border-gray-200 bg-white p-4">
       <p className="text-gray-600 text-sm">
         Your phone rings first. When you pick up, Twilio dials the destination
-        and bridges the two of you, presenting the selected Twilio number as
+        and bridges the two of you, presenting the configured Twilio number as
         caller id.
       </p>
       <form
         className="mt-4 space-y-4"
         onSubmit={(e) => {
           e.preventDefault()
-          if (validTarget) setConfirming(true)
+          if (validTarget && phoneNumber) setConfirming(true)
         }}
       >
-        <div className="space-y-1">
-          <label
-            htmlFor={callerIdId}
-            className="block font-medium text-gray-700 text-sm"
-          >
-            Caller id
-          </label>
-          <select
-            id={callerIdId}
-            value={callerId}
-            onChange={(e) => setCallerId(e.target.value)}
-            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900 text-sm"
-          >
-            {FROM_OPTIONS.map(([label, number]) => (
-              <option key={number} value={number}>
-                {label} ({number})
-              </option>
-            ))}
-          </select>
-        </div>
+        {displayNumber ? (
+          <p className="text-gray-500 text-sm">Caller id: {displayNumber}</p>
+        ) : null}
         <div className="space-y-1">
           <label
             htmlFor={targetId}
@@ -462,7 +458,7 @@ function ConnectCall() {
             </p>
           )}
         </div>
-        <Button type="submit" disabled={!validTarget}>
+        <Button type="submit" disabled={!validTarget || !phoneNumber}>
           <Phone className="h-4 w-4" />
           Connect a call
         </Button>
@@ -478,7 +474,7 @@ function ConnectCall() {
             <DialogDescription>
               This calls your phone immediately. When you answer, it dials{' '}
               <span className="font-medium text-gray-700">{trimmed}</span> and
-              connects you, showing {callerId} as the caller id.
+              connects you, showing {displayNumber} as the caller id.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 flex justify-end gap-3">

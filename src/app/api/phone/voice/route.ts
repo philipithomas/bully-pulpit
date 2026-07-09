@@ -1,8 +1,8 @@
 import { after, NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
-import { isSmsSignupUiEnabled } from '@/lib/feature-flags'
+import { smsSignupUi } from '@/lib/flags'
 import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
-import { phoneWebhookSecret } from '@/lib/phone/config'
+import { twilioSecret } from '@/lib/phone/config'
 import { generateGreeting } from '@/lib/phone/greeting'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 import {
@@ -40,11 +40,11 @@ export async function POST(request: Request) {
     }
   })
 
-  const secret = phoneWebhookSecret() ?? ''
+  const secret = twilioSecret() ?? ''
   const menuParams = new URLSearchParams({ secret })
   const callbackUrls = voicemailCallbackUrls({ from, to })
 
-  if (!isSmsSignupUiEnabled()) {
+  if (!(await smsSignupUi())) {
     return twimlResponse(voicemailTwiml({ greeting, ...callbackUrls }))
   }
 

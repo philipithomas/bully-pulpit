@@ -13,9 +13,6 @@ function trimForSms(value: string, maxLength: number): string {
 function postUrl(post: Post): string {
   const url = new URL(`/${post.slug}`, siteConfig.url)
   url.searchParams.set('utm_source', 'sms')
-  url.searchParams.set('utm_medium', 'sms')
-  url.searchParams.set('utm_campaign', post.newsletter)
-  url.searchParams.set('utm_content', post.slug)
   return url.toString()
 }
 

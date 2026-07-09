@@ -1,4 +1,14 @@
-import { and, eq, inArray, isNotNull, isNull, lte, ne, sql } from 'drizzle-orm'
+import {
+  and,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  sql,
+} from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { type SmsSend, smsSends, smsSubscribers } from '@/lib/db/schema'
 
@@ -88,8 +98,10 @@ export async function releaseSmsClaim(id: number): Promise<void> {
     )
 }
 
-export async function markUnsendableSmsSkippedById(id: number): Promise<void> {
-  await getDb()
+export async function markUnsendableSmsSkippedById(
+  id: number
+): Promise<boolean> {
+  const rows = await getDb()
     .update(smsSends)
     .set({
       sendError: SMS_SEND_SKIPPED_UNSUBSCRIBED,
@@ -105,6 +117,28 @@ export async function markUnsendableSmsSkippedById(id: number): Promise<void> {
         isNull(smsSubscribers.confirmedAt)
       )
     )
+    .returning({ id: smsSends.id })
+  return rows.length > 0
+}
+
+export async function pendingSmsReservationById(
+  id: number
+): Promise<Date | null> {
+  const rows = await getDb()
+    .select({ nextAttemptAt: smsSends.nextAttemptAt })
+    .from(smsSends)
+    .innerJoin(smsSubscribers, eq(smsSends.smsSubscriberId, smsSubscribers.id))
+    .where(
+      and(
+        eq(smsSends.id, id),
+        isNull(smsSends.sentAt),
+        isNull(smsSends.sendError),
+        isNotNull(smsSends.nextAttemptAt),
+        gt(smsSends.nextAttemptAt, sql`NOW()`),
+        isNotNull(smsSubscribers.confirmedAt)
+      )
+    )
+  return rows[0]?.nextAttemptAt ?? null
 }
 
 export async function findSendableSmsByIds(

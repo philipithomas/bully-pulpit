@@ -1,6 +1,11 @@
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { emailSends, logins, subscribers } from '@/lib/db/schema'
+import {
+  emailSends,
+  logins,
+  smsSubscribers,
+  subscribers,
+} from '@/lib/db/schema'
 
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 
@@ -115,6 +120,30 @@ describe('subscriberStats / countActive', () => {
       tsundoku: 1,
     })
     // active = confirmed AND at least one newsletter
+    expect(await countActive()).toBe(2)
+  })
+
+  it('includes active SMS subscribers in the public count', async () => {
+    const confirmedAt = new Date()
+    await seed({ confirmedAt })
+    await db.insert(smsSubscribers).values([
+      {
+        phoneNumber: '+15551230001',
+        confirmedAt,
+      },
+      {
+        phoneNumber: '+15551230002',
+      },
+      {
+        phoneNumber: '+15551230003',
+        confirmedAt,
+        subscribedPostcard: false,
+        subscribedContraption: false,
+        subscribedWorkshop: false,
+        subscribedTsundoku: false,
+      },
+    ])
+
     expect(await countActive()).toBe(2)
   })
 

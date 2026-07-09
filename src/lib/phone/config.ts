@@ -1,30 +1,55 @@
 import { siteConfig } from '@/lib/config'
-import { smsSubscribeNumber } from '@/lib/phone/sms-subscribe'
 
-// Phone backend configuration. Ported from junk-drawer's TwilioClient: the
-// Twilio numbers stay in code (they are stable, public numbers), while the
-// webhook secret comes from the environment. Phone notifications go to the
-// ADMIN_EMAILS allowlist.
+// Phone backend configuration. Phone notifications go to the ADMIN_EMAILS
+// allowlist. The public Twilio number is environment-specific because each
+// Vercel environment has a single active phone line.
 
-/** Twilio numbers owned by the Contraption Company, keyed by label. */
-export const phoneNumbers: Record<string, string> = {
-  NYC: smsSubscribeNumber,
-  SF: '+14159157592',
+function configuredSitePhoneNumber(): string | null {
+  return process.env.PHONE_NUMBER?.trim() || null
 }
 
-/** Human label for a Twilio number ("NYC", "SF") or the raw number. */
+/** Public Twilio number for this environment, or null when absent/invalid. */
+export function sitePhoneNumber(): string | null {
+  const number = configuredSitePhoneNumber()
+  return number && isE164(number) ? number : null
+}
+
+/** Public Twilio number for this environment. Throws on missing config. */
+export function requireSitePhoneNumber(): string {
+  const number = configuredSitePhoneNumber()
+  if (!number) {
+    throw new Error('PHONE_NUMBER is not configured')
+  }
+  if (!isE164(number)) {
+    throw new Error('PHONE_NUMBER must be an E.164 number')
+  }
+  return number
+}
+
+/** Formats NANP E.164 numbers for display while leaving other regions intact. */
+export function formatPhoneNumberForDisplay(number: string): string {
+  const nanp = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(number)
+  return nanp ? `+1 ${nanp[1]} ${nanp[2]} ${nanp[3]}` : number
+}
+
+/** Display label for the public Twilio number, or null when not configured. */
+export function sitePhoneDisplayNumber(): string | null {
+  const number = sitePhoneNumber()
+  return number ? formatPhoneNumberForDisplay(number) : null
+}
+
+/** Human label for the configured Twilio number or the raw number. */
 export function numberLabel(number: string | null | undefined): string {
   if (!number) return 'Unknown'
-  const entry = Object.entries(phoneNumbers).find(([, n]) => n === number)
-  return entry ? entry[0] : number
+  return number === sitePhoneNumber() ? 'Phone' : number
 }
 
 /**
- * Shared secret that Twilio includes in every webhook URL (`?secret=`).
+ * Twilio auth token. Also used as the shared `?secret=` value on webhook URLs.
  * Returns null when unset so callers fail closed.
  */
-export function phoneWebhookSecret(): string | null {
-  return process.env.PHONE_WEBHOOK_SECRET || null
+export function twilioSecret(): string | null {
+  return process.env.TWILIO_SECRET || null
 }
 
 /**
@@ -40,28 +65,11 @@ export function phoneNotificationRecipients(): string[] {
 }
 
 /**
- * True when `number` is one of the owned Twilio numbers. Used to allowlist a
- * caller_id (you can only originate outbound calls or texts as a number you
- * own) and to identify the Twilio side of a conversation.
- */
-export function isOwnedTwilioNumber(number: string): boolean {
-  return Object.values(phoneNumbers).includes(number)
-}
-
-/**
  * Owner's personal phone (the cell that rings first on a click-to-call
  * bridge). Returns null when unset so the click-to-call route fails closed.
  */
 export function ownerPhoneNumber(): string | null {
   return process.env.OWNER_PHONE_NUMBER || null
-}
-
-/**
- * Private test recipient for the newsletter "send test text to me" action.
- * Kept out of source control because it is a personal phone number.
- */
-export function testSmsRecipientPhoneNumber(): string | null {
-  return process.env.TEST_SMS_RECIPIENT_PHONE_NUMBER || null
 }
 
 /** Validates a string as an E.164 phone number ("+" then 7–15 digits). */

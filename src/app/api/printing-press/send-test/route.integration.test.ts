@@ -69,7 +69,8 @@ beforeEach(async () => {
   await resetDb()
   clearSessionStore()
   process.env.ADMIN_EMAILS = 'admin@example.com'
-  delete process.env.TEST_SMS_RECIPIENT_PHONE_NUMBER
+  process.env.PHONE_NUMBER = NYC
+  delete process.env.OWNER_PHONE_NUMBER
   vi.mocked(getPostBySlug).mockReset().mockReturnValue(POST_DATA)
   vi.mocked(buildEmailBodyHtml).mockReset().mockResolvedValue(EMAIL_BODY)
   vi.mocked(sendNewsletterEmail).mockReset().mockResolvedValue(undefined)
@@ -80,7 +81,8 @@ beforeEach(async () => {
 })
 
 afterEach(() => {
-  delete process.env.TEST_SMS_RECIPIENT_PHONE_NUMBER
+  delete process.env.PHONE_NUMBER
+  delete process.env.OWNER_PHONE_NUMBER
   vi.clearAllMocks()
 })
 
@@ -116,9 +118,9 @@ describe('POST /api/printing-press/send-test', () => {
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
   })
 
-  it('sends a test text to the configured private recipient', async () => {
+  it('sends a test text to the configured owner phone', async () => {
     await signInAs('admin@example.com')
-    process.env.TEST_SMS_RECIPIENT_PHONE_NUMBER = TEST_PHONE
+    process.env.OWNER_PHONE_NUMBER = TEST_PHONE
 
     const response = await POST(request({ slug: SLUG, channel: 'sms' }))
 
@@ -135,9 +137,9 @@ describe('POST /api/printing-press/send-test', () => {
     })
     const smsBody = vi.mocked(sendSms).mock.calls[0][0].body
     expect(smsBody).toContain('utm_source=sms')
-    expect(smsBody).toContain('utm_medium=sms')
-    expect(smsBody).toContain('utm_campaign=contraption')
-    expect(smsBody).toContain('utm_content=hello-world')
+    expect(smsBody).not.toContain('utm_medium=')
+    expect(smsBody).not.toContain('utm_campaign=')
+    expect(smsBody).not.toContain('utm_content=')
     expect(smsBody).toContain('Reply STOP to unsubscribe')
 
     const rows = await db.select().from(textMessages)
@@ -162,7 +164,7 @@ describe('POST /api/printing-press/send-test', () => {
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
   })
 
-  it('reports when the private test SMS recipient is missing', async () => {
+  it('reports when the owner phone is missing', async () => {
     await signInAs('admin@example.com')
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -170,7 +172,7 @@ describe('POST /api/printing-press/send-test', () => {
 
     expect(response.status).toBe(500)
     await expect(response.json()).resolves.toEqual({
-      error: 'TEST_SMS_RECIPIENT_PHONE_NUMBER is not configured',
+      error: 'OWNER_PHONE_NUMBER is not configured',
     })
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
     expect(await db.select().from(textMessages)).toHaveLength(0)

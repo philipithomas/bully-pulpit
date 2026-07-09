@@ -3,9 +3,9 @@ import { guardAdmin } from '@/lib/auth/admin'
 import { siteConfig } from '@/lib/config'
 import {
   isE164,
-  isOwnedTwilioNumber,
   ownerPhoneNumber,
-  phoneWebhookSecret,
+  requireSitePhoneNumber,
+  twilioSecret,
 } from '@/lib/phone/config'
 import { createCall } from '@/lib/phone/twilio'
 
@@ -13,14 +13,13 @@ import { createCall } from '@/lib/phone/twilio'
  * Click-to-call trigger. Admin-only. Rings the owner's phone first (so the
  * owner is never connected to a line they did not initiate), then on answer
  * Twilio fetches the secret-validated /api/phone/connect callback, which
- * <Dial>s the destination presenting one of the owned Twilio numbers as
- * caller id.
+ * <Dial>s the destination presenting the configured Twilio number as caller id.
  *
  * Hardening: admin-guarded; the destination is E.164-validated and the
- * caller_id is allowlisted to owned Twilio numbers; the callback URL carries
- * the shared webhook secret (validated on the callback) and the values are
- * re-validated and XML-escaped there. The owner number is required (fail
- * closed) so a misconfigured deploy cannot dial an unintended phone.
+ * caller_id comes from server config; the callback URL carries the shared
+ * webhook secret (validated on the callback), and the values are re-validated
+ * and XML-escaped there. The owner number is required (fail closed) so a
+ * misconfigured deploy cannot dial an unintended phone.
  */
 export async function POST(request: Request) {
   const session = await guardAdmin()
@@ -30,10 +29,8 @@ export async function POST(request: Request) {
 
   const payload = (await request.json().catch(() => null)) as {
     target?: string
-    callerId?: string
   } | null
   const target = payload?.target?.trim()
-  const callerId = payload?.callerId?.trim()
 
   if (!target || !isE164(target)) {
     return NextResponse.json(
@@ -41,13 +38,6 @@ export async function POST(request: Request) {
       { status: 400 }
     )
   }
-  if (!callerId || !isOwnedTwilioNumber(callerId)) {
-    return NextResponse.json(
-      { error: 'callerId must be one of the Twilio numbers' },
-      { status: 400 }
-    )
-  }
-
   const owner = ownerPhoneNumber()
   if (!owner || !isE164(owner)) {
     return NextResponse.json(
@@ -56,15 +46,25 @@ export async function POST(request: Request) {
     )
   }
 
-  const secret = phoneWebhookSecret()
-  if (!secret) {
+  let callerId: string
+  try {
+    callerId = requireSitePhoneNumber()
+  } catch (err) {
     return NextResponse.json(
-      { error: 'PHONE_WEBHOOK_SECRET is not configured' },
+      { error: err instanceof Error ? err.message : String(err) },
       { status: 500 }
     )
   }
 
-  const callbackParams = new URLSearchParams({ secret, target, callerId })
+  const secret = twilioSecret()
+  if (!secret) {
+    return NextResponse.json(
+      { error: 'TWILIO_SECRET is not configured' },
+      { status: 500 }
+    )
+  }
+
+  const callbackParams = new URLSearchParams({ secret, target })
   const twimlUrl = `${siteConfig.url}/api/phone/connect?${callbackParams}`
 
   try {

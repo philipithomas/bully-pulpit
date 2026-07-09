@@ -1,11 +1,11 @@
 import { siteConfig } from '@/lib/config'
-import { phoneWebhookSecret } from '@/lib/phone/config'
+import { twilioSecret } from '@/lib/phone/config'
 
 export function voicemailCallbackUrls(input: { from: string; to: string }): {
   recordingStatusUrl: string
   recordingCompleteUrl: string
 } {
-  const secret = phoneWebhookSecret() ?? ''
+  const secret = twilioSecret() ?? ''
   const statusParams = new URLSearchParams({
     secret,
     caller: input.from,

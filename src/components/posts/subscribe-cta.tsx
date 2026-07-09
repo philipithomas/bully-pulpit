@@ -24,11 +24,17 @@ export function SubscribeCta({
   className = 'mt-16',
   align = 'start',
   subscribeEndpoint,
+  smsSignupEnabled,
+  smsSignupPhoneNumber = null,
+  smsSignupDisplayNumber = null,
 }: {
   newsletter: Newsletter
   className?: string
   align?: 'start' | 'center'
   subscribeEndpoint?: string
+  smsSignupEnabled?: boolean
+  smsSignupPhoneNumber?: string | null
+  smsSignupDisplayNumber?: string | null
 }) {
   const { user, preferences, setPreferences, hasSession, loading } =
     useAuthContext()
@@ -92,7 +98,12 @@ export function SubscribeCta({
               )}
             </span>
           </button>
-          <SmsSubscribePrompt align={align} />
+          <SmsSubscribePrompt
+            align={align}
+            enabled={smsSignupEnabled}
+            phoneDisplayNumber={smsSignupDisplayNumber}
+            phoneNumber={smsSignupPhoneNumber}
+          />
         </>
       ) : (
         <InlineSignupForm
@@ -100,6 +111,9 @@ export function SubscribeCta({
           buttonClassName={buttonClassName}
           confirmedMessage={`You are subscribed to new ${newsletterNoun[newsletter]} by email.`}
           newsletters={[newsletter]}
+          smsSignupDisplayNumber={smsSignupDisplayNumber}
+          smsSignupEnabled={smsSignupEnabled}
+          smsSignupPhoneNumber={smsSignupPhoneNumber}
           subscribeEndpoint={subscribeEndpoint}
         />
       )}
