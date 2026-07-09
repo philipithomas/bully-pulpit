@@ -1,4 +1,5 @@
-import { and, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
+import { and, desc, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { SMS_SEND_SKIPPED_UNSUBSCRIBED } from '@/lib/db/queries/sms-sends'
 import type { NewsletterSlug } from '@/lib/db/queries/subscribers'
@@ -10,6 +11,13 @@ const newsletterColumns = {
   workshop: smsSubscribers.subscribedWorkshop,
   tsundoku: smsSubscribers.subscribedTsundoku,
 } as const
+
+const BELL_CONTACT_CARD_CLAIM_MS = 2 * 60 * 1000
+
+export type BellContactCardClaim = {
+  id: string
+  processingAt: Date
+}
 
 export async function subscribeSmsNumber(input: {
   phoneNumber: string
@@ -98,6 +106,132 @@ export async function findSmsSubscriberByPhoneNumber(
   return rows[0] ?? null
 }
 
+/**
+ * Atomically claims the Bell contact-card send for one active subscription.
+ * A stale lease can be reclaimed after a crashed invocation.
+ */
+export async function claimBellContactCard(
+  phoneNumber: string
+): Promise<BellContactCardClaim | null> {
+  const staleBefore = new Date(Date.now() - BELL_CONTACT_CARD_CLAIM_MS)
+  const claim = { id: randomUUID(), processingAt: new Date() }
+  const rows = await getDb()
+    .update(smsSubscribers)
+    .set({
+      bellContactCardClaimId: claim.id,
+      bellContactCardProcessingAt: claim.processingAt,
+    })
+    .where(
+      and(
+        eq(smsSubscribers.phoneNumber, phoneNumber),
+        isNotNull(smsSubscribers.confirmedAt),
+        isNull(smsSubscribers.bellContactCardSentAt),
+        or(
+          isNull(smsSubscribers.bellContactCardProcessingAt),
+          lt(smsSubscribers.bellContactCardProcessingAt, staleBefore)
+        )
+      )
+    )
+    .returning({ id: smsSubscribers.id })
+  return rows.length > 0 ? claim : null
+}
+
+/** Revalidates ownership immediately before the provider request. */
+export async function refreshBellContactCardClaim(
+  phoneNumber: string,
+  claim: BellContactCardClaim
+): Promise<boolean> {
+  const rows = await getDb()
+    .update(smsSubscribers)
+    .set({ bellContactCardProcessingAt: new Date() })
+    .where(
+      and(
+        eq(smsSubscribers.phoneNumber, phoneNumber),
+        eq(smsSubscribers.bellContactCardClaimId, claim.id),
+        isNotNull(smsSubscribers.confirmedAt),
+        isNull(smsSubscribers.bellContactCardSentAt)
+      )
+    )
+    .returning({ id: smsSubscribers.id })
+  return rows.length > 0
+}
+
+/**
+ * Records provider acceptance and completes the claim in one SQL statement.
+ * A constraint or database failure rolls both changes back together.
+ */
+export async function completeBellContactCard(input: {
+  phoneNumber: string
+  claim: BellContactCardClaim
+  attemptId: number
+  twilioSid: string
+  status: string
+}): Promise<void> {
+  await getDb().execute(sql`
+    WITH completed AS (
+      UPDATE sms_subscribers
+      SET
+        bell_contact_card_claim_id = NULL,
+        bell_contact_card_processing_at = NULL,
+        bell_contact_card_sent_at = NOW()
+      WHERE phone_number = ${input.phoneNumber}
+        AND bell_contact_card_claim_id = ${input.claim.id}
+        AND confirmed_at IS NOT NULL
+        AND bell_contact_card_sent_at IS NULL
+      RETURNING id
+    )
+    UPDATE text_messages
+    SET
+      twilio_sid = ${input.twilioSid},
+      status = ${input.status}
+    WHERE id = ${input.attemptId}
+  `)
+}
+
+/** Releases a claim and records its attempt outcome atomically. */
+export async function failBellContactCard(input: {
+  phoneNumber: string
+  claim: BellContactCardClaim
+  attemptId: number
+  status?: 'cancelled' | 'failed'
+}): Promise<void> {
+  await getDb().execute(sql`
+    WITH released AS (
+      UPDATE sms_subscribers
+      SET
+        bell_contact_card_claim_id = NULL,
+        bell_contact_card_processing_at = NULL
+      WHERE phone_number = ${input.phoneNumber}
+        AND bell_contact_card_claim_id = ${input.claim.id}
+        AND bell_contact_card_sent_at IS NULL
+      RETURNING id
+    )
+    UPDATE text_messages
+    SET status = ${input.status ?? 'failed'}
+    WHERE id = ${input.attemptId}
+  `)
+}
+
+/** Releases a claim when no provider attempt was recorded. */
+export async function releaseBellContactCard(
+  phoneNumber: string,
+  claim: BellContactCardClaim
+): Promise<void> {
+  await getDb()
+    .update(smsSubscribers)
+    .set({
+      bellContactCardClaimId: null,
+      bellContactCardProcessingAt: null,
+    })
+    .where(
+      and(
+        eq(smsSubscribers.phoneNumber, phoneNumber),
+        eq(smsSubscribers.bellContactCardClaimId, claim.id),
+        isNull(smsSubscribers.bellContactCardSentAt)
+      )
+    )
+}
+
 export async function unsubscribeSmsNumber(
   phoneNumber: string,
   input: { processedPhoneWebhookEventId?: number | null } = {}
@@ -106,15 +240,26 @@ export async function unsubscribeSmsNumber(
   if (input.processedPhoneWebhookEventId) {
     await db.execute(sql`
       WITH unsubscribed AS (
-        UPDATE sms_subscribers
-        SET
+        INSERT INTO sms_subscribers
+          (
+            phone_number,
+            confirmed_at,
+            subscribed_postcard,
+            subscribed_contraption,
+            subscribed_workshop,
+            subscribed_tsundoku
+          )
+        VALUES (${phoneNumber}, NULL, false, false, false, false)
+        ON CONFLICT (phone_number) DO UPDATE SET
           confirmed_at = NULL,
           subscribed_postcard = false,
           subscribed_contraption = false,
           subscribed_workshop = false,
           subscribed_tsundoku = false,
+          bell_contact_card_claim_id = NULL,
+          bell_contact_card_processing_at = NULL,
+          bell_contact_card_sent_at = NULL,
           updated_at = NOW()
-        WHERE phone_number = ${phoneNumber}
         RETURNING id
       ),
       skipped_sends AS (
@@ -134,16 +279,29 @@ export async function unsubscribeSmsNumber(
   }
 
   const rows = await db
-    .update(smsSubscribers)
-    .set({
+    .insert(smsSubscribers)
+    .values({
+      phoneNumber,
       confirmedAt: null,
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
       subscribedTsundoku: false,
-      updatedAt: sql`NOW()`,
     })
-    .where(eq(smsSubscribers.phoneNumber, phoneNumber))
+    .onConflictDoUpdate({
+      target: smsSubscribers.phoneNumber,
+      set: {
+        confirmedAt: null,
+        subscribedPostcard: false,
+        subscribedContraption: false,
+        subscribedWorkshop: false,
+        subscribedTsundoku: false,
+        bellContactCardClaimId: null,
+        bellContactCardProcessingAt: null,
+        bellContactCardSentAt: null,
+        updatedAt: sql`NOW()`,
+      },
+    })
     .returning()
   const subscriber = rows[0] ?? null
   if (subscriber) {

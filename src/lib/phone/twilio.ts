@@ -4,6 +4,8 @@
 
 import { twilioSecret } from '@/lib/phone/config'
 
+const TWILIO_REQUEST_TIMEOUT_MS = 30_000
+
 export type SentSms = {
   sid: string
   status: string
@@ -28,7 +30,11 @@ export function isRetryableTwilioError(error: unknown): boolean {
   if (error instanceof TwilioApiError) {
     return error.status === 429 || error.status >= 500
   }
-  return error instanceof TypeError
+  return (
+    error instanceof TypeError ||
+    (error instanceof Error &&
+      (error.name === 'AbortError' || error.name === 'TimeoutError'))
+  )
 }
 
 function twilioCredentials(): { accountSid: string; authToken: string } {
@@ -45,16 +51,25 @@ function basicAuthHeader(accountSid: string, authToken: string): string {
 }
 
 /**
- * Sends one SMS through Twilio's Messages API. Throws when credentials are
- * missing or Twilio rejects the request; the caller decides how to record
+ * Sends one SMS or MMS through Twilio's Messages API. Throws when credentials
+ * are missing or Twilio rejects the request; the caller decides how to record
  * the failure.
  */
 export async function sendSms(input: {
   from: string
   to: string
   body: string
+  mediaUrl?: string
 }): Promise<SentSms> {
   const { accountSid, authToken } = twilioCredentials()
+  const form = new URLSearchParams({
+    From: input.from,
+    To: input.to,
+    Body: input.body,
+  })
+  if (input.mediaUrl) {
+    form.set('MediaUrl', input.mediaUrl)
+  }
 
   const response = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
@@ -64,11 +79,8 @@ export async function sendSms(input: {
         Authorization: basicAuthHeader(accountSid, authToken),
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        From: input.from,
-        To: input.to,
-        Body: input.body,
-      }),
+      body: form,
+      signal: AbortSignal.timeout(TWILIO_REQUEST_TIMEOUT_MS),
     }
   )
 

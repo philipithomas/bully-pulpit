@@ -44,10 +44,7 @@ export function numberLabel(number: string | null | undefined): string {
   return number === sitePhoneNumber() ? 'Phone' : number
 }
 
-/**
- * Twilio auth token. Also used as the shared `?secret=` value on webhook URLs.
- * Returns null when unset so callers fail closed.
- */
+/** Twilio REST auth token and webhook-signing key. */
 export function twilioSecret(): string | null {
   return process.env.TWILIO_SECRET || null
 }

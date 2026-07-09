@@ -1,4 +1,4 @@
-import { toPlaintext } from '@/lib/chat/page-context'
+import { toPagePlaintext } from '@/lib/chat/page-context'
 import { siteConfig } from '@/lib/config'
 import {
   getPageBySlug,
@@ -54,7 +54,7 @@ function resolvePath(path: string): string {
 
   const item = getPostBySlug(slug) ?? getPageBySlug(slug)
   if (!item) return NOT_FOUND
-  return `${item.frontmatter.title}\n\n${toPlaintext(item.content)}`
+  return `${item.frontmatter.title}\n\n${toPagePlaintext(item)}`
 }
 
 /**

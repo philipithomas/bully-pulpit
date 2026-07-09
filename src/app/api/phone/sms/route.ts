@@ -22,14 +22,19 @@ import {
   createTextMessage,
   createTextMessageWithStatus,
 } from '@/lib/db/queries/text-messages'
-import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
-import { numberLabel } from '@/lib/phone/config'
+import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
+import { sendBellContactOnboarding } from '@/lib/phone/bell-contact-onboarding'
+import { numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import {
   sendIncomingSmsNotification,
   sendSmsSignupNotification,
 } from '@/lib/phone/notifications'
-import { smsCommandForBody } from '@/lib/phone/sms-commands'
 import {
+  isTwilioReactivationCommand,
+  smsCommandForBody,
+} from '@/lib/phone/sms-commands'
+import {
+  SMS_HELP_RESPONSE,
   SMS_SUBSCRIBE_CONFIRMATION,
   SMS_UNSUBSCRIBE_CONFIRMATION,
 } from '@/lib/phone/sms-subscription-copy'
@@ -46,11 +51,11 @@ const BELL_RATE_LIMIT_MESSAGE =
  * MessageSid redeliveries before applying command side effects.
  */
 export async function POST(request: Request) {
-  if (!isAuthorizedPhoneWebhook(request)) {
+  const form = await validatedPhoneWebhookForm(request)
+  if (!form) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const form = await request.formData()
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
   const body = String(form.get('Body') ?? '')
@@ -80,30 +85,61 @@ export async function POST(request: Request) {
 
   if (command === 'subscribe') {
     const existing = await findSmsSubscriberByPhoneNumber(from)
+    if (
+      existing &&
+      !existing.confirmedAt &&
+      !isTwilioReactivationCommand(body, optOutType)
+    ) {
+      const lease = webhookEvent
+        ? await claimPhoneWebhookEvent(webhookEvent.event.id)
+        : null
+      if (webhookEvent) {
+        const marked = lease
+          ? await markPhoneWebhookEventProcessed(webhookEvent.event.id, lease)
+          : false
+        if (!marked) return twimlResponse(emptyTwiml(), 503)
+      }
+      // Twilio still blocks outbound replies after STOP. The original STOP
+      // confirmation already tells the person to use a carrier opt-in word.
+      return twimlResponse(emptyTwiml())
+    }
+
+    const shouldNotifySignup = !existing?.confirmedAt
     await subscribeSmsNumber({
       phoneNumber: from,
       source: `sms:${numberLabel(to).toLowerCase()}`,
       processedPhoneWebhookEventId: webhookEvent?.event.id,
     })
-    if (!existing?.confirmedAt) {
-      after(async () => {
-        try {
-          await sendSmsSignupNotification({
+    after(async () => {
+      const tasks: Promise<unknown>[] = []
+      const confirmationFrom = sitePhoneNumber()
+      if (confirmationFrom) {
+        tasks.push(
+          sendBellContactOnboarding({
+            from: confirmationFrom,
+            to: from,
+          }).catch((err) => {
+            console.error('[phone/sms] Bell contact-card MMS failed:', err)
+          })
+        )
+      }
+      if (shouldNotifySignup) {
+        tasks.push(
+          sendSmsSignupNotification({
             phoneNumber: from,
             to,
             source: 'sms',
             metadata,
+          }).catch((err) => {
+            console.error('[phone/sms] SMS signup notification failed:', err)
           })
-        } catch (err) {
-          console.error('[phone/sms] SMS signup notification failed:', err)
-        }
-      })
-    }
-    return twimlResponse(
-      twilioAlreadyReplied
-        ? emptyTwiml()
-        : messageTwiml(SMS_SUBSCRIBE_CONFIRMATION)
-    )
+        )
+      }
+      await Promise.all(tasks)
+    })
+
+    if (twilioAlreadyReplied) return twimlResponse(emptyTwiml())
+    return twimlResponse(messageTwiml(SMS_SUBSCRIBE_CONFIRMATION))
   }
 
   if (command === 'unsubscribe') {
@@ -124,6 +160,19 @@ export async function POST(request: Request) {
     // Another invocation is still working. A 5xx asks Twilio to retry rather
     // than acknowledging a request that may have died before enqueue.
     return twimlResponse(emptyTwiml(), 503)
+  }
+
+  if (command === 'help') {
+    if (webhookEvent && lease) {
+      const marked = await markPhoneWebhookEventProcessed(
+        webhookEvent.event.id,
+        lease
+      )
+      if (!marked) return twimlResponse(emptyTwiml(), 503)
+    }
+    return twimlResponse(
+      twilioAlreadyReplied ? emptyTwiml() : messageTwiml(SMS_HELP_RESPONSE)
+    )
   }
 
   // Advanced Opt-Out also emits HELP/INFO classifications. Twilio has already

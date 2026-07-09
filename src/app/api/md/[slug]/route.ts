@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
+import {
+  formatPhoneNumberForDisplay,
+  sitePhoneNumber,
+} from '@/lib/phone/config'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -15,6 +19,11 @@ export async function GET(_request: Request, { params }: Props) {
     return new NextResponse('Not found', { status: 404 })
   }
 
+  const phoneNumber = item.slug === 'contact' ? sitePhoneNumber() : null
+  const content = phoneNumber
+    ? `${item.content.trimEnd()}\n\n**Telephone:** [${formatPhoneNumberForDisplay(phoneNumber)}](tel:${phoneNumber})\n`
+    : item.content
+
   const markdown = [
     `# ${item.frontmatter.title}`,
     item.frontmatter.description ? `\n> ${item.frontmatter.description}` : '',
@@ -22,7 +31,7 @@ export async function GET(_request: Request, { params }: Props) {
       ? `\nDate: ${item.frontmatter.publishedAt}`
       : '',
     '\n---\n',
-    item.content,
+    content,
   ].join('\n')
 
   return new NextResponse(markdown, {

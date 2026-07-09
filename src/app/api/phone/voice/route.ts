@@ -1,8 +1,7 @@
 import { after, NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
 import { smsSignupUi } from '@/lib/flags'
-import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
-import { twilioSecret } from '@/lib/phone/config'
+import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { generateGreeting } from '@/lib/phone/greeting'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 import {
@@ -20,11 +19,11 @@ import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
  * callbacks do not include them.
  */
 export async function POST(request: Request) {
-  if (!isAuthorizedPhoneWebhook(request)) {
+  const form = await validatedPhoneWebhookForm(request)
+  if (!form) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const form = await request.formData()
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
 
@@ -40,8 +39,6 @@ export async function POST(request: Request) {
     }
   })
 
-  const secret = twilioSecret() ?? ''
-  const menuParams = new URLSearchParams({ secret })
   const callbackUrls = voicemailCallbackUrls({ from, to })
 
   if (!(await smsSignupUi())) {
@@ -51,7 +48,7 @@ export async function POST(request: Request) {
   return twimlResponse(
     voiceMenuTwiml({
       greeting,
-      menuActionUrl: `${siteConfig.url}/api/phone/voice-menu?${menuParams}`,
+      menuActionUrl: `${siteConfig.url}/api/phone/voice-menu`,
       ...callbackUrls,
     })
   )

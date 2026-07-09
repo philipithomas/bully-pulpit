@@ -43,7 +43,13 @@ import {
   resetFailedSmsBySlug,
   SMS_SEND_SKIPPED_UNSUBSCRIBED,
 } from '@/lib/db/queries/sms-sends'
-import { countEligibleSms } from '@/lib/db/queries/sms-subscribers'
+import {
+  claimBellContactCard,
+  countEligibleSms,
+  refreshBellContactCardClaim,
+  subscribeSmsNumber,
+  unsubscribeSmsNumber,
+} from '@/lib/db/queries/sms-subscribers'
 import {
   bellConversations,
   bellGenerations,
@@ -54,45 +60,56 @@ import {
 } from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { smsSignupUi } from '@/lib/flags'
-import { SMS_SUBSCRIBE_CONFIRMATION } from '@/lib/phone/sms-subscription-copy'
+import {
+  SMS_BELL_CONTACT_ONBOARDING,
+  SMS_HELP_RESPONSE,
+  SMS_SUBSCRIBE_CONFIRMATION,
+} from '@/lib/phone/sms-subscription-copy'
 import { sendSms } from '@/lib/phone/twilio'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { db, resetDb } from '@/test/integration/db'
+import { twilioPostRequest } from '@/test/twilio'
 import { replyToSmsWorkflow } from '@/workflows/reply-to-sms'
 
 const SECRET = 'test-webhook-secret'
+let mediaSendCount = 0
 
-function smsRequest(form: Record<string, string>, secret = SECRET) {
-  return new Request(
-    `https://philipithomas.com/api/phone/sms?secret=${secret}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(form).toString(),
-    }
+function smsRequest(form: Record<string, string>, signature?: string) {
+  return twilioPostRequest(
+    'https://philipithomas.com/api/phone/sms',
+    form,
+    SECRET,
+    { signature }
   )
 }
 
-function voiceMenuRequest(form: Record<string, string>, secret = SECRET) {
-  return new Request(
-    `https://philipithomas.com/api/phone/voice-menu?secret=${secret}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(form).toString(),
-    }
+function voiceMenuRequest(form: Record<string, string>) {
+  return twilioPostRequest(
+    'https://philipithomas.com/api/phone/voice-menu',
+    form,
+    SECRET
   )
 }
 
 beforeEach(async () => {
   afterTasks.length = 0
+  mediaSendCount = 0
   await resetDb()
   process.env.PHONE_NUMBER = '+12123473190'
   process.env.TWILIO_SECRET = SECRET
   process.env.ADMIN_EMAILS = 'one@example.com, two@example.com'
   vi.mocked(smsSignupUi).mockResolvedValue(false)
   vi.mocked(checkRateLimit).mockResolvedValue(true)
-  vi.mocked(sendSms).mockResolvedValue({ sid: 'SM_CONFIRM', status: 'queued' })
+  vi.mocked(sendSms).mockImplementation(async (input) => {
+    if (input.mediaUrl) {
+      mediaSendCount += 1
+      return {
+        sid: mediaSendCount === 1 ? 'MM_BELL' : `MM_BELL_${mediaSendCount}`,
+        status: 'queued',
+      }
+    }
+    return { sid: 'SM_CONFIRM', status: 'queued' }
+  })
   vi.mocked(start).mockResolvedValue({
     runId: 'wrun_sms',
     // biome-ignore lint/suspicious/noExplicitAny: partial workflow run
@@ -108,9 +125,9 @@ afterEach(async () => {
 })
 
 describe('POST /api/phone/sms', () => {
-  it('rejects a wrong secret without touching the database', async () => {
+  it('rejects an invalid signature without touching the database', async () => {
     const response = await smsPost(
-      smsRequest({ From: '+1', To: '+2', Body: 'x' }, 'wrong')
+      smsRequest({ From: '+1', To: '+2', Body: 'x' }, 'invalid')
     )
     expect(response.status).toBe(401)
     expect(await db.select().from(textMessages)).toHaveLength(0)
@@ -297,7 +314,13 @@ describe('POST /api/phone/sms', () => {
     expect(response.status).toBe(200)
     const xml = await response.text()
     expect(xml).toContain('You are subscribed')
-    expect(xml).toContain('Reply STOP to unsubscribe')
+    expect(xml).toContain('Frequency varies')
+    expect(xml).toContain('Message and data rates may apply')
+    expect(xml).toContain('Reply HELP for help')
+    expect(xml).toContain('or STOP to unsubscribe')
+    expect(xml).not.toContain(SMS_BELL_CONTACT_ONBOARDING)
+    expect(xml).not.toContain('<Media>')
+    expect(xml.match(/<Message>/g)).toHaveLength(1)
 
     const subscribers = await db.select().from(smsSubscribers)
     expect(subscribers).toHaveLength(1)
@@ -310,8 +333,28 @@ describe('POST /api/phone/sms', () => {
       source: 'sms:phone',
     })
     expect(subscribers[0].confirmedAt).toBeInstanceOf(Date)
-    expect(await db.select().from(textMessages)).toHaveLength(1)
     await flushAfterTasks()
+    expect(vi.mocked(sendSms)).toHaveBeenCalledWith({
+      from: '+12123473190',
+      to: '+14155551234',
+      body: SMS_BELL_CONTACT_ONBOARDING,
+      mediaUrl: 'https://www.philipithomas.com/bell.vcf',
+    })
+    const messages = await db.select().from(textMessages)
+    expect(messages).toHaveLength(2)
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        fromNumber: '+12123473190',
+        toNumber: '+14155551234',
+        body: SMS_BELL_CONTACT_ONBOARDING,
+        direction: 'outbound',
+        twilioSid: 'MM_BELL',
+        status: 'queued',
+      })
+    )
+    const [updatedSubscriber] = await db.select().from(smsSubscribers)
+    expect(updatedSubscriber.bellContactCardProcessingAt).toBeNull()
+    expect(updatedSubscriber.bellContactCardSentAt).toBeInstanceOf(Date)
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
     const email = vi.mocked(sendSimpleEmail).mock.calls[0][0]
     expect(email.to).toEqual(['one@example.com', 'two@example.com'])
@@ -332,12 +375,166 @@ describe('POST /api/phone/sms', () => {
     await smsPost(smsRequest(form))
     await flushAfterTasks()
     vi.mocked(sendSimpleEmail).mockClear()
+    vi.mocked(sendSms).mockClear()
 
     const response = await smsPost(
       smsRequest({ ...form, MessageSid: 'SM_SUB_AGAIN' })
     )
 
     expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(xml).toContain(SMS_SUBSCRIBE_CONFIRMATION)
+    expect(xml).not.toContain(SMS_BELL_CONTACT_ONBOARDING)
+    expect(xml).not.toContain('<Media>')
+    await flushAfterTasks()
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+  })
+
+  it('retries the Bell card after Twilio rejects the first MMS', async () => {
+    vi.mocked(sendSms).mockRejectedValueOnce(new Error('MMS rejected'))
+
+    await smsPost(
+      smsRequest({
+        From: '+14155551234',
+        To: '+12123473190',
+        Body: 'SUBSCRIBE',
+        MessageSid: 'SM_SUB_FAIL',
+      })
+    )
+    await flushAfterTasks()
+
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.bellContactCardProcessingAt).toBeNull()
+    expect(subscriber.bellContactCardSentAt).toBeNull()
+    expect(await db.select().from(textMessages)).toContainEqual(
+      expect.objectContaining({
+        body: SMS_BELL_CONTACT_ONBOARDING,
+        direction: 'outbound',
+        twilioSid: null,
+        status: 'failed',
+      })
+    )
+
+    await smsPost(
+      smsRequest({
+        From: '+14155551234',
+        To: '+12123473190',
+        Body: 'SUBSCRIBE',
+        MessageSid: 'SM_SUB_RETRY',
+      })
+    )
+    await flushAfterTasks()
+
+    expect(vi.mocked(sendSms)).toHaveBeenCalledTimes(2)
+    const [retriedSubscriber] = await db.select().from(smsSubscribers)
+    expect(retriedSubscriber.bellContactCardProcessingAt).toBeNull()
+    expect(retriedSubscriber.bellContactCardSentAt).toBeInstanceOf(Date)
+    const onboardingAttempts = (await db.select().from(textMessages)).filter(
+      (message) => message.body === SMS_BELL_CONTACT_ONBOARDING
+    )
+    expect(onboardingAttempts).toHaveLength(2)
+    expect(onboardingAttempts.map((message) => message.status).sort()).toEqual([
+      'failed',
+      'queued',
+    ])
+  })
+
+  it('sends one Bell card when text and voice signups race', async () => {
+    vi.mocked(smsSignupUi).mockResolvedValue(true)
+
+    await Promise.all([
+      smsPost(
+        smsRequest({
+          From: '+14155551234',
+          To: '+12123473190',
+          Body: 'SUBSCRIBE',
+          MessageSid: 'SM_SUB_RACE',
+        })
+      ),
+      voiceMenuPost(
+        voiceMenuRequest({
+          From: '+14155551234',
+          To: '+12123473190',
+          Digits: '2',
+          CallSid: 'CA_SUB_RACE',
+        })
+      ),
+    ])
+    await flushAfterTasks()
+
+    const mediaCalls = vi
+      .mocked(sendSms)
+      .mock.calls.filter(([input]) => Boolean(input.mediaUrl))
+    expect(mediaCalls).toHaveLength(1)
+    const onboardingMessages = (await db.select().from(textMessages)).filter(
+      (message) =>
+        message.direction === 'outbound' &&
+        message.body === SMS_BELL_CONTACT_ONBOARDING
+    )
+    expect(onboardingMessages).toHaveLength(1)
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.bellContactCardProcessingAt).toBeNull()
+    expect(subscriber.bellContactCardSentAt).toBeInstanceOf(Date)
+  })
+
+  it('invalidates an old Bell claim across unsubscribe and reactivation', async () => {
+    const phoneNumber = '+14155551234'
+    await subscribeSmsNumber({ phoneNumber })
+    const oldClaim = await claimBellContactCard(phoneNumber)
+    expect(oldClaim).not.toBeNull()
+
+    await unsubscribeSmsNumber(phoneNumber)
+    await subscribeSmsNumber({ phoneNumber })
+    const newClaim = await claimBellContactCard(phoneNumber)
+    expect(newClaim).not.toBeNull()
+    if (!oldClaim || !newClaim) throw new Error('Expected Bell claims')
+    expect(newClaim.id).not.toBe(oldClaim.id)
+
+    expect(await refreshBellContactCardClaim(phoneNumber, oldClaim)).toBe(false)
+    expect(await refreshBellContactCardClaim(phoneNumber, newClaim)).toBe(true)
+  })
+
+  it('answers HELP without routing it to the admin inbox', async () => {
+    const response = await smsPost(
+      smsRequest({
+        From: '+14155551234',
+        To: '+12123473190',
+        Body: 'HELP',
+        MessageSid: 'SM_HELP',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain(SMS_HELP_RESPONSE)
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+    expect(await db.select().from(textMessages)).toHaveLength(1)
+
+    const duplicate = await smsPost(
+      smsRequest({
+        From: '+14155551234',
+        To: '+12123473190',
+        Body: 'HELP',
+        MessageSid: 'SM_HELP',
+      })
+    )
+    expect(await duplicate.text()).toContain('<Response></Response>')
+    expect(await db.select().from(textMessages)).toHaveLength(1)
+  })
+
+  it('does not duplicate Twilio Advanced Opt-Out HELP replies', async () => {
+    const response = await smsPost(
+      smsRequest({
+        From: '+14155551234',
+        To: '+12123473190',
+        Body: 'HELP',
+        MessageSid: 'SM_HELP',
+        OptOutType: 'HELP',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('<Response></Response>')
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
   })
 
@@ -363,11 +560,111 @@ describe('POST /api/phone/sms', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(await response.text()).toContain('You are unsubscribed')
+    const xml = await response.text()
+    expect(xml).toContain('You are unsubscribed')
+    expect(xml).toContain('START or UNSTOP')
     const [subscriber] = await db.select().from(smsSubscribers)
     expect(subscriber.confirmedAt).toBeNull()
     expect(subscriber.subscribedContraption).toBe(false)
+    expect(subscriber.bellContactCardProcessingAt).toBeNull()
+    expect(subscriber.bellContactCardSentAt).toBeNull()
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  it('does not reactivate a stopped number with an app-only subscribe word', async () => {
+    const phoneNumber = '+15551234567'
+    const stopResponse = await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'STOP',
+        MessageSid: 'SM_STOP',
+      })
+    )
+    expect(await stopResponse.text()).toContain('START or UNSTOP')
+    const [tombstone] = await db.select().from(smsSubscribers)
+    expect(tombstone).toMatchObject({
+      phoneNumber,
+      confirmedAt: null,
+      subscribedPostcard: false,
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedTsundoku: false,
+    })
+    vi.mocked(sendSms).mockClear()
+    vi.mocked(sendSimpleEmail).mockClear()
+
+    const form = {
+      From: phoneNumber,
+      To: '+12123473190',
+      Body: 'SUBSCRIBE',
+      MessageSid: 'SM_UNSAFE_RESUB',
+    }
+    const response = await smsPost(smsRequest(form))
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('<Response></Response>')
+    await flushAfterTasks()
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.confirmedAt).toBeNull()
+    expect(subscriber.subscribedPostcard).toBe(false)
+    expect(subscriber.subscribedContraption).toBe(false)
+    expect(subscriber.subscribedWorkshop).toBe(false)
+    expect(subscriber.subscribedTsundoku).toBe(false)
+    expect(subscriber.bellContactCardSentAt).toBeNull()
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+
+    const duplicate = await smsPost(smsRequest(form))
+    expect(await duplicate.text()).toContain('<Response></Response>')
+  })
+
+  it.each([
+    'UNSTOP',
+    'YES',
+  ])('reactivates local state for Twilio keyword %s without OptOutType', async (keyword) => {
+    const phoneNumber = '+15551234567'
+    await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'SUBSCRIBE',
+        MessageSid: 'SM_SUB',
+      })
+    )
+    await flushAfterTasks()
+    await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'STOP',
+        MessageSid: 'SM_STOP',
+      })
+    )
+    vi.mocked(sendSms).mockClear()
+
+    const response = await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: keyword,
+        MessageSid: `SM_${keyword}`,
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain(SMS_SUBSCRIBE_CONFIRMATION)
+    await flushAfterTasks()
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.confirmedAt).toBeInstanceOf(Date)
+    expect(subscriber.subscribedPostcard).toBe(true)
+    expect(vi.mocked(sendSms)).toHaveBeenCalledWith({
+      from: '+12123473190',
+      to: phoneNumber,
+      body: SMS_BELL_CONTACT_ONBOARDING,
+      mediaUrl: 'https://www.philipithomas.com/bell.vcf',
+    })
     expect(start).not.toHaveBeenCalled()
   })
 
@@ -395,14 +692,16 @@ describe('POST /api/phone/sms', () => {
     const [subscriber] = await db.select().from(smsSubscribers)
     expect(subscriber.confirmedAt).toBeNull()
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
-    expect(await db.select().from(textMessages)).toHaveLength(2)
+    expect(await db.select().from(textMessages)).toHaveLength(3)
 
-    await smsPost(
+    const resubscribe = await smsPost(
       smsRequest({
         ...subscribeForm,
+        Body: 'START',
         MessageSid: 'SM_RESUB',
       })
     )
+    expect(await resubscribe.text()).toContain(SMS_SUBSCRIBE_CONFIRMATION)
     await flushAfterTasks()
     vi.mocked(sendSimpleEmail).mockClear()
 
@@ -413,7 +712,7 @@ describe('POST /api/phone/sms', () => {
       .from(smsSubscribers)
     expect(subscriberAfterDuplicateStop.confirmedAt).toBeInstanceOf(Date)
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
-    expect(await db.select().from(textMessages)).toHaveLength(3)
+    expect(await db.select().from(textMessages)).toHaveLength(5)
   })
 
   it('marks pending SMS send rows skipped when a number unsubscribes', async () => {
@@ -536,6 +835,60 @@ describe('POST /api/phone/sms', () => {
     expect(sendSimpleEmail).not.toHaveBeenCalled()
   })
 
+  it('reactivates stopped state from authoritative Twilio START metadata', async () => {
+    const phoneNumber = '+15551234567'
+    await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'SUBSCRIBE',
+        MessageSid: 'SM_SUB',
+      })
+    )
+    await flushAfterTasks()
+    await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'STOP',
+        MessageSid: 'SM_STOP',
+      })
+    )
+    vi.mocked(sendSms).mockClear()
+
+    const response = await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'CUSTOM-OPT-IN',
+        MessageSid: 'SM_START',
+        OptOutType: 'START',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(xml).not.toContain(SMS_SUBSCRIBE_CONFIRMATION)
+    expect(xml).not.toContain(SMS_BELL_CONTACT_ONBOARDING)
+    expect(xml).not.toContain('<Media>')
+    await flushAfterTasks()
+    expect(vi.mocked(sendSms)).toHaveBeenCalledWith({
+      from: '+12123473190',
+      to: phoneNumber,
+      body: SMS_BELL_CONTACT_ONBOARDING,
+      mediaUrl: 'https://www.philipithomas.com/bell.vcf',
+    })
+    expect(await db.select().from(textMessages)).toContainEqual(
+      expect.objectContaining({
+        body: SMS_BELL_CONTACT_ONBOARDING,
+        direction: 'outbound',
+        twilioSid: 'MM_BELL',
+      })
+    )
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.confirmedAt).toBeInstanceOf(Date)
+  })
+
   it('rate-limits Bell by sender after compliance commands are handled', async () => {
     vi.mocked(checkRateLimit).mockResolvedValueOnce(false)
     const response = await smsPost(
@@ -584,7 +937,7 @@ describe('POST /api/phone/voice-menu', () => {
     expect(response.status).toBe(200)
     const xml = await response.text()
     expect(xml).toContain('You are subscribed')
-    expect(xml).toContain('Text STOP at any time to unsubscribe')
+    expect(xml).toContain('Text STOP to unsubscribe or HELP for help')
     const subscribers = await db.select().from(smsSubscribers)
     expect(subscribers).toHaveLength(1)
     expect(subscribers[0]).toMatchObject({
@@ -603,21 +956,64 @@ describe('POST /api/phone/voice-menu', () => {
     expect(email.html).toContain('Area code 415: San Francisco, CA')
     expect(email.html).toContain('Jane Caller')
     expect(email.html).toContain('CA_SUB')
+    expect(vi.mocked(sendSms)).toHaveBeenNthCalledWith(1, {
+      from: '+12123473190',
+      to: '+14155551234',
+      body: SMS_SUBSCRIBE_CONFIRMATION,
+    })
+    expect(vi.mocked(sendSms)).toHaveBeenNthCalledWith(2, {
+      from: '+12123473190',
+      to: '+14155551234',
+      body: SMS_BELL_CONTACT_ONBOARDING,
+      mediaUrl: 'https://www.philipithomas.com/bell.vcf',
+    })
+    const messages = await db.select().from(textMessages)
+    expect(messages).toHaveLength(2)
+    expect(messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          fromNumber: '+12123473190',
+          toNumber: '+14155551234',
+          body: SMS_SUBSCRIBE_CONFIRMATION,
+          direction: 'outbound',
+          twilioSid: 'SM_CONFIRM',
+          status: 'queued',
+        }),
+        expect.objectContaining({
+          fromNumber: '+12123473190',
+          toNumber: '+14155551234',
+          body: SMS_BELL_CONTACT_ONBOARDING,
+          direction: 'outbound',
+          twilioSid: 'MM_BELL',
+          status: 'queued',
+        }),
+      ])
+    )
+  })
+
+  it('does not resend the Bell card to an already-active voice subscriber', async () => {
+    vi.mocked(smsSignupUi).mockResolvedValue(true)
+    const form = {
+      From: '+14155551234',
+      To: '+12123473190',
+      Digits: '2',
+    }
+
+    await voiceMenuPost(voiceMenuRequest({ ...form, CallSid: 'CA_SUB_FIRST' }))
+    await flushAfterTasks()
+    vi.mocked(sendSms).mockClear()
+    vi.mocked(sendSimpleEmail).mockClear()
+
+    await voiceMenuPost(voiceMenuRequest({ ...form, CallSid: 'CA_SUB_AGAIN' }))
+    await flushAfterTasks()
+
+    expect(vi.mocked(sendSms)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(sendSms)).toHaveBeenCalledWith({
       from: '+12123473190',
       to: '+14155551234',
       body: SMS_SUBSCRIBE_CONFIRMATION,
     })
-    const messages = await db.select().from(textMessages)
-    expect(messages).toHaveLength(1)
-    expect(messages[0]).toMatchObject({
-      fromNumber: '+12123473190',
-      toNumber: '+14155551234',
-      body: SMS_SUBSCRIBE_CONFIRMATION,
-      direction: 'outbound',
-      twilioSid: 'SM_CONFIRM',
-      status: 'queued',
-    })
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
   })
 
   it('falls back to voicemail when the SMS signup UI flag is off', async () => {
@@ -648,7 +1044,7 @@ describe('POST /api/phone/voice-menu', () => {
 
     await voiceMenuPost(voiceMenuRequest(voiceForm))
     await flushAfterTasks()
-    expect(vi.mocked(sendSms)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(sendSms)).toHaveBeenCalledTimes(2)
 
     await smsPost(
       smsRequest({
@@ -670,6 +1066,44 @@ describe('POST /api/phone/voice-menu', () => {
     expect(subscriber.confirmedAt).toBeNull()
   })
 
+  it('requires handset reactivation when a stopped caller presses 2 again', async () => {
+    vi.mocked(smsSignupUi).mockResolvedValue(true)
+    const phoneNumber = '+14155551234'
+    await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'STOP',
+        MessageSid: 'SM_STOP',
+      })
+    )
+    vi.mocked(sendSms).mockClear()
+    vi.mocked(sendSimpleEmail).mockClear()
+
+    const voiceForm = {
+      From: phoneNumber,
+      To: '+12123473190',
+      Digits: '2',
+      CallSid: 'CA_RESUB',
+    }
+    const response = await voiceMenuPost(voiceMenuRequest(voiceForm))
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(xml).toContain('send START or UNSTOP from this phone')
+    expect(xml).not.toContain('You are subscribed')
+    await flushAfterTasks()
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.confirmedAt).toBeNull()
+    expect(subscriber.subscribedPostcard).toBe(false)
+    expect(subscriber.bellContactCardSentAt).toBeNull()
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+
+    const duplicate = await voiceMenuPost(voiceMenuRequest(voiceForm))
+    expect(await duplicate.text()).toContain('already handled')
+  })
+
   it('still gives spoken STOP instructions when voice confirmation SMS fails', async () => {
     vi.mocked(smsSignupUi).mockResolvedValue(true)
     vi.mocked(sendSms).mockRejectedValueOnce(new Error('Twilio rejected it'))
@@ -685,7 +1119,7 @@ describe('POST /api/phone/voice-menu', () => {
     expect(response.status).toBe(200)
     const xml = await response.text()
     expect(xml).toContain('You are subscribed')
-    expect(xml).toContain('Text STOP at any time to unsubscribe')
+    expect(xml).toContain('Text STOP to unsubscribe or HELP for help')
     await flushAfterTasks()
     const messages = await db.select().from(textMessages)
     expect(messages).toHaveLength(1)
@@ -697,6 +1131,42 @@ describe('POST /api/phone/voice-menu', () => {
       twilioSid: null,
       status: 'failed',
     })
+    expect(vi.mocked(sendSms)).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the confirmation when the optional Bell onboarding MMS fails', async () => {
+    vi.mocked(smsSignupUi).mockResolvedValue(true)
+    vi.mocked(sendSms)
+      .mockResolvedValueOnce({ sid: 'SM_CONFIRM', status: 'queued' })
+      .mockRejectedValueOnce(new Error('MMS rejected'))
+
+    const response = await voiceMenuPost(
+      voiceMenuRequest({
+        From: '+14155551234',
+        To: '+12123473190',
+        Digits: '2',
+        CallSid: 'CA_MMS_FAIL',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    await flushAfterTasks()
+    expect(vi.mocked(sendSms)).toHaveBeenCalledTimes(2)
+    const messages = await db.select().from(textMessages)
+    expect(messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          body: SMS_SUBSCRIBE_CONFIRMATION,
+          twilioSid: 'SM_CONFIRM',
+          status: 'queued',
+        }),
+        expect.objectContaining({
+          body: SMS_BELL_CONTACT_ONBOARDING,
+          twilioSid: null,
+          status: 'failed',
+        }),
+      ])
+    )
   })
 
   it('falls back to voicemail when the caller presses 1', async () => {

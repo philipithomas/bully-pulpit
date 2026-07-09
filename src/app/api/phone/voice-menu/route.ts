@@ -1,12 +1,17 @@
 import { after, NextResponse } from 'next/server'
-import { findOrCreatePhoneWebhookEvent } from '@/lib/db/queries/phone-webhook-events'
+import {
+  claimPhoneWebhookEvent,
+  findOrCreatePhoneWebhookEvent,
+  markPhoneWebhookEventProcessed,
+} from '@/lib/db/queries/phone-webhook-events'
 import {
   findSmsSubscriberByPhoneNumber,
   subscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
 import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { smsSignupUi } from '@/lib/flags'
-import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
+import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
+import { sendBellContactOnboarding } from '@/lib/phone/bell-contact-onboarding'
 import { isE164, numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import { sendSmsSignupNotification } from '@/lib/phone/notifications'
 import { SMS_SUBSCRIBE_CONFIRMATION } from '@/lib/phone/sms-subscription-copy'
@@ -19,9 +24,11 @@ import {
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
 import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
 
-async function sendVoiceSignupConfirmationSms(input: {
+async function sendVoiceSignupMessage(input: {
   from: string
   to: string
+  body: string
+  label: string
 }): Promise<boolean> {
   if (!isE164(input.from)) return false
 
@@ -29,31 +36,31 @@ async function sendVoiceSignupConfirmationSms(input: {
     const result = await sendSms({
       from: input.from,
       to: input.to,
-      body: SMS_SUBSCRIBE_CONFIRMATION,
+      body: input.body,
     })
     await createTextMessage({
       fromNumber: input.from,
       toNumber: input.to,
-      body: SMS_SUBSCRIBE_CONFIRMATION,
+      body: input.body,
       direction: 'outbound',
       twilioSid: result.sid,
       status: result.status,
     })
     return true
   } catch (err) {
-    console.error('[phone/voice-menu] Confirmation SMS failed:', err)
+    console.error(`[phone/voice-menu] ${input.label} failed:`, err)
     try {
       await createTextMessage({
         fromNumber: input.from,
         toNumber: input.to,
-        body: SMS_SUBSCRIBE_CONFIRMATION,
+        body: input.body,
         direction: 'outbound',
         twilioSid: null,
         status: 'failed',
       })
     } catch (recordErr) {
       console.error(
-        '[phone/voice-menu] Failed to record confirmation SMS attempt:',
+        `[phone/voice-menu] Failed to record ${input.label.toLowerCase()} attempt:`,
         recordErr
       )
     }
@@ -63,14 +70,15 @@ async function sendVoiceSignupConfirmationSms(input: {
 
 /**
  * Handles the DTMF choice from /api/phone/voice. 1 or timeout goes to voicemail;
- * 2 subscribes the caller ID to the all-newsletters SMS list.
+ * 2 subscribes a new caller ID to the all-newsletters SMS list. A caller that
+ * previously sent STOP must reactivate from the handset before Twilio can send.
  */
 export async function POST(request: Request) {
-  if (!isAuthorizedPhoneWebhook(request)) {
+  const form = await validatedPhoneWebhookForm(request)
+  if (!form) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const form = await request.formData()
   const digits = String(form.get('Digits') ?? '')
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
@@ -101,6 +109,27 @@ export async function POST(request: Request) {
     }
 
     const existing = await findSmsSubscriberByPhoneNumber(from)
+    if (existing && !existing.confirmedAt) {
+      if (webhookEvent) {
+        const lease = await claimPhoneWebhookEvent(webhookEvent.event.id)
+        const marked = lease
+          ? await markPhoneWebhookEventProcessed(webhookEvent.event.id, lease)
+          : false
+        if (!marked) {
+          return twimlResponse(
+            sayAndHangupTwiml(
+              'This phone menu request was already handled. Goodbye.'
+            )
+          )
+        }
+      }
+      return twimlResponse(
+        sayAndHangupTwiml(
+          'To resubscribe to new-post texts, send START or UNSTOP from this phone to the number you called. Goodbye.'
+        )
+      )
+    }
+
     const confirmationFrom = sitePhoneNumber()
     await subscribeSmsNumber({
       phoneNumber: from,
@@ -111,10 +140,25 @@ export async function POST(request: Request) {
       const tasks: Promise<unknown>[] = []
       if (confirmationFrom) {
         tasks.push(
-          sendVoiceSignupConfirmationSms({
-            from: confirmationFrom,
-            to: from,
-          })
+          (async () => {
+            const confirmationSent = await sendVoiceSignupMessage({
+              from: confirmationFrom,
+              to: from,
+              body: SMS_SUBSCRIBE_CONFIRMATION,
+              label: 'Confirmation SMS',
+            })
+            if (confirmationSent) {
+              await sendBellContactOnboarding({
+                from: confirmationFrom,
+                to: from,
+              }).catch((err) => {
+                console.error(
+                  '[phone/voice-menu] Bell contact-card MMS failed:',
+                  err
+                )
+              })
+            }
+          })()
         )
       }
       if (!existing?.confirmedAt) {
@@ -136,7 +180,7 @@ export async function POST(request: Request) {
     })
     return twimlResponse(
       sayAndHangupTwiml(
-        'You are subscribed to text message updates from philipithomas.com. Text STOP at any time to unsubscribe. Goodbye.'
+        'You are subscribed to new-post texts from philipithomas.com. Text STOP to unsubscribe or HELP for help. Goodbye.'
       )
     )
   }
