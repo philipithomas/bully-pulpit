@@ -5,6 +5,10 @@ import { Search } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import {
+  mergeTypeaheadResults,
+  TYPEAHEAD_RESULT_LIMIT,
+} from '@/components/search/typeahead-results'
 import { Spinner } from '@/components/ui/spinner'
 import {
   bucketDuration,
@@ -44,6 +48,7 @@ interface SearchResult {
 interface SearchResponse {
   results: SearchResult[]
   mode?: 'hybrid' | 'lexical'
+  error?: string
 }
 
 type SearchMode = 'hybrid' | 'lexical' | 'unknown'
@@ -54,6 +59,32 @@ const NEWSLETTER_COLORS: Record<string, string> = {
   postcard: 'bg-indigo',
   tsundoku: 'bg-sun',
   page: 'bg-gray-400',
+}
+
+function responseMode(mode: SearchResponse['mode']): SearchMode {
+  return mode === 'hybrid' || mode === 'lexical' ? mode : 'unknown'
+}
+
+async function requestSearchPhase(
+  query: string,
+  phase: 'lexical' | 'hybrid',
+  signal: AbortSignal
+): Promise<SearchResponse> {
+  const params = new URLSearchParams({
+    q: query,
+    source: 'typeahead',
+    phase,
+  })
+  const response = await fetch(`/api/search?${params}`, { signal })
+  const data = (await response
+    .json()
+    .catch(() => null)) as SearchResponse | null
+
+  if (!response.ok) {
+    throw new Error(data?.error ?? 'Search failed. Try again.')
+  }
+
+  return data ?? { results: [] }
 }
 
 function highlightQuery(text: string, query: string) {
@@ -143,40 +174,59 @@ export function SearchDialog({
     const controller = new AbortController()
     abortRef.current = controller
     const started = performance.now()
-    try {
-      const params = new URLSearchParams({ q, source: 'typeahead' })
-      const res = await fetch(`/api/search?${params}`, {
-        signal: controller.signal,
+
+    const settleResults = (
+      settledResults: SearchResult[],
+      mode: SearchMode
+    ) => {
+      setResults(settledResults)
+      setSearchMode(mode)
+      if (cacheRef.current.size > 100) cacheRef.current.clear()
+      cacheRef.current.set(q, { results: settledResults, mode })
+      trackClientEvent('Search completed', {
+        surface: 'site_search',
+        query_length: bucketQueryLength(q.length),
+        result_count: bucketResultCount(settledResults.length),
+        search_mode: mode,
+        duration: bucketDuration(performance.now() - started),
       })
-      if (res.ok) {
-        const data = (await res.json()) as SearchResponse
-        const results = data.results ?? []
-        const mode: SearchMode =
-          data.mode === 'hybrid' || data.mode === 'lexical'
-            ? data.mode
-            : 'unknown'
-        setResults(results)
-        setSearchMode(mode)
-        if (cacheRef.current.size > 100) cacheRef.current.clear()
-        cacheRef.current.set(q, { results, mode })
-        trackClientEvent('Search completed', {
-          surface: 'site_search',
-          query_length: bucketQueryLength(q.length),
-          result_count: bucketResultCount(results.length),
-          search_mode: mode,
-          duration: bucketDuration(performance.now() - started),
-        })
-      } else {
-        // Surface definitive rejections instead of leaving the previous
-        // query's results on screen with no feedback.
-        const data = await res.json().catch(() => null)
-        setResults([])
-        setSearchError(data?.error ?? 'Search failed. Try again.')
+    }
+
+    try {
+      const lexical = await requestSearchPhase(q, 'lexical', controller.signal)
+      const lexicalResults = lexical.results ?? []
+
+      if (lexicalResults.length >= TYPEAHEAD_RESULT_LIMIT) {
+        settleResults(
+          lexicalResults.slice(0, TYPEAHEAD_RESULT_LIMIT),
+          responseMode(lexical.mode)
+        )
+        return
       }
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') return
+
+      // Paint cheap BM25 matches as soon as they arrive. Keep the spinner up
+      // while the slower embedding request fills only the unused slots.
+      setResults(lexicalResults)
+      setSearchMode(responseMode(lexical.mode))
+
+      try {
+        const hybrid = await requestSearchPhase(q, 'hybrid', controller.signal)
+        settleResults(
+          mergeTypeaheadResults(lexicalResults, hybrid.results ?? []),
+          responseMode(hybrid.mode)
+        )
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        // Enrichment is opportunistic. A provider or network failure must not
+        // erase the lexical results that already painted successfully.
+        settleResults(lexicalResults, responseMode(lexical.mode))
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
       setResults([])
-      setSearchError('Search failed. Try again.')
+      setSearchError(
+        error instanceof Error ? error.message : 'Search failed. Try again.'
+      )
     } finally {
       if (!controller.signal.aborted) setLoading(false)
     }
@@ -188,9 +238,9 @@ export function SearchDialog({
       setActiveIndex(0)
       setSearchError(null)
       // Abort the previous in-flight request synchronously so a stale response
-      // can never paint over a newer query. There is no debounce: the route
-      // can run fast BM25 locally when the typeahead embedding flag is off,
-      // and this abort + per-query cache keep the latest query authoritative.
+      // can never paint over a newer query. There is no debounce: the first
+      // pass runs fast BM25 locally, and this abort + per-query cache keep the
+      // latest query authoritative through both search phases.
       abortRef.current?.abort()
       if (value.length < 2) {
         setResults([])
@@ -230,12 +280,12 @@ export function SearchDialog({
 
   const handleAskAI = useCallback(() => {
     trackClientEvent('Search asked Bell', {
-      had_results: !loading && results.length > 0,
+      had_results: results.length > 0,
       search_mode: searchMode,
     })
     useChatSidebar.getState().openSidebar(query)
     onOpenChange(false)
-  }, [loading, query, results.length, searchMode, onOpenChange])
+  }, [query, results.length, searchMode, onOpenChange])
 
   const showAskAI = query.length >= 2
   const displayResults = query.length < 2 ? recentPosts : results
