@@ -7,7 +7,6 @@ import {
   type MouseEvent,
   useCallback,
   useEffect,
-  useId,
   useRef,
   useState,
 } from 'react'
@@ -42,7 +41,6 @@ interface ImageSearchResponse {
 const MIN_QUERY_LENGTH = 2
 
 export function PhotographyImageSearch() {
-  const headingId = useId()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ImageSearchResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -147,21 +145,15 @@ export function PhotographyImageSearch() {
     query.trim().length >= MIN_QUERY_LENGTH && !loading && results.length === 0
 
   return (
-    <section className="mb-10 md:mb-12" aria-labelledby={headingId}>
+    <section className="mb-10 md:mb-12" aria-label="Search photos">
       <div className="mx-auto max-w-xl">
-        <h2
-          id={headingId}
-          className="mb-3 text-center font-sans font-semibold text-gray-950 text-sm uppercase tracking-[0.08em]"
-        >
-          Search photos
-        </h2>
         <label className="flex h-11 items-center border border-gray-300 bg-white px-3">
           <Search className="h-4 w-4 shrink-0 text-gray-400" />
           <input
             type="search"
             value={query}
             onChange={handleQueryChange}
-            placeholder="Coffee, temples, trains"
+            placeholder="Search coffee, temples, trains"
             aria-label="Search photos"
             className="min-w-0 flex-1 bg-transparent px-3 font-sans text-sm text-gray-950 placeholder:text-gray-400 pointer-coarse:text-base"
           />
