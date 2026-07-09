@@ -1,6 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import {
+  type AnalyticsNewsletter,
+  type AnalyticsPlacement,
+  trackClientEvent,
+} from '@/lib/analytics/events'
 
 export function SmsSubscribePrompt({
   enabled,
@@ -8,12 +13,16 @@ export function SmsSubscribePrompt({
   phoneDisplayNumber,
   align = 'start',
   className = 'mt-3',
+  analyticsPlacement = 'unknown',
+  newsletter = 'unspecified',
 }: {
   enabled?: boolean
   phoneNumber?: string | null
   phoneDisplayNumber?: string | null
   align?: 'start' | 'center'
   className?: string
+  analyticsPlacement?: AnalyticsPlacement
+  newsletter?: AnalyticsNewsletter
 }) {
   const [resolvedEnabled, setResolvedEnabled] = useState(enabled ?? false)
 
@@ -52,6 +61,12 @@ export function SmsSubscribePrompt({
       <span className="font-sans font-medium text-gray-700">SUBSCRIBE</span> to{' '}
       <a
         href={`sms:${phoneNumber}?body=SUBSCRIBE`}
+        onClick={() =>
+          trackClientEvent('SMS signup opened', {
+            placement: analyticsPlacement,
+            newsletter,
+          })
+        }
         className="font-sans text-gray-700 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950"
       >
         {displayNumber}

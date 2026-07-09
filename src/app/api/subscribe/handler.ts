@@ -1,6 +1,11 @@
 import { checkBotId } from 'botid/server'
 import { NextResponse } from 'next/server'
 import {
+  parseAnalyticsPlacement,
+  summarizeNewsletters,
+} from '@/lib/analytics/events'
+import { trackServerEvent } from '@/lib/analytics/server'
+import {
   createOrRetrieve,
   InvalidEmailError,
   SuppressedEmailError,
@@ -23,7 +28,7 @@ export async function handleSubscribeRequest(
   }
 
   const body = await request.json()
-  const { email, name, source, newsletters } = body
+  const { email, name, source, newsletters, analytics_placement } = body
   const requestedNewsletters =
     options.newsletters ??
     (Array.isArray(newsletters) ? newsletters : undefined)
@@ -55,6 +60,27 @@ export async function handleSubscribeRequest(
       allowExistingSubscriberOptIn:
         options.allowExistingSubscriberOptIn === true,
     })
+
+    const placement = parseAnalyticsPlacement(analytics_placement)
+    const newsletter = summarizeNewsletters(requestedNewsletters)
+    if (result.nextStep === 'verification_sent') {
+      await trackServerEvent(request, 'Newsletter verification sent', {
+        method: 'email',
+        placement,
+        newsletter,
+        new_subscriber: result.isNew,
+      })
+    } else if (options.allowExistingSubscriberOptIn) {
+      await Promise.all(
+        result.changedNewsletters.map((requested) =>
+          trackServerEvent(request, 'Newsletter preference changed', {
+            placement,
+            newsletter: requested,
+            subscribed: true,
+          })
+        )
+      )
+    }
 
     return NextResponse.json({ ok: true, status: result.nextStep })
   } catch (err) {

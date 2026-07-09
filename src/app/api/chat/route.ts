@@ -1,35 +1,69 @@
-import { convertToModelMessages, type ModelMessage, streamText } from 'ai'
+import { trace } from '@opentelemetry/api'
+import {
+  consumeStream,
+  convertToModelMessages,
+  type ModelMessage,
+  streamText,
+} from 'ai'
 import { checkBotId } from 'botid/server'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { bucketDuration, bucketTurn } from '@/lib/analytics/events'
+import { trackServerEvent } from '@/lib/analytics/server'
+import { getSession } from '@/lib/auth/jwt'
 import {
+  bellGatewayCost,
   bellModel,
-  bellProviderOptions,
   bellReasoning,
   bellStopWhen,
   bellTools,
+  getBellProviderOptions,
   prepareBellStep,
 } from '@/lib/chat/bell-generation'
+import {
+  canAppendToWebBellConversation,
+  isClientConversationId,
+  networkIdentityForRequest,
+} from '@/lib/chat/bell-identity'
 import { getPageContextContent } from '@/lib/chat/page-context'
 import { sanitizeChatMessages } from '@/lib/chat/sanitize-messages'
 import { sanitizePageTitle } from '@/lib/chat/sanitize-title'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
+import {
+  createWebBellTurn,
+  getOrCreateWebBellConversation,
+} from '@/lib/db/queries/bell-conversations'
+import {
+  abortBellGeneration,
+  completeBellGeneration,
+  failBellGeneration,
+  markBellGenerationRunning,
+  setBellGenerationAssistantMessageId,
+} from '@/lib/db/queries/bell-generations'
+import {
+  createBellMessage,
+  textFromBellParts,
+} from '@/lib/db/queries/bell-messages'
+import { findByUuid } from '@/lib/db/queries/subscribers'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   const headersList = await headers()
   const ip =
-    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+    headersList.get('x-vercel-forwarded-for')?.split(',')[0]?.trim() ??
+    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    'unknown'
 
   // The rate-limit check (a Vercel Firewall self-fetch), the BotID
   // classification call, and body parsing are independent. Both checks read
   // only request headers, so all three run concurrently instead of paying
   // two sequential network round trips before the model call starts.
   // Rejection precedence is unchanged: rate limit, then bot check, then body.
-  const [allowed, { isBot }, body] = await Promise.all([
+  const [allowed, { isBot }, body, session] = await Promise.all([
     checkRateLimit('chat', `ip:${ip}`, request),
     checkBotId(),
     request.json().catch(() => null),
+    getSession(),
   ])
 
   if (!allowed) {
@@ -46,6 +80,12 @@ export async function POST(request: Request) {
   if (!body || !Array.isArray(body.messages) || body.messages.length === 0) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
+  if (!isClientConversationId(body.id)) {
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
+  }
+  if (!isClientConversationId(body.requestId)) {
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
+  }
   // Narrow client-supplied fields at the trust boundary — they are
   // interpolated into the system prompt. The path must look like a site path
   // (leading slash, then only letters, digits, hyphen, underscore, slash,
@@ -59,15 +99,13 @@ export async function POST(request: Request) {
       ? rawPath
       : undefined
   const title = sanitizePageTitle(body.pageContext?.title)
-  const userName = typeof body.userName === 'string' ? body.userName : null
-
   // Sanitize before conversion: convertToModelMessages would turn a crafted
   // { role: 'system' } message in the client payload into a real system
   // message, so only user and assistant messages with expected part shapes
   // survive. The slice caps the conversation the model sees — the client
   // accumulates history in sessionStorage, and an unbounded array is an easy
   // token-burn vector.
-  const sanitizedMessages = sanitizeChatMessages(body.messages).slice(-40)
+  const sanitizedMessages = sanitizeChatMessages(body.messages.slice(-40))
   if (sanitizedMessages.length === 0) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
@@ -78,32 +116,93 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
 
+  const latestUserMessage = sanitizedMessages.findLast(
+    (message) => message.role === 'user'
+  )
+  if (!latestUserMessage) {
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
+  }
+  const subscriber = session ? await findByUuid(session.uuid) : null
+  const networkIdentity = subscriber ? null : networkIdentityForRequest(request)
+  const conversation = await getOrCreateWebBellConversation({
+    clientConversationId: body.id,
+    subscriberId: subscriber?.id,
+    networkIdentityHash: networkIdentity?.hash,
+    networkIdentityPeriod: networkIdentity?.period,
+    pagePath: path,
+    pageTitle: title,
+  })
+  if (
+    !canAppendToWebBellConversation(
+      conversation.subscriberId,
+      subscriber?.id ?? null
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          'This Bell conversation belongs to another session. Start a new conversation.',
+      },
+      { status: 409 }
+    )
+  }
+  const activeSpan = trace.getActiveSpan()?.spanContext()
+  const turn = await createWebBellTurn({
+    conversation,
+    requestId: body.requestId,
+    clientMessageId: latestUserMessage.id,
+    content: textFromBellParts(latestUserMessage.parts),
+    parts: latestUserMessage.parts,
+    traceId: activeSpan?.isRemote ? null : activeSpan?.traceId,
+  })
+  if (!turn.generationInserted) {
+    return NextResponse.json(
+      { error: 'This message is already being answered.' },
+      { status: 409 }
+    )
+  }
+  await markBellGenerationRunning(turn.generation.id)
+  const startedAt = Date.now()
+  let generationOutcome: 'running' | 'completed' | 'aborted' | 'error' =
+    'running'
+  const turnNumber = sanitizedMessages.filter(
+    (message) => message.role === 'user'
+  ).length
+
   // When the visitor is on a known post or page, inject its content into the
   // system prompt so on-page questions answer without tool calls.
   const pageContent = getPageContextContent(path)
   const system = getSystemPrompt({
     pageContext: { path, title },
     pageContent,
-    userName,
+    // Only the server-verified display name reaches the prompt. Email is not a
+    // conversational attribute, and the client-supplied userName is ignored.
+    userName: sanitizePageTitle(subscriber?.name),
   })
 
   const result = streamText({
     // Shared with SMS so every Bell surface uses the same speed-first model.
     model: bellModel,
     reasoning: bellReasoning,
-    providerOptions: bellProviderOptions,
+    providerOptions: getBellProviderOptions({
+      surface: 'web',
+      pseudonymousUser: subscriber
+        ? `subscriber:${subscriber.uuid}`
+        : networkIdentity
+          ? `network:${networkIdentity.hash}`
+          : null,
+    }),
     maxOutputTokens: 2048,
     // Stop upstream generation when the visitor hits Stop or disconnects.
     abortSignal: request.signal,
-    // recordInputs/recordOutputs put full prompts and responses on the AI
-    // spans in Vercel Observability (Project → Observability → AI). Flip
-    // both to false to stop recording visitor messages.
     runtimeContext: { path: path ?? 'unknown' },
     telemetry: {
       isEnabled: true,
       functionId: 'bell-chat',
-      recordInputs: true,
-      recordOutputs: true,
+      // Neon is the canonical, retention-controlled transcript. Vercel keeps
+      // aggregate traces without receiving another copy of message content.
+      recordInputs: false,
+      recordOutputs: false,
       includeRuntimeContext: { path: true },
     },
     system,
@@ -111,9 +210,110 @@ export async function POST(request: Request) {
     tools: bellTools,
     stopWhen: bellStopWhen,
     prepareStep: prepareBellStep,
+    onEnd: async (event) => {
+      // AI SDK reports provider failures through onError. Do not let the
+      // terminal onEnd callback overwrite that authoritative error outcome.
+      if (event.finishReason === 'error') {
+        generationOutcome = 'error'
+        return
+      }
+      const gateway = await bellGatewayCost(
+        event.steps.map((step) => step.providerMetadata)
+      )
+      const toolsUsed = Array.from(
+        new Set(
+          event.steps.flatMap((step) =>
+            step.toolCalls.map((call) => call.toolName)
+          )
+        )
+      )
+      await completeBellGeneration(turn.generation.id, {
+        model: event.model.modelId,
+        provider: event.model.provider,
+        callId: event.callId,
+        gatewayGenerationId: gateway.gatewayGenerationId,
+        inputTokens: event.usage.inputTokens ?? null,
+        outputTokens: event.usage.outputTokens ?? null,
+        totalTokens: event.usage.totalTokens ?? null,
+        cachedInputTokens:
+          event.usage.inputTokenDetails.cacheReadTokens ?? null,
+        reasoningTokens: event.usage.outputTokenDetails.reasoningTokens ?? null,
+        costUsd: gateway.costUsd,
+        latencyMs: Date.now() - startedAt,
+        finishReason: event.finishReason,
+        toolsUsed,
+      })
+      generationOutcome = 'completed'
+      await trackServerEvent(request, 'Bell reply finished', {
+        surface: 'web',
+        outcome: 'success',
+        duration: bucketDuration(Date.now() - startedAt),
+        finish_reason: bellAnalyticsFinishReason(event.finishReason),
+        tool_used: toolsUsed.length > 0,
+        turn: bucketTurn(turnNumber),
+      })
+    },
+    onAbort: async () => {
+      generationOutcome = 'aborted'
+      await abortBellGeneration(turn.generation.id, Date.now() - startedAt)
+      await trackServerEvent(request, 'Bell reply finished', {
+        surface: 'web',
+        outcome: 'stopped',
+        duration: bucketDuration(Date.now() - startedAt),
+        finish_reason: 'stop',
+        tool_used: false,
+        turn: bucketTurn(turnNumber),
+      })
+    },
+    onError: async ({ error }) => {
+      generationOutcome = 'error'
+      await failBellGeneration(
+        turn.generation.id,
+        error,
+        Date.now() - startedAt
+      )
+      await trackServerEvent(request, 'Bell reply finished', {
+        surface: 'web',
+        outcome: 'error',
+        duration: bucketDuration(Date.now() - startedAt),
+        finish_reason: 'error',
+        tool_used: false,
+        turn: bucketTurn(turnNumber),
+      })
+    },
   })
 
   return result.toUIMessageStreamResponse({
+    originalMessages: sanitizedMessages,
+    consumeSseStream: consumeStream,
+    onEnd: async ({ responseMessage, isAborted }) => {
+      const messageStatus =
+        isAborted || generationOutcome === 'aborted'
+          ? 'aborted'
+          : generationOutcome === 'error'
+            ? 'error'
+            : 'completed'
+      const assistant = await createBellMessage({
+        conversationId: conversation.id,
+        role: 'assistant',
+        authorKind: 'bell',
+        content: textFromBellParts(responseMessage.parts),
+        parts: responseMessage.parts,
+        // Stable across a retried HTTP request even if the AI SDK assigns a
+        // new response message ID while rebuilding the stream.
+        clientMessageId: `generation:${turn.generation.id}`,
+        replyToMessageId: turn.userMessage.id,
+        status: messageStatus,
+        expiresAt: conversation.expiresAt,
+      })
+      await setBellGenerationAssistantMessageId(
+        turn.generation.id,
+        assistant.message.id
+      )
+      if (isAborted) {
+        await abortBellGeneration(turn.generation.id, Date.now() - startedAt)
+      }
+    },
     // The default onError forwards raw error text (provider internals) to
     // the visitor. Log it server-side and send a friendly message instead.
     onError: (error) => {
@@ -121,4 +321,23 @@ export async function POST(request: Request) {
       return 'Something went wrong. Please try again.'
     },
   })
+}
+
+function bellAnalyticsFinishReason(
+  reason: string
+):
+  | 'stop'
+  | 'length'
+  | 'content_filter'
+  | 'tool_calls'
+  | 'error'
+  | 'other'
+  | 'unknown' {
+  if (reason === 'stop' || reason === 'length' || reason === 'error') {
+    return reason
+  }
+  if (reason === 'content-filter') return 'content_filter'
+  if (reason === 'tool-calls') return 'tool_calls'
+  if (reason === 'unknown') return 'unknown'
+  return 'other'
 }

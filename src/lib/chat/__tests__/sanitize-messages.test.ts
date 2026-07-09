@@ -219,6 +219,86 @@ describe('sanitizeChatMessages', () => {
     expect(result[0]?.id).toBe('sanitized-0')
   })
 
+  it('bounds persisted and model-visible text', () => {
+    const result = sanitizeChatMessages([
+      userMessage('x'.repeat(20_000), 'bounded'),
+    ])
+    expect(result[0]?.parts[0]).toMatchObject({
+      type: 'text',
+      text: 'x'.repeat(16_000),
+    })
+  })
+
+  it('bounds client identifiers, tool errors, and parts per message', () => {
+    const result = sanitizeChatMessages([
+      {
+        id: 'm'.repeat(500),
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-fetchPage',
+            toolCallId: 'c'.repeat(500),
+            state: 'output-error',
+            input: { path: '/contact' },
+            errorText: 'e'.repeat(20_000),
+          },
+          ...Array.from({ length: 150 }, (_, index) => ({
+            type: 'text',
+            text: `part ${index}`,
+          })),
+        ],
+      },
+    ])
+
+    expect(result[0]?.id).toHaveLength(200)
+    expect(result[0]?.parts).toHaveLength(100)
+    expect(result[0]?.parts[0]).toMatchObject({
+      toolCallId: 'c'.repeat(200),
+      errorText: 'e'.repeat(16_000),
+    })
+  })
+
+  it('drops oversized replayed tool payloads', () => {
+    const result = sanitizeChatMessages([
+      {
+        id: 'assistant',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-fetchPage',
+            toolCallId: 'oversized',
+            state: 'output-available',
+            input: { path: '/contact' },
+            output: 'x'.repeat(70_000),
+          },
+          { type: 'text', text: 'A bounded answer.' },
+        ],
+      },
+    ])
+    expect(result[0]?.parts).toEqual([
+      { type: 'text', text: 'A bounded answer.' },
+    ])
+  })
+
+  it('bounds aggregate model-visible parts bytes per message', () => {
+    const result = sanitizeChatMessages([
+      {
+        id: 'assistant',
+        role: 'assistant',
+        parts: Array.from({ length: 100 }, (_, index) => ({
+          type: 'text',
+          text: `${index}:${'x'.repeat(15_000)}`,
+        })),
+      },
+    ])
+
+    expect(result[0]?.parts.length).toBeGreaterThan(0)
+    expect(result[0]?.parts.length).toBeLessThan(100)
+    expect(
+      Buffer.byteLength(JSON.stringify(result[0]?.parts), 'utf8')
+    ).toBeLessThanOrEqual(64_000)
+  })
+
   it('produces output convertToModelMessages accepts without system messages', async () => {
     const input = [
       {

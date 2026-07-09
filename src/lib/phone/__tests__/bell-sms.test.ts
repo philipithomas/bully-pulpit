@@ -2,22 +2,41 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('ai', () => ({ generateText: vi.fn() }))
 vi.mock('@/lib/chat/bell-generation', () => ({
+  bellGatewayCost: vi.fn(async () => ({
+    gatewayGenerationId: null,
+    costUsd: null,
+  })),
   bellModel: 'test-model',
-  bellProviderOptions: { gateway: {} },
   bellReasoning: 'none',
   bellStopWhen: 'stop-condition',
   bellTools: { searchPosts: {} },
+  getBellProviderOptions: vi.fn(() => ({ gateway: {} })),
   prepareBellStep: vi.fn(),
 }))
+vi.mock('@/lib/chat/bell-identity', () => ({
+  smsIdentityHash: vi.fn(() => 'sms-hash'),
+}))
 vi.mock('@/lib/db/queries/text-messages', () => ({
-  createTextMessage: vi.fn(),
+  createTextMessageWithStatus: vi.fn(),
   recentConversationWith: vi.fn(),
+}))
+vi.mock('@/lib/db/queries/bell-generations', () => ({
+  completeBellGeneration: vi.fn(),
+  failBellGeneration: vi.fn(),
+  markBellGenerationRunning: vi.fn(),
+  setBellGenerationAssistantMessageId: vi.fn(),
+}))
+vi.mock('@/lib/db/queries/bell-messages', () => ({
+  createBellMessage: vi.fn(),
+  updateBellMessage: vi.fn(),
 }))
 vi.mock('@/lib/phone/twilio', () => ({ sendSms: vi.fn() }))
 
 import { generateText } from 'ai'
+import { getBellProviderOptions } from '@/lib/chat/bell-generation'
+import { createBellMessage } from '@/lib/db/queries/bell-messages'
 import {
-  createTextMessage,
+  createTextMessageWithStatus,
   recentConversationWith,
 } from '@/lib/db/queries/text-messages'
 import type { TextMessage } from '@/lib/db/schema'
@@ -39,6 +58,9 @@ const INPUT = {
   from: '+15551234567',
   to: '+12123473190',
   inboundMessageId: 9,
+  conversationId: '11111111-1111-4111-8111-111111111111',
+  userMessageId: '22222222-2222-4222-8222-222222222222',
+  generationId: '33333333-3333-4333-8333-333333333333',
 }
 
 function message(
@@ -63,6 +85,18 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(recentConversationWith).mockResolvedValue([])
   vi.mocked(sendSms).mockResolvedValue({ sid: 'SM_REPLY', status: 'queued' })
+  vi.mocked(createBellMessage).mockResolvedValue({
+    message: {
+      id: '44444444-4444-4444-8444-444444444444',
+      conversationId: INPUT.conversationId,
+    },
+    inserted: true,
+    // biome-ignore lint/suspicious/noExplicitAny: focused persistence stub
+  } as any)
+  vi.mocked(createTextMessageWithStatus).mockResolvedValue({
+    message: message(10, 'outbound', '[Bell AI] Hello'),
+    inserted: true,
+  })
 })
 
 describe('SMS encoding budget', () => {
@@ -180,12 +214,26 @@ describe('Bell SMS generation and delivery', () => {
     ])
     vi.mocked(generateText).mockResolvedValue({
       text: 'It is about the new Workshop post.',
+      steps: [],
+      finalStep: {
+        model: { modelId: 'test-model', provider: 'test-provider' },
+        callId: 'call-1',
+      },
+      usage: {
+        inputTokens: 10,
+        outputTokens: 5,
+        totalTokens: 15,
+        inputTokenDetails: { cacheReadTokens: 0 },
+        outputTokenDetails: { reasoningTokens: 0 },
+      },
+      finishReason: 'stop',
       // biome-ignore lint/suspicious/noExplicitAny: partial generateText result
     } as any)
 
-    await expect(generateBellSmsBody(INPUT)).resolves.toBe(
-      '[Bell AI] It is about the new Workshop post.'
-    )
+    await expect(generateBellSmsBody(INPUT)).resolves.toEqual({
+      body: '[Bell AI] It is about the new Workshop post.',
+      assistantMessageId: '44444444-4444-4444-8444-444444444444',
+    })
     expect(recentConversationWith).toHaveBeenCalledWith(INPUT.from, 9)
     const call = vi.mocked(generateText).mock.calls[0][0]
     expect(call.prompt).toContain('Workshop: A new message')
@@ -193,6 +241,22 @@ describe('Bell SMS generation and delivery', () => {
     expect(call.maxOutputTokens).toBe(256)
     expect(call.reasoning).toBe('none')
     expect(call.tools).toEqual({ searchPosts: {} })
+    expect(call.telemetry).toMatchObject({
+      recordInputs: false,
+      recordOutputs: false,
+    })
+    expect(getBellProviderOptions).toHaveBeenCalledWith({
+      surface: 'sms',
+      pseudonymousUser: 'sms:sms-hash',
+    })
+    expect(createBellMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: 'assistant',
+        authorKind: 'bell',
+        clientMessageId: `generation:${INPUT.generationId}`,
+        replyToMessageId: INPUT.userMessageId,
+      })
+    )
   })
 
   it('sends the reply from the Twilio number', async () => {
@@ -207,14 +271,14 @@ describe('Bell SMS generation and delivery', () => {
       to: INPUT.from,
       body,
     })
-    expect(createTextMessage).not.toHaveBeenCalled()
+    expect(createTextMessageWithStatus).not.toHaveBeenCalled()
   })
 
   it('records the durable result against the inbound message', async () => {
     const body = '[Bell AI] Hello'
     await recordBellSms(INPUT, body, { sid: 'SM_REPLY', status: 'queued' })
 
-    expect(createTextMessage).toHaveBeenCalledWith({
+    expect(createTextMessageWithStatus).toHaveBeenCalledWith({
       fromNumber: INPUT.to,
       toNumber: INPUT.from,
       body,
@@ -223,5 +287,14 @@ describe('Bell SMS generation and delivery', () => {
       replyToMessageId: INPUT.inboundMessageId,
       status: 'queued',
     })
+    expect(createBellMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: 'assistant',
+        authorKind: 'bell',
+        sourceTextMessageId: 10,
+        replyToMessageId: INPUT.userMessageId,
+        status: 'completed',
+      })
+    )
   })
 })

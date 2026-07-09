@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
+import {
+  type AnalyticsPlacement,
+  summarizeNewsletters,
+  trackClientEvent,
+} from '@/lib/analytics/events'
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''
 
@@ -149,10 +154,12 @@ function useGoogleAuth({
   loginHint,
   newsletters,
   onSuccess,
+  analyticsPlacement = 'unknown',
 }: {
   loginHint?: string
   newsletters?: readonly string[]
   onSuccess?: GoogleSignInSuccessHandler
+  analyticsPlacement?: AnalyticsPlacement
 } = {}) {
   const available = useGoogleSignInAvailable()
   const normalizedLoginHint = normalizeGoogleLoginHint(loginHint)
@@ -187,6 +194,7 @@ function useGoogleAuth({
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 code: response.code,
+                analytics_placement: analyticsPlacement,
                 ...(newslettersRef.current?.length
                   ? { newsletters: newslettersRef.current }
                   : {}),
@@ -226,13 +234,19 @@ function useGoogleAuth({
       cancelled = true
       clientRef.current = null
     }
-  }, [normalizedLoginHint])
+  }, [analyticsPlacement, normalizedLoginHint])
 
   const requestSignIn = useCallback(() => {
     if (loading || !clientRef.current) return
+    trackClientEvent('Newsletter signup submitted', {
+      method: 'google',
+      placement: analyticsPlacement,
+      newsletter: summarizeNewsletters(newslettersRef.current),
+      signed_in: false,
+    })
     setLoading(true)
     clientRef.current.requestCode()
-  }, [loading])
+  }, [analyticsPlacement, loading])
 
   return { requestSignIn, loading, available }
 }
@@ -241,15 +255,18 @@ export function GoogleSignInButton({
   loginHint,
   newsletters,
   onSuccess,
+  analyticsPlacement,
 }: {
   loginHint?: string
   newsletters?: readonly string[]
   onSuccess?: GoogleSignInSuccessHandler
+  analyticsPlacement?: AnalyticsPlacement
 }) {
   const { requestSignIn, loading, available } = useGoogleAuth({
     loginHint,
     newsletters,
     onSuccess,
+    analyticsPlacement,
   })
 
   if (!available) return null
@@ -274,7 +291,9 @@ export function GoogleSignInButton({
 }
 
 export function GoogleSignInLink({ className }: { className?: string }) {
-  const { requestSignIn, loading, available } = useGoogleAuth()
+  const { requestSignIn, loading, available } = useGoogleAuth({
+    analyticsPlacement: 'member_menu',
+  })
 
   if (!available) return null
 

@@ -1,5 +1,3 @@
-import { Analytics } from '@vercel/analytics/next'
-import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { Metadata } from 'next'
 import { preload } from 'react-dom'
 import '@/styles/globals.css'
@@ -12,6 +10,7 @@ import { NewsletterProvider } from '@/components/layout/newsletter-context'
 import { CoverPreload } from '@/components/posts/cover-preload'
 import { ImageZoom } from '@/components/ui/image-zoom'
 import { Toaster } from '@/components/ui/sonner'
+import { PublicAnalytics } from '@/lib/analytics/public-analytics'
 import { siteConfig } from '@/lib/config'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 
@@ -118,8 +117,7 @@ export default function RootLayout({
             <Toaster />
             <CoverPreload />
             <ImageZoom />
-            <Analytics />
-            <SpeedInsights />
+            <PublicAnalytics />
           </NewsletterProvider>
         </AuthProvider>
       </body>

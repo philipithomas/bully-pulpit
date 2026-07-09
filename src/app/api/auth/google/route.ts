@@ -1,6 +1,11 @@
 import { checkBotId } from 'botid/server'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { NextResponse } from 'next/server'
+import {
+  parseAnalyticsPlacement,
+  summarizeNewsletters,
+} from '@/lib/analytics/events'
+import { trackServerEvent } from '@/lib/analytics/server'
 import { setSessionCookies, signSession } from '@/lib/auth/jwt'
 import {
   createOrRetrieve,
@@ -24,7 +29,7 @@ export async function POST(request: Request) {
   if (!body) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
-  const { code, newsletters } = body
+  const { code, newsletters, analytics_placement } = body
 
   if (!code) {
     return NextResponse.json(
@@ -88,19 +93,39 @@ export async function POST(request: Request) {
     }
 
     // Google-verified emails skip the OTP and are confirmed immediately.
-    const { subscriber } = await createOrRetrieve({
+    const result = await createOrRetrieve({
       email,
       name: name || undefined,
       googleVerified: true,
       newsletters: requestedNewsletters,
       allowExistingSubscriberOptIn: requestedNewsletters.length > 0,
     })
+    const { subscriber, newlyConfirmed } = result
 
     const jwt = await signSession(subscriber)
     const response = NextResponse.json({
       user: serializeSubscriber(subscriber),
     })
     setSessionCookies(response, jwt)
+
+    const placement = parseAnalyticsPlacement(analytics_placement)
+    await Promise.all([
+      trackServerEvent(request, 'Newsletter signup completed', {
+        method: 'google',
+        placement,
+        newsletter: summarizeNewsletters(requestedNewsletters),
+        new_subscriber: newlyConfirmed,
+      }),
+      ...(!newlyConfirmed
+        ? result.changedNewsletters.map((newsletter) =>
+            trackServerEvent(request, 'Newsletter preference changed', {
+              placement,
+              newsletter,
+              subscribed: true,
+            })
+          )
+        : []),
+    ])
 
     return response
   } catch (err) {

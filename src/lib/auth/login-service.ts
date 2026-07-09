@@ -138,10 +138,10 @@ export async function createAndSendLogin(
  * and sends the admin notification on first confirmation. Throws InvalidTokenError
  * for bad tokens, incrementing the per-subscriber attempt counter for codes.
  */
-export async function verifyToken(
+export async function verifyTokenWithMetadata(
   token: string,
   email?: string
-): Promise<Subscriber> {
+): Promise<{ subscriber: Subscriber; newlyConfirmed: boolean }> {
   const tokenType: TokenType = /^\d{6}$/.test(token) ? 'code' : 'magic_link'
 
   // A 6-digit code is only meaningful for the account it was minted for, so it
@@ -189,5 +189,12 @@ export async function verifyToken(
     }
   }
 
-  return subscriber
+  return { subscriber, newlyConfirmed: !wasAlreadyConfirmed }
+}
+
+export async function verifyToken(
+  token: string,
+  email?: string
+): Promise<Subscriber> {
+  return (await verifyTokenWithMetadata(token, email)).subscriber
 }

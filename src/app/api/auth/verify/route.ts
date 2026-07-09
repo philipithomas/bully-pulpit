@@ -1,7 +1,15 @@
 import { checkBotId } from 'botid/server'
 import { NextResponse } from 'next/server'
+import {
+  parseAnalyticsPlacement,
+  summarizeNewsletters,
+} from '@/lib/analytics/events'
+import { trackServerEvent } from '@/lib/analytics/server'
 import { setSessionCookies, signSession } from '@/lib/auth/jwt'
-import { InvalidTokenError, verifyToken } from '@/lib/auth/login-service'
+import {
+  InvalidTokenError,
+  verifyTokenWithMetadata,
+} from '@/lib/auth/login-service'
 import {
   applyNewsletterOptIns,
   normalizedNewsletters,
@@ -19,7 +27,7 @@ export async function POST(request: Request) {
   if (!body) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
-  const { email, code, newsletters } = body
+  const { email, code, newsletters, analytics_placement } = body
 
   if (!email || !code) {
     return NextResponse.json(
@@ -39,7 +47,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    let subscriber = await verifyToken(code, email)
+    const verification = await verifyTokenWithMetadata(code, email)
+    let subscriber = verification.subscriber
     subscriber = await applyNewsletterOptIns(
       subscriber,
       normalizedNewsletters(
@@ -51,6 +60,14 @@ export async function POST(request: Request) {
       user: serializeSubscriber(subscriber),
     })
     setSessionCookies(response, jwt)
+    await trackServerEvent(request, 'Newsletter signup completed', {
+      method: 'email_code',
+      placement: parseAnalyticsPlacement(analytics_placement),
+      newsletter: summarizeNewsletters(
+        Array.isArray(newsletters) ? newsletters : undefined
+      ),
+      new_subscriber: verification.newlyConfirmed,
+    })
     return response
   } catch (err) {
     if (err instanceof InvalidTokenError) {

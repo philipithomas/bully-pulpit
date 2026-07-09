@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
+import { trackClientEvent } from '@/lib/analytics/events'
 import type {
   SubscriberPreferenceKey,
   SubscriberPreferences,
@@ -68,13 +69,23 @@ export function AccountClient() {
   const handleToggle = useCallback(
     async (key: SubscriberPreferenceKey, enabled: boolean) => {
       if (!preferences) return
+      const newsletter = newsletterInfo.find((item) => item.key === key)?.slug
+      if (!newsletter) return
+      trackClientEvent('Newsletter preference submitted', {
+        placement: 'account',
+        newsletter,
+        subscribed: enabled,
+      })
       setSaving(key)
       setSaved(false)
       try {
         const res = await fetch('/api/auth/preferences', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [key]: enabled }),
+          body: JSON.stringify({
+            [key]: enabled,
+            analytics_placement: 'account',
+          }),
         })
         if (res.ok) {
           setPreferences((prev) => (prev ? { ...prev, [key]: enabled } : prev))

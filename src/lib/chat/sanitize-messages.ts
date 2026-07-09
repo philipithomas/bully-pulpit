@@ -16,6 +16,11 @@ const TOOL_PART_TYPES = new Set([
   'tool-fetchPost',
   'tool-fetchPage',
 ])
+const MAX_TEXT_CHARACTERS = 16_000
+const MAX_TOOL_PART_BYTES = 64_000
+const MAX_MESSAGE_PARTS_JSON_BYTES = 64_000
+const MAX_IDENTIFIER_CHARACTERS = 200
+const MAX_PARTS_PER_MESSAGE = 100
 
 type SanitizedPart = UIMessage['parts'][number]
 
@@ -25,18 +30,33 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function sanitizeTextPart(part: Record<string, unknown>): SanitizedPart | null {
   if (typeof part.text !== 'string') return null
-  return { type: 'text', text: part.text }
+  return { type: 'text', text: part.text.slice(0, MAX_TEXT_CHARACTERS) }
 }
 
 function sanitizeToolPart(part: Record<string, unknown>): SanitizedPart | null {
-  if (typeof part.toolCallId !== 'string') return null
+  if (typeof part.toolCallId !== 'string' || part.toolCallId.length === 0) {
+    return null
+  }
+  const toolCallId = part.toolCallId.slice(0, MAX_IDENTIFIER_CHARACTERS)
+  try {
+    if (
+      Buffer.byteLength(
+        JSON.stringify({ input: part.input, output: part.output }),
+        'utf8'
+      ) > MAX_TOOL_PART_BYTES
+    ) {
+      return null
+    }
+  } catch {
+    return null
+  }
   const type = part.type as `tool-${string}`
   // Only completed calls appear in replayed history. Streaming, approval,
   // and provider-executed states are not shapes this client produces.
   if (part.state === 'output-available') {
     return {
       type,
-      toolCallId: part.toolCallId,
+      toolCallId,
       state: 'output-available',
       input: part.input,
       output: part.output,
@@ -45,10 +65,10 @@ function sanitizeToolPart(part: Record<string, unknown>): SanitizedPart | null {
   if (part.state === 'output-error' && typeof part.errorText === 'string') {
     return {
       type,
-      toolCallId: part.toolCallId,
+      toolCallId,
       state: 'output-error',
       input: part.input,
-      errorText: part.errorText,
+      errorText: part.errorText.slice(0, MAX_TEXT_CHARACTERS),
     }
   }
   return null
@@ -73,12 +93,30 @@ export function sanitizeChatMessages(messages: unknown[]): UIMessage[] {
     const role = message.role
     if (role !== 'user' && role !== 'assistant') continue
     if (!Array.isArray(message.parts)) continue
-    const parts = message.parts
-      .map((part) => sanitizePart(part, role))
-      .filter((part) => part !== null)
+    const parts: SanitizedPart[] = []
+    // Account for the surrounding JSON array and commas between parts.
+    let partsBytes = 2
+    for (const rawPart of message.parts.slice(0, MAX_PARTS_PER_MESSAGE)) {
+      const part = sanitizePart(rawPart, role)
+      if (!part) continue
+      const partBytes = Buffer.byteLength(JSON.stringify(part), 'utf8')
+      const separatorBytes = parts.length > 0 ? 1 : 0
+      if (
+        partsBytes + separatorBytes + partBytes >
+        MAX_MESSAGE_PARTS_JSON_BYTES
+      ) {
+        break
+      }
+      parts.push(part)
+      partsBytes += separatorBytes + partBytes
+    }
     if (parts.length === 0) continue
+    const id =
+      typeof message.id === 'string' && message.id.length > 0
+        ? message.id.slice(0, MAX_IDENTIFIER_CHARACTERS)
+        : `sanitized-${index}`
     sanitized.push({
-      id: typeof message.id === 'string' ? message.id : `sanitized-${index}`,
+      id,
       role,
       parts,
     })

@@ -50,7 +50,14 @@ import {
   subscribeSmsNumber,
   unsubscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
-import { smsSends, smsSubscribers, textMessages } from '@/lib/db/schema'
+import {
+  bellConversations,
+  bellGenerations,
+  bellMessages,
+  smsSends,
+  smsSubscribers,
+  textMessages,
+} from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { smsSignupUi } from '@/lib/flags'
 import {
@@ -156,12 +163,37 @@ describe('POST /api/phone/sms', () => {
     expect(email.subject).toBe('SMS from +15551234567 to Phone')
     expect(email.html).toContain('Running late')
     expect(start).toHaveBeenCalledWith(replyToSmsWorkflow, [
-      {
+      expect.objectContaining({
         from: '+15551234567',
         to: '+12123473190',
         inboundMessageId: rows[0].id,
-      },
+        conversationId: expect.any(String),
+        userMessageId: expect.any(String),
+        generationId: expect.any(String),
+      }),
     ])
+    const conversations = await db.select().from(bellConversations)
+    const messages = await db.select().from(bellMessages)
+    const generations = await db.select().from(bellGenerations)
+    expect(conversations).toHaveLength(1)
+    expect(conversations[0]).toMatchObject({
+      surface: 'sms',
+      smsPhoneHash: expect.any(String),
+      expiresAt: null,
+    })
+    expect(conversations[0].smsPhoneHash).not.toContain('+15551234567')
+    expect(messages).toHaveLength(1)
+    expect(messages[0]).toMatchObject({
+      role: 'user',
+      authorKind: 'visitor',
+      content: '',
+      sourceTextMessageId: rows[0].id,
+    })
+    expect(generations).toHaveLength(1)
+    expect(generations[0]).toMatchObject({
+      userMessageId: messages[0].id,
+      workflowRunId: 'wrun_sms',
+    })
   })
 
   it('does not duplicate the row when Twilio redelivers the webhook', async () => {
@@ -176,6 +208,9 @@ describe('POST /api/phone/sms', () => {
     expect(first.status).toBe(200)
     expect(duplicate.status).toBe(200)
     expect(await db.select().from(textMessages)).toHaveLength(1)
+    expect(await db.select().from(bellConversations)).toHaveLength(1)
+    expect(await db.select().from(bellMessages)).toHaveLength(1)
+    expect(await db.select().from(bellGenerations)).toHaveLength(1)
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
     expect(start).toHaveBeenCalledTimes(1)
   })

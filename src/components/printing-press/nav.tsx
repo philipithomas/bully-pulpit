@@ -28,6 +28,11 @@ const items = [
     label: 'Phone',
     match: (p: string) => p.startsWith('/printing-press/phone'),
   },
+  {
+    href: '/printing-press/bell',
+    label: 'Bell',
+    match: (p: string) => p.startsWith('/printing-press/bell'),
+  },
 ]
 
 export function PrintingPressNav() {

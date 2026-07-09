@@ -309,7 +309,7 @@ describe('POST /api/auth/verify', () => {
       )
     )
     expect(res.headers.get('location')).toBe(
-      'https://www.philipithomas.com/?signed-in=1'
+      'https://www.philipithomas.com/?signed-in=1&analytics-signup=email-link&analytics-newsletter=contraption&analytics-new-subscriber=0'
     )
     expect(res.cookies.get('bp_has_session')?.value).toBe('1')
 

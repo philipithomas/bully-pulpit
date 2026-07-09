@@ -59,7 +59,24 @@ function isValidEmail(email: string): boolean {
 export type CreateResult = {
   subscriber: Subscriber
   isNew: boolean
+  newlyConfirmed: boolean
+  changedNewsletters: Newsletter[]
   nextStep: 'confirmed' | 'verification_sent'
+}
+
+function changedNewsletterOptIns(
+  before: Subscriber,
+  after: Subscriber
+): Newsletter[] {
+  const preferences = [
+    ['contraption', 'subscribedContraption'],
+    ['workshop', 'subscribedWorkshop'],
+    ['postcard', 'subscribedPostcard'],
+    ['tsundoku', 'subscribedTsundoku'],
+  ] as const
+  return preferences
+    .filter(([, key]) => !before[key] && after[key])
+    .map(([newsletter]) => newsletter)
 }
 
 export function normalizedNewsletters(
@@ -219,29 +236,60 @@ export async function createOrRetrieve(input: {
     ) {
       subscriber = await applyNewsletterOptIns(existing, newsletters)
     }
+    const changedNewsletters = changedNewsletterOptIns(existing, subscriber)
 
     if (googleVerified && existing.confirmedAt == null) {
       const confirmed = await confirmSubscriber(existing.id)
       await notifyNewSubscriber(confirmed)
-      return { subscriber: confirmed, isNew: false, nextStep: 'confirmed' }
+      return {
+        subscriber: confirmed,
+        isNew: false,
+        newlyConfirmed: true,
+        changedNewsletters,
+        nextStep: 'confirmed',
+      }
     }
 
     if (subscriber.confirmedAt == null) {
       await sendLoginOrRejectSuppressed(subscriber, 'confirm')
-      return { subscriber, isNew: false, nextStep: 'verification_sent' }
+      return {
+        subscriber,
+        isNew: false,
+        newlyConfirmed: false,
+        changedNewsletters,
+        nextStep: 'verification_sent',
+      }
     } else if (!googleVerified) {
       if (hasRequestedNewsletterOptIn && allowExistingSubscriberOptIn) {
-        return { subscriber, isNew: false, nextStep: 'confirmed' }
+        return {
+          subscriber,
+          isNew: false,
+          newlyConfirmed: false,
+          changedNewsletters,
+          nextStep: 'confirmed',
+        }
       }
       await sendLoginOrRejectSuppressed(
         subscriber,
         'sign-in',
         hasRequestedNewsletterOptIn ? newsletters : undefined
       )
-      return { subscriber, isNew: false, nextStep: 'verification_sent' }
+      return {
+        subscriber,
+        isNew: false,
+        newlyConfirmed: false,
+        changedNewsletters,
+        nextStep: 'verification_sent',
+      }
     }
 
-    return { subscriber, isNew: false, nextStep: 'confirmed' }
+    return {
+      subscriber,
+      isNew: false,
+      newlyConfirmed: false,
+      changedNewsletters,
+      nextStep: 'confirmed',
+    }
   }
 
   const subscriber = await createSubscriber({
@@ -254,9 +302,21 @@ export async function createOrRetrieve(input: {
   if (googleVerified) {
     const confirmed = await confirmSubscriber(subscriber.id)
     await notifyNewSubscriber(confirmed)
-    return { subscriber: confirmed, isNew: true, nextStep: 'confirmed' }
+    return {
+      subscriber: confirmed,
+      isNew: true,
+      newlyConfirmed: true,
+      changedNewsletters: [],
+      nextStep: 'confirmed',
+    }
   }
 
   await sendLoginOrRejectSuppressed(subscriber, 'confirm')
-  return { subscriber, isNew: true, nextStep: 'verification_sent' }
+  return {
+    subscriber,
+    isNew: true,
+    newlyConfirmed: false,
+    changedNewsletters: [],
+    nextStep: 'verification_sent',
+  }
 }

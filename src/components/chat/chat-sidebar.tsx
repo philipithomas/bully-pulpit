@@ -1,19 +1,43 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
-import { track } from '@vercel/analytics'
 import { DefaultChatTransport } from 'ai'
 import { PanelRight, PanelRightClose, RotateCcw, X } from 'lucide-react'
 import Image from 'next/image'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { ChatInput } from '@/components/chat/chat-input'
 import { ChatMessage, ThinkingIndicator } from '@/components/chat/chat-message'
+import {
+  analyticsPageType,
+  bucketTurn,
+  trackClientEvent,
+} from '@/lib/analytics/events'
 import { chatErrorMessage } from '@/lib/chat/chat-error-message'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
-function WelcomeScreen({ userName }: { userName?: string | null }) {
+function WelcomeScreen({
+  userName,
+  onSuggestionSelect,
+}: {
+  userName?: string | null
+  onSuggestionSelect: (suggestion: string) => void
+}) {
+  const handleSuggestionClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      onSuggestionSelect(event.currentTarget.value)
+    },
+    [onSuggestionSelect]
+  )
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
       <Image src="/images/bell.svg" alt="Bell" width={48} height={48} />
@@ -35,7 +59,8 @@ function WelcomeScreen({ userName }: { userName?: string | null }) {
           <button
             key={q}
             type="button"
-            data-suggestion={q}
+            value={q}
+            onClick={handleSuggestionClick}
             className="rounded-full border border-gray-100 px-3 py-1.5 font-sans text-xs text-gray-600 transition-colors hover:border-gray-200 hover:text-gray-950"
           >
             {q}
@@ -51,16 +76,17 @@ export function ChatSidebar() {
     open,
     pinned,
     initialQuery,
+    entrySource,
     savedMessages,
     chatId,
     closeSidebar,
     togglePin,
     saveMessages,
     clearMessages,
+    consumeInitialQuery,
+    syncConversationIdentity,
   } = useChatSidebar()
-  const { user } = useAuthContext()
-  const userRef = useRef(user)
-  userRef.current = user
+  const { user, loading: authLoading } = useAuthContext()
   const [entered, setEntered] = useState(false)
   useEffect(() => {
     const raf = requestAnimationFrame(() => setEntered(true))
@@ -75,7 +101,25 @@ export function ChatSidebar() {
             path: window.location.pathname,
             title: document.title,
           },
-          userName: userRef.current?.name || userRef.current?.email || null,
+        }),
+        prepareSendMessagesRequest: ({
+          id,
+          messages: requestMessages,
+          trigger,
+          messageId,
+          body,
+        }) => ({
+          body: {
+            ...body,
+            id,
+            messages: requestMessages,
+            trigger,
+            messageId,
+            // One generation attempt per transport request. The server uses
+            // this UUID as an idempotency key without trusting the browser's
+            // conversation or message IDs as an attempt identity.
+            requestId: crypto.randomUUID(),
+          },
         }),
       }),
     []
@@ -110,16 +154,43 @@ export function ChatSidebar() {
     },
   })
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const hasSentInitialRef = useRef(false)
-  const lastInitialQueryRef = useRef('')
+  const lastHandoffChatIdRef = useRef('')
   const messagesRef = useRef(messages)
   messagesRef.current = messages
+  const userRef = useRef(user)
+  userRef.current = user
+
+  // A durable browser conversation belongs to exactly one resolved auth
+  // identity. Initial auth hydration adopts the existing identity marker;
+  // subsequent sign-outs and account switches stop the old chat, rotate its
+  // ID, and clear its transcript before another message can be sent.
+  useEffect(() => {
+    if (authLoading) return
+    const identity = user ? `subscriber:${user.uuid}` : 'anonymous'
+    if (!syncConversationIdentity(identity)) return
+    stop()
+    setMessages([])
+  }, [authLoading, setMessages, stop, syncConversationIdentity, user])
+
+  // Count an open once per visible session. Search handoffs and the header
+  // share the same panel but represent meaningfully different entry points.
+  const wasOpenRef = useRef(false)
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      trackClientEvent('Bell opened', {
+        entry_source: entrySource,
+        signed_in: Boolean(user),
+        page_type: analyticsPageType(window.location.pathname),
+      })
+    }
+    wasOpenRef.current = open
+  }, [entrySource, open, user])
 
   const saveMessagesFromRef = useCallback(() => {
     if (messagesRef.current.length > 0) {
-      saveMessages(messagesRef.current)
+      saveMessages(chatId, messagesRef.current)
     }
-  }, [saveMessages])
+  }, [chatId, saveMessages])
 
   // Hydrate useChat from sessionStorage on mount (once).
   // Uses refs so the effect deps stay empty without lying to the linter.
@@ -134,24 +205,43 @@ export function ChatSidebar() {
     }
   }, [])
 
-  // Send initial query when sidebar opens with a query
+  // Send an initial search query once for the fresh chat ID created by the
+  // handoff. Mark it consumed only when the timer fires: auth hydration can
+  // otherwise cancel the effect between clearing the old transcript and
+  // sending the query, leaving Bell open with an empty thread.
   useEffect(() => {
-    if (open && initialQuery && initialQuery !== lastInitialQueryRef.current) {
-      lastInitialQueryRef.current = initialQuery
-      if (!hasSentInitialRef.current) {
-        hasSentInitialRef.current = true
-        setMessages([])
-        // Delay to ensure clean state
-        setTimeout(() => {
-          sendMessage({ text: initialQuery })
-          track('Chat Message', { depth: 1, path: window.location.pathname })
-        }, 50)
+    if (!open || !initialQuery || lastHandoffChatIdRef.current === chatId) {
+      return
+    }
+    setMessages([])
+    const timeout = window.setTimeout(() => {
+      const state = useChatSidebar.getState()
+      if (
+        !state.open ||
+        state.chatId !== chatId ||
+        state.initialQuery !== initialQuery
+      ) {
+        return
       }
-    }
-    if (!open) {
-      hasSentInitialRef.current = false
-    }
-  }, [open, initialQuery, sendMessage, setMessages])
+      lastHandoffChatIdRef.current = chatId
+      sendMessage({ text: initialQuery })
+      consumeInitialQuery(chatId)
+      trackClientEvent('Bell message submitted', {
+        surface: 'web',
+        source: 'search_handoff',
+        signed_in: Boolean(userRef.current),
+        turn: '1',
+      })
+    }, 50)
+    return () => window.clearTimeout(timeout)
+  }, [
+    chatId,
+    consumeInitialQuery,
+    initialQuery,
+    open,
+    sendMessage,
+    setMessages,
+  ])
 
   // Auto-scroll when messages update or status changes. The CSS
   // reduced-motion kill switch cannot reach JS-initiated smooth scrolls, so
@@ -227,39 +317,77 @@ export function ChatSidebar() {
   }, [pinned])
 
   const handleNewConversation = useCallback(() => {
+    const previousTurns = messagesRef.current.filter(
+      (message) => message.role === 'user'
+    ).length
+    if (previousTurns > 0) {
+      trackClientEvent('Bell new conversation', {
+        surface: 'web',
+        previous_turns: bucketTurn(previousTurns),
+      })
+    }
     clearMessages()
     setMessages([])
-    lastInitialQueryRef.current = ''
+    lastHandoffChatIdRef.current = ''
   }, [clearMessages, setMessages])
 
-  const handleSend = useCallback(
-    (text: string) => {
+  const submitMessage = useCallback(
+    (text: string, source: 'composer' | 'suggestion') => {
       const depth =
         messagesRef.current.filter((m) => m.role === 'user').length + 1
       sendMessage({ text })
-      track('Chat Message', { depth, path: window.location.pathname })
+      trackClientEvent('Bell message submitted', {
+        surface: 'web',
+        source,
+        signed_in: Boolean(user),
+        turn: bucketTurn(depth),
+      })
     },
-    [sendMessage]
+    [sendMessage, user]
   )
 
+  const handleSend = useCallback(
+    (text: string) => submitMessage(text, 'composer'),
+    [submitMessage]
+  )
+
+  const handleStop = useCallback(() => {
+    const turns = messagesRef.current.filter(
+      (message) => message.role === 'user'
+    ).length
+    trackClientEvent('Bell stopped', {
+      surface: 'web',
+      turn: bucketTurn(turns),
+    })
+    stop()
+  }, [stop])
+
   const handleRetry = useCallback(() => {
+    const turns = messagesRef.current.filter(
+      (message) => message.role === 'user'
+    ).length
+    trackClientEvent('Bell regenerated', {
+      surface: 'web',
+      turn: bucketTurn(turns),
+    })
     regenerate()
   }, [regenerate])
+
+  const handleBackdropKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Enter' || event.key === ' ') closeSidebar()
+    },
+    [closeSidebar]
+  )
 
   const isStreaming = status === 'streaming'
   const isSubmitted = status === 'submitted'
   const isError = status === 'error'
   const showWelcome = messages.length === 0 && !isSubmitted
 
-  // Handle suggestion chip clicks via event delegation
-  const handleMessagesClick = useCallback(
-    (e: React.MouseEvent) => {
-      const target = (e.target as HTMLElement).closest('[data-suggestion]')
-      if (target) {
-        sendMessage({ text: target.getAttribute('data-suggestion') ?? '' })
-      }
-    },
-    [sendMessage]
+  const handleSuggestionSelect = useCallback(
+    (suggestion: string) => submitMessage(suggestion, 'suggestion'),
+    [submitMessage]
   )
 
   return (
@@ -269,9 +397,7 @@ export function ChatSidebar() {
         <div
           className="fixed inset-0 z-50 bg-black/50 sm:hidden"
           onClick={closeSidebar}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') closeSidebar()
-          }}
+          onKeyDown={handleBackdropKeyDown}
           role="button"
           tabIndex={0}
           aria-label="Close chat"
@@ -333,14 +459,12 @@ export function ChatSidebar() {
         </div>
 
         {/* Messages */}
-        <div
-          className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-4"
-          onClick={handleMessagesClick}
-          onKeyDown={() => {}}
-          role="presentation"
-        >
+        <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-4">
           {showWelcome ? (
-            <WelcomeScreen userName={user?.name} />
+            <WelcomeScreen
+              userName={user?.name}
+              onSuggestionSelect={handleSuggestionSelect}
+            />
           ) : (
             <div className="flex flex-col gap-4">
               {messages.map((message) => (
@@ -359,7 +483,7 @@ export function ChatSidebar() {
               {isSubmitted && <ThinkingIndicator />}
 
               {/* Error message */}
-              {isError && error && (
+              {isError && Boolean(error) && (
                 <div className="flex justify-start">
                   <div className="min-w-0 max-w-[85%] wrap-anywhere rounded-lg px-3.5 py-2.5 font-sans text-sm text-red">
                     <p className="mb-2">{chatErrorMessage(error)}</p>
@@ -388,7 +512,7 @@ export function ChatSidebar() {
         {/* Input */}
         <ChatInput
           onSend={handleSend}
-          onStop={stop}
+          onStop={handleStop}
           isStreaming={isStreaming || isSubmitted}
           focus={open}
         />
