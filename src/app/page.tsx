@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image, { getImageProps } from 'next/image'
 import Link from 'next/link'
 import { InlineSignupForm } from '@/components/auth/inline-signup-form'
+import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
@@ -156,8 +157,6 @@ export default async function HomePage() {
             analyticsPlacement="homepage"
             hideWhenLoggedIn
             initialSubscriberCount={subscriberCount}
-            smsSignupDisplayNumber={smsSignupDisplayNumber}
-            smsSignupPhoneNumber={smsSignupPhoneNumber}
           />
 
           {/* Newsletter directory */}
@@ -189,13 +188,20 @@ export default async function HomePage() {
               ))}
             </div>
             <p className="font-serif text-sm text-gray-500 mt-3">
-              Available by email or{' '}
+              Also available via{' '}
               <Link
                 href="/feed/rss.xml"
                 className="underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
                 RSS
               </Link>
+              <SmsSubscribePrompt
+                analyticsPlacement="homepage"
+                newsletter="all"
+                phoneDisplayNumber={smsSignupDisplayNumber}
+                phoneNumber={smsSignupPhoneNumber}
+                variant="homepage"
+              />
               .
             </p>
           </div>
