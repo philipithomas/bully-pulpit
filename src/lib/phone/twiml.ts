@@ -99,8 +99,9 @@ export function connectCallTwiml(input: {
  * Wraps TwiML in a Response with no-store cache headers so neither Vercel's
  * CDN nor any intermediary caches a per-call document.
  */
-export function twimlResponse(xml: string): Response {
+export function twimlResponse(xml: string, status = 200): Response {
   return new Response(xml, {
+    status,
     headers: {
       'Content-Type': 'text/xml; charset=utf-8',
       'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',

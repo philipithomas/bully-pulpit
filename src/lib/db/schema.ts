@@ -173,6 +173,9 @@ export const textMessages = pgTable(
     body: text('body').notNull().default(''),
     direction: text('direction').notNull(),
     twilioSid: text('twilio_sid').unique(),
+    replyToMessageId: bigint('reply_to_message_id', {
+      mode: 'number',
+    }).unique(),
     status: text('status').notNull().default('received'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -197,6 +200,7 @@ export const phoneWebhookEvents = pgTable(
     id: bigserial('id', { mode: 'number' }).primaryKey(),
     eventKey: text('event_key').notNull().unique(),
     eventType: text('event_type').notNull(),
+    processingAt: timestamp('processing_at', { withTimezone: true }),
     processedAt: timestamp('processed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

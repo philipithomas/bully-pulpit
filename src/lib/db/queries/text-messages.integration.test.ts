@@ -7,6 +7,7 @@ import {
   createTextMessage,
   createTextMessageWithStatus,
   listConversations,
+  recentConversationWith,
 } from '@/lib/db/queries/text-messages'
 import { textMessages } from '@/lib/db/schema'
 import { db, resetDb } from '@/test/integration/db'
@@ -80,6 +81,21 @@ describe('createTextMessage', () => {
     expect(await db.select().from(textMessages)).toHaveLength(2)
   })
 
+  it('deduplicates Bell replies by their inbound message id', async () => {
+    const inboundMessage = await createTextMessage(inbound(ALICE, 'SM_IN'))
+    const first = await createTextMessage({
+      ...outbound(ALICE, 'SM_REPLY_1', '[Bell AI] Hello'),
+      replyToMessageId: inboundMessage.id,
+    })
+    const second = await createTextMessage({
+      ...outbound(ALICE, null, '[Bell AI] Hello'),
+      replyToMessageId: inboundMessage.id,
+    })
+
+    expect(second.id).toBe(first.id)
+    expect(await db.select().from(textMessages)).toHaveLength(2)
+  })
+
   it('rejects an invalid direction', async () => {
     await expect(
       createTextMessage({
@@ -121,5 +137,37 @@ describe('conversationWith', () => {
 
     const thread = await conversationWith(ALICE)
     expect(thread.map((m) => m.body)).toEqual(['one', 'two', 'three'])
+  })
+})
+
+describe('recentConversationWith', () => {
+  it('returns bounded delivered history through the current inbound row', async () => {
+    const t = (minutes: number) => new Date(2026, 0, 1, 12, minutes)
+    await createTextMessage(
+      outbound(
+        ALICE,
+        'SM_NEWS',
+        'Postcard: A new message\nhttps://www.philipithomas.com/new',
+        t(0)
+      )
+    )
+    await createTextMessage(inbound(ALICE, 'SM1', 'What was that?', t(1)))
+    await createTextMessage({
+      ...outbound(ALICE, null, 'This failed', t(2)),
+      status: 'failed',
+    })
+    await createTextMessage(inbound(BOB, 'SM_BOB', 'Unrelated', t(3)))
+    const current = await createTextMessage(
+      inbound(ALICE, 'SM2', 'Tell me more', t(4))
+    )
+    await createTextMessage(outbound(ALICE, 'SM_FUTURE', 'A later reply', t(5)))
+
+    const history = await recentConversationWith(ALICE, current.id, 3)
+
+    expect(history.map((message) => message.body)).toEqual([
+      'Postcard: A new message\nhttps://www.philipithomas.com/new',
+      'What was that?',
+      'Tell me more',
+    ])
   })
 })

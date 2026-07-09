@@ -28,7 +28,15 @@ vi.mock('@/lib/phone/twilio', () => ({
 vi.mock('@/lib/flags', () => ({
   smsSignupUi: vi.fn(async () => false),
 }))
+vi.mock('@/lib/rate-limit', () => ({
+  checkRateLimit: vi.fn(async () => true),
+}))
+vi.mock('workflow/api', () => ({ start: vi.fn() }))
+vi.mock('@/workflows/reply-to-sms', () => ({
+  replyToSmsWorkflow: vi.fn(),
+}))
 
+import { start } from 'workflow/api'
 import { POST as smsPost } from '@/app/api/phone/sms/route'
 import { POST as voiceMenuPost } from '@/app/api/phone/voice-menu/route'
 import {
@@ -41,7 +49,9 @@ import { sendSimpleEmail } from '@/lib/email/ses'
 import { smsSignupUi } from '@/lib/flags'
 import { SMS_SUBSCRIBE_CONFIRMATION } from '@/lib/phone/sms-subscription-copy'
 import { sendSms } from '@/lib/phone/twilio'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { db, resetDb } from '@/test/integration/db'
+import { replyToSmsWorkflow } from '@/workflows/reply-to-sms'
 
 const SECRET = 'test-webhook-secret'
 
@@ -74,7 +84,12 @@ beforeEach(async () => {
   process.env.TWILIO_SECRET = SECRET
   process.env.ADMIN_EMAILS = 'one@example.com, two@example.com'
   vi.mocked(smsSignupUi).mockResolvedValue(false)
+  vi.mocked(checkRateLimit).mockResolvedValue(true)
   vi.mocked(sendSms).mockResolvedValue({ sid: 'SM_CONFIRM', status: 'queued' })
+  vi.mocked(start).mockResolvedValue({
+    runId: 'wrun_sms',
+    // biome-ignore lint/suspicious/noExplicitAny: partial workflow run
+  } as any)
 })
 
 afterEach(async () => {
@@ -123,6 +138,13 @@ describe('POST /api/phone/sms', () => {
     expect(email.to).toEqual(['one@example.com', 'two@example.com'])
     expect(email.subject).toBe('SMS from +15551234567 to Phone')
     expect(email.html).toContain('Running late')
+    expect(start).toHaveBeenCalledWith(replyToSmsWorkflow, [
+      {
+        from: '+15551234567',
+        to: '+12123473190',
+        inboundMessageId: rows[0].id,
+      },
+    ])
   })
 
   it('does not duplicate the row when Twilio redelivers the webhook', async () => {
@@ -132,14 +154,52 @@ describe('POST /api/phone/sms', () => {
       Body: 'Running late',
       MessageSid: 'SM123',
     }
-    await smsPost(smsRequest(form))
-    await smsPost(smsRequest(form))
+    const first = await smsPost(smsRequest(form))
+    const duplicate = await smsPost(smsRequest(form))
+    expect(first.status).toBe(200)
+    expect(duplicate.status).toBe(200)
     expect(await db.select().from(textMessages)).toHaveLength(1)
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
+    expect(start).toHaveBeenCalledTimes(1)
   })
 
-  it('retries side effects for unprocessed duplicate SMS webhooks', async () => {
+  it('claims concurrent webhook duplicates before starting Bell', async () => {
+    let finishStart:
+      | ((run: Awaited<ReturnType<typeof start>>) => void)
+      | undefined
+    vi.mocked(start).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishStart = resolve
+        })
+    )
+    const form = {
+      From: '+15551234567',
+      To: '+12123473190',
+      Body: 'Running late',
+      MessageSid: 'SM_CONCURRENT',
+    }
+
+    const first = smsPost(smsRequest(form))
+    await vi.waitFor(() => {
+      expect(start).toHaveBeenCalledTimes(1)
+    })
+    const duplicate = await smsPost(smsRequest(form))
+    finishStart?.({
+      runId: 'wrun_concurrent',
+      // biome-ignore lint/suspicious/noExplicitAny: partial workflow run
+    } as any)
+    await first
+
+    expect(duplicate.status).toBe(503)
+    expect(await duplicate.text()).toContain('<Response></Response>')
+    expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
+    expect(start).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not block Bell when the admin notification fails', async () => {
     vi.mocked(sendSimpleEmail).mockRejectedValueOnce(new Error('SES offline'))
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const form = {
       From: '+15551234567',
       To: '+12123473190',
@@ -147,15 +207,44 @@ describe('POST /api/phone/sms', () => {
       MessageSid: 'SM123',
     }
 
-    await expect(smsPost(smsRequest(form))).rejects.toThrow('SES offline')
-    expect(await db.select().from(textMessages)).toHaveLength(1)
+    const response = await smsPost(smsRequest(form))
+    await flushAfterTasks()
+    const duplicate = await smsPost(smsRequest(form))
 
+    expect(response.status).toBe(200)
+    expect(duplicate.status).toBe(200)
+    expect(await response.text()).toContain('<Response></Response>')
+    expect(await db.select().from(textMessages)).toHaveLength(1)
+    expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(consoleError).toHaveBeenCalledWith(
+      '[phone/sms] incoming SMS notification failed:',
+      expect.any(Error)
+    )
+  })
+
+  it('releases the webhook claim when workflow enqueue fails', async () => {
+    vi.mocked(start)
+      .mockRejectedValueOnce(new Error('workflow unavailable'))
+      .mockResolvedValueOnce({
+        runId: 'wrun_retry',
+        // biome-ignore lint/suspicious/noExplicitAny: partial workflow run
+      } as any)
+    const form = {
+      From: '+15551234567',
+      To: '+12123473190',
+      Body: 'What is new?',
+      MessageSid: 'SM_WORKFLOW_RETRY',
+    }
+
+    await expect(smsPost(smsRequest(form))).rejects.toThrow(
+      'workflow unavailable'
+    )
     const response = await smsPost(smsRequest(form))
 
     expect(response.status).toBe(200)
-    expect(await response.text()).toContain('<Response></Response>')
+    expect(start).toHaveBeenCalledTimes(2)
     expect(await db.select().from(textMessages)).toHaveLength(1)
-    expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(2)
   })
 
   it('subscribes an SMS sender and emails an admin notification with Twilio metadata', async () => {
@@ -195,6 +284,7 @@ describe('POST /api/phone/sms', () => {
     expect(email.html).toContain('Texted SUBSCRIBE')
     expect(email.html).toContain('SAN FRANCISCO, CA')
     expect(email.html).toContain('SM_SUB')
+    expect(start).not.toHaveBeenCalled()
   })
 
   it('does not send another signup notification for a repeated subscribe command', async () => {
@@ -243,6 +333,7 @@ describe('POST /api/phone/sms', () => {
     expect(subscriber.confirmedAt).toBeNull()
     expect(subscriber.subscribedContraption).toBe(false)
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+    expect(start).not.toHaveBeenCalled()
   })
 
   it('ignores duplicate command webhooks after MessageSid dedupe', async () => {
@@ -391,6 +482,53 @@ describe('POST /api/phone/sms', () => {
     expect(subscriber.subscribedWorkshop).toBe(false)
     expect(subscriber.subscribedTsundoku).toBe(false)
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+  })
+
+  it('does not add Bell or email replies to Twilio-managed HELP', async () => {
+    const response = await smsPost(
+      smsRequest({
+        From: '+15551234567',
+        To: '+12123473190',
+        Body: 'HELP',
+        MessageSid: 'SM_HELP',
+        OptOutType: 'HELP',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('<Response></Response>')
+    expect(start).not.toHaveBeenCalled()
+    expect(sendSimpleEmail).not.toHaveBeenCalled()
+  })
+
+  it('rate-limits Bell by sender after compliance commands are handled', async () => {
+    vi.mocked(checkRateLimit).mockResolvedValueOnce(false)
+    const response = await smsPost(
+      smsRequest({
+        From: '+15551234567',
+        To: '+12123473190',
+        Body: 'Tell me everything',
+        MessageSid: 'SM_RATE_LIMITED',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain(
+      '[Bell AI] Too many messages. Please try again later.'
+    )
+    expect(checkRateLimit).toHaveBeenCalledWith(
+      'chat',
+      'phone:+15551234567',
+      expect.any(Request)
+    )
+    expect(start).not.toHaveBeenCalled()
+    const rows = await db.select().from(textMessages)
+    expect(rows).toHaveLength(2)
+    expect(rows[1]).toMatchObject({
+      direction: 'outbound',
+      status: 'queued',
+      replyToMessageId: rows[0].id,
+    })
   })
 })
 

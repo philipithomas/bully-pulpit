@@ -22,6 +22,14 @@ describe('scrubLeakedToolJson', () => {
     )
   })
 
+  it('strips fetchPage and scoped search inputs', () => {
+    expect(
+      scrubLeakedToolJson(
+        '{"path":"/contact"}{"query":"coffee","scope":"images"}Answer.'
+      )
+    ).toBe('Answer.')
+  })
+
   it('returns an empty string when the part is only leaked JSON', () => {
     expect(scrubLeakedToolJson('{"slug":"colophon"}')).toBe('')
   })

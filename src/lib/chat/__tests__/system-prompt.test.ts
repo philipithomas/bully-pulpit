@@ -55,3 +55,20 @@ describe('getSystemPrompt page context', () => {
     expect(prompt).not.toContain('## Current page')
   })
 })
+
+describe('getSystemPrompt SMS surface', () => {
+  it('uses recent messages as grounding and requires concise plain text', () => {
+    const prompt = getSystemPrompt({ surface: 'sms' })
+
+    expect(prompt).toContain(
+      'Base your answers only on the recent SMS history or content you retrieve'
+    )
+    expect(prompt).toContain('Reply in one compact plain-text paragraph')
+    expect(prompt).toContain('Do not use Markdown')
+    expect(prompt).toContain('Do not write the [Bell AI] prefix')
+    expect(prompt).toContain('https://www.philipithomas.com URL')
+    expect(prompt).not.toContain(
+      'Use markdown links with the exact URL returned by the search tool'
+    )
+  })
+})

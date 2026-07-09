@@ -1,4 +1,4 @@
-import { desc, eq, or } from 'drizzle-orm'
+import { and, desc, eq, lte, ne, or } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import {
   type NewTextMessage,
@@ -15,6 +15,9 @@ const CONVERSATION_SCAN_LIMIT = 1_000
 /** Per-thread message cap; older history is simply not shown. */
 const THREAD_LIMIT = 500
 
+/** Bell gets a small, deterministic window instead of the 500-row admin UI. */
+const BELL_THREAD_LIMIT = 12
+
 /**
  * Inserts one message. Inbound rows carry Twilio's MessageSid, which is
  * unique, so a webhook redelivery is a no-op instead of a duplicate; the
@@ -29,17 +32,27 @@ export async function createTextMessage(
 export async function createTextMessageWithStatus(
   input: NewTextMessage
 ): Promise<{ message: TextMessage; inserted: boolean }> {
+  const dedupeByReply =
+    input.replyToMessageId !== null && input.replyToMessageId !== undefined
   const inserted = await getDb()
     .insert(textMessages)
     .values(input)
-    .onConflictDoNothing({ target: textMessages.twilioSid })
+    .onConflictDoNothing({
+      target: dedupeByReply
+        ? textMessages.replyToMessageId
+        : textMessages.twilioSid,
+    })
     .returning()
   if (inserted.length > 0) return { message: inserted[0], inserted: true }
-  // Conflict: the sid is already stored (webhook retry). Return that row.
+  // Conflict: the Twilio sid or Bell source message is already stored.
   const existing = await getDb()
     .select()
     .from(textMessages)
-    .where(eq(textMessages.twilioSid, input.twilioSid ?? ''))
+    .where(
+      dedupeByReply
+        ? eq(textMessages.replyToMessageId, input.replyToMessageId as number)
+        : eq(textMessages.twilioSid, input.twilioSid ?? '')
+    )
     .limit(1)
   return { message: existing[0], inserted: false }
 }
@@ -86,5 +99,34 @@ export async function conversationWith(number: string): Promise<TextMessage[]> {
     )
     .orderBy(desc(textMessages.createdAt), desc(textMessages.id))
     .limit(THREAD_LIMIT)
+  return rows.reverse()
+}
+
+/**
+ * Recent delivered/received messages through one inbound row, oldest first.
+ * The id ceiling keeps two rapidly arriving texts from reading each other as
+ * history before either Bell reply exists. Failed outbound attempts are not
+ * included because the other person never received them.
+ */
+export async function recentConversationWith(
+  number: string,
+  throughId: number,
+  limit = BELL_THREAD_LIMIT
+): Promise<TextMessage[]> {
+  const rows = await getDb()
+    .select()
+    .from(textMessages)
+    .where(
+      and(
+        or(
+          eq(textMessages.fromNumber, number),
+          eq(textMessages.toNumber, number)
+        ),
+        lte(textMessages.id, throughId),
+        ne(textMessages.status, 'failed')
+      )
+    )
+    .orderBy(desc(textMessages.createdAt), desc(textMessages.id))
+    .limit(Math.max(1, Math.min(limit, 50)))
   return rows.reverse()
 }
