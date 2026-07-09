@@ -1,5 +1,6 @@
 import { checkBotId } from 'botid/server'
 import { NextResponse } from 'next/server'
+import { z } from 'zod/v4'
 import {
   parseAnalyticsPlacement,
   summarizeNewsletters,
@@ -15,25 +16,40 @@ import {
   normalizedNewsletters,
 } from '@/lib/auth/subscriber-service'
 import { serializeSubscriber } from '@/lib/db/queries/subscribers'
+import { PUBLIC_JSON_BODY_MAX_BYTES, readJsonBody } from '@/lib/http/json-body'
 import { checkRateLimit } from '@/lib/rate-limit'
 
+const verifyBodySchema = z.strictObject({
+  email: z.string().max(320).optional(),
+  code: z.string().max(2_048).optional(),
+  newsletters: z.array(z.string().max(32)).max(4).optional(),
+  analytics_placement: z.string().max(100).optional(),
+})
+
 export async function POST(request: Request) {
-  const { isBot } = await checkBotId()
-  if (isBot) {
-    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+  const parsedBody = await readJsonBody(
+    request,
+    verifyBodySchema,
+    PUBLIC_JSON_BODY_MAX_BYTES
+  )
+  if (!parsedBody.ok) {
+    return NextResponse.json(
+      { error: parsedBody.error },
+      { status: parsedBody.status }
+    )
   }
 
-  const body = await request.json().catch(() => null)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-  }
-  const { email, code, newsletters, analytics_placement } = body
-
+  const { email, code, newsletters, analytics_placement } = parsedBody.data
   if (!email || !code) {
     return NextResponse.json(
       { error: 'Email and code are required' },
       { status: 400 }
     )
+  }
+
+  const { isBot } = await checkBotId()
+  if (isBot) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 
   // Rate limit: 5 attempts per email per 15 minutes
@@ -51,9 +67,7 @@ export async function POST(request: Request) {
     let subscriber = verification.subscriber
     subscriber = await applyNewsletterOptIns(
       subscriber,
-      normalizedNewsletters(
-        Array.isArray(newsletters) ? newsletters : undefined
-      )
+      normalizedNewsletters(newsletters)
     )
     const jwt = await signSession(subscriber)
     const response = NextResponse.json({
@@ -63,9 +77,7 @@ export async function POST(request: Request) {
     await trackServerEvent(request, 'Newsletter signup completed', {
       method: 'email_code',
       placement: parseAnalyticsPlacement(analytics_placement),
-      newsletter: summarizeNewsletters(
-        Array.isArray(newsletters) ? newsletters : undefined
-      ),
+      newsletter: summarizeNewsletters(newsletters),
       new_subscriber: verification.newlyConfirmed,
     })
     return response

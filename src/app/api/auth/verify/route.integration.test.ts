@@ -1,3 +1,4 @@
+import { checkBotId } from 'botid/server'
 import { and, desc, eq } from 'drizzle-orm'
 import { jwtVerify } from 'jose'
 import { NextRequest } from 'next/server'
@@ -187,6 +188,15 @@ describe('POST /api/auth/verify', () => {
     )
     expect(res.status).toBe(400)
     expect(await res.json()).toEqual({ error: 'Invalid request body' })
+
+    const missingFields = await verifyPost(
+      jsonPost('http://localhost/api/auth/verify', {})
+    )
+    expect(missingFields.status).toBe(400)
+    expect(await missingFields.json()).toEqual({
+      error: 'Email and code are required',
+    })
+    expect(checkBotId).not.toHaveBeenCalled()
   })
 
   it('rejects a wrong code and increments the attempt counter', async () => {
