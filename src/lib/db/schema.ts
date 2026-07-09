@@ -223,6 +223,12 @@ export const smsSubscribers = pgTable(
       .default(true),
     subscribedWorkshop: boolean('subscribed_workshop').notNull().default(true),
     subscribedTsundoku: boolean('subscribed_tsundoku').notNull().default(true),
+    bellContactCardProcessingAt: timestamp('bell_contact_card_processing_at', {
+      withTimezone: true,
+    }),
+    bellContactCardSentAt: timestamp('bell_contact_card_sent_at', {
+      withTimezone: true,
+    }),
     source: text('source'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

@@ -11,10 +11,10 @@ afterEach(() => {
   delete process.env.PHONE_NUMBER
 })
 
-function expectDownloadHeaders(response: Response): void {
+function expectVCardHeaders(response: Response): void {
   expect(response.headers.get('Content-Type')).toBe('text/vcard; charset=utf-8')
   expect(response.headers.get('Content-Disposition')).toBe(
-    'attachment; filename="Bell.vcf"'
+    'inline; filename="Bell.vcf"'
   )
   expect(response.headers.get('Cache-Control')).toContain('no-store')
   expect(response.headers.get('Cache-Control')).toContain('no-cache')
@@ -27,7 +27,7 @@ describe('/bell.vcf', () => {
     const body = await response.text()
 
     expect(response.status).toBe(200)
-    expectDownloadHeaders(response)
+    expectVCardHeaders(response)
     expect(response.headers.get('Content-Length')).toBe(
       String(new TextEncoder().encode(body).byteLength)
     )
@@ -40,7 +40,7 @@ describe('/bell.vcf', () => {
     const headResponse = HEAD()
 
     expect(headResponse.status).toBe(200)
-    expectDownloadHeaders(headResponse)
+    expectVCardHeaders(headResponse)
     expect(headResponse.headers.get('Content-Length')).toBe(
       getResponse.headers.get('Content-Length')
     )

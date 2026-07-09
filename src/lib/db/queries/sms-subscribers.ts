@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { SMS_SEND_SKIPPED_UNSUBSCRIBED } from '@/lib/db/queries/sms-sends'
 import type { NewsletterSlug } from '@/lib/db/queries/subscribers'
@@ -10,6 +10,8 @@ const newsletterColumns = {
   workshop: smsSubscribers.subscribedWorkshop,
   tsundoku: smsSubscribers.subscribedTsundoku,
 } as const
+
+const BELL_CONTACT_CARD_CLAIM_MS = 2 * 60 * 1000
 
 export async function subscribeSmsNumber(input: {
   phoneNumber: string
@@ -98,6 +100,73 @@ export async function findSmsSubscriberByPhoneNumber(
   return rows[0] ?? null
 }
 
+/**
+ * Atomically claims the Bell contact-card send for one active subscription.
+ * A stale lease can be reclaimed after a crashed invocation.
+ */
+export async function claimBellContactCard(
+  phoneNumber: string
+): Promise<Date | null> {
+  const staleBefore = new Date(Date.now() - BELL_CONTACT_CARD_CLAIM_MS)
+  const processingAt = new Date()
+  const rows = await getDb()
+    .update(smsSubscribers)
+    .set({ bellContactCardProcessingAt: processingAt })
+    .where(
+      and(
+        eq(smsSubscribers.phoneNumber, phoneNumber),
+        isNotNull(smsSubscribers.confirmedAt),
+        isNull(smsSubscribers.bellContactCardSentAt),
+        or(
+          isNull(smsSubscribers.bellContactCardProcessingAt),
+          lt(smsSubscribers.bellContactCardProcessingAt, staleBefore)
+        )
+      )
+    )
+    .returning({ id: smsSubscribers.id })
+  return rows.length > 0 ? processingAt : null
+}
+
+/** Marks a Bell contact-card claim complete, but only for its current lease. */
+export async function completeBellContactCard(
+  phoneNumber: string,
+  processingAt: Date
+): Promise<boolean> {
+  const rows = await getDb()
+    .update(smsSubscribers)
+    .set({
+      bellContactCardProcessingAt: null,
+      bellContactCardSentAt: sql`NOW()`,
+    })
+    .where(
+      and(
+        eq(smsSubscribers.phoneNumber, phoneNumber),
+        eq(smsSubscribers.bellContactCardProcessingAt, processingAt),
+        isNotNull(smsSubscribers.confirmedAt),
+        isNull(smsSubscribers.bellContactCardSentAt)
+      )
+    )
+    .returning({ id: smsSubscribers.id })
+  return rows.length > 0
+}
+
+/** Releases a failed Bell contact-card claim so the next signup can retry. */
+export async function releaseBellContactCard(
+  phoneNumber: string,
+  processingAt: Date
+): Promise<void> {
+  await getDb()
+    .update(smsSubscribers)
+    .set({ bellContactCardProcessingAt: null })
+    .where(
+      and(
+        eq(smsSubscribers.phoneNumber, phoneNumber),
+        eq(smsSubscribers.bellContactCardProcessingAt, processingAt),
+        isNull(smsSubscribers.bellContactCardSentAt)
+      )
+    )
+}
+
 export async function unsubscribeSmsNumber(
   phoneNumber: string,
   input: { processedPhoneWebhookEventId?: number | null } = {}
@@ -113,6 +182,8 @@ export async function unsubscribeSmsNumber(
           subscribed_contraption = false,
           subscribed_workshop = false,
           subscribed_tsundoku = false,
+          bell_contact_card_processing_at = NULL,
+          bell_contact_card_sent_at = NULL,
           updated_at = NOW()
         WHERE phone_number = ${phoneNumber}
         RETURNING id
@@ -141,6 +212,8 @@ export async function unsubscribeSmsNumber(
       subscribedContraption: false,
       subscribedWorkshop: false,
       subscribedTsundoku: false,
+      bellContactCardProcessingAt: null,
+      bellContactCardSentAt: null,
       updatedAt: sql`NOW()`,
     })
     .where(eq(smsSubscribers.phoneNumber, phoneNumber))

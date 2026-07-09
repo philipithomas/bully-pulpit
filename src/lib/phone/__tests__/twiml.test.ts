@@ -5,6 +5,7 @@ import {
   escapeXml,
   goodbyeTwiml,
   mediaMessageTwiml,
+  messagesTwiml,
   messageTwiml,
   sayAndHangupTwiml,
   twimlResponse,
@@ -67,7 +68,11 @@ describe('voiceMenuTwiml', () => {
       '<Gather action="https://philipithomas.com/api/phone/voice-menu?secret=s" method="POST" input="dtmf" numDigits="1" timeout="6">'
     )
     expect(xml).toContain('Press 1 to leave a voicemail.')
-    expect(xml).toContain('Press 2 to subscribe to text message updates.')
+    expect(xml).toContain(
+      'Press 2 to subscribe to recurring new-post texts from philipithomas.com.'
+    )
+    expect(xml).toContain('Frequency varies. Message and data rates may apply.')
+    expect(xml).toContain('Text STOP to unsubscribe or HELP for help.')
     expect(xml).toContain('<Record maxLength="120"')
   })
 })
@@ -125,6 +130,26 @@ describe('mediaMessageTwiml', () => {
     expect(xml).toContain('&lt;Bell&gt; says &quot;hello&quot;')
     expect(xml).toContain(
       'https://example.com/&lt;bell&gt;.vcf?owner=Philip&amp;kind=contact'
+    )
+  })
+})
+
+describe('messagesTwiml', () => {
+  it('keeps a confirmation SMS ahead of an onboarding MMS', () => {
+    const xml = messagesTwiml([
+      { body: 'Subscribed.' },
+      {
+        body: 'Meet Bell.',
+        mediaUrl: 'https://www.philipithomas.com/bell.vcf',
+      },
+    ])
+
+    expect(xml.indexOf('<Message>Subscribed.</Message>')).toBeLessThan(
+      xml.indexOf('<Body>Meet Bell.</Body>')
+    )
+    expect(xml.match(/<Message>/g)).toHaveLength(2)
+    expect(xml).toContain(
+      '<Media>https://www.philipithomas.com/bell.vcf</Media>'
     )
   })
 })

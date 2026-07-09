@@ -47,15 +47,18 @@ The public SMS signup affordances are gated by the Vercel
 the SMS option and the voice webhook records voicemail without offering
 "press 2" SMS signup. When the flag is on, the voice webhook plays the
 generated greeting, then offers "press 1" for voicemail and "press 2" to
-subscribe the caller ID to SMS updates. No input falls through to voicemail.
+subscribe the caller ID to SMS updates. Before the caller chooses, the prompt
+identifies recurring new-post texts and states the frequency, rate, HELP, and
+STOP disclosures. No input falls through to voicemail.
 The SMS webhook stores inbound replies, handles `SUBSCRIBE`, `HELP`, and `STOP`,
 and emails admins about normal replies. `SUBSCRIBE` replies with a branded
 confirmation that identifies the recurring new-post message type, says that
 frequency varies and message and data rates may apply, and includes both HELP
-and STOP instructions. `HELP` returns the support address and repeats the
-frequency, rate, and STOP details. Voice-menu signups send the same subscription
-confirmation SMS when Twilio accepts it; if that confirmation send fails, the
-spoken confirmation still tells the caller to text STOP at any time.
+and STOP instructions. When Twilio has not already handled the keyword, `HELP`
+returns the support address and repeats the frequency, rate, and STOP details.
+Voice-menu signups send the same subscription confirmation SMS when Twilio
+accepts it; if that confirmation send fails, the spoken confirmation still
+tells the caller to text STOP at any time.
 
 When a number becomes active through either a `SUBSCRIBE` text or the voice
 menu, the app also sends one Bell onboarding MMS with the contact card at
@@ -72,10 +75,14 @@ state, caller name, message SID, or call SID when Twilio provides it, and an
 area-code hint for common US/Canada numbers.
 Keyword handling is both Twilio-aware and application-layer: Twilio may apply
 its own START, STOP, or HELP behavior and include `OptOutType` in the webhook.
-The app still syncs local `sms_subscribers` state for START and STOP, avoids
-sending a duplicate app reply when Twilio already sent one, and marks any
-pending unsent `sms_sends` rows for that number as skipped so retry cannot send
-an old post after someone opts out.
+The app still syncs local `sms_subscribers` state for START and STOP and avoids
+duplicating Twilio's keyword response. A newly active START subscriber still
+receives the distinct one-time Bell onboarding card. The configured Twilio
+Advanced Opt-Out responses are the user-visible replies for classified START,
+STOP, and HELP messages, so their START and HELP copy must stay aligned with the
+disclosures and support address above. Unsubscribe marks any pending unsent
+`sms_sends` rows for that number as skipped so retry cannot send an old post
+after someone opts out.
 
 Newsletter SMS delivery runs inside the same Vercel Workflow as email delivery:
 the admin send page enqueues `sms_sends` rows after the email pass, sends them
@@ -100,6 +107,9 @@ press both menu options, and confirm `/printing-press/phone` shows the inbound
 and outbound thread history. Use a fresh or unsubscribed number to verify that
 both text and voice signup paths send the Bell card once. Open the attachment on
 an actual iPhone, confirm the Bell image and fields appear, and save it manually.
+In the Twilio Console, also confirm the Advanced Opt-Out START and HELP replies
+identify the program, include the support address, and match the frequency,
+message-and-data-rate, HELP, and STOP disclosures above.
 
 ## Content
 

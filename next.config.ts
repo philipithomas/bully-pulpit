@@ -50,10 +50,12 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       // Static pages — CDN caches 1 hour, browser caches 10 min, serve stale
-      // while revalidating. Excludes sitemap.xml only, so the human sitemap
-      // page at /sitemap is cached like any other static page.
+      // while revalidating. Excludes sitemap.xml and the dynamic Bell contact
+      // card, so the human sitemap page at /sitemap is cached like any other
+      // static page.
       {
-        source: '/:path((?!api|_next|feed|sitemap\\.xml|robots|llms).*)',
+        source:
+          '/:path((?!api|_next|feed|sitemap\\.xml|robots|llms|bell\\.vcf).*)',
         headers: [
           {
             key: 'Cache-Control',

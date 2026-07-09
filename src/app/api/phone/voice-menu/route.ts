@@ -7,6 +7,7 @@ import {
 import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { smsSignupUi } from '@/lib/flags'
 import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
+import { sendBellContactOnboarding } from '@/lib/phone/bell-contact-onboarding'
 import { isE164, numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import { sendSmsSignupNotification } from '@/lib/phone/notifications'
 import { SMS_SUBSCRIBE_CONFIRMATION } from '@/lib/phone/sms-subscription-copy'
@@ -19,9 +20,11 @@ import {
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
 import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
 
-async function sendVoiceSignupConfirmationSms(input: {
+async function sendVoiceSignupMessage(input: {
   from: string
   to: string
+  body: string
+  label: string
 }): Promise<boolean> {
   if (!isE164(input.from)) return false
 
@@ -29,31 +32,31 @@ async function sendVoiceSignupConfirmationSms(input: {
     const result = await sendSms({
       from: input.from,
       to: input.to,
-      body: SMS_SUBSCRIBE_CONFIRMATION,
+      body: input.body,
     })
     await createTextMessage({
       fromNumber: input.from,
       toNumber: input.to,
-      body: SMS_SUBSCRIBE_CONFIRMATION,
+      body: input.body,
       direction: 'outbound',
       twilioSid: result.sid,
       status: result.status,
     })
     return true
   } catch (err) {
-    console.error('[phone/voice-menu] Confirmation SMS failed:', err)
+    console.error(`[phone/voice-menu] ${input.label} failed:`, err)
     try {
       await createTextMessage({
         fromNumber: input.from,
         toNumber: input.to,
-        body: SMS_SUBSCRIBE_CONFIRMATION,
+        body: input.body,
         direction: 'outbound',
         twilioSid: null,
         status: 'failed',
       })
     } catch (recordErr) {
       console.error(
-        '[phone/voice-menu] Failed to record confirmation SMS attempt:',
+        `[phone/voice-menu] Failed to record ${input.label.toLowerCase()} attempt:`,
         recordErr
       )
     }
@@ -111,10 +114,25 @@ export async function POST(request: Request) {
       const tasks: Promise<unknown>[] = []
       if (confirmationFrom) {
         tasks.push(
-          sendVoiceSignupConfirmationSms({
-            from: confirmationFrom,
-            to: from,
-          })
+          (async () => {
+            const confirmationSent = await sendVoiceSignupMessage({
+              from: confirmationFrom,
+              to: from,
+              body: SMS_SUBSCRIBE_CONFIRMATION,
+              label: 'Confirmation SMS',
+            })
+            if (confirmationSent) {
+              await sendBellContactOnboarding({
+                from: confirmationFrom,
+                to: from,
+              }).catch((err) => {
+                console.error(
+                  '[phone/voice-menu] Bell contact-card MMS failed:',
+                  err
+                )
+              })
+            }
+          })()
         )
       }
       if (!existing?.confirmedAt) {
@@ -136,7 +154,7 @@ export async function POST(request: Request) {
     })
     return twimlResponse(
       sayAndHangupTwiml(
-        'You are subscribed to text message updates from philipithomas.com. Text STOP at any time to unsubscribe. Goodbye.'
+        'You are subscribed to new-post texts from philipithomas.com. Text STOP to unsubscribe or HELP for help. Goodbye.'
       )
     )
   }

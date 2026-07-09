@@ -41,7 +41,7 @@ export function voiceMenuTwiml(input: {
 <Response>
   <Say voice="${SAY_VOICE}">${escapeXml(input.greeting)}</Say>
   <Gather action="${escapeXml(input.menuActionUrl)}" method="POST" input="dtmf" numDigits="1" timeout="6">
-    <Say voice="${SAY_VOICE}">Press 1 to leave a voicemail. Press 2 to subscribe to text message updates.</Say>
+    <Say voice="${SAY_VOICE}">Press 1 to leave a voicemail. Press 2 to subscribe to recurring new-post texts from philipithomas.com. Frequency varies. Message and data rates may apply. Text STOP to unsubscribe or HELP for help.</Say>
   </Gather>
   <Say voice="${SAY_VOICE}">Leave a message after the tone.</Say>
   <Record maxLength="120" recordingStatusCallback="${escapeXml(input.recordingStatusUrl)}" recordingStatusCallbackMethod="POST" action="${escapeXml(input.recordingCompleteUrl)}" method="POST" />
@@ -73,10 +73,7 @@ export function emptyTwiml(): string {
 
 /** Replies to an inbound SMS with a short message. */
 export function messageTwiml(body: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message>${escapeXml(body)}</Message>
-</Response>`
+  return messagesTwiml([{ body }])
 }
 
 /** Replies to an inbound message with an MMS body and media attachment. */
@@ -84,12 +81,28 @@ export function mediaMessageTwiml(input: {
   body: string
   mediaUrl: string
 }): string {
+  return messagesTwiml([input])
+}
+
+/** Sends one or more SMS/MMS replies in order. */
+export function messagesTwiml(
+  messages: readonly { body: string; mediaUrl?: string }[]
+): string {
+  const verbs = messages
+    .map((message) => {
+      if (!message.mediaUrl) {
+        return `  <Message>${escapeXml(message.body)}</Message>`
+      }
+      return `  <Message>
+    <Body>${escapeXml(message.body)}</Body>
+    <Media>${escapeXml(message.mediaUrl)}</Media>
+  </Message>`
+    })
+    .join('\n')
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Message>
-    <Body>${escapeXml(input.body)}</Body>
-    <Media>${escapeXml(input.mediaUrl)}</Media>
-  </Message>
+${verbs}
 </Response>`
 }
 

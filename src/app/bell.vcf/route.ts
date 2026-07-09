@@ -13,7 +13,7 @@ const NO_CACHE_HEADERS = {
 function downloadHeaders(body: string): Headers {
   return new Headers({
     ...NO_CACHE_HEADERS,
-    'Content-Disposition': 'attachment; filename="Bell.vcf"',
+    'Content-Disposition': 'inline; filename="Bell.vcf"',
     'Content-Length': String(new TextEncoder().encode(body).byteLength),
     'Content-Type': 'text/vcard; charset=utf-8',
   })
