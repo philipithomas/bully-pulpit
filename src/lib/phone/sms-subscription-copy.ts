@@ -8,4 +8,4 @@ export const SMS_HELP_RESPONSE =
   'philipithomas.com: Help at mail@philipithomas.com. You receive new-post texts. Frequency varies. Message and data rates may apply. Reply STOP to unsubscribe.'
 
 export const SMS_UNSUBSCRIBE_CONFIRMATION =
-  'You are unsubscribed from SMS updates.'
+  'You are unsubscribed from SMS updates. Reply START or UNSTOP to resubscribe.'

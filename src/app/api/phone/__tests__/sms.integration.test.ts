@@ -525,7 +525,9 @@ describe('POST /api/phone/sms', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(await response.text()).toContain('You are unsubscribed')
+    const xml = await response.text()
+    expect(xml).toContain('You are unsubscribed')
+    expect(xml).toContain('START or UNSTOP')
     const [subscriber] = await db.select().from(smsSubscribers)
     expect(subscriber.confirmedAt).toBeNull()
     expect(subscriber.subscribedContraption).toBe(false)
@@ -537,16 +539,7 @@ describe('POST /api/phone/sms', () => {
 
   it('does not reactivate a stopped number with an app-only subscribe word', async () => {
     const phoneNumber = '+15551234567'
-    await smsPost(
-      smsRequest({
-        From: phoneNumber,
-        To: '+12123473190',
-        Body: 'SUBSCRIBE',
-        MessageSid: 'SM_SUB',
-      })
-    )
-    await flushAfterTasks()
-    await smsPost(
+    const stopResponse = await smsPost(
       smsRequest({
         From: phoneNumber,
         To: '+12123473190',
@@ -554,6 +547,16 @@ describe('POST /api/phone/sms', () => {
         MessageSid: 'SM_STOP',
       })
     )
+    expect(await stopResponse.text()).toContain('START or UNSTOP')
+    const [tombstone] = await db.select().from(smsSubscribers)
+    expect(tombstone).toMatchObject({
+      phoneNumber,
+      confirmedAt: null,
+      subscribedPostcard: false,
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedTsundoku: false,
+    })
     vi.mocked(sendSms).mockClear()
     vi.mocked(sendSimpleEmail).mockClear()
 
@@ -1031,15 +1034,6 @@ describe('POST /api/phone/voice-menu', () => {
   it('requires handset reactivation when a stopped caller presses 2 again', async () => {
     vi.mocked(smsSignupUi).mockResolvedValue(true)
     const phoneNumber = '+14155551234'
-    await smsPost(
-      smsRequest({
-        From: phoneNumber,
-        To: '+12123473190',
-        Body: 'SUBSCRIBE',
-        MessageSid: 'SM_SUB',
-      })
-    )
-    await flushAfterTasks()
     await smsPost(
       smsRequest({
         From: phoneNumber,

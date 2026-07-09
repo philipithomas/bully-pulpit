@@ -65,6 +65,8 @@ accepts it; if that confirmation send fails, the spoken confirmation still
 tells the caller to text STOP at any time. A caller that previously sent STOP
 must reactivate from the handset by texting START or UNSTOP. Pressing 2 cannot
 clear Twilio's block and gives those instructions without changing local state.
+The app records STOP as an inactive tombstone even when the number has never
+subscribed locally, and app-handled STOP replies include the START/UNSTOP path.
 
 When a number first becomes active through either a `SUBSCRIBE` text or the
 voice menu, the app also sends one Bell onboarding MMS with the contact card at
@@ -98,7 +100,8 @@ Phone panel. SMS subscribers are separate from email subscribers and are opted
 into every newsletter as one list.
 
 `PHONE_NUMBER` is the public E.164 Twilio number for the active environment. It
-appears on subscribe and contact surfaces, and is the caller ID for click-to-call.
+appears on subscribe and contact surfaces, including the `/contact.md` mirror,
+and is the caller ID for click-to-call.
 `OWNER_PHONE_NUMBER` is the private E.164 number that click-to-call rings first.
 The admin "Send test text to me" button also sends test newsletter texts there.
 

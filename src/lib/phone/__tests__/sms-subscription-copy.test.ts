@@ -3,6 +3,7 @@ import {
   SMS_BELL_CONTACT_ONBOARDING,
   SMS_HELP_RESPONSE,
   SMS_SUBSCRIBE_CONFIRMATION,
+  SMS_UNSUBSCRIBE_CONFIRMATION,
 } from '@/lib/phone/sms-subscription-copy'
 
 describe('SMS subscription copy', () => {
@@ -24,5 +25,11 @@ describe('SMS subscription copy', () => {
       'philipithomas.com: Help at mail@philipithomas.com. You receive new-post texts. Frequency varies. Message and data rates may apply. Reply STOP to unsubscribe.'
     )
     expect(SMS_HELP_RESPONSE).toHaveLength(157)
+  })
+
+  it('tells app-handled STOP senders how to reactivate', () => {
+    expect(SMS_UNSUBSCRIBE_CONFIRMATION).toBe(
+      'You are unsubscribed from SMS updates. Reply START or UNSTOP to resubscribe.'
+    )
   })
 })
