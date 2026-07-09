@@ -1,5 +1,6 @@
 import { getAllPosts, getPages } from '@/lib/content/loader'
 import type { Frontmatter, Page, Post } from '@/lib/content/types'
+import { type PublicAppPage, publicAppPages } from '@/lib/public-pages'
 import { createHeadingSlugger } from '@/lib/search/heading-anchor'
 import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 
@@ -455,6 +456,18 @@ export function chunkPage(page: Page): PostChunk[] {
   })
 }
 
+/** Builds deterministic text chunks for an App Router page registry entry. */
+export function chunkPublicAppPage(page: PublicAppPage): PostChunk[] {
+  const titleText = [page.title, page.description].filter(Boolean).join('. ')
+  const searchText = stripToPlaintext(page.searchText)
+  return [
+    { seq: 0, kind: 'title', text: titleText },
+    ...(searchText
+      ? [{ seq: 1, kind: 'body' as const, text: searchText }]
+      : []),
+  ]
+}
+
 export function buildCorpusFromPosts(
   posts: Post[],
   options: CorpusOptions = {}
@@ -490,10 +503,28 @@ export function buildCorpusFromPages(pages: Page[]): CorpusPost[] {
   }))
 }
 
-/** Builds the corpus for all searchable posts and content pages. */
+export function buildCorpusFromPublicAppPages(
+  pages: readonly PublicAppPage[] = publicAppPages
+): CorpusPost[] {
+  return pages.map((page) => ({
+    contentType: 'page',
+    slug: page.id,
+    title: page.title,
+    url: page.path,
+    newsletter: 'page',
+    description: page.description,
+    coverImage: '',
+    coverAlt: '',
+    chunks: chunkPublicAppPage(page),
+    images: [],
+  }))
+}
+
+/** Builds the corpus for posts, content pages, and registered app pages. */
 export function buildCorpus(options: CorpusOptions = {}): CorpusPost[] {
   return [
     ...buildCorpusFromPosts(getAllPosts(), options),
     ...buildCorpusFromPages(getPages()),
+    ...buildCorpusFromPublicAppPages(),
   ]
 }

@@ -13,10 +13,13 @@ import {
 } from '@/lib/content/zoom-image'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
+import { publicAppPage } from '@/lib/public-pages'
+
+const tsundokuPage = publicAppPage('/tsundoku')
 
 export const metadata: Metadata = {
-  title: 'Tsundoku',
-  description: siteConfig.newsletters.tsundoku.tagline,
+  title: tsundokuPage.title,
+  description: tsundokuPage.description,
   alternates: {
     canonical: '/tsundoku',
     types: feedDiscovery('tsundoku'),

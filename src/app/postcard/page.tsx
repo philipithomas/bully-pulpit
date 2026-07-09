@@ -5,10 +5,13 @@ import { PostcardLatestLink } from '@/components/postcard/latest-link'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { publicAppPage } from '@/lib/public-pages'
+
+const postcardPage = publicAppPage('/postcard')
 
 export const metadata: Metadata = {
-  title: 'Postcard',
-  description: siteConfig.newsletters.postcard.tagline,
+  title: postcardPage.title,
+  description: postcardPage.description,
   alternates: {
     canonical: '/postcard',
     types: feedDiscovery('postcard'),

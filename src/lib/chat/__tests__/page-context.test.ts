@@ -50,8 +50,18 @@ describe('getPageContextContent', () => {
     expect(getPageContextContent(`/${post.slug}/`)?.slug).toBe(post.slug)
   })
 
-  it('returns null for the homepage', () => {
-    expect(getPageContextContent('/')).toBeNull()
+  it('resolves registered app pages through the shared Bell text', () => {
+    const home = getPageContextContent('/')
+    expect(home).toMatchObject({
+      slug: 'app-home',
+      title: 'Home',
+      fetchPath: '/',
+      truncated: false,
+    })
+    expect(home?.content).toContain('Philip I. Thomas')
+
+    const print = getPageContextContent('/print')
+    expect(print?.content).toContain('no longer available to order')
   })
 
   it('returns null for unknown paths', () => {

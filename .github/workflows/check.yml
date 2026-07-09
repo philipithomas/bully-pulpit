@@ -43,6 +43,9 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Bell deterministic evaluations
+        run: pnpm bell:eval
+
       # Fails the PR if a content change did not regenerate the committed
       # search index (merkle root mismatch) or any other generated artifact.
       - name: Content pipeline check (images + search index)

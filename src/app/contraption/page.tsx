@@ -8,10 +8,13 @@ import { coverPreloadAttrs } from '@/lib/content/cover-preload'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { publicAppPage } from '@/lib/public-pages'
+
+const contraptionPage = publicAppPage('/contraption')
 
 export const metadata: Metadata = {
-  title: 'Contraption',
-  description: siteConfig.newsletters.contraption.tagline,
+  title: contraptionPage.title,
+  description: contraptionPage.description,
   alternates: {
     canonical: '/contraption',
     types: feedDiscovery('contraption'),
