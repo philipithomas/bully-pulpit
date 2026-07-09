@@ -276,6 +276,15 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
       numberOneWhileVisited: true,
     },
   },
+  {
+    name: 'Disfrutar',
+    city: 'Barcelona',
+    stars: 2,
+    worldsBest: {
+      rank: 9,
+      url: WORLDS_BEST_2019,
+    },
+  },
 ]
 
 export const stargazingFavorites = [

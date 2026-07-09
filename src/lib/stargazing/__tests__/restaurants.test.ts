@@ -27,7 +27,7 @@ describe('stargazing restaurant data', () => {
   })
 
   it('keeps one public row per restaurant', () => {
-    expect(stargazingRestaurants).toHaveLength(54)
+    expect(stargazingRestaurants).toHaveLength(55)
     const names = stargazingRestaurants.map((restaurant) =>
       restaurant.name.toLocaleLowerCase()
     )
@@ -36,9 +36,9 @@ describe('stargazing restaurant data', () => {
 
   it('derives the public headline totals from the rows', () => {
     expect(stargazingStats).toEqual({
-      restaurants: 54,
-      starredRestaurants: 51,
-      stars: 76,
+      restaurants: 55,
+      starredRestaurants: 52,
+      stars: 78,
       numberOneRestaurants: 3,
     })
   })
@@ -65,6 +65,9 @@ describe('stargazing restaurant data', () => {
     expect(restaurants.get('Alchemist')?.stars).toBe(2)
     expect(restaurants.get('Alchemist')?.worldsBest?.rank).toBe(8)
     expect(restaurants.get('Alchemist')?.worldsBest?.url).toContain('2024')
+    expect(restaurants.get('Disfrutar')?.stars).toBe(2)
+    expect(restaurants.get('Disfrutar')?.worldsBest?.rank).toBe(9)
+    expect(restaurants.get('Disfrutar')?.worldsBest?.url).toContain('2019')
   })
 
   it('publishes only starred restaurants, Green Stars, or World-ranked rows', () => {
@@ -107,6 +110,7 @@ describe('stargazing restaurant data', () => {
     expect(text).toContain('Trishna | London')
     expect(text).toContain('Oriole | Chicago')
     expect(text).toContain('Alchemist | Copenhagen')
+    expect(text).toContain('Disfrutar | Barcelona')
     expect(text).toContain('Indienne | Chicago')
     expect(text).toContain('Omakase Yume | Chicago')
     expect(text).toContain(
