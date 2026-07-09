@@ -49,7 +49,7 @@ export function filterAndSortRestaurants(
         })
   const multiplier = direction === 'ascending' ? 1 : -1
 
-  return filtered.toSorted((a, b) => {
+  return [...filtered].sort((a, b) => {
     let comparison = 0
     if (sortKey === 'name') {
       return a.name.localeCompare(b.name) * multiplier
