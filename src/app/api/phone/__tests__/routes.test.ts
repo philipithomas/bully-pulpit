@@ -20,6 +20,9 @@ vi.mock('@/lib/phone/notifications', () => ({
   sendMissedCallNotification: vi.fn(async () => undefined),
   sendIncomingSmsNotification: vi.fn(async () => undefined),
 }))
+vi.mock('@/lib/flags', () => ({
+  smsSignupUi: vi.fn(async () => false),
+}))
 
 // The SMS webhook writes to Postgres, so it is covered by the colocated
 // sms.integration.test.ts instead of this unit file.
@@ -27,6 +30,7 @@ import { start } from 'workflow/api'
 import { POST as recordingCompletePost } from '@/app/api/phone/recording-complete/route'
 import { POST as recordingStatusPost } from '@/app/api/phone/recording-status/route'
 import { POST as voicePost } from '@/app/api/phone/voice/route'
+import { smsSignupUi } from '@/lib/flags'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 
 const SECRET = 'test-webhook-secret'
@@ -44,11 +48,12 @@ function twilioPost(path: string, form: Record<string, string>): Request {
 }
 
 beforeEach(() => {
-  process.env.PHONE_WEBHOOK_SECRET = SECRET
+  process.env.TWILIO_SECRET = SECRET
+  vi.mocked(smsSignupUi).mockResolvedValue(false)
 })
 
 afterEach(() => {
-  delete process.env.PHONE_WEBHOOK_SECRET
+  delete process.env.TWILIO_SECRET
   vi.clearAllMocks()
 })
 
@@ -60,7 +65,7 @@ describe('POST /api/phone/voice', () => {
     expect(response.status).toBe(401)
   })
 
-  it('returns greeting TwiML with secret-bearing callbacks and notifies', async () => {
+  it('defaults to voicemail-only TwiML and notifies', async () => {
     const response = await voicePost(
       twilioPost('/api/phone/voice', {
         From: '+15551234567',
@@ -71,6 +76,8 @@ describe('POST /api/phone/voice', () => {
     expect(response.headers.get('Content-Type')).toContain('text/xml')
     const xml = await response.text()
     expect(xml).toContain('You have reached the test suite.')
+    expect(xml).not.toContain('<Gather')
+    expect(xml).not.toContain('/api/phone/voice-menu')
     expect(xml).toContain(
       '/api/phone/recording-status?secret=test-webhook-secret'
     )
@@ -83,6 +90,23 @@ describe('POST /api/phone/voice', () => {
       to: '+12123473190',
       greeting: 'You have reached the test suite.',
     })
+  })
+
+  it('offers the SMS signup menu when the flag is enabled', async () => {
+    vi.mocked(smsSignupUi).mockResolvedValue(true)
+
+    const response = await voicePost(
+      twilioPost('/api/phone/voice', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(xml).toContain('<Gather')
+    expect(xml).toContain('/api/phone/voice-menu?secret=test-webhook-secret')
+    expect(xml).toContain('Press 2 to subscribe to text message updates.')
   })
 })
 

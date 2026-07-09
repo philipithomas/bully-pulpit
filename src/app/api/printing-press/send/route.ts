@@ -4,6 +4,7 @@ import { guardAdmin } from '@/lib/auth/admin'
 import { getPostBySlug } from '@/lib/content/loader'
 import { resetFailedBySlug } from '@/lib/db/queries/email-sends'
 import { recordSendRun } from '@/lib/db/queries/send-runs'
+import { resetFailedSmsBySlug } from '@/lib/db/queries/sms-sends'
 import { isNewsletter } from '@/lib/db/queries/subscribers'
 import { isSendRunActive } from '@/lib/email/send-guard'
 import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
     // the workflow resends those existing rows rather than inserting duplicate
     // email_sends rows for the same subscriber+post. Mirrors the Retry path.
     await resetFailedBySlug(slug)
+    await resetFailedSmsBySlug(slug)
 
     const run = await start(sendNewsletterWorkflow, [slug])
     await recordSendRun(slug, run.runId)

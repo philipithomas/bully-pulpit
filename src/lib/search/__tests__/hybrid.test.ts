@@ -55,7 +55,7 @@ describe('hybridSearchPosts', () => {
   it('returns content pages in the default search scope', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    const { mode, results } = await hybridSearchPosts('contact telephone')
+    const { mode, results } = await hybridSearchPosts('contact email')
     const contact = results.find((result) => result.url === '/contact')
 
     expect(mode).toBe('lexical')
@@ -67,7 +67,7 @@ describe('hybridSearchPosts', () => {
     })
     expect(
       contact?.excerpts.map((excerpt) => excerpt.text).join(' ')
-    ).toContain('+1 212 347 3190')
+    ).toContain('mail@philipithomas.com')
   })
 
   it('falls back to BM25 results when query embedding times out', async () => {

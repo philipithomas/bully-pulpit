@@ -1,4 +1,8 @@
 import { escapeHtml } from '@/lib/email/escape'
+import {
+  describePhoneOrigin,
+  type TwilioWebhookMetadata,
+} from '@/lib/phone/webhook-metadata'
 
 // Phone notification emails (voicemail, missed call, inbound SMS). Ported
 // from junk-drawer's VoicemailMailer / MissedCallMailer / SmsMailer views,
@@ -229,4 +233,55 @@ export function renderIncomingSmsEmail(input: IncomingSmsEmailInput): string {
 
 export function renderIncomingSmsText(input: IncomingSmsEmailInput): string {
   return renderPhoneNotificationText(incomingSmsContent(input))
+}
+
+// --- SMS signup ---
+
+export type SmsSignupSource = 'sms' | 'voice-menu'
+
+export type SmsSignupEmailInput = {
+  phoneNumber: string
+  to: string
+  toLabel: string
+  source: SmsSignupSource
+  metadata?: TwilioWebhookMetadata | null
+  receivedAt: Date
+}
+
+function signupSourceLabel(source: SmsSignupSource): string {
+  return source === 'sms' ? 'Texted SUBSCRIBE' : 'Pressed 2 during a phone call'
+}
+
+function smsSignupContent(input: SmsSignupEmailInput) {
+  const metadata = input.metadata ?? null
+  const details: Array<[string, string]> = [
+    ['Phone', input.phoneNumber],
+    ['Source', signupSourceLabel(input.source)],
+    ['To', `${input.to} (${input.toLabel})`],
+  ]
+  const origin = describePhoneOrigin(input.phoneNumber, metadata)
+  if (origin) details.push(['Origin', origin])
+  if (metadata?.callerName) details.push(['Caller name', metadata.callerName])
+  if (metadata?.fromZip) details.push(['ZIP', metadata.fromZip])
+  if (metadata?.messageSid) details.push(['Message SID', metadata.messageSid])
+  if (metadata?.callSid) details.push(['Call SID', metadata.callSid])
+  details.push(['Received', formatTimestamp(input.receivedAt)])
+
+  return {
+    heading: 'New SMS subscriber',
+    details,
+    footnote:
+      'SMS subscribers are a separate all-newsletters list. They do not have an email login unless they also subscribe by email.',
+  }
+}
+
+export function renderSmsSignupEmail(input: SmsSignupEmailInput): string {
+  return renderPhoneNotification({
+    title: `SMS signup from ${input.phoneNumber}`,
+    ...smsSignupContent(input),
+  })
+}
+
+export function renderSmsSignupText(input: SmsSignupEmailInput): string {
+  return renderPhoneNotificationText(smsSignupContent(input))
 }

@@ -1,52 +1,59 @@
 import { SetNewsletter } from '@/components/layout/newsletter-context'
 import { JsonLd } from '@/components/seo/json-ld'
 import type { Page } from '@/lib/content/types'
-
-const contactItems = [
-  {
-    label: 'Email',
-    value: (
-      <a
-        className="underline decoration-gray-300 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
-        href="mailto:mail@philipithomas.com"
-      >
-        mail@philipithomas.com
-      </a>
-    ),
-  },
-  {
-    label: 'Telephone',
-    value: (
-      <a
-        className="underline decoration-gray-300 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
-        href="tel:+12123473190"
-      >
-        +1 212 347 3190
-      </a>
-    ),
-  },
-  {
-    label: 'Address',
-    value: (
-      <address className="not-italic">
-        The Contraption Company LLC
-        <br />
-        169 Madison Ave.
-        <br />
-        Suite 2174
-        <br />
-        New York, NY 10016
-        <br />
-        USA
-      </address>
-    ),
-  },
-] as const
+import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 
 const mapSrc =
   'https://maps.google.com/maps?q=40.747157,-73.984165&z=12&output=embed'
 
 export function ContactPage({ page }: { page: Page }) {
+  const phoneNumber = sitePhoneNumber()
+  const phoneDisplayNumber = sitePhoneDisplayNumber()
+  const contactItems = [
+    {
+      label: 'Email',
+      value: (
+        <a
+          className="underline decoration-gray-300 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
+          href="mailto:mail@philipithomas.com"
+        >
+          mail@philipithomas.com
+        </a>
+      ),
+    },
+    ...(phoneNumber
+      ? [
+          {
+            label: 'Telephone',
+            value: (
+              <a
+                className="underline decoration-gray-300 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
+                href={`tel:${phoneNumber}`}
+              >
+                {phoneDisplayNumber ?? phoneNumber}
+              </a>
+            ),
+          },
+        ]
+      : []),
+    {
+      label: 'Address',
+      value: (
+        <address className="not-italic">
+          The Contraption Company LLC
+          <br />
+          169 Madison Ave.
+          <br />
+          Suite 2174
+          <br />
+          New York, NY 10016
+          <br />
+          USA
+        </address>
+      ),
+    },
+  ]
+
   return (
     <article>
       <SetNewsletter newsletter={null} />

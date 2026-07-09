@@ -1,6 +1,7 @@
 import { siteConfig } from '@/lib/config'
 import { getPostBySlug } from '@/lib/content/loader'
 import { isNewsletter } from '@/lib/db/queries/subscribers'
+import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { renderFullNewsletter } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { sendNewsletterEmail, sendSimpleEmail } from '@/lib/email/ses'
@@ -13,6 +14,13 @@ import {
   renderNewSubscriberEmail,
   renderNewsletterOptInEmail,
 } from '@/lib/email/templates/new-subscriber'
+import {
+  isE164,
+  ownerPhoneNumber,
+  requireSitePhoneNumber,
+} from '@/lib/phone/config'
+import { renderNewsletterSms } from '@/lib/phone/newsletter-sms'
+import { sendSms } from '@/lib/phone/twilio'
 
 export { renderFullNewsletter, sendQueuedEmail } from '@/lib/email/queued-send'
 
@@ -114,4 +122,49 @@ export async function sendNewsletterToOne(input: {
     unsubscribeUrl,
     // Test sends have no per-recipient token, so omit the one-click POST target.
   })
+}
+
+/** Sends a single test SMS copy of a post's newsletter to the owner phone. */
+export async function sendNewsletterSmsToTestRecipient(input: {
+  slug: string
+}): Promise<{ sentTo: string }> {
+  const to = ownerPhoneNumber()
+  if (!to) {
+    throw new Error('OWNER_PHONE_NUMBER is not configured')
+  }
+  if (!isE164(to)) {
+    throw new Error('OWNER_PHONE_NUMBER must be an E.164 number')
+  }
+
+  const post = getPostBySlug(input.slug)
+  if (!post) throw new Error(`Post not found: ${input.slug}`)
+  if (!isNewsletter(post.newsletter)) {
+    throw new Error(`Post is not a sendable newsletter: ${input.slug}`)
+  }
+
+  const body = renderNewsletterSms(post)
+  const from = requireSitePhoneNumber()
+  try {
+    const result = await sendSms({ from, to, body })
+    await createTextMessage({
+      fromNumber: from,
+      toNumber: to,
+      body,
+      direction: 'outbound',
+      twilioSid: result.sid,
+      status: result.status,
+    })
+  } catch (err) {
+    await createTextMessage({
+      fromNumber: from,
+      toNumber: to,
+      body,
+      direction: 'outbound',
+      twilioSid: null,
+      status: 'failed',
+    })
+    throw err
+  }
+
+  return { sentTo: to }
 }

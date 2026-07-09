@@ -2,10 +2,25 @@ import { notFound } from 'next/navigation'
 import { SendClient } from '@/app/printing-press/send/[slug]/send-client'
 import { requireAdmin } from '@/lib/auth/admin'
 import { getPostBySlug } from '@/lib/content/loader'
-import { sendStatsBySlug } from '@/lib/db/queries/email-sends'
+import { type SendStats, sendStatsBySlug } from '@/lib/db/queries/email-sends'
+import { smsSendStatsBySlug } from '@/lib/db/queries/sms-sends'
+import { countEligibleSms } from '@/lib/db/queries/sms-subscribers'
 import { countEligible, isNewsletter } from '@/lib/db/queries/subscribers'
 import { renderNewsletterPreview } from '@/lib/email/send'
 import { isSendRunActive } from '@/lib/email/send-guard'
+
+type CombinedSendStats = SendStats & { skipped: number }
+type SmsStats = SendStats & { skipped: number }
+
+function combineSendStats(email: SendStats, sms: SmsStats): CombinedSendStats {
+  return {
+    total: email.total + sms.total,
+    sent: email.sent + sms.sent,
+    pending: email.pending + sms.pending,
+    failed: email.failed + sms.failed,
+    skipped: sms.skipped,
+  }
+}
 
 export default async function SendPage({
   params,
@@ -25,11 +40,14 @@ export default async function SendPage({
     notFound()
   }
 
-  const [eligible, stats, active] = await Promise.all([
-    countEligible(post.newsletter, slug),
-    sendStatsBySlug(slug),
-    isSendRunActive(slug),
-  ])
+  const [eligible, smsEligible, emailStats, smsStats, active] =
+    await Promise.all([
+      countEligible(post.newsletter, slug),
+      countEligibleSms(post.newsletter, slug),
+      sendStatsBySlug(slug),
+      smsSendStatsBySlug(slug),
+      isSendRunActive(slug),
+    ])
 
   return (
     <SendClient
@@ -40,7 +58,8 @@ export default async function SendPage({
       newsletter={post.newsletter}
       previewHtml={preview.html}
       initialEligible={eligible}
-      initialStats={stats}
+      initialSmsEligible={smsEligible}
+      initialStats={combineSendStats(emailStats, smsStats)}
       initialActive={active}
     />
   )

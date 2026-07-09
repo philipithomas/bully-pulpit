@@ -1,10 +1,16 @@
 import { after, NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
+import { smsSignupUi } from '@/lib/flags'
 import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
-import { phoneWebhookSecret } from '@/lib/phone/config'
+import { twilioSecret } from '@/lib/phone/config'
 import { generateGreeting } from '@/lib/phone/greeting'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
-import { twimlResponse, voicemailTwiml } from '@/lib/phone/twiml'
+import {
+  twimlResponse,
+  voiceMenuTwiml,
+  voicemailTwiml,
+} from '@/lib/phone/twiml'
+import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
 
 /**
  * Twilio voice webhook for incoming calls. Generates a fresh greeting, speaks
@@ -34,19 +40,19 @@ export async function POST(request: Request) {
     }
   })
 
-  const secret = phoneWebhookSecret() ?? ''
-  const statusParams = new URLSearchParams({
-    secret,
-    caller: from,
-    called: to,
-  })
-  const completeParams = new URLSearchParams({ secret })
+  const secret = twilioSecret() ?? ''
+  const menuParams = new URLSearchParams({ secret })
+  const callbackUrls = voicemailCallbackUrls({ from, to })
+
+  if (!(await smsSignupUi())) {
+    return twimlResponse(voicemailTwiml({ greeting, ...callbackUrls }))
+  }
 
   return twimlResponse(
-    voicemailTwiml({
+    voiceMenuTwiml({
       greeting,
-      recordingStatusUrl: `${siteConfig.url}/api/phone/recording-status?${statusParams}`,
-      recordingCompleteUrl: `${siteConfig.url}/api/phone/recording-complete?${completeParams}`,
+      menuActionUrl: `${siteConfig.url}/api/phone/voice-menu?${menuParams}`,
+      ...callbackUrls,
     })
   )
 }

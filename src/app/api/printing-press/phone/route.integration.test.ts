@@ -45,7 +45,12 @@ function jsonRequest(path: string, body: unknown) {
 beforeEach(async () => {
   await resetDb()
   clearSessionStore()
+  process.env.PHONE_NUMBER = NYC
   vi.clearAllMocks()
+})
+
+afterEach(() => {
+  delete process.env.PHONE_NUMBER
 })
 
 describe('GET /api/printing-press/phone/conversations', () => {
@@ -95,7 +100,6 @@ describe('POST /api/printing-press/phone/send', () => {
     await signInAs('reader@example.com')
     const response = await sendPost(
       jsonRequest('/api/printing-press/phone/send', {
-        from: NYC,
         to: ALICE,
         body: 'hi',
       })
@@ -104,23 +108,10 @@ describe('POST /api/printing-press/phone/send', () => {
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
   })
 
-  it('rejects a from number that is not a Twilio number', async () => {
-    await signInAs('admin@example.com')
-    const response = await sendPost(
-      jsonRequest('/api/printing-press/phone/send', {
-        from: ALICE,
-        to: ALICE,
-        body: 'hi',
-      })
-    )
-    expect(response.status).toBe(400)
-  })
-
   it('rejects a non-E.164 recipient', async () => {
     await signInAs('admin@example.com')
     const response = await sendPost(
       jsonRequest('/api/printing-press/phone/send', {
-        from: NYC,
         to: '555-1234',
         body: 'hi',
       })
@@ -132,7 +123,6 @@ describe('POST /api/printing-press/phone/send', () => {
     await signInAs('admin@example.com')
     const response = await sendPost(
       jsonRequest('/api/printing-press/phone/send', {
-        from: NYC,
         to: ALICE,
         body: '  ',
       })
@@ -144,7 +134,6 @@ describe('POST /api/printing-press/phone/send', () => {
     await signInAs('admin@example.com')
     const response = await sendPost(
       jsonRequest('/api/printing-press/phone/send', {
-        from: NYC,
         to: ALICE,
         body: 'x'.repeat(1601),
       })
@@ -159,7 +148,6 @@ describe('POST /api/printing-press/phone/send', () => {
 
     const response = await sendPost(
       jsonRequest('/api/printing-press/phone/send', {
-        from: NYC,
         to: ALICE,
         body: 'On my way',
       })
@@ -188,7 +176,6 @@ describe('POST /api/printing-press/phone/send', () => {
 
     const response = await sendPost(
       jsonRequest('/api/printing-press/phone/send', {
-        from: NYC,
         to: ALICE,
         body: 'On my way',
       })
@@ -207,12 +194,12 @@ describe('POST /api/printing-press/phone/send', () => {
 
 describe('POST /api/printing-press/phone/call (click-to-call trigger)', () => {
   beforeEach(() => {
-    process.env.PHONE_WEBHOOK_SECRET = SECRET
+    process.env.TWILIO_SECRET = SECRET
     process.env.OWNER_PHONE_NUMBER = OWNER
   })
 
   afterEach(() => {
-    delete process.env.PHONE_WEBHOOK_SECRET
+    delete process.env.TWILIO_SECRET
     delete process.env.OWNER_PHONE_NUMBER
   })
 
@@ -221,7 +208,6 @@ describe('POST /api/printing-press/phone/call (click-to-call trigger)', () => {
     const response = await callPost(
       jsonRequest('/api/printing-press/phone/call', {
         target: ALICE,
-        callerId: NYC,
       })
     )
     expect(response.status).toBe(403)
@@ -233,19 +219,6 @@ describe('POST /api/printing-press/phone/call (click-to-call trigger)', () => {
     const response = await callPost(
       jsonRequest('/api/printing-press/phone/call', {
         target: '555-1234',
-        callerId: NYC,
-      })
-    )
-    expect(response.status).toBe(400)
-    expect(vi.mocked(createCall)).not.toHaveBeenCalled()
-  })
-
-  it('rejects a caller id that is not an owned Twilio number', async () => {
-    await signInAs('admin@example.com')
-    const response = await callPost(
-      jsonRequest('/api/printing-press/phone/call', {
-        target: ALICE,
-        callerId: ALICE,
       })
     )
     expect(response.status).toBe(400)
@@ -258,7 +231,6 @@ describe('POST /api/printing-press/phone/call (click-to-call trigger)', () => {
     const response = await callPost(
       jsonRequest('/api/printing-press/phone/call', {
         target: ALICE,
-        callerId: NYC,
       })
     )
     expect(response.status).toBe(500)
@@ -275,7 +247,6 @@ describe('POST /api/printing-press/phone/call (click-to-call trigger)', () => {
     const response = await callPost(
       jsonRequest('/api/printing-press/phone/call', {
         target: ALICE,
-        callerId: NYC,
       })
     )
     expect(response.status).toBe(200)
@@ -288,17 +259,17 @@ describe('POST /api/printing-press/phone/call (click-to-call trigger)', () => {
     expect(call.twimlUrl).toContain('/api/phone/connect?')
     expect(call.twimlUrl).toContain(`secret=${SECRET}`)
     expect(call.twimlUrl).toContain(`target=${encodeURIComponent(ALICE)}`)
-    expect(call.twimlUrl).toContain(`callerId=${encodeURIComponent(NYC)}`)
+    expect(call.twimlUrl).not.toContain('callerId=')
   })
 })
 
 describe('POST /api/phone/connect (click-to-call callback)', () => {
   beforeEach(() => {
-    process.env.PHONE_WEBHOOK_SECRET = SECRET
+    process.env.TWILIO_SECRET = SECRET
   })
 
   afterEach(() => {
-    delete process.env.PHONE_WEBHOOK_SECRET
+    delete process.env.TWILIO_SECRET
   })
 
   function connectRequest(qs: string) {
@@ -309,30 +280,21 @@ describe('POST /api/phone/connect (click-to-call callback)', () => {
 
   it('rejects a bad secret', async () => {
     const response = await connectPost(
-      connectRequest(`secret=wrong&target=${ALICE}&callerId=${NYC}`)
+      connectRequest(`secret=wrong&target=${ALICE}`)
     )
     expect(response.status).toBe(401)
   })
 
   it('rejects a non-E.164 target', async () => {
     const response = await connectPost(
-      connectRequest(`secret=${SECRET}&target=evil&callerId=${NYC}`)
-    )
-    expect(response.status).toBe(400)
-  })
-
-  it('rejects a caller id we do not own', async () => {
-    const response = await connectPost(
-      connectRequest(`secret=${SECRET}&target=${ALICE}&callerId=${ALICE}`)
+      connectRequest(`secret=${SECRET}&target=evil`)
     )
     expect(response.status).toBe(400)
   })
 
   it('returns XML-escaped Dial TwiML', async () => {
     const response = await connectPost(
-      connectRequest(
-        `secret=${SECRET}&target=${encodeURIComponent(ALICE)}&callerId=${encodeURIComponent(NYC)}`
-      )
+      connectRequest(`secret=${SECRET}&target=${encodeURIComponent(ALICE)}`)
     )
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Type')).toContain('text/xml')

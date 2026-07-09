@@ -9,6 +9,7 @@ import {
   useGoogleSignInAvailable,
 } from '@/components/auth/google-sign-in'
 import { matchesSubmittedEmail } from '@/components/auth/signup-completion'
+import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import {
   Dialog,
@@ -39,6 +40,9 @@ interface Props {
   subscribeEndpoint?: string
   confirmedMessage?: string
   initialSubscriberCount?: number | null
+  smsSignupEnabled?: boolean
+  smsSignupPhoneNumber?: string | null
+  smsSignupDisplayNumber?: string | null
   /**
    * When true and no initial count was provided, fetches the live subscriber
    * count client-side and uses it as the header text ("Join N other subscribers:").
@@ -59,6 +63,9 @@ export function InlineSignupForm({
   subscribeEndpoint = '/api/subscribe',
   confirmedMessage = 'You are subscribed by email.',
   initialSubscriberCount = null,
+  smsSignupEnabled,
+  smsSignupPhoneNumber = null,
+  smsSignupDisplayNumber = null,
   showSubscriberCount = false,
 }: Props) {
   const { user, hasSession, loading: authLoading } = useAuthContext()
@@ -259,6 +266,12 @@ export function InlineSignupForm({
           </button>
         </div>
       </form>
+      <SmsSubscribePrompt
+        align={align}
+        enabled={smsSignupEnabled}
+        phoneDisplayNumber={smsSignupDisplayNumber}
+        phoneNumber={smsSignupPhoneNumber}
+      />
 
       {step === 'code' ? (
         <SignupConfirmationDialog

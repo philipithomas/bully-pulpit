@@ -23,19 +23,25 @@ const THREAD_LIMIT = 500
 export async function createTextMessage(
   input: NewTextMessage
 ): Promise<TextMessage> {
+  return (await createTextMessageWithStatus(input)).message
+}
+
+export async function createTextMessageWithStatus(
+  input: NewTextMessage
+): Promise<{ message: TextMessage; inserted: boolean }> {
   const inserted = await getDb()
     .insert(textMessages)
     .values(input)
     .onConflictDoNothing({ target: textMessages.twilioSid })
     .returning()
-  if (inserted.length > 0) return inserted[0]
+  if (inserted.length > 0) return { message: inserted[0], inserted: true }
   // Conflict: the sid is already stored (webhook retry). Return that row.
   const existing = await getDb()
     .select()
     .from(textMessages)
     .where(eq(textMessages.twilioSid, input.twilioSid ?? ''))
     .limit(1)
-  return existing[0]
+  return { message: existing[0], inserted: false }
 }
 
 export type Conversation = {

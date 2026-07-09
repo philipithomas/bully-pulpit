@@ -23,6 +23,7 @@ type SendStats = {
   sent: number
   pending: number
   failed: number
+  skipped: number
 }
 
 interface Props {
@@ -33,6 +34,7 @@ interface Props {
   newsletter: string
   previewHtml: string
   initialEligible: number
+  initialSmsEligible: number
   initialStats: SendStats
   initialActive: boolean
 }
@@ -45,15 +47,18 @@ export function SendClient({
   newsletter,
   previewHtml,
   initialEligible,
+  initialSmsEligible,
   initialStats,
   initialActive,
 }: Props) {
   const [view, setView] = useState<'desktop' | 'mobile'>('desktop')
   const [scheme, setScheme] = useState<'light' | 'dark'>('light')
-  const [testing, setTesting] = useState(false)
+  const [testingEmail, setTestingEmail] = useState(false)
+  const [testingSms, setTestingSms] = useState(false)
   const [starting, setStarting] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [eligible, setEligible] = useState(initialEligible)
+  const [smsEligible, setSmsEligible] = useState(initialSmsEligible)
   const [stats, setStats] = useState<SendStats>(initialStats)
   const [active, setActive] = useState(initialActive)
 
@@ -90,8 +95,10 @@ export function SendClient({
           sent: data.sent,
           pending: data.pending,
           failed: data.failed,
+          skipped: data.skipped ?? 0,
         })
         setEligible(data.eligible)
+        setSmsEligible(data.smsEligible ?? 0)
         const runActive = Boolean(data.active)
         setActive(runActive)
         if (runActive) {
@@ -103,7 +110,7 @@ export function SendClient({
           setActive(false)
           return
         }
-        const processed = data.sent + data.failed
+        const processed = data.sent + data.failed + (data.skipped ?? 0)
         if (data.pending > 0 && processed === lastProcessed) {
           stalledPolls += 1
           if (stalledPolls >= STALL_POLLS) setActive(false)
@@ -118,23 +125,72 @@ export function SendClient({
     return () => clearInterval(id)
   }, [active, slug])
 
-  const sendTest = useCallback(async () => {
-    setTesting(true)
-    try {
-      const res = await fetch('/api/printing-press/send-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug }),
-      })
-      const data = await res.json()
-      if (res.ok) toast.success(`Test sent to ${data.sentTo ?? adminEmail}`)
-      else toast.error(data.error ?? 'Test send failed')
-    } catch {
-      toast.error('Test send failed')
-    } finally {
-      setTesting(false)
-    }
-  }, [slug, adminEmail])
+  const sendTest = useCallback(
+    async (channel: 'email' | 'sms') => {
+      if (channel === 'email') setTestingEmail(true)
+      else setTestingSms(true)
+      try {
+        const res = await fetch('/api/printing-press/send-test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, channel }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          toast.success(
+            channel === 'email'
+              ? `Test email sent to ${data.sentTo ?? adminEmail}`
+              : `Test text sent to ${data.sentTo ?? 'the test number'}`
+          )
+        } else {
+          toast.error(data.error ?? 'Test send failed')
+        }
+      } catch {
+        toast.error('Test send failed')
+      } finally {
+        if (channel === 'email') setTestingEmail(false)
+        else setTestingSms(false)
+      }
+    },
+    [slug, adminEmail]
+  )
+
+  const sendTestEmail = useCallback(async () => {
+    await sendTest('email')
+  }, [sendTest])
+
+  const sendTestSms = useCallback(async () => {
+    await sendTest('sms')
+  }, [sendTest])
+
+  const openConfirm = useCallback(() => {
+    setConfirmOpen(true)
+  }, [])
+
+  const setDesktopView = useCallback(() => {
+    setView('desktop')
+  }, [])
+
+  const setMobileView = useCallback(() => {
+    setView('mobile')
+  }, [])
+
+  const setLightScheme = useCallback(() => {
+    setScheme('light')
+  }, [])
+
+  const setDarkScheme = useCallback(() => {
+    setScheme('dark')
+  }, [])
+
+  const handleConfirmOpenChange = useCallback(
+    (open: boolean) => {
+      if (!starting) setConfirmOpen(open)
+    },
+    [starting]
+  )
+
+  const testButtonDisabled = testingEmail || testingSms
 
   const confirmSend = useCallback(async () => {
     setStarting(true)
@@ -183,13 +239,23 @@ export function SendClient({
     }
   }, [slug])
 
-  const processed = stats.sent + stats.failed
+  const processed = stats.sent + stats.failed + stats.skipped
   const progress = stats.total > 0 ? (processed / stats.total) * 100 : 0
   const progressText =
     active && stats.total === 0
       ? 'Preparing send'
       : `${processed} of ${stats.total} processed${active ? ' · sending' : ''}`
-  const canSend = eligible > 0 && !active && !starting
+  const sendAudienceParts = [
+    eligible > 0
+      ? `${eligible} email subscriber${eligible === 1 ? '' : 's'}`
+      : null,
+    smsEligible > 0
+      ? `${smsEligible} SMS subscriber${smsEligible === 1 ? '' : 's'}`
+      : null,
+  ].filter(Boolean)
+  const sendAudience =
+    sendAudienceParts.length > 0 ? sendAudienceParts.join(' + ') : '0 people'
+  const canSend = (eligible > 0 || smsEligible > 0) && !active && !starting
   const canRetry =
     (stats.failed > 0 || stats.pending > 0) && !active && !starting
 
@@ -203,13 +269,19 @@ export function SendClient({
 
       {/* Status */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <Badge variant="outline">{eligible} eligible</Badge>
+        <Badge variant="outline">{eligible} email eligible</Badge>
+        {smsEligible > 0 ? (
+          <Badge variant="outline">{smsEligible} SMS</Badge>
+        ) : null}
         {stats.sent > 0 && <Badge variant="success">{stats.sent} sent</Badge>}
         {stats.pending > 0 && (
           <Badge variant="warning">{stats.pending} pending</Badge>
         )}
         {stats.failed > 0 && (
           <Badge variant="destructive">{stats.failed} failed</Badge>
+        )}
+        {stats.skipped > 0 && (
+          <Badge variant="secondary">{stats.skipped} skipped</Badge>
         )}
         {active ? <Badge variant="warning">Sending</Badge> : null}
       </div>
@@ -226,14 +298,33 @@ export function SendClient({
 
       {/* Actions */}
       <div className="flex flex-wrap items-center gap-3 mb-8">
-        <Button variant="outline" onClick={sendTest} disabled={testing}>
-          {testing ? <Spinner className="h-4 w-4" /> : `Send test to me`}
+        <Button
+          variant="outline"
+          onClick={sendTestEmail}
+          disabled={testButtonDisabled}
+        >
+          {testingEmail ? (
+            <Spinner className="h-4 w-4" />
+          ) : (
+            `Send test email to me`
+          )}
         </Button>
-        <Button onClick={() => setConfirmOpen(true)} disabled={!canSend}>
+        <Button
+          variant="outline"
+          onClick={sendTestSms}
+          disabled={testButtonDisabled}
+        >
+          {testingSms ? (
+            <Spinner className="h-4 w-4" />
+          ) : (
+            `Send test text to me`
+          )}
+        </Button>
+        <Button onClick={openConfirm} disabled={!canSend}>
           {starting ? (
             <Spinner className="h-4 w-4" />
           ) : (
-            `Send to ${eligible} subscriber${eligible === 1 ? '' : 's'}`
+            `Send to ${sendAudience}`
           )}
         </Button>
         {canRetry ? (
@@ -250,14 +341,14 @@ export function SendClient({
           <Button
             variant={view === 'desktop' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setView('desktop')}
+            onClick={setDesktopView}
           >
             Desktop
           </Button>
           <Button
             variant={view === 'mobile' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setView('mobile')}
+            onClick={setMobileView}
           >
             Mobile
           </Button>
@@ -266,14 +357,14 @@ export function SendClient({
           <Button
             variant={scheme === 'light' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setScheme('light')}
+            onClick={setLightScheme}
           >
             Light
           </Button>
           <Button
             variant={scheme === 'dark' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setScheme('dark')}
+            onClick={setDarkScheme}
           >
             Dark
           </Button>
@@ -303,18 +394,14 @@ export function SendClient({
         />
       </div>
 
-      <Dialog
-        open={confirmOpen}
-        onOpenChange={(open) => {
-          if (!starting) setConfirmOpen(open)
-        }}
-      >
+      <Dialog open={confirmOpen} onOpenChange={handleConfirmOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send to {eligible} subscribers?</DialogTitle>
+            <DialogTitle>Send to {sendAudience}?</DialogTitle>
             <DialogDescription>
               This emails “{subject}” to every confirmed {newsletter} subscriber
-              who has not received it yet. This cannot be undone.
+              and texts every SMS subscriber who has not received it yet. This
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 mt-4">

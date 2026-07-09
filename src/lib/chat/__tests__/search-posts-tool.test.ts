@@ -64,7 +64,7 @@ describe('searchPosts tool output', () => {
   })
 
   it('returns content pages for site-page queries', async () => {
-    const results = await run('contact telephone')
+    const results = await run('contact email')
     const contact = results.find((result) => result.url === '/contact')
 
     expect(contact).toMatchObject({
@@ -75,7 +75,7 @@ describe('searchPosts tool output', () => {
     })
     expect(
       contact?.excerpts.map((excerpt) => excerpt.text).join(' ')
-    ).toContain('+1 212 347 3190')
+    ).toContain('mail@philipithomas.com')
   })
 
   it('cites the section for excerpts that sit under a heading', async () => {

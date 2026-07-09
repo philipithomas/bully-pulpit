@@ -66,11 +66,13 @@ describe('processVoicemail', () => {
   beforeEach(() => {
     process.env.ADMIN_EMAILS = 'one@example.com, two@example.com'
     process.env.OPENAI_API_KEY = 'test-openai-key'
+    process.env.PHONE_NUMBER = '+12123473190'
   })
 
   afterEach(() => {
     delete process.env.ADMIN_EMAILS
     delete process.env.OPENAI_API_KEY
+    delete process.env.PHONE_NUMBER
     vi.clearAllMocks()
     vi.unstubAllGlobals()
   })
@@ -94,7 +96,7 @@ describe('processVoicemail', () => {
     expect(mockedSend).toHaveBeenCalledTimes(1)
     const sent = mockedSend.mock.calls[0][0]
     expect(sent.to).toEqual(['one@example.com', 'two@example.com'])
-    expect(sent.subject).toBe('Voicemail from +15551234567 to NYC (42s)')
+    expect(sent.subject).toBe('Voicemail from +15551234567 to Phone (42s)')
     expect(sent.html).toContain('Call me back.')
     expect(sent.text).toContain('Call me back.')
     expect(sent.attachment).toEqual(

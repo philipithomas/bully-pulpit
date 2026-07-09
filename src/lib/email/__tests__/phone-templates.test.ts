@@ -4,6 +4,8 @@ import {
   renderIncomingSmsText,
   renderMissedCallEmail,
   renderMissedCallText,
+  renderSmsSignupEmail,
+  renderSmsSignupText,
   renderVoicemailEmail,
   renderVoicemailText,
 } from '@/lib/email/templates/phone'
@@ -128,5 +130,37 @@ describe('incoming sms email', () => {
     const text = renderIncomingSmsText(input)
     expect(text).toContain('Message:')
     expect(text).toContain('Running late, be there in 10 <minutes>')
+  })
+})
+
+describe('sms signup email', () => {
+  const input = {
+    phoneNumber: '+14155551234',
+    to: '+12123473190',
+    toLabel: 'NYC',
+    source: 'voice-menu' as const,
+    metadata: {
+      callSid: 'CA123',
+      callerName: 'Jane Caller',
+      areaCode: '415',
+      areaDescription: 'San Francisco, CA',
+    },
+    receivedAt,
+  }
+
+  it('renders source, caller metadata, and area-code context', () => {
+    const html = renderSmsSignupEmail(input)
+    expect(html).toContain('New SMS subscriber')
+    expect(html).toContain('Pressed 2 during a phone call')
+    expect(html).toContain('Area code 415: San Francisco, CA')
+    expect(html).toContain('Jane Caller')
+    expect(html).toContain('CA123')
+  })
+
+  it('mirrors the content in plaintext', () => {
+    const text = renderSmsSignupText(input)
+    expect(text).toContain('New SMS subscriber')
+    expect(text).toContain('Source: Pressed 2 during a phone call')
+    expect(text).toContain('Origin: Area code 415: San Francisco, CA')
   })
 })

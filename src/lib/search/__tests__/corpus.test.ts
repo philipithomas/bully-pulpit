@@ -362,6 +362,9 @@ describe('buildCorpus', () => {
       coverImage: '',
     })
     expect(contact?.chunks.map((chunk) => chunk.text).join('\n')).toContain(
+      'mail@philipithomas.com'
+    )
+    expect(contact?.chunks.map((chunk) => chunk.text).join('\n')).toContain(
       '+1 212 347 3190'
     )
   })

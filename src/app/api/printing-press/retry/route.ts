@@ -4,6 +4,7 @@ import { guardAdmin } from '@/lib/auth/admin'
 import { getPostBySlug } from '@/lib/content/loader'
 import { resetFailedBySlug } from '@/lib/db/queries/email-sends'
 import { recordSendRun } from '@/lib/db/queries/send-runs'
+import { resetFailedSmsBySlug } from '@/lib/db/queries/sms-sends'
 import { isNewsletter } from '@/lib/db/queries/subscribers'
 import { isSendRunActive } from '@/lib/email/send-guard'
 import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
@@ -55,10 +56,17 @@ export async function POST(request: Request) {
       )
     }
 
-    const reset = await resetFailedBySlug(slug)
+    const [resetEmail, resetSms] = await Promise.all([
+      resetFailedBySlug(slug),
+      resetFailedSmsBySlug(slug),
+    ])
     const run = await start(sendNewsletterWorkflow, [slug])
     await recordSendRun(slug, run.runId)
-    return NextResponse.json({ ok: true, reset, runId: run.runId })
+    return NextResponse.json({
+      ok: true,
+      reset: resetEmail + resetSms,
+      runId: run.runId,
+    })
   } catch (err) {
     console.error('[printing-press/retry] error:', err)
     return NextResponse.json({ error: 'Retry failed' }, { status: 500 })

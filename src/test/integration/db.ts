@@ -36,7 +36,7 @@ export function getDb() {
 /** Empties app tables between tests; leaves drizzle's migration bookkeeping. */
 export async function resetDb() {
   await db.execute(
-    sql`TRUNCATE email_sends, send_runs, logins, email_suppressions, subscribers, text_messages RESTART IDENTITY CASCADE`
+    sql`TRUNCATE email_sends, send_runs, logins, email_suppressions, subscribers, text_messages, phone_webhook_events, sms_sends, sms_subscribers RESTART IDENTITY CASCADE`
   )
 }
 

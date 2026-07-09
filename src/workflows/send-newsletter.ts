@@ -7,16 +7,56 @@ import {
   markSent,
   pendingRowIdsBySlug,
 } from '@/lib/db/queries/email-sends'
+import {
+  bulkCreateQueuedSms,
+  type ClaimedSmsSend,
+  claimSendableSmsById,
+  findSentSmsByIds,
+  markSmsPermanentFailure,
+  markSmsSent,
+  markUnsendableSmsSkippedById,
+  pendingSmsReservationById,
+  pendingSmsRowIdsBySlug,
+  releaseSmsClaim,
+} from '@/lib/db/queries/sms-sends'
+import { findEligibleSmsIds } from '@/lib/db/queries/sms-subscribers'
 import { findEligibleIds, isNewsletter } from '@/lib/db/queries/subscribers'
 import { isSuppressed } from '@/lib/db/queries/suppressions'
+import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { isPermanentSesError } from '@/lib/email/errors'
 import { sendQueuedEmail } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
+import { requireSitePhoneNumber } from '@/lib/phone/config'
+import { renderNewsletterSms } from '@/lib/phone/newsletter-sms'
+import {
+  isRetryableTwilioError,
+  type SentSms,
+  sendSms,
+} from '@/lib/phone/twilio'
 
 // ~12-13/sec, comfortably under SES's default 14/sec. Paced inside the step
 // (steps have full Node.js access, so setTimeout is fine).
 const BATCH_SIZE = 50
 const SEND_SPACING_MS = 80
+const SMS_SEND_SPACING_MS = 1000
+
+function retryableStepError(err: unknown): RetryableError {
+  const { attempt } = getStepMetadata()
+  return new RetryableError(err instanceof Error ? err.message : String(err), {
+    retryAfter: Math.min(60_000, 2 ** attempt * 1000),
+  })
+}
+
+function reservedSmsRetryableError(
+  rowId: number,
+  nextAttemptAt: Date
+): RetryableError {
+  const retryAfter = Math.max(1000, nextAttemptAt.getTime() - Date.now())
+  return new RetryableError(
+    `SMS send ${rowId} is reserved until ${nextAttemptAt.toISOString()}`,
+    { retryAfter }
+  )
+}
 
 function chunk(ids: number[]): number[][] {
   const chunks: number[][] = []
@@ -133,6 +173,122 @@ export async function sendBatch(rowIds: number[]): Promise<{
 // before the run fails; the batch is idempotent so extra attempts can't double-send.
 sendBatch.maxRetries = 6
 
+export async function enqueueSmsRecipients(slug: string): Promise<number[][]> {
+  'use step'
+  const post = getPostBySlug(slug)
+  if (!post) {
+    throw new FatalError(`Post not found: ${slug}`)
+  }
+  if (!isNewsletter(post.newsletter)) {
+    throw new FatalError(`Post is not a newsletter: ${slug}`)
+  }
+
+  const eligibleIds = await findEligibleSmsIds(post.newsletter, slug)
+  if (eligibleIds.length > 0) {
+    await bulkCreateQueuedSms({
+      smsSubscriberIds: eligibleIds,
+      postSlug: slug,
+      newsletter: post.newsletter,
+      body: renderNewsletterSms(post),
+    })
+  }
+
+  return chunk(await pendingSmsRowIdsBySlug(slug))
+}
+
+async function recordSmsTextHistory(
+  row: ClaimedSmsSend,
+  fromNumber: string,
+  result?: SentSms
+): Promise<void> {
+  const twilioSid = result?.sid ?? row.send.twilioSid
+  if (!twilioSid) {
+    throw new Error(`SMS send ${row.send.id} has no Twilio sid`)
+  }
+  await createTextMessage({
+    fromNumber,
+    toNumber: row.phoneNumber,
+    body: row.send.body,
+    direction: 'outbound',
+    twilioSid,
+    status: result?.status ?? row.send.twilioStatus ?? 'queued',
+  })
+}
+
+export async function sendSmsBatch(rowIds: number[]): Promise<{
+  sent: number
+  failed: number
+}> {
+  'use step'
+  const fromNumber = requireSitePhoneNumber()
+  let sent = 0
+  let failed = 0
+
+  for (const rowId of rowIds) {
+    const recovered = await findSentSmsByIds([rowId])
+    if (recovered[0]) {
+      try {
+        await recordSmsTextHistory(recovered[0], fromNumber)
+        sent++
+      } catch (err) {
+        throw retryableStepError(err)
+      }
+      await new Promise((resolve) => setTimeout(resolve, SMS_SEND_SPACING_MS))
+      continue
+    }
+
+    const row = await claimSendableSmsById(rowId)
+    if (!row) {
+      const skipped = await markUnsendableSmsSkippedById(rowId)
+      if (skipped) continue
+      const reservedUntil = await pendingSmsReservationById(rowId)
+      if (reservedUntil) throw reservedSmsRetryableError(rowId, reservedUntil)
+      continue
+    }
+
+    const { send, phoneNumber } = row
+    let result: SentSms
+    try {
+      result = await sendSms({
+        from: fromNumber,
+        to: phoneNumber,
+        body: send.body,
+      })
+    } catch (err) {
+      if (isRetryableTwilioError(err)) {
+        await releaseSmsClaim(send.id)
+        throw retryableStepError(err)
+      }
+      const markedFailed = await markSmsPermanentFailure(
+        send.id,
+        err instanceof Error ? err.message : String(err)
+      )
+      if (markedFailed) failed++
+      await new Promise((resolve) => setTimeout(resolve, SMS_SEND_SPACING_MS))
+      continue
+    }
+
+    try {
+      const markedSent = await markSmsSent({
+        id: send.id,
+        twilioSid: result.sid,
+        twilioStatus: result.status,
+      })
+      if (!markedSent) continue
+      await recordSmsTextHistory(row, fromNumber, result)
+      sent++
+    } catch (err) {
+      throw retryableStepError(err)
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, SMS_SEND_SPACING_MS))
+  }
+
+  return { sent, failed }
+}
+
+sendSmsBatch.maxRetries = 6
+
 /**
  * Durable newsletter send. Enqueues eligible recipients and sends them in paced,
  * retryable batches. Survives function timeouts/crashes via the Workflow runtime.
@@ -141,6 +297,9 @@ export async function sendNewsletterWorkflow(slug: string): Promise<{
   batches: number
   sent: number
   failed: number
+  smsBatches: number
+  smsSent: number
+  smsFailed: number
 }> {
   'use workflow'
   const chunks = await enqueueRecipients(slug)
@@ -151,5 +310,22 @@ export async function sendNewsletterWorkflow(slug: string): Promise<{
     sent += result.sent
     failed += result.failed
   }
-  return { batches: chunks.length, sent, failed }
+
+  const smsChunks = await enqueueSmsRecipients(slug)
+  let smsSent = 0
+  let smsFailed = 0
+  for (const batch of smsChunks) {
+    const result = await sendSmsBatch(batch)
+    smsSent += result.sent
+    smsFailed += result.failed
+  }
+
+  return {
+    batches: chunks.length,
+    sent,
+    failed,
+    smsBatches: smsChunks.length,
+    smsSent,
+    smsFailed,
+  }
 }

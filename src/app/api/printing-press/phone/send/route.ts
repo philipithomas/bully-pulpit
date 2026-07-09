@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { guardAdmin } from '@/lib/auth/admin'
 import { createTextMessage } from '@/lib/db/queries/text-messages'
-import { isE164, isOwnedTwilioNumber } from '@/lib/phone/config'
+import { isE164, requireSitePhoneNumber } from '@/lib/phone/config'
 import { sendSms } from '@/lib/phone/twilio'
 
 /**
@@ -11,7 +11,7 @@ import { sendSms } from '@/lib/phone/twilio'
 const MAX_BODY_LENGTH = 1600
 
 /**
- * Sends an SMS from one of the owned Twilio numbers and records it. A Twilio
+ * Sends an SMS from the configured Twilio number and records it. A Twilio
  * failure is still recorded (status "failed", no sid), matching junk-drawer,
  * so the thread shows the attempt.
  */
@@ -22,20 +22,21 @@ export async function POST(request: Request) {
   }
 
   const payload = (await request.json().catch(() => null)) as {
-    from?: string
     to?: string
     body?: string
   } | null
-  const from = payload?.from?.trim()
   const to = payload?.to?.trim()
   const body = payload?.body?.trim()
-
-  if (!from || !isOwnedTwilioNumber(from)) {
+  let from: string
+  try {
+    from = requireSitePhoneNumber()
+  } catch (err) {
     return NextResponse.json(
-      { error: 'from must be one of the Twilio numbers' },
-      { status: 400 }
+      { error: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
     )
   }
+
   if (!to || !isE164(to)) {
     return NextResponse.json(
       { error: 'to must be an E.164 phone number' },
