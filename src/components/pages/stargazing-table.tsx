@@ -98,16 +98,8 @@ function MichelinCell({ restaurant }: { restaurant: StargazingRestaurant }) {
   const hasGreenStar = restaurant.distinction === 'Green Star'
 
   if (restaurant.stars === 0 && !hasGreenStar) {
-    return (
-      <span className="text-gray-700">
-        {restaurant.distinction ?? 'Selected'}
-      </span>
-    )
+    return null
   }
-
-  const notes = [hasGreenStar ? undefined : restaurant.distinction].filter(
-    Boolean
-  )
 
   return (
     <span>
@@ -145,11 +137,6 @@ function MichelinCell({ restaurant }: { restaurant: StargazingRestaurant }) {
           </span>
         ) : null}
       </span>
-      {notes.length > 0 ? (
-        <span className="mt-0.5 block text-gray-500 text-xs">
-          {notes.join(' · ')}
-        </span>
-      ) : null}
     </span>
   )
 }

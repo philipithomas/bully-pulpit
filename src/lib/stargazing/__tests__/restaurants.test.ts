@@ -17,7 +17,7 @@ const WORLD_KEYS = new Set(['rank', 'url', 'numberOneWhileVisited'])
 
 describe('stargazing restaurant data', () => {
   it('keeps one public row per restaurant', () => {
-    expect(stargazingRestaurants).toHaveLength(46)
+    expect(stargazingRestaurants).toHaveLength(47)
     const names = stargazingRestaurants.map((restaurant) =>
       restaurant.name.toLocaleLowerCase()
     )
@@ -26,9 +26,9 @@ describe('stargazing restaurant data', () => {
 
   it('derives the public headline totals from the rows', () => {
     expect(stargazingStats).toEqual({
-      restaurants: 46,
-      starredRestaurants: 39,
-      stars: 59,
+      restaurants: 47,
+      starredRestaurants: 45,
+      stars: 66,
       numberOneRestaurants: 3,
     })
   })
@@ -43,15 +43,16 @@ describe('stargazing restaurant data', () => {
     expect(restaurants.get('Pujol')?.worldsBest?.rank).toBe(13)
     expect(restaurants.get('Quintonil')?.worldsBest?.rank).toBe(11)
     expect(restaurants.get('Don Julio')?.worldsBest?.rank).toBe(13)
-    expect(restaurants.get('Cosme')?.worldsBest?.rank).toBe(22)
+    expect(restaurants.get('Rosetta')?.worldsBest?.rank).toBe(34)
+    expect(restaurants.get('Lyle’s')?.worldsBest?.rank).toBe(33)
   })
 
-  it('keeps Bib Gourmands only when they also have a World ranking', () => {
-    const bibGourmands = stargazingRestaurants.filter(
-      (restaurant) => restaurant.distinction === 'Bib Gourmand'
-    )
+  it('publishes only starred restaurants or Green Stars', () => {
     expect(
-      bibGourmands.every((restaurant) => Boolean(restaurant.worldsBest))
+      stargazingRestaurants.every(
+        (restaurant) =>
+          restaurant.stars > 0 || restaurant.distinction === 'Green Star'
+      )
     ).toBe(true)
   })
 
@@ -77,6 +78,13 @@ describe('stargazing restaurant data', () => {
     expect(text).toContain('Osteria Francescana')
     expect(text).toContain('Don Julio | Buenos Aires')
     expect(text).toContain('Tickets | Barcelona')
+    expect(text).toContain('Llevadura de Olla | Oaxaca City')
+    expect(text).toContain('Máximo | Mexico City')
+    expect(text).toContain('Rosetta | Mexico City')
+    expect(text).toContain('OXTE | Paris')
+    expect(text).toContain('Trishna | London')
+    expect(text).toContain('Oriole | Chicago')
+    expect(text).not.toContain('Michelin: Selected')
     expect(text).not.toMatch(/\b20\d{2}\b|Former|Historical|Closed/)
   })
 })

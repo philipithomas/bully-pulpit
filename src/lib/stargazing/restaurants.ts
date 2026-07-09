@@ -1,6 +1,6 @@
 export type MichelinStars = 0 | 1 | 2 | 3
 
-export type MichelinDistinction = 'Bib Gourmand' | 'Green Star' | 'Selected'
+export type MichelinDistinction = 'Green Star'
 
 export interface WorldsBestRecognition {
   rank: number
@@ -25,7 +25,9 @@ export interface StargazingRestaurant {
 const WORLDS_BEST_ARCHIVE =
   'https://www.theworlds50best.com/restaurants/best-in-the-world/previous-list/'
 const WORLDS_BEST_2018 = `${WORLDS_BEST_ARCHIVE}2018`
+const WORLDS_BEST_2019 = `${WORLDS_BEST_ARCHIVE}2019`
 const WORLDS_BEST_2021 = `${WORLDS_BEST_ARCHIVE}2021`
+const WORLDS_BEST_2024 = `${WORLDS_BEST_ARCHIVE}2024`
 
 export const stargazingRestaurants: readonly StargazingRestaurant[] = [
   { name: 'The Progress', city: 'San Francisco', stars: 1 },
@@ -84,19 +86,13 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     searchAliases: ['Cote', 'NYC'],
   },
   {
-    name: 'Olmsted',
-    city: 'Brooklyn',
-    stars: 0,
-    distinction: 'Selected',
-    searchAliases: ['New York City', 'NYC'],
-  },
-  {
     name: 'Tamarind Tribeca',
     city: 'New York City',
     stars: 1,
     searchAliases: ['NYC'],
   },
   { name: 'Ever', city: 'Chicago', stars: 2 },
+  { name: 'Oriole', city: 'Chicago', stars: 2 },
   { name: 'Roister', city: 'Chicago', stars: 1 },
   {
     name: 'Noma',
@@ -109,13 +105,6 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     },
   },
   { name: 'EL Ideas', city: 'Chicago', stars: 1 },
-  {
-    name: 'Dhamaka',
-    city: 'New York City',
-    stars: 0,
-    distinction: 'Selected',
-    searchAliases: ['NYC'],
-  },
   {
     name: 'Quintonil',
     city: 'Mexico City',
@@ -137,13 +126,6 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     city: 'New York City',
     stars: 1,
     searchAliases: ['Cafe China', 'NYC'],
-  },
-  {
-    name: 'Soothr',
-    city: 'New York City',
-    stars: 0,
-    distinction: 'Selected',
-    searchAliases: ['NYC'],
   },
   {
     name: 'Blackbelly Market & Restaurant',
@@ -175,12 +157,23 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     stars: 1,
     distinction: 'Green Star',
   },
+  { name: 'Llevadura de Olla', city: 'Oaxaca City', stars: 1 },
   {
-    name: 'Nijo Aritsune',
-    city: 'Kyoto',
-    stars: 0,
-    distinction: 'Selected',
+    name: 'Máximo',
+    city: 'Mexico City',
+    stars: 1,
+    searchAliases: ['Maximo', 'Máximo Bistrot', 'Maximo Bistrot'],
   },
+  {
+    name: 'Rosetta',
+    city: 'Mexico City',
+    stars: 1,
+    worldsBest: {
+      rank: 34,
+      url: WORLDS_BEST_2024,
+    },
+  },
+  { name: 'OXTE', city: 'Paris', stars: 1 },
   {
     name: 'L’Atelier de Robuchon',
     city: 'Paris',
@@ -204,6 +197,10 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     name: 'Lyle’s',
     city: 'London',
     stars: 1,
+    worldsBest: {
+      rank: 33,
+      url: WORLDS_BEST_2019,
+    },
     searchAliases: ["Lyle's of London", 'Lyles'],
   },
   { name: 'Angler', city: 'San Francisco', stars: 1 },
@@ -216,18 +213,8 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
       url: WORLDS_BEST_2021,
     },
   },
-  {
-    name: 'Cosme',
-    city: 'New York City',
-    stars: 0,
-    distinction: 'Selected',
-    worldsBest: {
-      rank: 22,
-      url: WORLDS_BEST_2021,
-    },
-    searchAliases: ['NYC'],
-  },
   { name: 'Gymkhana', city: 'London', stars: 1 },
+  { name: 'Trishna', city: 'London', stars: 1 },
   {
     name: 'Eleven Madison Park',
     city: 'New York City',
@@ -258,7 +245,7 @@ export function michelinRecognition(restaurant: StargazingRestaurant): string {
       ? `${stars} (${restaurant.distinction.toLowerCase()})`
       : stars
   }
-  return restaurant.distinction ?? 'Selected'
+  return restaurant.distinction ?? 'No Michelin stars'
 }
 
 export const stargazingStats = {
@@ -288,7 +275,7 @@ export function stargazingPublicText(): string {
   return [
     stargazingSummary,
     'I enjoy fine dining as a lens to explore local culture and craftspeople performing at the highest level.',
-    'I count each restaurant once. Michelin stars reflect the rating at the time I visited, with some grace for nearby promotions and places the Guide reached later. World rankings reflect the list at the time I visited. Visit dates stay private.',
+    'I count each restaurant once. Michelin stars reflect the Michelin Guide rating at the time I visited, with some grace for nearby promotions and places the Guide reached later. World rankings reflect the World’s 50 Best list at the time I visited.',
     'Restaurants:',
     ...rows,
   ].join('\n')

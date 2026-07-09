@@ -10,12 +10,49 @@ import {
 const MICHELIN_GUIDE_URL = 'https://guide.michelin.com/en/restaurants'
 const WORLDS_BEST_URL =
   'https://www.theworlds50best.com/restaurants/best-in-the-world/previous-list/'
+const RULE_LINK_CLASS =
+  'underline decoration-gray-300 underline-offset-2 hover:text-gray-950 hover:decoration-gray-900'
 
 const countingRules = [
-  'I count each restaurant once, no matter how often I return.',
-  'Michelin stars reflect the rating at the time I visited, with some grace for nearby promotions and places the Guide reached later.',
-  'World rankings reflect the list at the time I visited. Visit dates stay private.',
-  'I also keep Green Stars and selected restaurants here. I include a Bib Gourmand only when it also appeared in The World’s 50 Best.',
+  {
+    id: 'once',
+    content: 'I count each restaurant once, no matter how often I return.',
+  },
+  {
+    id: 'michelin',
+    content: (
+      <>
+        Michelin stars reflect the rating in the{' '}
+        <a
+          href={MICHELIN_GUIDE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={RULE_LINK_CLASS}
+        >
+          Michelin Guide
+        </a>{' '}
+        at the time I visited, with some grace for nearby promotions and places
+        the Guide reached later.
+      </>
+    ),
+  },
+  {
+    id: 'world',
+    content: (
+      <>
+        World rankings reflect the list in the{' '}
+        <a
+          href={WORLDS_BEST_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={RULE_LINK_CLASS}
+        >
+          World’s 50 Best archives
+        </a>{' '}
+        at the time I visited.
+      </>
+    ),
+  },
 ]
 
 export function StargazingPage({ page }: { page: Page }) {
@@ -63,37 +100,16 @@ export function StargazingPage({ page }: { page: Page }) {
           <div className="max-w-3xl">
             <ol className="space-y-5">
               {countingRules.map((rule, index) => (
-                <li key={rule} className="flex gap-4">
+                <li key={rule.id} className="flex gap-4">
                   <span className="mt-1 shrink-0 font-mono text-brass text-xs">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <p className="font-serif text-gray-700 text-lg leading-relaxed">
-                    {rule}
+                    {rule.content}
                   </p>
                 </li>
               ))}
             </ol>
-            <p className="mt-7 font-sans text-gray-500 text-sm">
-              Browse the{' '}
-              <a
-                href={MICHELIN_GUIDE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-gray-300 underline-offset-2 hover:text-gray-950 hover:decoration-gray-900"
-              >
-                Michelin Guide
-              </a>{' '}
-              and{' '}
-              <a
-                href={WORLDS_BEST_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-gray-300 underline-offset-2 hover:text-gray-950 hover:decoration-gray-900"
-              >
-                World’s 50 Best archives
-              </a>
-              .
-            </p>
           </div>
         </section>
 

@@ -17,6 +17,7 @@ describe('stargazing filtering and sorting', () => {
       'Gymkhana',
       'Lyle’s',
       'Silo',
+      'Trishna',
     ])
 
     const noma = filterAndSortRestaurants(

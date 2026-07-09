@@ -34,7 +34,7 @@ describe('getPageText', () => {
 
   it('gives Bell the complete public Stargazing list', () => {
     const text = getPageText('/stargazing')
-    expect(text).toContain('39 Michelin-starred restaurants')
+    expect(text).toContain('45 Michelin-starred restaurants')
     expect(text).toContain('Silo | London')
     expect(text).toContain('Eleven Madison Park')
     expect(text.length).toBeLessThanOrEqual(PAGE_TEXT_MAX_CHARS)
