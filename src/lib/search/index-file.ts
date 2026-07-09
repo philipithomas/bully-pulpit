@@ -6,7 +6,7 @@ import path from 'node:path'
  * text — only merkle hashes and base64-encoded float32 vectors. Chunk text is
  * recomputed from content/ at runtime and aligned to vectors by chunk hash.
  * The `posts` array is the historical file key; it now contains searchable
- * posts and content pages.
+ * posts, content pages, and registered app pages.
  */
 
 export interface SearchIndexChunk {

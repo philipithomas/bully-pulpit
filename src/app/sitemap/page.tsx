@@ -1,13 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPages } from '@/lib/content/loader'
 import type { Newsletter } from '@/lib/content/types'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { publicAppPage, publicAppPages } from '@/lib/public-pages'
+
+const sitemapPage = publicAppPage('/sitemap')
 
 export const metadata: Metadata = {
-  title: 'Sitemap',
-  description: `A sitemap for humans: every page and post by ${siteConfig.author}.`,
+  title: sitemapPage.title,
+  description: sitemapPage.description,
   // Page-level alternates replace the root layout's, so restate the feeds.
   alternates: { canonical: '/sitemap', types: feedDiscovery() },
 }
@@ -28,17 +30,6 @@ const newsletterColor: Record<Newsletter, string> = {
   tsundoku: 'text-sun',
 }
 
-// App Router pages that do not come from content/pages.
-const appPages: { href: string; title: string }[] = [
-  { href: '/', title: 'Home' },
-  { href: '/contraption', title: 'Contraption' },
-  { href: '/workshop', title: 'Workshop' },
-  { href: '/postcard', title: 'Postcard' },
-  { href: '/tsundoku', title: 'Tsundoku' },
-  { href: '/photography', title: 'Photography' },
-  { href: '/print', title: 'Print edition' },
-]
-
 export default function SitemapPage() {
   const posts = getAllPosts()
 
@@ -49,6 +40,9 @@ export default function SitemapPage() {
     }))
     .sort((a, b) => a.title.localeCompare(b.title))
 
+  const appPages = publicAppPages
+    .filter((page) => page.humanSitemap)
+    .map((page) => ({ href: page.path, title: page.title }))
   const pages = [...appPages, ...contentPages]
 
   // Group posts by year, descending

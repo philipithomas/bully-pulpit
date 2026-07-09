@@ -37,7 +37,7 @@ describe('searchPosts tool output', () => {
     for (const result of results) {
       expect(typeof result.title).toBe('string')
       expect(result.type).toMatch(/^(post|page|image)$/)
-      expect(result.url).toMatch(/^\/[a-z0-9-]+$/)
+      expect(result.url).toMatch(/^\/(?:[a-z0-9-]+)?$/)
       expect(typeof result.newsletter).toBe('string')
       expect(typeof result.coverImage).toBe('string')
       expect(Array.isArray(result.excerpts)).toBe(true)
@@ -76,6 +76,16 @@ describe('searchPosts tool output', () => {
     expect(
       contact?.excerpts.map((excerpt) => excerpt.text).join(' ')
     ).toContain('mail@philipithomas.com')
+  })
+
+  it('returns registered app pages for site-level queries', async () => {
+    const results = await run('print edition no longer available order')
+    expect(results.find((result) => result.url === '/print')).toMatchObject({
+      type: 'page',
+      title: 'Print edition',
+      newsletter: 'page',
+      coverImage: '',
+    })
   })
 
   it('cites the section for excerpts that sit under a heading', async () => {

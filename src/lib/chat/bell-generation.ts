@@ -5,7 +5,9 @@ import { fetchPost } from '@/lib/chat/fetch-post-tool'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 
 /** Shared Bell model and tool-loop settings for the web and SMS surfaces. */
-export const bellModel = gateway('openai/gpt-5.6-luna')
+export const BELL_MODEL_ID = 'openai/gpt-5.6-luna'
+export const BELL_FALLBACK_MODEL_IDS = ['openai/gpt-5.4-mini'] as const
+export const bellModel = gateway(BELL_MODEL_ID)
 
 /** Disable reasoning latency for Bell's short, tool-oriented responses. */
 export const bellReasoning = 'none' as const
@@ -30,7 +32,7 @@ export function getBellProviderOptions(input: {
       // GPT-5.6 availability issues.
       order: ['openai'],
       sort: 'ttft',
-      models: ['openai/gpt-5.4-mini'],
+      models: [...BELL_FALLBACK_MODEL_IDS],
       zeroDataRetention: true,
       ...(input.pseudonymousUser ? { user: input.pseudonymousUser } : {}),
       tags: [

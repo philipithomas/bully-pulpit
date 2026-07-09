@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { getPageBySlug } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
+import { publicAppPage, publicAppPages } from '@/lib/public-pages'
 import {
   buildCorpus,
+  buildCorpusFromPublicAppPages,
   chunkPage,
   chunkPost,
+  chunkPublicAppPage,
   extractHeadings,
   extractImageAssets,
   MAX_CHUNK_CHARS,
@@ -164,6 +167,16 @@ describe('chunkPage', () => {
     expect(chunks.map((chunk) => chunk.text).join('\n')).toContain(
       'mail@philipithomas.com'
     )
+  })
+})
+
+describe('chunkPublicAppPage', () => {
+  it('chunks registry title, description, and search text', () => {
+    const page = publicAppPage('/print')
+    const chunks = chunkPublicAppPage(page)
+    expect(chunks[0].text).toContain('Print edition')
+    expect(chunks[0].text).toContain('no longer available to order')
+    expect(chunks[1].text).toContain('Introducing the print edition')
   })
 })
 
@@ -348,7 +361,7 @@ describe('buildCorpus', () => {
     for (const post of a) {
       expect(post.chunks[0].kind).toBe('title')
       expect(Array.isArray(post.images)).toBe(true)
-      expect(post.url).toBe(`/${post.slug}`)
+      expect(post.url).toMatch(/^\//)
     }
   })
 
@@ -366,6 +379,22 @@ describe('buildCorpus', () => {
     expect(contactText).toContain('mail@philipithomas.com')
     expect(contactText).not.toContain('+1 212 347 3190')
     expect(contactText).not.toMatch(/\+\d[\d ]{6,}/)
+  })
+
+  it('includes every registered app page as a searchable page entry', () => {
+    const appCorpus = buildCorpusFromPublicAppPages()
+    expect(appCorpus).toHaveLength(publicAppPages.length)
+
+    for (const page of publicAppPages) {
+      expect(appCorpus.find((entry) => entry.slug === page.id)).toMatchObject({
+        contentType: 'page',
+        title: page.title,
+        url: page.path,
+        newsletter: 'page',
+        description: page.description,
+        images: [],
+      })
+    }
   })
 
   it('adds the public Stargazing ledger to page search', () => {

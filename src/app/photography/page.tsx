@@ -8,10 +8,13 @@ import {
   zoomImageDataAttrs,
 } from '@/lib/content/zoom-image'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { publicAppPage } from '@/lib/public-pages'
+
+const photographyPage = publicAppPage('/photography')
 
 export const metadata: Metadata = {
-  title: 'Photography',
-  description: 'I take and edit all photos on the site.',
+  title: photographyPage.title,
+  description: photographyPage.description,
   // Page-level alternates replace the root layout's, so restate the feeds.
   alternates: { canonical: '/photography', types: feedDiscovery() },
 }

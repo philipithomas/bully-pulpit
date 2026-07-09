@@ -9,7 +9,15 @@ describe('getPageText', () => {
     expect(text).toContain('Contraption (/contraption)')
     expect(text).toContain('Workshop (/workshop)')
     expect(text).toContain('Postcard (/postcard)')
+    expect(text).toContain('available by email and RSS')
+    expect(text).not.toContain('snail mail')
     expect(text.length).toBeLessThanOrEqual(PAGE_TEXT_MAX_CHARS)
+  })
+
+  it('reads registered app pages outside the newsletter indexes', () => {
+    expect(getPageText('/photography')).toContain('search the photographs')
+    expect(getPageText('/print')).toContain('no longer available to order')
+    expect(getPageText('/sitemap')).toContain('App pages:')
   })
 
   it('lists the five most recent posts for a newsletter index', () => {
