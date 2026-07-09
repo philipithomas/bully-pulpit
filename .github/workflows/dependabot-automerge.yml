@@ -1,0 +1,59 @@
+name: Dependabot low-risk auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions: {}
+
+jobs:
+  enable-auto-merge:
+    if: github.actor == 'dependabot[bot]' && !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Read Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check patch allowlist
+        id: eligibility
+        shell: bash
+        env:
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+        run: |
+          eligible=true
+          if [[ "$UPDATE_TYPE" != 'version-update:semver-patch' ]]; then
+            eligible=false
+          fi
+
+          IFS=',' read -ra dependencies <<< "$DEPENDENCY_NAMES"
+          for dependency in "${dependencies[@]}"; do
+            dependency="${dependency//[[:space:]]/}"
+            case "$dependency" in
+              '@types/node') ;;
+              '@types/react') ;;
+              '@types/react-dom') ;;
+              'class-variance-authority') ;;
+              'clsx') ;;
+              'lucide-react') ;;
+              'tailwind-merge') ;;
+              'tailwindcss-animate') ;;
+              *) eligible=false ;;
+            esac
+          done
+
+          echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
+
+      - name: Enable squash auto-merge after required checks
+        if: steps.eligibility.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
