@@ -5,6 +5,10 @@ on:
     - cron: '0 12 2 * *' # 2nd of each month at noon UTC
   workflow_dispatch: # Allow manual trigger
 
+# GitHub permissions are job-scoped. This job receives only the two write
+# scopes its final action needs, and checkout does not persist those credentials.
+permissions: {}
+
 jobs:
   create-postcard-draft:
     runs-on: ubuntu-latest
@@ -14,7 +18,9 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Calculate next month
         id: date
@@ -64,7 +70,7 @@ jobs:
 
       - name: Create pull request
         if: steps.check.outputs.exists == 'false'
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           branch: postcard/${{ steps.date.outputs.next_month }}
           commit-message: "Draft postcard for ${{ steps.date.outputs.month_name }} ${{ steps.date.outputs.year }}"

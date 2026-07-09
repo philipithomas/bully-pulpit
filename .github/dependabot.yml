@@ -4,17 +4,58 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
-    open-pull-requests-limit: 5
-    ignore:
-      # sharp 0.35.0 ships an exports map that hides its type declarations
-      # (TS7016 under moduleResolution bundler). Remove once a fixed release
-      # exists upstream: https://github.com/lovell/sharp/issues
-      - dependency-name: 'sharp'
-        versions: ['0.35.0']
+    open-pull-requests-limit: 10
     groups:
-      minor-and-patch:
-        patterns: ['*']
+      workflow-runtime:
+        patterns:
+          - 'workflow'
+          - '@workflow/*'
+          - '@vercel/oidc'
         update-types: ['minor', 'patch']
+      ai-sdk-and-gateway:
+        patterns:
+          - 'ai'
+          - '@ai-sdk/*'
+        update-types: ['minor', 'patch']
+      next-and-react:
+        patterns:
+          - 'next'
+          - 'react'
+          - 'react-dom'
+          - '@flags-sdk/vercel'
+          - '@vercel/analytics'
+          - '@vercel/speed-insights'
+          - 'botid'
+          - 'flags'
+        update-types: ['minor', 'patch']
+      database:
+        patterns:
+          - '@electric-sql/pglite'
+          - '@neondatabase/serverless'
+          - 'drizzle-kit'
+          - 'drizzle-orm'
+        update-types: ['minor', 'patch']
+      provider-sdks:
+        patterns:
+          - '@aws-sdk/*'
+          - '@opentelemetry/*'
+          - '@vercel/firewall'
+          - '@vercel/otel'
+          - 'jose'
+          - 'twilio'
+        update-types: ['minor', 'patch']
+      low-risk-patches:
+        patterns:
+          - '@types/node'
+          - '@types/react'
+          - '@types/react-dom'
+          - 'class-variance-authority'
+          - 'clsx'
+          - 'lucide-react'
+          - 'tailwind-merge'
+          - 'tailwindcss-animate'
+        update-types: ['patch']
+  # Action updates remain isolated from application and provider changes.
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
