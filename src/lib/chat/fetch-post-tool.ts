@@ -2,6 +2,7 @@ import { tool } from 'ai'
 import { z } from 'zod/v4'
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
 import { extractHeadings, extractImageAssets } from '@/lib/search/corpus'
+import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 
 export const fetchPost = tool({
   description:
@@ -22,9 +23,14 @@ export const fetchPost = tool({
       return JSON.stringify({ error: `No post found for slug "${slug}"` })
     }
 
+    const content =
+      item.slug === 'stargazing'
+        ? stargazingPageContent(item.content)
+        : item.content
+
     // Heading outline with anchors, same algorithm as the search corpus, so
     // section citations from a full read match the ones search returns
-    const outline = extractHeadings(item.content).map((h) => ({
+    const outline = extractHeadings(content).map((h) => ({
       heading: h.text,
       anchor: h.anchor,
       url: `/${item.slug}#${h.anchor}`,
@@ -57,7 +63,7 @@ export const fetchPost = tool({
       newsletter: 'newsletter' in item ? item.newsletter : null,
       outline,
       images,
-      content: item.content,
+      content,
     })
   },
 })

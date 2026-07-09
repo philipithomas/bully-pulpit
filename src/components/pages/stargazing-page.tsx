@@ -90,7 +90,11 @@ export function StargazingPage({ page }: { page: Page }) {
 
         <section className="grid gap-7 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-12">
           <div>
-            <h2 className="font-sans font-semibold text-2xl text-gray-950 tracking-tight">
+            {/* biome-ignore lint/correctness/useUniqueElementIds: stable indexed section anchor */}
+            <h2
+              id="how-i-count"
+              className="scroll-mt-14 font-sans font-semibold text-2xl text-gray-950 tracking-tight"
+            >
               How I count
             </h2>
             <p className="mt-2 font-mono text-gray-500 text-xs">

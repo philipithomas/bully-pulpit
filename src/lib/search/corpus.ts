@@ -1,7 +1,7 @@
 import { getAllPosts, getPages } from '@/lib/content/loader'
 import type { Frontmatter, Page, Post } from '@/lib/content/types'
 import { createHeadingSlugger } from '@/lib/search/heading-anchor'
-import { stargazingPublicText } from '@/lib/stargazing/restaurants'
+import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 
 /**
  * Deterministic chunker over all posts. The chunks here are the single source
@@ -451,7 +451,7 @@ export function chunkPage(page: Page): PostChunk[] {
   if (page.slug !== 'stargazing') return chunkContent(page)
   return chunkContent({
     ...page,
-    content: `${page.content}\n\n## Restaurants\n\n${stargazingPublicText()}`,
+    content: stargazingPageContent(page.content),
   })
 }
 

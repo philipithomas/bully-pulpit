@@ -28,6 +28,8 @@ const WORLDS_BEST_2018 = `${WORLDS_BEST_ARCHIVE}2018`
 const WORLDS_BEST_2019 = `${WORLDS_BEST_ARCHIVE}2019`
 const WORLDS_BEST_2021 = `${WORLDS_BEST_ARCHIVE}2021`
 const WORLDS_BEST_2024 = `${WORLDS_BEST_ARCHIVE}2024`
+const WORLDS_BEST_51_100 =
+  'https://www.theworlds50best.com/restaurants/best-in-the-world/list/51-100'
 
 export const stargazingRestaurants: readonly StargazingRestaurant[] = [
   { name: 'The Progress', city: 'San Francisco', stars: 1 },
@@ -156,6 +158,16 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     searchAliases: ['Cafe Boulud', 'NYC'],
   },
   { name: 'Sorrel', city: 'San Francisco', stars: 1 },
+  {
+    name: 'SingleThread',
+    city: 'Healdsburg',
+    stars: 3,
+    worldsBest: {
+      rank: 80,
+      url: WORLDS_BEST_51_100,
+    },
+    searchAliases: ['Single Thread'],
+  },
   { name: 'Rich Table', city: 'San Francisco', stars: 1 },
   { name: '7 Adams', city: 'San Francisco', stars: 1 },
   { name: 'Frances', city: 'San Francisco', stars: 1 },
@@ -307,4 +319,8 @@ export function stargazingPublicText(): string {
     'Restaurants:',
     ...rows,
   ].join('\n')
+}
+
+export function stargazingPageContent(content: string): string {
+  return `${content}\n\n## Restaurants\n\n${stargazingPublicText()}`
 }

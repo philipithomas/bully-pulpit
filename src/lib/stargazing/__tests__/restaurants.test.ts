@@ -17,7 +17,7 @@ const WORLD_KEYS = new Set(['rank', 'url', 'numberOneWhileVisited'])
 
 describe('stargazing restaurant data', () => {
   it('keeps one public row per restaurant', () => {
-    expect(stargazingRestaurants).toHaveLength(53)
+    expect(stargazingRestaurants).toHaveLength(54)
     const names = stargazingRestaurants.map((restaurant) =>
       restaurant.name.toLocaleLowerCase()
     )
@@ -26,9 +26,9 @@ describe('stargazing restaurant data', () => {
 
   it('derives the public headline totals from the rows', () => {
     expect(stargazingStats).toEqual({
-      restaurants: 53,
-      starredRestaurants: 50,
-      stars: 73,
+      restaurants: 54,
+      starredRestaurants: 51,
+      stars: 76,
       numberOneRestaurants: 3,
     })
   })
@@ -50,6 +50,8 @@ describe('stargazing restaurant data', () => {
     expect(restaurants.get('Omakase Yume')?.stars).toBe(1)
     expect(restaurants.get('Takumi Tatsuhiro')?.stars).toBe(1)
     expect(restaurants.get('Yaesu Sushi Umi')?.stars).toBe(2)
+    expect(restaurants.get('SingleThread')?.stars).toBe(3)
+    expect(restaurants.get('SingleThread')?.worldsBest?.rank).toBe(80)
     expect(restaurants.get('Alchemist')?.stars).toBe(2)
     expect(restaurants.get('Alchemist')?.worldsBest?.rank).toBe(8)
     expect(restaurants.get('Alchemist')?.worldsBest?.url).toContain('2024')
@@ -102,6 +104,7 @@ describe('stargazing restaurant data', () => {
     )
     expect(text).toContain('Takumi Tatsuhiro | Tokyo')
     expect(text).toContain('Yaesu Sushi Umi | Tokyo')
+    expect(text).toContain('SingleThread | Healdsburg')
     expect(text).not.toContain('Michelin: Selected')
     expect(text).not.toMatch(/\b20\d{2}\b|Former|Historical|Closed/)
   })
