@@ -74,7 +74,10 @@ export async function POST(request: Request) {
   }
 
   if (isBot) {
-    return NextResponse.json({ error: 'Access denied.' }, { status: 403 })
+    return NextResponse.json(
+      { error: 'Bell could not verify this browser. Try again in a moment.' },
+      { status: 403 }
+    )
   }
 
   if (!body || !Array.isArray(body.messages) || body.messages.length === 0) {

@@ -11,9 +11,13 @@ describe('chatErrorMessage', () => {
   })
 
   it('unwraps the 403 bot-check body', () => {
-    expect(chatErrorMessage(new Error('{"error":"Access denied."}'))).toBe(
-      'Access denied.'
-    )
+    expect(
+      chatErrorMessage(
+        new Error(
+          '{"error":"Bell could not verify this browser. Try again in a moment."}'
+        )
+      )
+    ).toBe('Bell could not verify this browser. Try again in a moment.')
   })
 
   it('passes the generic stream error message through unchanged', () => {
