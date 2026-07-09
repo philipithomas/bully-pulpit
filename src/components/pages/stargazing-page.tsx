@@ -98,9 +98,6 @@ export function StargazingPage({ page }: { page: Page }) {
             >
               How I count
             </h2>
-            <p className="mt-2 font-mono text-gray-500 text-xs">
-              {stargazingStats.restaurants} restaurants, one line each
-            </p>
           </div>
           <div className="max-w-3xl">
             <ol className="space-y-5">
