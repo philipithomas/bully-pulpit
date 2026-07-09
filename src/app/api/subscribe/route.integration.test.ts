@@ -101,11 +101,11 @@ describe('POST /api/subscribe', () => {
     expect(rows[0].name).toBe('New Person')
     expect(rows[0].source).toBe('footer')
     expect(rows[0].confirmedAt).toBeNull()
-    // Every new public signup starts on all newsletters.
+    // Every new public signup starts on newsletters accepting subscriptions.
     expect(rows[0].subscribedContraption).toBe(true)
     expect(rows[0].subscribedWorkshop).toBe(true)
     expect(rows[0].subscribedPostcard).toBe(true)
-    expect(rows[0].subscribedTsundoku).toBe(true)
+    expect(rows[0].subscribedTsundoku).toBe(false)
 
     // Both login rows: a 6-digit code and a magic link, both marked emailed
     const loginRows = await db
@@ -132,10 +132,10 @@ describe('POST /api/subscribe', () => {
       'Confirm your subscription to philipithomas.com'
     )
     expect(message.html).toContain(
-      'Thanks for subscribing to Contraption, Workshop, Postcard, and Tsundoku at'
+      'Thanks for subscribing to Contraption, Workshop, and Postcard at'
     )
     expect(message.text).toContain(
-      'Thanks for subscribing to Contraption, Workshop, Postcard, and Tsundoku at philipithomas.com.'
+      'Thanks for subscribing to Contraption, Workshop, and Postcard at philipithomas.com.'
     )
     expect(message.html).toContain(codeLogin?.token)
     expect(message.text).toContain(codeLogin?.token)
@@ -144,7 +144,7 @@ describe('POST /api/subscribe', () => {
     )
   })
 
-  it('subscribes a NEW subscriber to every newsletter even from a focused form', async () => {
+  it('ignores an inactive focused newsletter and applies active defaults to a new subscriber', async () => {
     const res = await POST(
       subscribeRequest({
         email: 'picky@example.com',
@@ -166,7 +166,7 @@ describe('POST /api/subscribe', () => {
     expect(row.subscribedContraption).toBe(true)
     expect(row.subscribedPostcard).toBe(true)
     expect(row.subscribedWorkshop).toBe(true)
-    expect(row.subscribedTsundoku).toBe(true)
+    expect(row.subscribedTsundoku).toBe(false)
     expect(row.source).toBeNull()
 
     // New subscribers get the full list in their confirmation email.
@@ -175,7 +175,7 @@ describe('POST /api/subscribe', () => {
       'Confirm your subscription to philipithomas.com'
     )
     expect(message.text).toContain(
-      'Thanks for subscribing to Contraption, Workshop, Postcard, and Tsundoku at philipithomas.com.'
+      'Thanks for subscribing to Contraption, Workshop, and Postcard at philipithomas.com.'
     )
   })
 
@@ -330,8 +330,9 @@ describe('POST /api/subscribe', () => {
     const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
     expect(message.subject).toBe('Your sign-in code for philipithomas.com')
     expect(message.text).toContain(
-      `https://www.philipithomas.com/auth/verify?token=${magicLogin?.token}&newsletter=tsundoku`
+      `https://www.philipithomas.com/auth/verify?token=${magicLogin?.token}`
     )
+    expect(message.text).not.toContain('newsletter=tsundoku')
   })
 
   it('does not trust client-provided email-only opt-in on the public route', async () => {
@@ -374,45 +375,19 @@ describe('POST /api/subscribe', () => {
     expect(message.subject).toBe('Your sign-in code for philipithomas.com')
   })
 
-  it('opts an existing confirmed subscriber into Tsundoku through the Tsundoku endpoint', async () => {
-    await db.insert(subscribers).values({
-      email: 'japan@example.com',
-      name: 'Japan Reader',
-      source: 'https://original.example',
-      confirmedAt: new Date(),
-      subscribedContraption: false,
-      subscribedWorkshop: false,
-      subscribedPostcard: false,
-      subscribedTsundoku: false,
-    })
-
+  it('returns gone from the archived Tsundoku subscribe endpoint', async () => {
     const res = await POST_TSUNDOKU(
       subscribeRequest({
         email: 'japan@example.com',
-        name: 'Overwrite Attempt',
-        source: 'https://www.google.com',
-        newsletters: ['contraption'],
-        allowExistingSubscriberOptIn: true,
       })
     )
 
-    expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true, status: 'confirmed' })
-
-    const [row] = await db
-      .select()
-      .from(subscribers)
-      .where(eq(subscribers.email, 'japan@example.com'))
-    expect(row.subscribedContraption).toBe(false)
-    expect(row.subscribedWorkshop).toBe(false)
-    expect(row.subscribedPostcard).toBe(false)
-    expect(row.subscribedTsundoku).toBe(true)
-    expect(row.name).toBe('Japan Reader')
-    expect(row.source).toBe('https://original.example')
-
-    expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
-    const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
-    expect(message.subject).toBe('Tsundoku opt-in: japan@example.com')
+    expect(res.status).toBe(410)
+    expect(await res.json()).toEqual({
+      error: 'Tsundoku is archived and no longer accepts subscriptions.',
+    })
+    expect(await db.select().from(subscribers)).toHaveLength(0)
+    expect(sendSimpleEmail).not.toHaveBeenCalled()
   })
 
   it('rejects a suppressed address with 422 and sends no email', async () => {

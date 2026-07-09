@@ -1,5 +1,4 @@
 import { createAndSendLogin } from '@/lib/auth/login-service'
-import { siteConfig } from '@/lib/config'
 import { type Newsletter, newsletterSchema } from '@/lib/content/types'
 import {
   confirmSubscriber,
@@ -11,11 +10,12 @@ import {
 import { isSuppressed } from '@/lib/db/queries/suppressions'
 import type { Subscriber } from '@/lib/db/schema'
 import { canReceiveMail } from '@/lib/email/deliverability'
-import {
-  sendNewSubscriberNotification,
-  sendNewsletterOptInNotification,
-} from '@/lib/email/send'
+import { sendNewSubscriberNotification } from '@/lib/email/send'
 import type { ConfirmationPurpose } from '@/lib/email/templates/confirmation'
+import {
+  defaultSignupNewsletters,
+  isNewsletterAcceptingSubscriptions,
+} from '@/lib/newsletters'
 
 /** Thrown for a malformed email address (maps to HTTP 400). */
 export class InvalidEmailError extends Error {
@@ -72,7 +72,6 @@ function changedNewsletterOptIns(
     ['contraption', 'subscribedContraption'],
     ['workshop', 'subscribedWorkshop'],
     ['postcard', 'subscribedPostcard'],
-    ['tsundoku', 'subscribedTsundoku'],
   ] as const
   return preferences
     .filter(([, key]) => !before[key] && after[key])
@@ -86,7 +85,9 @@ export function normalizedNewsletters(
   const seen = new Set<Newsletter>()
   for (const newsletter of newsletters) {
     const parsed = newsletterSchema.safeParse(newsletter)
-    if (parsed.success) seen.add(parsed.data)
+    if (parsed.success && isNewsletterAcceptingSubscriptions(parsed.data)) {
+      seen.add(parsed.data)
+    }
   }
   return [...seen]
 }
@@ -94,13 +95,13 @@ export function normalizedNewsletters(
 export function prefsForNewsletters(
   newsletters: Newsletter[]
 ): SubscriberPrefs {
+  const accepts = (newsletter: Newsletter) =>
+    newsletters.includes(newsletter) &&
+    isNewsletterAcceptingSubscriptions(newsletter)
   return {
-    ...(newsletters.includes('contraption')
-      ? { subscribedContraption: true }
-      : {}),
-    ...(newsletters.includes('workshop') ? { subscribedWorkshop: true } : {}),
-    ...(newsletters.includes('postcard') ? { subscribedPostcard: true } : {}),
-    ...(newsletters.includes('tsundoku') ? { subscribedTsundoku: true } : {}),
+    ...(accepts('contraption') ? { subscribedContraption: true } : {}),
+    ...(accepts('workshop') ? { subscribedWorkshop: true } : {}),
+    ...(accepts('postcard') ? { subscribedPostcard: true } : {}),
   }
 }
 
@@ -114,16 +115,17 @@ export async function applyNewsletterOptIns(
     prefsForNewsletters(newsletters)
   )
   if (!updated) return subscriber
-  await notifyTsundokuOptInBestEffort(subscriber, updated)
   return updated
 }
 
 function creationPrefsForNewSubscriber() {
+  const defaults = new Set(defaultSignupNewsletters)
   return {
-    subscribedContraption: true,
-    subscribedWorkshop: true,
-    subscribedPostcard: true,
-    subscribedTsundoku: true,
+    subscribedContraption: defaults.has('contraption'),
+    subscribedWorkshop: defaults.has('workshop'),
+    subscribedPostcard: defaults.has('postcard'),
+    // Archived newsletter columns remain for historical data only.
+    subscribedTsundoku: false,
   }
 }
 
@@ -136,21 +138,6 @@ async function notifyNewSubscriber(subscriber: Subscriber): Promise<void> {
     )
   } catch (err) {
     console.error('[subscriber] new subscriber notification failed:', err)
-  }
-}
-
-async function notifyTsundokuOptInBestEffort(
-  before: Subscriber,
-  after: Subscriber
-): Promise<void> {
-  if (before.subscribedTsundoku || !after.subscribedTsundoku) return
-  try {
-    await sendNewsletterOptInNotification(
-      after.email,
-      siteConfig.newsletters.tsundoku.name
-    )
-  } catch (err) {
-    console.error('[subscriber] newsletter opt-in notification failed:', err)
   }
 }
 
@@ -190,16 +177,17 @@ async function sendLoginOrRejectSuppressed(
  * when the call is actually a sign-in.
  *
  * `name` and `source` apply only when the row is created. New public signups
- * start on every newsletter. For existing confirmed subscribers, public forms
- * sign them in without changing preferences unless the caller explicitly allows
- * email-only opt-in. Existing unconfirmed rows may still update newsletter
- * flags before the confirmation email is resent.
+ * start on every newsletter that is accepting subscriptions. For existing
+ * confirmed subscribers, public forms sign them in without changing
+ * preferences unless the caller explicitly allows email-only opt-in. Existing
+ * unconfirmed rows may still update active newsletter flags before the
+ * confirmation email is resent.
  */
 export async function createOrRetrieve(input: {
   email: string
   name?: string | null
   source?: string | null
-  /** Newsletter slugs to opt an existing row into; new rows receive all newsletters. */
+  /** Newsletter slugs to opt an existing row into; inactive slugs are ignored. */
   newsletters?: string[]
   /** Permit a confirmed existing subscriber to opt in by email without signing in. */
   allowExistingSubscriberOptIn?: boolean

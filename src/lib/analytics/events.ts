@@ -90,7 +90,7 @@ export interface AnalyticsEventProperties {
     newsletter: AnalyticsNewsletter
   }
   'Bell opened': {
-    entry_source: 'header' | 'search' | 'other'
+    entry_source: 'header' | 'search' | 'onboarding' | 'other'
     signed_in: boolean
     page_type: AnalyticsPageType
   }

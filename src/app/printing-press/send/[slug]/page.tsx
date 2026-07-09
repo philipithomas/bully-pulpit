@@ -8,6 +8,7 @@ import { countEligibleSms } from '@/lib/db/queries/sms-subscribers'
 import { countEligible, isNewsletter } from '@/lib/db/queries/subscribers'
 import { renderNewsletterPreview } from '@/lib/email/send'
 import { isSendRunActive } from '@/lib/email/send-guard'
+import { isNewsletterSendingEnabled } from '@/lib/newsletters'
 
 type CombinedSendStats = SendStats & { skipped: number }
 type SmsStats = SendStats & { skipped: number }
@@ -40,6 +41,8 @@ export default async function SendPage({
     notFound()
   }
 
+  const sendingEnabled = isNewsletterSendingEnabled(post.newsletter)
+
   const [eligible, smsEligible, emailStats, smsStats, active] =
     await Promise.all([
       countEligible(post.newsletter, slug),
@@ -61,6 +64,7 @@ export default async function SendPage({
       initialSmsEligible={smsEligible}
       initialStats={combineSendStats(emailStats, smsStats)}
       initialActive={active}
+      sendingEnabled={sendingEnabled}
     />
   )
 }

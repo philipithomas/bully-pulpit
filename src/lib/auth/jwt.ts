@@ -104,10 +104,10 @@ export async function setNewSubscriberOnboardingCookie(
   subscriber: { uuid: string },
   newlyConfirmed: boolean
 ): Promise<void> {
-  if (!newlyConfirmed) {
-    clearNewSubscriberOnboardingCookie(response)
-    return
-  }
+  // A signup mints separate code and magic-link tokens. Completing the second
+  // valid token must not clear the fresh marker issued by the first. Explicit
+  // consumption, logout, and subscriber-bound verification own cleanup.
+  if (!newlyConfirmed) return
 
   response.cookies.set(
     NEW_SUBSCRIBER_ONBOARDING_COOKIE,

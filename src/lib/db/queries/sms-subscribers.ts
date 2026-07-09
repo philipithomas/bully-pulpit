@@ -4,6 +4,17 @@ import { getDb } from '@/lib/db/client'
 import { SMS_SEND_SKIPPED_UNSUBSCRIBED } from '@/lib/db/queries/sms-sends'
 import type { NewsletterSlug } from '@/lib/db/queries/subscribers'
 import { type SmsSubscriber, smsSends, smsSubscribers } from '@/lib/db/schema'
+import {
+  isNewsletterAcceptingSubscriptions,
+  isNewsletterSendingEnabled,
+} from '@/lib/newsletters'
+
+const defaultSmsSubscriptions = {
+  postcard: isNewsletterAcceptingSubscriptions('postcard'),
+  contraption: isNewsletterAcceptingSubscriptions('contraption'),
+  workshop: isNewsletterAcceptingSubscriptions('workshop'),
+  tsundoku: isNewsletterAcceptingSubscriptions('tsundoku'),
+}
 
 const newsletterColumns = {
   postcard: smsSubscribers.subscribedPostcard,
@@ -41,18 +52,30 @@ export async function subscribeSmsNumber(input: {
         VALUES (
           ${input.phoneNumber},
           NOW(),
-          true,
-          true,
-          true,
-          true,
+          ${defaultSmsSubscriptions.postcard},
+          ${defaultSmsSubscriptions.contraption},
+          ${defaultSmsSubscriptions.workshop},
+          ${defaultSmsSubscriptions.tsundoku},
           ${input.source ?? null}
         )
         ON CONFLICT (phone_number) DO UPDATE SET
           confirmed_at = NOW(),
-          subscribed_postcard = true,
-          subscribed_contraption = true,
-          subscribed_workshop = true,
-          subscribed_tsundoku = true,
+          subscribed_postcard = CASE
+            WHEN ${defaultSmsSubscriptions.postcard} THEN true
+            ELSE sms_subscribers.subscribed_postcard
+          END,
+          subscribed_contraption = CASE
+            WHEN ${defaultSmsSubscriptions.contraption} THEN true
+            ELSE sms_subscribers.subscribed_contraption
+          END,
+          subscribed_workshop = CASE
+            WHEN ${defaultSmsSubscriptions.workshop} THEN true
+            ELSE sms_subscribers.subscribed_workshop
+          END,
+          subscribed_tsundoku = CASE
+            WHEN ${defaultSmsSubscriptions.tsundoku} THEN true
+            ELSE sms_subscribers.subscribed_tsundoku
+          END,
           source = COALESCE(sms_subscribers.source, excluded.source),
           updated_at = NOW()
         RETURNING id
@@ -73,20 +96,32 @@ export async function subscribeSmsNumber(input: {
     .values({
       phoneNumber: input.phoneNumber,
       confirmedAt: sql`NOW()`,
-      subscribedPostcard: true,
-      subscribedContraption: true,
-      subscribedWorkshop: true,
-      subscribedTsundoku: true,
+      subscribedPostcard: defaultSmsSubscriptions.postcard,
+      subscribedContraption: defaultSmsSubscriptions.contraption,
+      subscribedWorkshop: defaultSmsSubscriptions.workshop,
+      subscribedTsundoku: defaultSmsSubscriptions.tsundoku,
       source: input.source ?? null,
     })
     .onConflictDoUpdate({
       target: smsSubscribers.phoneNumber,
       set: {
         confirmedAt: sql`NOW()`,
-        subscribedPostcard: true,
-        subscribedContraption: true,
-        subscribedWorkshop: true,
-        subscribedTsundoku: true,
+        subscribedPostcard: sql`CASE
+          WHEN ${defaultSmsSubscriptions.postcard} THEN true
+          ELSE ${smsSubscribers.subscribedPostcard}
+        END`,
+        subscribedContraption: sql`CASE
+          WHEN ${defaultSmsSubscriptions.contraption} THEN true
+          ELSE ${smsSubscribers.subscribedContraption}
+        END`,
+        subscribedWorkshop: sql`CASE
+          WHEN ${defaultSmsSubscriptions.workshop} THEN true
+          ELSE ${smsSubscribers.subscribedWorkshop}
+        END`,
+        subscribedTsundoku: sql`CASE
+          WHEN ${defaultSmsSubscriptions.tsundoku} THEN true
+          ELSE ${smsSubscribers.subscribedTsundoku}
+        END`,
         source: sql`COALESCE(${smsSubscribers.source}, excluded.source)`,
         updatedAt: sql`NOW()`,
       },
@@ -342,6 +377,7 @@ export async function findEligibleSmsIds(
   newsletter: NewsletterSlug,
   postSlug: string
 ): Promise<number[]> {
+  if (!isNewsletterSendingEnabled(newsletter)) return []
   const rows = await getDb()
     .select({ id: smsSubscribers.id })
     .from(smsSubscribers)
@@ -354,6 +390,7 @@ export async function countEligibleSms(
   newsletter: NewsletterSlug,
   postSlug: string
 ): Promise<number> {
+  if (!isNewsletterSendingEnabled(newsletter)) return 0
   const rows = await getDb()
     .select({ count: sql<number>`count(*)::int` })
     .from(smsSubscribers)
@@ -371,8 +408,7 @@ export async function countActiveSms(): Promise<number> {
         or(
           eq(smsSubscribers.subscribedPostcard, true),
           eq(smsSubscribers.subscribedContraption, true),
-          eq(smsSubscribers.subscribedWorkshop, true),
-          eq(smsSubscribers.subscribedTsundoku, true)
+          eq(smsSubscribers.subscribedWorkshop, true)
         )
       )
     )

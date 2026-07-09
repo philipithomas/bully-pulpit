@@ -91,7 +91,6 @@ describe('GET /api/unsubscribe/[token]', () => {
       subscribed_postcard: true,
       subscribed_contraption: true,
       subscribed_workshop: false,
-      subscribed_tsundoku: false,
     })
   })
 
@@ -136,7 +135,6 @@ describe('DELETE /api/unsubscribe/[token]', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
-      subscribedTsundoku: false,
     })
     expect(mockedSends.markUnsubscribed).toHaveBeenCalledWith(10)
     expect(mockedSubs.deleteWithData).not.toHaveBeenCalled()
@@ -180,7 +178,21 @@ describe('POST /api/unsubscribe/[token] (one-click)', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
-      subscribedTsundoku: false,
     })
+  })
+
+  it('preserves the historical field for an old Tsundoku token', async () => {
+    mockedSends.findByUnsubscribeToken.mockResolvedValue(
+      makeEmailSend({ newsletter: 'tsundoku' })
+    )
+    mockedSubs.findById.mockResolvedValue(
+      makeSubscriber({ subscribedTsundoku: true })
+    )
+    mockedSubs.updateSubscriber.mockResolvedValue(makeSubscriber())
+
+    await POST({} as NextRequest, params(TOKEN))
+
+    expect(mockedSubs.updateSubscriber).toHaveBeenCalledWith('uuid-1', {})
+    expect(mockedSends.markUnsubscribed).toHaveBeenCalledWith(10)
   })
 })

@@ -2,6 +2,25 @@ import type { UIMessage } from 'ai'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 
+export const SUBSCRIBER_WELCOME_MESSAGE =
+  'Thanks for subscribing. I am the AI research assistant for this site. Try asking me about the archive anytime.'
+
+export const SUBSCRIBER_WELCOME_METADATA = {
+  provenance: 'scripted',
+  kind: 'subscriber-welcome',
+  showStarterPrompts: true,
+} as const
+
+export function isScriptedChatMessage(message: UIMessage): boolean {
+  const metadata = message.metadata
+  return (
+    typeof metadata === 'object' &&
+    metadata !== null &&
+    'provenance' in metadata &&
+    metadata.provenance === 'scripted'
+  )
+}
+
 interface ChatSidebarState {
   open: boolean
   // True once the sidebar has ever been opened — gates the lazy chat bundle
@@ -9,19 +28,32 @@ interface ChatSidebarState {
   hasOpened: boolean
   pinned: boolean
   initialQuery: string
-  entrySource: 'header' | 'search'
+  entrySource: 'header' | 'search' | 'onboarding'
   savedMessages: UIMessage[]
+  pendingLocalMessage: UIMessage | null
+  // The mounted AI SDK Chat instance must be stopped before an action rotates
+  // chatId. This callback is runtime-only and deliberately not persisted.
+  activeChatStop: (() => void) | null
   chatId: string
   // The authenticated identity this browser conversation belongs to. Keep
   // this beside the persisted chat ID so a sign-out or account switch cannot
   // replay one person's transcript into another person's conversation.
   conversationIdentity: string | null
   openSidebar: (query?: string) => void
+  openSidebarWithLocalMessage: (
+    message: string,
+    options: {
+      conversationIdentity: string
+      entrySource: 'onboarding'
+    }
+  ) => void
   closeSidebar: () => void
   togglePin: () => void
   setPinned: (pinned: boolean) => void
+  setActiveChatStop: (stop: (() => void) | null) => void
   saveMessages: (chatId: string, messages: UIMessage[]) => void
   clearMessages: () => void
+  consumePendingLocalMessage: (chatId: string) => void
   consumeInitialQuery: (chatId: string) => void
   syncConversationIdentity: (identity: string) => boolean
 }
@@ -46,6 +78,8 @@ export const useChatSidebar = create<ChatSidebarState>()(
       initialQuery: '',
       entrySource: 'header',
       savedMessages: [],
+      pendingLocalMessage: null,
+      activeChatStop: null,
       chatId: generateChatId(),
       conversationIdentity: null,
       openSidebar: (query?: string) => {
@@ -59,13 +93,41 @@ export const useChatSidebar = create<ChatSidebarState>()(
           // Rotate the durable ID and clear both persisted and in-memory
           // history before the handoff can send its first message.
           ...(searchHandoff
-            ? { savedMessages: [], chatId: generateChatId() }
+            ? {
+                savedMessages: [],
+                pendingLocalMessage: null,
+                chatId: generateChatId(),
+              }
             : {}),
+        })
+      },
+      openSidebarWithLocalMessage: (message, options) => {
+        // useChat replaces its Chat instance as soon as chatId changes. Stop
+        // the currently mounted instance while it is still addressable so a
+        // stale stream cannot finish into the scripted welcome thread.
+        get().activeChatStop?.()
+        const localMessage: UIMessage = {
+          id: `local-${crypto.randomUUID()}`,
+          role: 'assistant',
+          metadata: SUBSCRIBER_WELCOME_METADATA,
+          parts: [{ type: 'text', text: message }],
+        }
+        set({
+          open: true,
+          hasOpened: true,
+          pinned: false,
+          initialQuery: '',
+          entrySource: options.entrySource,
+          chatId: generateChatId(),
+          savedMessages: [localMessage],
+          pendingLocalMessage: localMessage,
+          conversationIdentity: options.conversationIdentity,
         })
       },
       closeSidebar: () => set({ open: false, pinned: false }),
       togglePin: () => set((state) => ({ pinned: !state.pinned })),
       setPinned: (pinned: boolean) => set({ pinned }),
+      setActiveChatStop: (activeChatStop) => set({ activeChatStop }),
       saveMessages: (chatId: string, messages: UIMessage[]) => {
         if (get().chatId === chatId) set({ savedMessages: messages })
       },
@@ -75,7 +137,11 @@ export const useChatSidebar = create<ChatSidebarState>()(
           chatId: generateChatId(),
           initialQuery: '',
           entrySource: 'header',
+          pendingLocalMessage: null,
         }),
+      consumePendingLocalMessage: (chatId: string) => {
+        if (get().chatId === chatId) set({ pendingLocalMessage: null })
+      },
       consumeInitialQuery: (chatId: string) => {
         if (get().chatId === chatId) set({ initialQuery: '' })
       },
@@ -89,6 +155,7 @@ export const useChatSidebar = create<ChatSidebarState>()(
         set({
           conversationIdentity: identity,
           savedMessages: [],
+          pendingLocalMessage: null,
           chatId: generateChatId(),
         })
         return true
@@ -123,6 +190,7 @@ export const useChatSidebar = create<ChatSidebarState>()(
           ...persisted,
           chatId: generateChatId(),
           savedMessages: [],
+          pendingLocalMessage: null,
           conversationIdentity: null,
         }
       },

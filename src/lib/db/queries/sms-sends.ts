@@ -11,6 +11,7 @@ import {
 } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { type SmsSend, smsSends, smsSubscribers } from '@/lib/db/schema'
+import { isNewsletterSendingEnabled } from '@/lib/newsletters'
 
 const INSERT_CHUNK = 500
 export const SMS_SEND_SKIPPED_UNSUBSCRIBED =
@@ -29,6 +30,7 @@ export async function bulkCreateQueuedSms(input: {
   newsletter: string
   body: string
 }): Promise<number[]> {
+  if (!isNewsletterSendingEnabled(input.newsletter)) return []
   const ids: number[] = []
   for (let i = 0; i < input.smsSubscriberIds.length; i += INSERT_CHUNK) {
     const chunk = input.smsSubscriberIds.slice(i, i + INSERT_CHUNK)

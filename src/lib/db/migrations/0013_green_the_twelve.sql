@@ -1,0 +1,1 @@
+ALTER TABLE "sms_subscribers" ALTER COLUMN "subscribed_tsundoku" SET DEFAULT false;

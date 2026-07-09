@@ -67,7 +67,6 @@ describe('GET /api/unsubscribe/[token]', () => {
       subscribed_postcard: true,
       subscribed_contraption: true,
       subscribed_workshop: true,
-      subscribed_tsundoku: false,
     })
   })
 })
@@ -95,6 +94,10 @@ describe('POST /api/unsubscribe/[token] (RFC 8058 one-click)', () => {
 describe('DELETE /api/unsubscribe/[token]', () => {
   it('clears all newsletter flags but retains the subscriber row', async () => {
     const { subscriber, send, token } = await seed()
+    await db
+      .update(subscribers)
+      .set({ subscribedTsundoku: true })
+      .where(eq(subscribers.id, subscriber.id))
 
     const res = await DELETE(
       request(token, { method: 'DELETE' }),
@@ -110,7 +113,7 @@ describe('DELETE /api/unsubscribe/[token]', () => {
     expect(after.subscribedPostcard).toBe(false)
     expect(after.subscribedContraption).toBe(false)
     expect(after.subscribedWorkshop).toBe(false)
-    expect(after.subscribedTsundoku).toBe(false)
+    expect(after.subscribedTsundoku).toBe(true)
 
     const stamped = await sendRow(send.id)
     expect(stamped.triggeredUnsubscribeAt).toBeInstanceOf(Date)
@@ -163,6 +166,32 @@ describe('PATCH /api/unsubscribe/[token]', () => {
     expect(after.subscribedContraption).toBe(true)
     expect(after.subscribedWorkshop).toBe(true)
     expect(after.subscribedTsundoku).toBe(false)
+  })
+
+  it.each([
+    true,
+    false,
+  ])('rejects archived Tsundoku mutations (%s) and preserves historical data', async (requested) => {
+    const { subscriber, token } = await seed()
+    await db
+      .update(subscribers)
+      .set({ subscribedTsundoku: true })
+      .where(eq(subscribers.id, subscriber.id))
+
+    const res = await PATCH(
+      request(token, {
+        method: 'PATCH',
+        body: JSON.stringify({ subscribed_tsundoku: requested }),
+        headers: { 'content-type': 'application/json' },
+      }),
+      params(token)
+    )
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      error: 'Invalid preferences in request body',
+    })
+    expect((await subscriberRow(subscriber.id)).subscribedTsundoku).toBe(true)
   })
 })
 

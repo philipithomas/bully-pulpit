@@ -316,10 +316,24 @@ describe('POST import', () => {
       expect(row.subscribedPostcard).toBe(true)
       expect(row.subscribedContraption).toBe(true)
       expect(row.subscribedWorkshop).toBe(true)
-      expect(row.subscribedTsundoku).toBe(true)
+      expect(row.subscribedTsundoku).toBe(false)
       expect(row.confirmedAt).not.toBeNull()
       expect(row.source).toBe('csv_import')
     }
+  })
+
+  it('keeps an inactive newsletter off for a new row with explicit true', async () => {
+    await signInAsAdmin()
+    const res = await importPost(
+      importRequest('email,tsundoku\nnew-reader@example.com,true\n')
+    )
+    expect(res.status).toBe(200)
+
+    const subscriber = await subscriberByEmail('new-reader@example.com')
+    expect(subscriber.subscribedPostcard).toBe(true)
+    expect(subscriber.subscribedContraption).toBe(true)
+    expect(subscriber.subscribedWorkshop).toBe(true)
+    expect(subscriber.subscribedTsundoku).toBe(false)
   })
 
   it('counts re-imported rows as updated but preserves opt-outs (absent flag columns)', async () => {
@@ -345,10 +359,10 @@ describe('POST import', () => {
     expect(a.subscribedWorkshop).toBe(false) // opt-out preserved
     expect(a.subscribedPostcard).toBe(true)
     expect(a.subscribedContraption).toBe(true)
-    expect(a.subscribedTsundoku).toBe(true)
+    expect(a.subscribedTsundoku).toBe(false)
   })
 
-  it('overwrites flags on existing rows when the CSV has explicit flag columns', async () => {
+  it('overwrites active flags without activating an inactive newsletter', async () => {
     await signInAsAdmin()
     await seedSubscriber({
       email: 'a@example.com',
@@ -377,8 +391,29 @@ describe('POST import', () => {
     expect(a.subscribedPostcard).toBe(true)
     expect(a.subscribedContraption).toBe(false)
     expect(a.subscribedWorkshop).toBe(true)
-    expect(a.subscribedTsundoku).toBe(true)
+    expect(a.subscribedTsundoku).toBe(false)
     expect(a.confirmedAt).not.toBeNull()
+  })
+
+  it('preserves a legacy inactive subscription until an explicit opt-out', async () => {
+    await signInAsAdmin()
+    await seedSubscriber({
+      email: 'legacy@example.com',
+      subscribedTsundoku: true,
+      confirmedAt: new Date(),
+    })
+
+    await importPost(importRequest('email,tsundoku\nlegacy@example.com,true\n'))
+    expect(
+      (await subscriberByEmail('legacy@example.com')).subscribedTsundoku
+    ).toBe(true)
+
+    await importPost(
+      importRequest('email,tsundoku\nlegacy@example.com,false\n')
+    )
+    expect(
+      (await subscriberByEmail('legacy@example.com')).subscribedTsundoku
+    ).toBe(false)
   })
 
   it('keeps confirmation monotonic: a blank confirmed cell cannot un-confirm', async () => {
@@ -570,7 +605,7 @@ describe('GET export', () => {
     expect(rt1.subscribedPostcard).toBe(true)
     expect(rt1.subscribedContraption).toBe(false)
     expect(rt1.subscribedWorkshop).toBe(true)
-    expect(rt1.subscribedTsundoku).toBe(true)
+    expect(rt1.subscribedTsundoku).toBe(false)
     expect(rt1.confirmedAt).not.toBeNull()
     expect(rt1.source).toBe('https://example.org/')
 

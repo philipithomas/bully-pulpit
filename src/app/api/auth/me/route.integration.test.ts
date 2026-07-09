@@ -87,7 +87,6 @@ describe('GET /api/auth/me', () => {
         subscribed_contraption: true,
         subscribed_workshop: false,
         subscribed_postcard: true,
-        subscribed_tsundoku: true,
       },
       newSubscriberOnboarding: false,
     })

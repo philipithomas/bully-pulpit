@@ -37,6 +37,7 @@ interface Props {
   initialSmsEligible: number
   initialStats: SendStats
   initialActive: boolean
+  sendingEnabled: boolean
 }
 
 export function SendClient({
@@ -50,6 +51,7 @@ export function SendClient({
   initialSmsEligible,
   initialStats,
   initialActive,
+  sendingEnabled,
 }: Props) {
   const [view, setView] = useState<'desktop' | 'mobile'>('desktop')
   const [scheme, setScheme] = useState<'light' | 'dark'>('light')
@@ -255,9 +257,13 @@ export function SendClient({
   ].filter(Boolean)
   const sendAudience =
     sendAudienceParts.length > 0 ? sendAudienceParts.join(' + ') : '0 people'
-  const canSend = (eligible > 0 || smsEligible > 0) && !active && !starting
+  const canSend =
+    sendingEnabled && (eligible > 0 || smsEligible > 0) && !active && !starting
   const canRetry =
-    (stats.failed > 0 || stats.pending > 0) && !active && !starting
+    sendingEnabled &&
+    (stats.failed > 0 || stats.pending > 0) &&
+    !active &&
+    !starting
 
   return (
     <div>
@@ -265,6 +271,7 @@ export function SendClient({
         <Badge variant="secondary" className="capitalize">
           {newsletter}
         </Badge>
+        {!sendingEnabled ? <Badge variant="outline">Archived</Badge> : null}
       </PageHeader>
 
       {/* Status */}
@@ -297,42 +304,49 @@ export function SendClient({
       )}
 
       {/* Actions */}
-      <div className="flex flex-wrap items-center gap-3 mb-8">
-        <Button
-          variant="outline"
-          onClick={sendTestEmail}
-          disabled={testButtonDisabled}
-        >
-          {testingEmail ? (
-            <Spinner className="h-4 w-4" />
-          ) : (
-            `Send test email to me`
-          )}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={sendTestSms}
-          disabled={testButtonDisabled}
-        >
-          {testingSms ? (
-            <Spinner className="h-4 w-4" />
-          ) : (
-            `Send test text to me`
-          )}
-        </Button>
-        <Button onClick={openConfirm} disabled={!canSend}>
-          {starting ? (
-            <Spinner className="h-4 w-4" />
-          ) : (
-            `Send to ${sendAudience}`
-          )}
-        </Button>
-        {canRetry ? (
-          <Button variant="ghost" onClick={retry}>
-            Retry / resume
+      {sendingEnabled ? (
+        <div className="flex flex-wrap items-center gap-3 mb-8">
+          <Button
+            variant="outline"
+            onClick={sendTestEmail}
+            disabled={testButtonDisabled}
+          >
+            {testingEmail ? (
+              <Spinner className="h-4 w-4" />
+            ) : (
+              `Send test email to me`
+            )}
           </Button>
-        ) : null}
-      </div>
+          <Button
+            variant="outline"
+            onClick={sendTestSms}
+            disabled={testButtonDisabled}
+          >
+            {testingSms ? (
+              <Spinner className="h-4 w-4" />
+            ) : (
+              `Send test text to me`
+            )}
+          </Button>
+          <Button onClick={openConfirm} disabled={!canSend}>
+            {starting ? (
+              <Spinner className="h-4 w-4" />
+            ) : (
+              `Send to ${sendAudience}`
+            )}
+          </Button>
+          {canRetry ? (
+            <Button variant="ghost" onClick={retry}>
+              Retry / resume
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <p className="mb-8 text-sm text-gray-500">
+          This newsletter is archived. Test delivery, sends, and retries are
+          disabled.
+        </p>
+      )}
 
       {/* Preview */}
       <div className="mb-3 flex items-center gap-2">

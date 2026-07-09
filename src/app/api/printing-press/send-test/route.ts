@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
 import { guardAdmin } from '@/lib/auth/admin'
+import { getPostBySlug } from '@/lib/content/loader'
+import { isNewsletter } from '@/lib/db/queries/subscribers'
 import {
   sendNewsletterSmsToTestRecipient,
   sendNewsletterToOne,
 } from '@/lib/email/send'
+import { isNewsletterSendingEnabled } from '@/lib/newsletters'
 
 export async function POST(request: Request) {
   const session = await guardAdmin()
@@ -24,6 +27,20 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: 'channel must be email or sms' },
       { status: 400 }
+    )
+  }
+
+  const post = getPostBySlug(slug)
+  if (!post || !isNewsletter(post.newsletter)) {
+    return NextResponse.json(
+      { error: 'Not a sendable newsletter post' },
+      { status: 404 }
+    )
+  }
+  if (!isNewsletterSendingEnabled(post.newsletter)) {
+    return NextResponse.json(
+      { error: 'This newsletter is archived and cannot be sent.' },
+      { status: 409 }
     )
   }
 

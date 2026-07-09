@@ -190,8 +190,8 @@ describe('POST /api/auth/verify', () => {
     expect(
       res2.headers
         .getSetCookie()
-        .some((cookie) => cookie.startsWith('bp_onboarding=;'))
-    ).toBe(true)
+        .some((cookie) => cookie.startsWith('bp_onboarding='))
+    ).toBe(false)
 
     // ...but no second admin notification for an already-confirmed subscriber.
     expect(adminNotificationCalls()).toHaveLength(1)
@@ -344,8 +344,8 @@ describe('POST /api/auth/verify', () => {
     expect(
       res.headers
         .getSetCookie()
-        .some((cookie) => cookie.startsWith('bp_onboarding=;'))
-    ).toBe(true)
+        .some((cookie) => cookie.startsWith('bp_onboarding='))
+    ).toBe(false)
 
     const after = await subscriberByEmail('contraption-reader@example.com')
     expect(after.subscribedContraption).toBe(true)
@@ -380,5 +380,48 @@ describe('POST /api/auth/verify', () => {
     expect(
       (await subscriberByEmail('new-reader@example.com')).confirmedAt
     ).not.toBeNull()
+  })
+
+  it('preserves onboarding when a code is followed by its valid magic link', async () => {
+    await subscribe('two-token-reader@example.com')
+    const subscriber = await subscriberByEmail('two-token-reader@example.com')
+    const { token: code } = await latestCodeLogin(subscriber.id)
+    const { token: magicToken } = await latestMagicLogin(subscriber.id)
+
+    const codeResponse = await verify('two-token-reader@example.com', code)
+    expect(codeResponse.status).toBe(200)
+    const marker = codeResponse.cookies.get(
+      NEW_SUBSCRIBER_ONBOARDING_COOKIE
+    )?.value
+    expect(marker).toBeTruthy()
+
+    const magicResponse = await verifyMagicLinkGet(
+      new NextRequest(
+        `https://www.philipithomas.com/auth/verify?token=${magicToken}`,
+        {
+          headers: {
+            cookie: `${NEW_SUBSCRIBER_ONBOARDING_COOKIE}=${marker}`,
+          },
+        }
+      )
+    )
+
+    expect(magicResponse.headers.get('location')).toContain(
+      'analytics-new-subscriber=0'
+    )
+    expect(
+      magicResponse.headers
+        .getSetCookie()
+        .some((cookie) =>
+          cookie.startsWith(`${NEW_SUBSCRIBER_ONBOARDING_COOKIE}=`)
+        )
+    ).toBe(false)
+    expect(
+      await verifyNewSubscriberOnboardingCookie(
+        marker as string,
+        subscriber.uuid
+      )
+    ).toBe(true)
+    expect(adminNotificationCalls()).toHaveLength(1)
   })
 })

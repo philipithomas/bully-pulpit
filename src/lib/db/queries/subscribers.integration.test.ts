@@ -110,16 +110,25 @@ describe('subscriberStats / countActive', () => {
       subscribedContraption: false,
       subscribedWorkshop: false,
     })
+    // confirmed historical Tsundoku-only row: retained in the raw archive
+    // count, excluded from active subscriber totals.
+    await seed({
+      confirmedAt,
+      subscribedPostcard: false,
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedTsundoku: true,
+    })
 
     expect(await subscriberStats()).toEqual({
-      total: 4,
-      confirmed: 3,
+      total: 3,
+      confirmed: 2,
       postcard: 1,
       contraption: 2,
       workshop: 1,
-      tsundoku: 1,
+      tsundoku: 2,
     })
-    // active = confirmed AND at least one newsletter
+    // active = confirmed AND at least one active newsletter
     expect(await countActive()).toBe(2)
   })
 
@@ -142,6 +151,14 @@ describe('subscriberStats / countActive', () => {
         subscribedWorkshop: false,
         subscribedTsundoku: false,
       },
+      {
+        phoneNumber: '+15551230004',
+        confirmedAt,
+        subscribedPostcard: false,
+        subscribedContraption: false,
+        subscribedWorkshop: false,
+        subscribedTsundoku: true,
+      },
     ])
 
     expect(await countActive()).toBe(2)
@@ -162,6 +179,19 @@ describe('subscriberStats / countActive', () => {
 
 describe('eligibility (findEligibleIds / countEligible)', () => {
   const slug = 'some-post'
+
+  it('never treats an archived Tsundoku flag as send eligibility', async () => {
+    await seed({
+      confirmedAt: new Date(),
+      subscribedPostcard: false,
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedTsundoku: true,
+    })
+
+    expect(await findEligibleIds('tsundoku', slug)).toEqual([])
+    expect(await countEligible('tsundoku', slug)).toBe(0)
+  })
 
   it('requires confirmed and opted into the newsletter', async () => {
     const eligible = await seed({ confirmedAt: new Date() })
@@ -297,7 +327,7 @@ describe('importSubscribers', () => {
       subscribedContraption: false,
     })
 
-    // the import route fills true for every absent column, present=false
+    // present=false makes the query apply central new-subscriber defaults.
     const result = await importSubscribers(
       [row('veteran@example.com'), row('fresh@example.com')],
       nonePresent
@@ -314,12 +344,12 @@ describe('importSubscribers', () => {
     expect(fresh?.subscribedPostcard).toBe(true)
     expect(fresh?.subscribedContraption).toBe(true)
     expect(fresh?.subscribedWorkshop).toBe(true)
-    expect(fresh?.subscribedTsundoku).toBe(true)
+    expect(fresh?.subscribedTsundoku).toBe(false)
     expect(fresh?.confirmedAt).not.toBeNull()
     expect(fresh?.source).toBe('csv_import')
   })
 
-  it('with flag columns PRESENT, the import overwrites existing flags both ways', async () => {
+  it('with flag columns present, active flags overwrite but inactive cannot activate', async () => {
     await seed({
       email: 'flip@example.com',
       subscribedContraption: false,
@@ -334,7 +364,27 @@ describe('importSubscribers', () => {
     const flipped = await findByEmail('flip@example.com')
     expect(flipped?.subscribedContraption).toBe(true)
     expect(flipped?.subscribedWorkshop).toBe(false)
-    expect(flipped?.subscribedTsundoku).toBe(true)
+    expect(flipped?.subscribedTsundoku).toBe(false)
+  })
+
+  it('preserves a legacy inactive subscription until an explicit false opts out', async () => {
+    await seed({
+      email: 'legacy@example.com',
+      subscribedTsundoku: true,
+    })
+
+    await importSubscribers([row('legacy@example.com')], allPresent)
+    expect((await findByEmail('legacy@example.com'))?.subscribedTsundoku).toBe(
+      true
+    )
+
+    await importSubscribers(
+      [row('legacy@example.com', { tsundoku: false })],
+      allPresent
+    )
+    expect((await findByEmail('legacy@example.com'))?.subscribedTsundoku).toBe(
+      false
+    )
   })
 
   it('confirmed is monotonic: an import can confirm but never un-confirm', async () => {
@@ -464,8 +514,7 @@ describe('importSubscribers', () => {
       source: 'csv_import',
     })
 
-    // The import route maps a bare email,source file to defaults (true) for
-    // every flag with present=false, mirroring the bare-email-list case.
+    // A bare email,source file applies the current defaults only to new rows.
     await importSubscribers(
       [row('optout@example.com', { source: 'https://example.org/' })],
       nonePresent

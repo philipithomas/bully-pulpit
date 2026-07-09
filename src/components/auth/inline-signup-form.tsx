@@ -3,26 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
-import {
-  GoogleSignInButton,
-  type GoogleSignInUser,
-  useGoogleSignInAvailable,
-} from '@/components/auth/google-sign-in'
+import { EmailCodeConfirmationDialog } from '@/components/auth/email-code-confirmation-dialog'
+import type { GoogleSignInUser } from '@/components/auth/google-sign-in'
 import { matchesSubmittedEmail } from '@/components/auth/signup-completion'
 import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
 import {
   type AnalyticsPlacement,
@@ -197,6 +182,16 @@ export function InlineSignupForm({
     url.searchParams.set('signed-in', '1')
     window.location.assign(url.toString())
   }, [])
+  const handleGoogleConfirmationSuccess = useCallback(
+    (googleUser: GoogleSignInUser) => {
+      // A different Google account becomes the authenticated identity. The
+      // server applies pending active-newsletter opt-ins to that account only.
+      if (!matchesSubmittedEmail(googleUser.email, email)) return true
+      finishSignedIn()
+      return false
+    },
+    [email, finishSignedIn]
+  )
 
   useEffect(() => {
     if (step !== 'code') return
@@ -295,120 +290,18 @@ export function InlineSignupForm({
       />
 
       {step === 'code' ? (
-        <SignupConfirmationDialog
+        <EmailCodeConfirmationDialog
           code={code}
           email={email}
           loading={loading}
-          newsletters={newsletters}
-          analyticsPlacement={analyticsPlacement}
           onCodeChange={setCode}
           onDifferentEmail={handleDifferentEmail}
-          onSignedIn={finishSignedIn}
           onVerifyCode={verifyCode}
+          googleAnalyticsPlacement={analyticsPlacement}
+          googleNewsletters={newsletters}
+          onGoogleSuccess={handleGoogleConfirmationSuccess}
         />
       ) : null}
     </>
-  )
-}
-
-function SignupConfirmationDialog({
-  code,
-  email,
-  loading,
-  newsletters,
-  analyticsPlacement,
-  onCodeChange,
-  onDifferentEmail,
-  onSignedIn,
-  onVerifyCode,
-}: {
-  code: string
-  email: string
-  loading: boolean
-  newsletters: Newsletter[]
-  analyticsPlacement: AnalyticsPlacement
-  onCodeChange: (value: string) => void
-  onDifferentEmail: () => void
-  onSignedIn: () => void
-  onVerifyCode: (value: string) => void
-}) {
-  const googleAvailable = useGoogleSignInAvailable()
-  const handleGoogleSuccess = useCallback(
-    (googleUser: GoogleSignInUser) => {
-      // If the visitor chooses a different Google account, that account is the
-      // authenticated identity. The server applies these pending opt-ins to the
-      // Google account only, so the originally typed email is not confirmed.
-      if (!matchesSubmittedEmail(googleUser.email, email)) return true
-
-      onSignedIn()
-      return false
-    },
-    [email, onSignedIn]
-  )
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) onDifferentEmail()
-    },
-    [onDifferentEmail]
-  )
-
-  return (
-    <Dialog open onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Check your email</DialogTitle>
-          <DialogDescription>
-            {googleAvailable
-              ? `Check ${email} for a 6-digit code, or finish with Google.`
-              : `Check ${email} for a 6-digit code.`}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="mt-6 space-y-4">
-          <InputOTP
-            maxLength={6}
-            value={code}
-            onChange={onCodeChange}
-            onComplete={onVerifyCode}
-            disabled={loading}
-            autoFocus
-            aria-label="6-digit code"
-            containerClassName="justify-center"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <Spinner className="h-3.5 w-3.5" />
-              <span>Verifying</span>
-            </div>
-          ) : null}
-          {googleAvailable ? (
-            <>
-              <p className="text-center font-sans text-xs text-gray-400">or</p>
-              <GoogleSignInButton
-                loginHint={email}
-                newsletters={newsletters}
-                analyticsPlacement={analyticsPlacement}
-                onSuccess={handleGoogleSuccess}
-              />
-            </>
-          ) : null}
-          <button
-            type="button"
-            onClick={onDifferentEmail}
-            className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            Use a different email
-          </button>
-        </div>
-      </DialogContent>
-    </Dialog>
   )
 }

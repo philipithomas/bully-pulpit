@@ -7,6 +7,7 @@ import { recordSendRun } from '@/lib/db/queries/send-runs'
 import { resetFailedSmsBySlug } from '@/lib/db/queries/sms-sends'
 import { isNewsletter } from '@/lib/db/queries/subscribers'
 import { isSendRunActive } from '@/lib/email/send-guard'
+import { isNewsletterSendingEnabled } from '@/lib/newsletters'
 import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
 
 /**
@@ -43,6 +44,12 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Not a sendable newsletter post' },
         { status: 404 }
+      )
+    }
+    if (!isNewsletterSendingEnabled(post.newsletter)) {
+      return NextResponse.json(
+        { error: 'This newsletter is archived and cannot be sent.' },
+        { status: 409 }
       )
     }
 

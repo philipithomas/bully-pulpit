@@ -689,6 +689,22 @@ describe('sendNewsletterWorkflow', () => {
     expect(await allSmsRows()).toHaveLength(0)
   })
 
+  it('refuses to queue an archived newsletter at the SMS query boundary', async () => {
+    const subscriber = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+    })
+
+    const ids = await bulkCreateQueuedSms({
+      smsSubscriberIds: [subscriber.id],
+      postSlug: SLUG,
+      newsletter: 'tsundoku',
+      body: 'Tsundoku: Archived post',
+    })
+
+    expect(ids).toEqual([])
+    expect(await allSmsRows()).toHaveLength(0)
+  })
+
   it('removes claimed SMS rows from the sendable set until the claim expires', async () => {
     const subscriber = await seedSmsSubscriber({
       phoneNumber: '+15551234567',

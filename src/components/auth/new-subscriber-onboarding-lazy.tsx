@@ -26,6 +26,7 @@ export function LazyNewSubscriberOnboarding() {
     <NewSubscriberOnboarding
       initialPreferences={preferences}
       onDismiss={dismissNewSubscriberOnboarding}
+      subscriberUuid={user.uuid}
     />
   )
 }

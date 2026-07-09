@@ -1,8 +1,8 @@
-import { handleSubscribeRequest } from '@/app/api/subscribe/handler'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: Request) {
-  return handleSubscribeRequest(request, {
-    newsletters: ['tsundoku'],
-    allowExistingSubscriberOptIn: true,
-  })
+export async function POST(_request: Request) {
+  return NextResponse.json(
+    { error: 'Tsundoku is archived and no longer accepts subscriptions.' },
+    { status: 410 }
+  )
 }

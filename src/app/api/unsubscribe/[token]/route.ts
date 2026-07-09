@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod/v4'
 import {
   findByUnsubscribeToken,
   markUnsubscribed,
@@ -22,6 +23,13 @@ function notFound() {
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const preferencesSchema = z.strictObject({
+  name: z.string().optional(),
+  subscribed_postcard: z.boolean().optional(),
+  subscribed_contraption: z.boolean().optional(),
+  subscribed_workshop: z.boolean().optional(),
+})
 
 async function resolveSubscriber(token: string) {
   // unsubscribe_token is a uuid column; a malformed token would throw a
@@ -48,7 +56,6 @@ export async function GET(
     subscribed_postcard: resolved.subscriber.subscribedPostcard,
     subscribed_contraption: resolved.subscriber.subscribedContraption,
     subscribed_workshop: resolved.subscriber.subscribedWorkshop,
-    subscribed_tsundoku: resolved.subscriber.subscribedTsundoku,
   })
 }
 
@@ -64,7 +71,14 @@ export async function PATCH(
   if (!body) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
-  await updateSubscriber(resolved.subscriber.uuid, prefsFromBody(body))
+  const parsed = preferencesSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid preferences in request body' },
+      { status: 400 }
+    )
+  }
+  await updateSubscriber(resolved.subscriber.uuid, prefsFromBody(parsed.data))
   return NextResponse.json({ success: true })
 }
 
@@ -87,7 +101,6 @@ export async function DELETE(
     subscribedPostcard: false,
     subscribedContraption: false,
     subscribedWorkshop: false,
-    subscribedTsundoku: false,
   })
   await markUnsubscribed(resolved.emailSend.id)
   return NextResponse.json({ success: true })
@@ -102,14 +115,15 @@ function unsubscribeUpdate(newsletter: string | null): SubscriberPrefs {
       return { subscribedContraption: false }
     case 'workshop':
       return { subscribedWorkshop: false }
+    // Archived newsletter values are historical data and are no longer a
+    // public preference. Old unsubscribe tokens are still stamped below.
     case 'tsundoku':
-      return { subscribedTsundoku: false }
+      return {}
     default:
       return {
         subscribedPostcard: false,
         subscribedContraption: false,
         subscribedWorkshop: false,
-        subscribedTsundoku: false,
       }
   }
 }

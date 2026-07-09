@@ -26,6 +26,11 @@ import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { isPermanentSesError } from '@/lib/email/errors'
 import { sendQueuedEmail } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
+import {
+  INACTIVE_NEWSLETTER_SEND_ERROR,
+  isNewsletterArchived,
+  isNewsletterSendingEnabled,
+} from '@/lib/newsletters'
 import { requireSitePhoneNumber } from '@/lib/phone/config'
 import { renderNewsletterSms } from '@/lib/phone/newsletter-sms'
 import {
@@ -85,6 +90,9 @@ export async function enqueueRecipients(slug: string): Promise<number[][]> {
   if (!isNewsletter(post.newsletter)) {
     throw new FatalError(`Post is not a newsletter: ${slug}`)
   }
+  if (!isNewsletterSendingEnabled(post.newsletter)) {
+    throw new FatalError(`Newsletter is archived: ${post.newsletter}`)
+  }
 
   const eligibleIds = await findEligibleIds(post.newsletter, slug)
   if (eligibleIds.length > 0) {
@@ -125,6 +133,12 @@ export async function sendBatch(rowIds: number[]): Promise<{
   let failed = 0
 
   for (const { send, email } of rows) {
+    if (isNewsletterArchived(send.newsletter ?? '')) {
+      await markPermanentFailure(send.id, INACTIVE_NEWSLETTER_SEND_ERROR)
+      failed++
+      continue
+    }
+
     if (await isSuppressed(email)) {
       await markPermanentFailure(send.id, 'Recipient is suppressed')
       failed++
@@ -181,6 +195,9 @@ export async function enqueueSmsRecipients(slug: string): Promise<number[][]> {
   }
   if (!isNewsletter(post.newsletter)) {
     throw new FatalError(`Post is not a newsletter: ${slug}`)
+  }
+  if (!isNewsletterSendingEnabled(post.newsletter)) {
+    throw new FatalError(`Newsletter is archived: ${post.newsletter}`)
   }
 
   const eligibleIds = await findEligibleSmsIds(post.newsletter, slug)
@@ -247,6 +264,15 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
     }
 
     const { send, phoneNumber } = row
+    if (isNewsletterArchived(send.newsletter ?? '')) {
+      const markedFailed = await markSmsPermanentFailure(
+        send.id,
+        INACTIVE_NEWSLETTER_SEND_ERROR
+      )
+      if (markedFailed) failed++
+      continue
+    }
+
     let result: SentSms
     try {
       result = await sendSms({

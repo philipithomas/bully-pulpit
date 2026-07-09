@@ -6,6 +6,9 @@ vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('botid/server', () =>
   import('@/test/integration/mocks').then((m) => m.botidMock())
 )
+vi.mock('@/lib/email/ses', () =>
+  import('@/test/integration/mocks').then((m) => m.sesMock())
+)
 vi.mock('jose', async (importOriginal) => {
   const actual = await importOriginal<typeof import('jose')>()
   return {
@@ -120,8 +123,8 @@ describe('POST /api/auth/google', () => {
     expect(
       response.headers
         .getSetCookie()
-        .some((cookie) => cookie.startsWith('bp_onboarding=;'))
-    ).toBe(true)
+        .some((cookie) => cookie.startsWith('bp_onboarding='))
+    ).toBe(false)
 
     const typedEmail = await subscriberByEmail('foo@gmail.com')
     expect(typedEmail.confirmedAt).toBeNull()
@@ -145,6 +148,12 @@ describe('POST /api/auth/google', () => {
 
     expect(response.status).toBe(200)
     const subscriber = await subscriberByEmail('bar@gmail.com')
+    expect(subscriber).toMatchObject({
+      subscribedContraption: true,
+      subscribedWorkshop: true,
+      subscribedPostcard: true,
+      subscribedTsundoku: false,
+    })
     const marker = response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value
     expect(marker).toBeTruthy()
     expect(decodeJwt(marker as string)).toMatchObject({

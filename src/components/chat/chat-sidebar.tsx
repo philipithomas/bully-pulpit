@@ -1,7 +1,7 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
+import { DefaultChatTransport, type UIMessage } from 'ai'
 import { PanelRight, PanelRightClose, RotateCcw, X } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -23,6 +23,14 @@ import {
 import { chatErrorMessage } from '@/lib/chat/chat-error-message'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
+
+function messageText(message: { parts: UIMessage['parts'] }) {
+  return message.parts
+    .filter((part) => part.type === 'text')
+    .map((part) => part.text)
+    .join(' ')
+    .trim()
+}
 
 function WelcomeScreen({
   userName,
@@ -78,11 +86,14 @@ export function ChatSidebar() {
     initialQuery,
     entrySource,
     savedMessages,
+    pendingLocalMessage,
     chatId,
     closeSidebar,
     togglePin,
+    setActiveChatStop,
     saveMessages,
     clearMessages,
+    consumePendingLocalMessage,
     consumeInitialQuery,
     syncConversationIdentity,
   } = useChatSidebar()
@@ -145,11 +156,7 @@ export function ChatSidebar() {
     onFinish: ({ message, isAbort, isError }) => {
       saveMessagesFromRef()
       if (isAbort || isError || message.role !== 'assistant') return
-      const text = message.parts
-        .filter((part) => part.type === 'text')
-        .map((part) => part.text)
-        .join(' ')
-        .trim()
+      const text = messageText(message)
       if (text) setAnnouncement(text)
     },
   })
@@ -159,6 +166,14 @@ export function ChatSidebar() {
   messagesRef.current = messages
   const userRef = useRef(user)
   userRef.current = user
+
+  // Keep the current AI SDK Chat instance stoppable from store actions that
+  // rotate chatId. Calling stop after the rotation would target the new empty
+  // instance and leave the superseded request streaming.
+  useEffect(() => {
+    setActiveChatStop(stop)
+    return () => setActiveChatStop(null)
+  }, [setActiveChatStop, stop])
 
   // A durable browser conversation belongs to exactly one resolved auth
   // identity. Initial auth hydration adopts the existing identity marker;
@@ -204,6 +219,24 @@ export function ChatSidebar() {
       setMessagesRef.current(savedMessagesRef.current)
     }
   }, [])
+
+  // Local system-owned welcomes render directly without sending a prompt to
+  // the model. The store stopped the superseded Chat before rotating chatId;
+  // this effect installs the welcome into the new instance. This also handles
+  // Bell already being mounted but closed.
+  useEffect(() => {
+    if (!open || !pendingLocalMessage) return
+    setMessages([pendingLocalMessage])
+    const text = messageText(pendingLocalMessage)
+    if (text) setAnnouncement(text)
+    consumePendingLocalMessage(chatId)
+  }, [
+    chatId,
+    consumePendingLocalMessage,
+    open,
+    pendingLocalMessage,
+    setMessages,
+  ])
 
   // Send an initial search query once for the fresh chat ID created by the
   // handoff. Mark it consumed only when the timer fires: auth hydration can

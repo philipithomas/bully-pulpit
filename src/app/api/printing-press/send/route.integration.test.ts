@@ -227,6 +227,23 @@ describe('request validation (both handlers)', () => {
     }
     expect(mockedStart).not.toHaveBeenCalled()
   })
+
+  it('returns 409 for archived newsletter posts on send and retry', async () => {
+    await signInAsAdmin()
+    mockedGetPost.mockReturnValue({ ...POST, newsletter: 'tsundoku' })
+
+    for (const [path, handler] of [
+      ['send', sendPost],
+      ['retry', retryPost],
+    ] as const) {
+      const res = await handler(request(path, { slug: SLUG }))
+      expect(res.status).toBe(409)
+      expect(await res.json()).toEqual({
+        error: 'This newsletter is archived and cannot be sent.',
+      })
+    }
+    expect(mockedStart).not.toHaveBeenCalled()
+  })
 })
 
 describe('POST send', () => {
@@ -486,6 +503,18 @@ describe('bulkCreateQueued conflict handling', () => {
     newsletter: 'contraption',
     subject: 'Hello',
     htmlContent: '<p>hi</p>',
+  })
+
+  it('refuses to enqueue an archived newsletter at the query boundary', async () => {
+    const sub = await seedSubscriber('alice@example.com')
+
+    const ids = await bulkCreateQueued({
+      ...input([sub.id]),
+      newsletter: 'tsundoku',
+    })
+
+    expect(ids).toEqual([])
+    expect(await allRows()).toHaveLength(0)
   })
 
   it('ignores duplicate (subscriber, post) enqueues from racing runs', async () => {

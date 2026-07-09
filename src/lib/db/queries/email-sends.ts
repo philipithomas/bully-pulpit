@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { type EmailSend, emailSends, subscribers } from '@/lib/db/schema'
+import { isNewsletterSendingEnabled } from '@/lib/newsletters'
 
 const INSERT_CHUNK = 500
 
@@ -40,6 +41,7 @@ export async function bulkCreateQueued(input: {
   textContent?: string | null
   previewText?: string | null
 }): Promise<number[]> {
+  if (!isNewsletterSendingEnabled(input.newsletter)) return []
   const ids: number[] = []
   for (let i = 0; i < input.subscriberIds.length; i += INSERT_CHUNK) {
     const chunk = input.subscriberIds.slice(i, i + INSERT_CHUNK)

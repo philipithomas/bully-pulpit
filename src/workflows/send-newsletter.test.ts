@@ -85,8 +85,13 @@ import { isSuppressed } from '@/lib/db/queries/suppressions'
 import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { sendQueuedEmail } from '@/lib/email/queued-send'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
+import { INACTIVE_NEWSLETTER_SEND_ERROR } from '@/lib/newsletters'
 import { sendSms, TwilioApiError } from '@/lib/phone/twilio'
-import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
+import {
+  sendBatch,
+  sendNewsletterWorkflow,
+  sendSmsBatch,
+} from '@/workflows/send-newsletter'
 
 const mockedSends = vi.mocked(emailSends)
 const mockedSmsSends = vi.mocked(smsSends)
@@ -209,6 +214,82 @@ afterEach(() => {
 })
 
 describe('sendNewsletterWorkflow', () => {
+  it('rejects direct Workflow invocation for an archived newsletter', async () => {
+    mockedGetPost.mockReturnValue({ ...POST, newsletter: 'tsundoku' })
+
+    await expect(sendNewsletterWorkflow('hello-world')).rejects.toThrow(
+      'Newsletter is archived: tsundoku'
+    )
+    expect(mockedEligible).not.toHaveBeenCalled()
+    expect(mockedSends.bulkCreateQueued).not.toHaveBeenCalled()
+    expect(mockedSendQueued).not.toHaveBeenCalled()
+    expect(mockedSendSms).not.toHaveBeenCalled()
+  })
+
+  it('fails an old archived email queue row before SES delivery', async () => {
+    mockedSends.findSendableByIds.mockResolvedValue([
+      {
+        ...claimed(1),
+        send: { ...claimed(1).send, newsletter: 'tsundoku' },
+      },
+    ])
+
+    await expect(sendBatch([1])).resolves.toEqual({ sent: 0, failed: 1 })
+    expect(mockedSends.markPermanentFailure).toHaveBeenCalledWith(
+      1,
+      INACTIVE_NEWSLETTER_SEND_ERROR
+    )
+    expect(mockedSendQueued).not.toHaveBeenCalled()
+  })
+
+  it('preserves delivery semantics for a nullable legacy email queue row', async () => {
+    mockedSends.findSendableByIds.mockResolvedValue([
+      {
+        ...claimed(1),
+        send: { ...claimed(1).send, newsletter: null },
+      },
+    ])
+
+    const promise = sendBatch([1])
+    await vi.runAllTimersAsync()
+
+    await expect(promise).resolves.toEqual({ sent: 1, failed: 0 })
+    expect(mockedSendQueued).toHaveBeenCalledTimes(1)
+    expect(mockedSends.markSent).toHaveBeenCalledWith(1)
+  })
+
+  it('fails an old archived SMS queue row before Twilio delivery', async () => {
+    mockedSmsSends.claimSendableSmsById.mockResolvedValue({
+      ...claimedSms(701),
+      send: { ...claimedSms(701).send, newsletter: 'tsundoku' },
+    })
+
+    await expect(sendSmsBatch([701])).resolves.toEqual({ sent: 0, failed: 1 })
+    expect(mockedSmsSends.markSmsPermanentFailure).toHaveBeenCalledWith(
+      701,
+      INACTIVE_NEWSLETTER_SEND_ERROR
+    )
+    expect(mockedSendSms).not.toHaveBeenCalled()
+  })
+
+  it('preserves delivery semantics for a nullable legacy SMS queue row', async () => {
+    mockedSmsSends.claimSendableSmsById.mockResolvedValue({
+      ...claimedSms(701),
+      send: { ...claimedSms(701).send, newsletter: null },
+    })
+
+    const promise = sendSmsBatch([701])
+    await vi.runAllTimersAsync()
+
+    await expect(promise).resolves.toEqual({ sent: 1, failed: 0 })
+    expect(mockedSendSms).toHaveBeenCalledTimes(1)
+    expect(mockedSmsSends.markSmsSent).toHaveBeenCalledWith({
+      id: 701,
+      twilioSid: 'SM_test',
+      twilioStatus: 'queued',
+    })
+  })
+
   it('enqueues eligible recipients and sends every pending row in 50-row batches', async () => {
     const eligible = Array.from({ length: 51 }, (_, i) => i + 1)
     const pending = Array.from({ length: 51 }, (_, i) => i + 101)

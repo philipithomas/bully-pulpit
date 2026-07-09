@@ -54,15 +54,28 @@ describe('new subscriber onboarding marker', () => {
     ).toBe(false)
   })
 
-  it('expires a stale marker for a returning subscriber', async () => {
+  it('does not clear an existing marker for a duplicate valid completion', async () => {
+    const firstResponse = NextResponse.json({ ok: true })
+    await setNewSubscriberOnboardingCookie(firstResponse, subscriber, true)
+    const marker = firstResponse.cookies.get(
+      NEW_SUBSCRIBER_ONBOARDING_COOKIE
+    )?.value
     const response = NextResponse.json({ ok: true })
 
     await setNewSubscriberOnboardingCookie(response, subscriber, false)
 
-    const cookie = response.headers
-      .getSetCookie()
-      .find((value) => value.startsWith(`${NEW_SUBSCRIBER_ONBOARDING_COOKIE}=`))
-    expect(cookie).toMatch(/^bp_onboarding=;/)
-    expect(cookie?.toLowerCase()).toMatch(/max-age=0|expires=thu, 01 jan 1970/)
+    expect(
+      response.headers
+        .getSetCookie()
+        .some((value) =>
+          value.startsWith(`${NEW_SUBSCRIBER_ONBOARDING_COOKIE}=`)
+        )
+    ).toBe(false)
+    expect(
+      await verifyNewSubscriberOnboardingCookie(
+        marker as string,
+        subscriber.uuid
+      )
+    ).toBe(true)
   })
 })

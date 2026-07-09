@@ -1,4 +1,14 @@
-import { and, desc, eq, isNotNull, or, type SQL, sql } from 'drizzle-orm'
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  or,
+  type SQL,
+  type SQLWrapper,
+  sql,
+} from 'drizzle-orm'
 import type { SubscriberPreferences } from '@/lib/auth/preferences'
 import { getDb } from '@/lib/db/client'
 import {
@@ -9,6 +19,10 @@ import {
   smsSubscribers,
   subscribers,
 } from '@/lib/db/schema'
+import {
+  isNewsletterAcceptingSubscriptions,
+  isNewsletterSendingEnabled,
+} from '@/lib/newsletters'
 
 const newsletterColumns = {
   postcard: subscribers.subscribedPostcard,
@@ -143,8 +157,7 @@ export async function countActive(): Promise<number> {
         or(
           eq(subscribers.subscribedPostcard, true),
           eq(subscribers.subscribedContraption, true),
-          eq(subscribers.subscribedWorkshop, true),
-          eq(subscribers.subscribedTsundoku, true)
+          eq(subscribers.subscribedWorkshop, true)
         )
       )
     )
@@ -157,8 +170,7 @@ export async function countActive(): Promise<number> {
         or(
           eq(smsSubscribers.subscribedPostcard, true),
           eq(smsSubscribers.subscribedContraption, true),
-          eq(smsSubscribers.subscribedWorkshop, true),
-          eq(smsSubscribers.subscribedTsundoku, true)
+          eq(smsSubscribers.subscribedWorkshop, true)
         )
       )
     )
@@ -188,6 +200,7 @@ export async function findEligibleIds(
   newsletter: NewsletterSlug,
   postSlug: string
 ): Promise<number[]> {
+  if (!isNewsletterSendingEnabled(newsletter)) return []
   const rows = await getDb()
     .select({ id: subscribers.id })
     .from(subscribers)
@@ -199,6 +212,7 @@ export async function countEligible(
   newsletter: NewsletterSlug,
   postSlug: string
 ): Promise<number> {
+  if (!isNewsletterSendingEnabled(newsletter)) return 0
   const rows = await getDb()
     .select({ count: sql<number>`count(*)::int` })
     .from(subscribers)
@@ -231,7 +245,6 @@ export type SerializedSubscriber = {
   subscribed_postcard: boolean
   subscribed_contraption: boolean
   subscribed_workshop: boolean
-  subscribed_tsundoku: boolean
   source: string | null
   created_at: string
   updated_at: string
@@ -247,7 +260,6 @@ export function serializeSubscriber(s: Subscriber): SerializedSubscriber {
     subscribed_postcard: s.subscribedPostcard,
     subscribed_contraption: s.subscribedContraption,
     subscribed_workshop: s.subscribedWorkshop,
-    subscribed_tsundoku: s.subscribedTsundoku,
     source: s.source,
     created_at: s.createdAt.toISOString(),
     updated_at: s.updatedAt.toISOString(),
@@ -262,7 +274,6 @@ export function serializeSubscriberPreferences(
     subscribed_contraption: s.subscribedContraption,
     subscribed_workshop: s.subscribedWorkshop,
     subscribed_postcard: s.subscribedPostcard,
-    subscribed_tsundoku: s.subscribedTsundoku,
   }
 }
 
@@ -276,8 +287,6 @@ export function prefsFromBody(body: Record<string, unknown>): SubscriberPrefs {
     prefs.subscribedContraption = body.subscribed_contraption
   if (typeof body.subscribed_workshop === 'boolean')
     prefs.subscribedWorkshop = body.subscribed_workshop
-  if (typeof body.subscribed_tsundoku === 'boolean')
-    prefs.subscribedTsundoku = body.subscribed_tsundoku
   return prefs
 }
 
@@ -293,10 +302,15 @@ export type SubscriberStats = {
 /** Aggregate counts for the Printing Press overview (one query). */
 export async function subscriberStats(): Promise<SubscriberStats> {
   const confirmed = sql`${subscribers.confirmedAt} IS NOT NULL`
+  const active = sql`(
+    ${subscribers.subscribedPostcard}
+    OR ${subscribers.subscribedContraption}
+    OR ${subscribers.subscribedWorkshop}
+  )`
   const rows = await getDb()
     .select({
-      total: sql<number>`count(*)::int`,
-      confirmed: sql<number>`(count(*) FILTER (WHERE ${confirmed}))::int`,
+      total: sql<number>`(count(*) FILTER (WHERE ${active}))::int`,
+      confirmed: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${active}))::int`,
       postcard: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedPostcard}))::int`,
       contraption: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedContraption}))::int`,
       workshop: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedWorkshop}))::int`,
@@ -441,6 +455,29 @@ export type ImportRow = {
 
 const IMPORT_CHUNK = 500
 
+function importedNewsletterPreference(
+  newsletter: NewsletterSlug,
+  requested: boolean,
+  columnPresent: boolean
+): boolean {
+  return (
+    isNewsletterAcceptingSubscriptions(newsletter) &&
+    (!columnPresent || requested)
+  )
+}
+
+function inactiveNewsletterImportUpdate(
+  existingPreference: SQLWrapper,
+  requestedOptInEmails: string[]
+): boolean | SQL {
+  if (requestedOptInEmails.length === 0) return false
+  return sql`CASE
+    WHEN ${inArray(subscribers.email, requestedOptInEmails)}
+      THEN ${existingPreference}
+    ELSE false
+  END`
+}
+
 /** Which optional columns the CSV actually contained (see importSubscribers). */
 export type ImportColumnsPresent = {
   postcard: boolean
@@ -452,9 +489,11 @@ export type ImportColumnsPresent = {
 
 /**
  * Upserts subscribers from a CSV import, keyed by email. A flag column the CSV
- * actually contains overwrites existing rows; a column absent from the CSV only
- * sets defaults on NEW rows and leaves existing rows untouched — so importing a
- * bare email list can't re-subscribe someone who opted out. A name is only
+ * actually contains overwrites existing rows for active newsletters. For an
+ * inactive newsletter, true preserves the existing value without activating a
+ * new or opted-out row, while false may opt out. A column absent from the CSV
+ * only sets defaults on NEW rows and leaves existing rows untouched — so a bare
+ * email list can't re-subscribe someone who opted out. A name is only
  * overwritten when the import provides one; confirmation is monotonic — an
  * import can confirm a subscriber but never un-confirm one. Source is
  * backfill-only: new rows take the CSV source (falling back to 'csv_import');
@@ -472,16 +511,36 @@ export async function importSubscribers(
   let updated = 0
   for (let i = 0; i < rows.length; i += IMPORT_CHUNK) {
     const chunk = rows.slice(i, i + IMPORT_CHUNK)
+    const requestedOptInEmails = (newsletter: NewsletterSlug) =>
+      chunk
+        .filter((row) => row[newsletter])
+        .map((row) => row.email.toLowerCase())
     const result = await getDb()
       .insert(subscribers)
       .values(
         chunk.map((r) => ({
           email: r.email.toLowerCase(),
           name: r.name,
-          subscribedPostcard: r.postcard,
-          subscribedContraption: r.contraption,
-          subscribedWorkshop: r.workshop,
-          subscribedTsundoku: r.tsundoku,
+          subscribedPostcard: importedNewsletterPreference(
+            'postcard',
+            r.postcard,
+            present.postcard
+          ),
+          subscribedContraption: importedNewsletterPreference(
+            'contraption',
+            r.contraption,
+            present.contraption
+          ),
+          subscribedWorkshop: importedNewsletterPreference(
+            'workshop',
+            r.workshop,
+            present.workshop
+          ),
+          subscribedTsundoku: importedNewsletterPreference(
+            'tsundoku',
+            r.tsundoku,
+            present.tsundoku
+          ),
           confirmedAt: r.confirmed ? new Date() : null,
           source: r.source ?? 'csv_import',
         }))
@@ -492,16 +551,52 @@ export async function importSubscribers(
           name: sql`COALESCE(excluded.name, ${subscribers.name})`,
           // A key omitted from ON CONFLICT SET leaves the existing value alone.
           ...(present.postcard
-            ? { subscribedPostcard: sql`excluded.subscribed_postcard` }
+            ? {
+                subscribedPostcard: isNewsletterAcceptingSubscriptions(
+                  'postcard'
+                )
+                  ? sql`excluded.subscribed_postcard`
+                  : inactiveNewsletterImportUpdate(
+                      subscribers.subscribedPostcard,
+                      requestedOptInEmails('postcard')
+                    ),
+              }
             : {}),
           ...(present.contraption
-            ? { subscribedContraption: sql`excluded.subscribed_contraption` }
+            ? {
+                subscribedContraption: isNewsletterAcceptingSubscriptions(
+                  'contraption'
+                )
+                  ? sql`excluded.subscribed_contraption`
+                  : inactiveNewsletterImportUpdate(
+                      subscribers.subscribedContraption,
+                      requestedOptInEmails('contraption')
+                    ),
+              }
             : {}),
           ...(present.workshop
-            ? { subscribedWorkshop: sql`excluded.subscribed_workshop` }
+            ? {
+                subscribedWorkshop: isNewsletterAcceptingSubscriptions(
+                  'workshop'
+                )
+                  ? sql`excluded.subscribed_workshop`
+                  : inactiveNewsletterImportUpdate(
+                      subscribers.subscribedWorkshop,
+                      requestedOptInEmails('workshop')
+                    ),
+              }
             : {}),
           ...(present.tsundoku
-            ? { subscribedTsundoku: sql`excluded.subscribed_tsundoku` }
+            ? {
+                subscribedTsundoku: isNewsletterAcceptingSubscriptions(
+                  'tsundoku'
+                )
+                  ? sql`excluded.subscribed_tsundoku`
+                  : inactiveNewsletterImportUpdate(
+                      subscribers.subscribedTsundoku,
+                      requestedOptInEmails('tsundoku')
+                    ),
+              }
             : {}),
           ...(present.confirmed
             ? {

@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/auth/admin'
 import { getAllPosts } from '@/lib/content/loader'
 import { allSendStats } from '@/lib/db/queries/email-sends'
 import { activeSendRunSlugs } from '@/lib/email/send-guard'
+import { isNewsletterSendingEnabled } from '@/lib/newsletters'
 import { isRecent, NOT_SENT_BADGE_WINDOW_MS } from '@/lib/printing-press'
 
 /** "today", "yesterday", or "N days ago" — cadence awareness, not a metric. */
@@ -41,12 +42,14 @@ export default async function PostsPage() {
         {posts.map((post) => {
           const s = stats[post.slug]
           const active = activeRuns.has(post.slug)
+          const sendingEnabled = isNewsletterSendingEnabled(post.newsletter)
           // Every post links into the send flow. The "Not sent" badge only
           // appears on recent posts: on older ones it reads as a problem when
           // the post simply predates the email system.
           const showNotSent =
             !s &&
             !active &&
+            sendingEnabled &&
             isRecent(post.frontmatter.publishedAt, NOT_SENT_BADGE_WINDOW_MS)
 
           return (
@@ -81,6 +84,9 @@ export default async function PostsPage() {
                   </>
                 ) : null}
                 {active ? <Badge variant="warning">Sending</Badge> : null}
+                {!sendingEnabled ? (
+                  <Badge variant="outline">Archived</Badge>
+                ) : null}
                 {showNotSent ? <Badge variant="outline">Not sent</Badge> : null}
               </div>
             </Link>

@@ -10,10 +10,8 @@ import {
   renderConfirmationEmail,
   renderConfirmationText,
 } from '@/lib/email/templates/confirmation'
-import {
-  renderNewSubscriberEmail,
-  renderNewsletterOptInEmail,
-} from '@/lib/email/templates/new-subscriber'
+import { renderNewSubscriberEmail } from '@/lib/email/templates/new-subscriber'
+import { isNewsletterSendingEnabled } from '@/lib/newsletters'
 import {
   isE164,
   ownerPhoneNumber,
@@ -58,18 +56,6 @@ export async function sendNewSubscriberNotification(
   })
 }
 
-export async function sendNewsletterOptInNotification(
-  email: string,
-  newsletter: string
-): Promise<void> {
-  const html = renderNewsletterOptInEmail({ email, newsletter })
-  await sendSimpleEmail({
-    to: siteConfig.sesFromEmail,
-    subject: `${newsletter} opt-in: ${email}`,
-    html,
-  })
-}
-
 // --- Newsletter rendering ---
 
 /** Full rendered newsletter HTML for a post, for the admin preview iframe. */
@@ -104,7 +90,13 @@ export async function sendNewsletterToOne(input: {
 }): Promise<void> {
   const post = getPostBySlug(input.slug)
   if (!post) throw new Error(`Post not found: ${input.slug}`)
-  const newsletter = isNewsletter(post.newsletter) ? post.newsletter : undefined
+  if (!isNewsletter(post.newsletter)) {
+    throw new Error(`Post is not a sendable newsletter: ${input.slug}`)
+  }
+  if (!isNewsletterSendingEnabled(post.newsletter)) {
+    throw new Error(`Newsletter is archived: ${post.newsletter}`)
+  }
+  const newsletter = post.newsletter
   const body = await buildEmailBodyHtml(post)
   const unsubscribeUrl = `${siteConfig.url}/unsubscribe`
   const html = renderFullNewsletter({
@@ -128,18 +120,21 @@ export async function sendNewsletterToOne(input: {
 export async function sendNewsletterSmsToTestRecipient(input: {
   slug: string
 }): Promise<{ sentTo: string }> {
+  const post = getPostBySlug(input.slug)
+  if (!post) throw new Error(`Post not found: ${input.slug}`)
+  if (!isNewsletter(post.newsletter)) {
+    throw new Error(`Post is not a sendable newsletter: ${input.slug}`)
+  }
+  if (!isNewsletterSendingEnabled(post.newsletter)) {
+    throw new Error(`Newsletter is archived: ${post.newsletter}`)
+  }
+
   const to = ownerPhoneNumber()
   if (!to) {
     throw new Error('OWNER_PHONE_NUMBER is not configured')
   }
   if (!isE164(to)) {
     throw new Error('OWNER_PHONE_NUMBER must be an E.164 number')
-  }
-
-  const post = getPostBySlug(input.slug)
-  if (!post) throw new Error(`Post not found: ${input.slug}`)
-  if (!isNewsletter(post.newsletter)) {
-    throw new Error(`Post is not a sendable newsletter: ${input.slug}`)
   }
 
   const body = renderNewsletterSms(post)
