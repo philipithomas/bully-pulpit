@@ -93,6 +93,8 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
   },
   { name: 'Ever', city: 'Chicago', stars: 2 },
   { name: 'Oriole', city: 'Chicago', stars: 2 },
+  { name: 'Indienne', city: 'Chicago', stars: 1 },
+  { name: 'Omakase Yume', city: 'Chicago', stars: 1 },
   { name: 'Roister', city: 'Chicago', stars: 1 },
   {
     name: 'Noma',
@@ -102,6 +104,15 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
       rank: 1,
       url: 'https://www.theworlds50best.com/restaurants/best-in-the-world/awards/best-of-the-best/Noma.html',
       numberOneWhileVisited: true,
+    },
+  },
+  {
+    name: 'Alchemist',
+    city: 'Copenhagen',
+    stars: 2,
+    worldsBest: {
+      rank: 8,
+      url: WORLDS_BEST_2024,
     },
   },
   { name: 'EL Ideas', city: 'Chicago', stars: 1 },
@@ -212,6 +223,16 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
       rank: 13,
       url: WORLDS_BEST_2021,
     },
+  },
+  {
+    name: 'Cosme',
+    city: 'New York City',
+    stars: 0,
+    worldsBest: {
+      rank: 22,
+      url: WORLDS_BEST_2021,
+    },
+    searchAliases: ['NYC'],
   },
   { name: 'Gymkhana', city: 'London', stars: 1 },
   { name: 'Trishna', city: 'London', stars: 1 },

@@ -72,7 +72,7 @@ export function StargazingPage({ page }: { page: Page }) {
           </p>
         </header>
 
-        <p className="my-10 max-w-4xl border-gray-300 border-y py-8 font-serif text-2xl text-gray-950 leading-snug sm:text-3xl md:my-14 md:py-10 md:text-4xl">
+        <p className="my-12 max-w-4xl font-serif text-2xl text-gray-950 leading-snug sm:text-3xl md:my-16 md:text-4xl">
           I have eaten at{' '}
           <span className="font-mono font-semibold text-forest tabular-nums">
             {stargazingStats.starredRestaurants}

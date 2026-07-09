@@ -50,7 +50,7 @@ function SortableHeader({
     <th
       scope="col"
       aria-sort={active ? direction : undefined}
-      className={`sticky top-0 z-10 border-gray-300 border-b bg-gray-050 px-4 py-3 text-left align-bottom font-sans font-semibold text-gray-700 text-xs ${className ?? ''}`}
+      className={`sticky top-0 z-10 bg-gray-050 px-4 py-3 text-left align-bottom font-sans font-semibold text-gray-700 text-xs ${className ?? ''}`}
     >
       <button
         type="button"
@@ -98,7 +98,7 @@ function MichelinCell({ restaurant }: { restaurant: StargazingRestaurant }) {
   const hasGreenStar = restaurant.distinction === 'Green Star'
 
   if (restaurant.stars === 0 && !hasGreenStar) {
-    return null
+    return <span className="text-gray-400">Not starred</span>
   }
 
   return (
@@ -199,7 +199,7 @@ export function StargazingTable({ restaurants }: StargazingTableProps) {
 
   return (
     <div>
-      <div className="border-gray-300 border-y py-5">
+      <div className="pb-5">
         <div className="max-w-2xl">
           <label
             htmlFor={searchId}
@@ -254,7 +254,7 @@ export function StargazingTable({ restaurants }: StargazingTableProps) {
           </div>
         ) : (
           <>
-            <div className="hidden border border-gray-200 bg-white md:block">
+            <div className="hidden md:block">
               <table className="w-full table-fixed border-collapse">
                 <thead className="bg-gray-050">
                   <tr>
@@ -292,14 +292,14 @@ export function StargazingTable({ restaurants }: StargazingTableProps) {
                     />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {visibleRestaurants.map((restaurant) => (
                     <tr
                       key={restaurant.name}
                       className={
                         restaurant.worldsBest?.numberOneWhileVisited
                           ? 'bg-indigo/5 transition-colors hover:bg-indigo/10'
-                          : 'transition-colors hover:bg-gray-050'
+                          : 'transition-colors hover:bg-white/70'
                       }
                     >
                       <th
@@ -331,7 +331,7 @@ export function StargazingTable({ restaurants }: StargazingTableProps) {
               <div
                 role="group"
                 aria-label="Sort restaurants"
-                className="sticky top-0 z-10 grid grid-cols-4 border border-gray-200 bg-gray-050"
+                className="sticky top-0 z-10 mb-1 grid grid-cols-4 bg-gray-050"
               >
                 {MOBILE_SORT_OPTIONS.map((option) => (
                   <MobileSortableHeader
@@ -344,7 +344,7 @@ export function StargazingTable({ restaurants }: StargazingTableProps) {
                   />
                 ))}
               </div>
-              <ul className="divide-y divide-gray-200 border-gray-200 border-x border-b bg-white">
+              <ul className="space-y-2">
                 {visibleRestaurants.map((restaurant) => (
                   <li
                     key={restaurant.name}

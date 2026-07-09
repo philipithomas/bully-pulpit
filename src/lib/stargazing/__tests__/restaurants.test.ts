@@ -17,7 +17,7 @@ const WORLD_KEYS = new Set(['rank', 'url', 'numberOneWhileVisited'])
 
 describe('stargazing restaurant data', () => {
   it('keeps one public row per restaurant', () => {
-    expect(stargazingRestaurants).toHaveLength(47)
+    expect(stargazingRestaurants).toHaveLength(51)
     const names = stargazingRestaurants.map((restaurant) =>
       restaurant.name.toLocaleLowerCase()
     )
@@ -26,9 +26,9 @@ describe('stargazing restaurant data', () => {
 
   it('derives the public headline totals from the rows', () => {
     expect(stargazingStats).toEqual({
-      restaurants: 47,
-      starredRestaurants: 45,
-      stars: 66,
+      restaurants: 51,
+      starredRestaurants: 48,
+      stars: 70,
       numberOneRestaurants: 3,
     })
   })
@@ -45,13 +45,21 @@ describe('stargazing restaurant data', () => {
     expect(restaurants.get('Don Julio')?.worldsBest?.rank).toBe(13)
     expect(restaurants.get('Rosetta')?.worldsBest?.rank).toBe(34)
     expect(restaurants.get('Lyle’s')?.worldsBest?.rank).toBe(33)
+    expect(restaurants.get('Cosme')?.worldsBest?.rank).toBe(22)
+    expect(restaurants.get('Indienne')?.stars).toBe(1)
+    expect(restaurants.get('Omakase Yume')?.stars).toBe(1)
+    expect(restaurants.get('Alchemist')?.stars).toBe(2)
+    expect(restaurants.get('Alchemist')?.worldsBest?.rank).toBe(8)
+    expect(restaurants.get('Alchemist')?.worldsBest?.url).toContain('2024')
   })
 
-  it('publishes only starred restaurants or Green Stars', () => {
+  it('publishes only starred restaurants, Green Stars, or World-ranked rows', () => {
     expect(
       stargazingRestaurants.every(
         (restaurant) =>
-          restaurant.stars > 0 || restaurant.distinction === 'Green Star'
+          restaurant.stars > 0 ||
+          restaurant.distinction === 'Green Star' ||
+          restaurant.worldsBest !== undefined
       )
     ).toBe(true)
   })
@@ -84,6 +92,12 @@ describe('stargazing restaurant data', () => {
     expect(text).toContain('OXTE | Paris')
     expect(text).toContain('Trishna | London')
     expect(text).toContain('Oriole | Chicago')
+    expect(text).toContain('Alchemist | Copenhagen')
+    expect(text).toContain('Indienne | Chicago')
+    expect(text).toContain('Omakase Yume | Chicago')
+    expect(text).toContain(
+      'Cosme | New York City | Michelin: No Michelin stars'
+    )
     expect(text).not.toContain('Michelin: Selected')
     expect(text).not.toMatch(/\b20\d{2}\b|Former|Historical|Closed/)
   })
