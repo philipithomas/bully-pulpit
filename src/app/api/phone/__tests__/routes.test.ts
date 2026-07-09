@@ -90,6 +90,7 @@ describe('POST /api/phone/voice', () => {
     expect(response.headers.get('Content-Type')).toContain('text/xml')
     const xml = await response.text()
     expect(xml).toContain('You have reached the test suite.')
+    expect(xml).toContain('Leave a message after the tone.')
     expect(xml).not.toContain('<Gather')
     expect(xml).not.toContain('/api/phone/voice-menu')
     expect(xml).toContain('/api/phone/recording-status?caller=')
@@ -130,6 +131,12 @@ describe('POST /api/phone/voice', () => {
     const xml = await response.text()
     expect(xml).toContain('<Gather')
     expect(xml).toContain('/api/phone/voice-menu')
+    expect(xml.indexOf('You have reached the test suite.')).toBeLessThan(
+      xml.indexOf('<Gather')
+    )
+    expect(xml.indexOf('Leave a message after the tone.')).toBeGreaterThan(
+      xml.indexOf('</Gather>')
+    )
     expect(xml).not.toContain('secret=')
     expect(xml).toContain(
       'Press 2 to subscribe to recurring new-post texts from philipithomas.com.'

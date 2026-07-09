@@ -17,15 +17,21 @@ export function escapeXml(value: string): string {
 
 const SAY_VOICE = 'Polly.Matthew-Neural'
 
-/** Greets the caller and records a voicemail with status callbacks. */
+const VOICEMAIL_INSTRUCTION = 'Leave a message after the tone.'
+
+/** Optionally greets the caller, then records a voicemail with callbacks. */
 export function voicemailTwiml(input: {
-  greeting: string
+  greeting?: string
   recordingStatusUrl: string
   recordingCompleteUrl: string
 }): string {
+  const greeting = input.greeting
+    ? `  <Say voice="${SAY_VOICE}">${escapeXml(input.greeting)}</Say>\n`
+    : ''
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${SAY_VOICE}">${escapeXml(input.greeting)}</Say>
+${greeting}  <Say voice="${SAY_VOICE}">${VOICEMAIL_INSTRUCTION}</Say>
   <Record maxLength="120" recordingStatusCallback="${escapeXml(input.recordingStatusUrl)}" recordingStatusCallbackMethod="POST" action="${escapeXml(input.recordingCompleteUrl)}" method="POST" />
 </Response>`
 }

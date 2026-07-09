@@ -1,65 +1,50 @@
-import { gateway } from '@ai-sdk/gateway'
 import { generateText } from 'ai'
+import {
+  bellModel,
+  bellReasoning,
+  getPhoneGreetingProviderOptions,
+} from '@/lib/chat/bell-model'
+import {
+  fetchNycWeatherSnapshot,
+  type NycWeatherSnapshot,
+} from '@/lib/weather/nyc'
 
 // Voicemail greeting generation. Ported from junk-drawer's
 // TwilioVoicemailController#generate_dynamic_greeting, rewritten on the AI
-// Gateway (same gateway credits as Bell, no BYOK) instead of a direct OpenAI
-// client.
+// Gateway instead of a direct provider client.
 
 export const FALLBACK_GREETING =
-  'You have reached the Contraption Company. Leave a message after the tone.'
+  'You have reached the Contraption Company and Philip Thomas.'
 
 // Twilio gives voice webhooks 15 seconds to respond before playing an
-// application error to the caller. The weather fetch is capped at 2 seconds,
-// so an 8 second cap on the gateway call leaves comfortable headroom for the
-// route to render TwiML with the fallback greeting instead.
+// application error to the caller. The shared weather fetch gets one 2 second
+// deadline across both Weather.gov requests, so an 8 second cap on the gateway
+// call leaves headroom for the route to render the fallback greeting.
+const WEATHER_TIMEOUT_MS = 2_000
 const GREETING_TIMEOUT_MS = 8_000
+const NYC_TIME_ZONE = 'America/New_York'
 
-const SYSTEM_PROMPT = `You write voicemail greetings for the Contraption Company. Generate ONLY the greeting text, nothing else. Keep it to 1-2 sentences. Professional but with dry/cheeky humor.
+const SYSTEM_PROMPT = `Select one short opening sentence for a professional telephone receptionist in New York City.
 
-Company tagline: Crafting digital tools.
+The application supplies an ordered list of approved sentences derived from the verified local time, vetted holiday, and current Weather.gov conditions. Return one sentence from that list exactly as written. Prefer the first option unless another supplied option sounds more natural.
 
-Style: Give a witty, deadpan excuse for why nobody can answer. Keep it PC/professional but playful. Love of irony, sarcasm, and self-deprecation.
+The approved options are already calm, welcoming, professional, inclusive, and politically neutral. Do not rewrite, combine, embellish, or explain them. Do not add humor, an excuse for the unanswered call, company identification, an IVR instruction, quotation marks, emoji, or commentary.
 
-Time-based excuses:
-- Late night (9pm-5am): Keep it creative.
-- Morning (5am-12pm): Could mention coffee not kicked in yet
-- Lunch (11:30am-1:30pm): 'It is lunch time, so nobody can answer the phone.'
-- Afternoon/Evening: Normal greeting or mild excuse
+The application adds "You have reached the Contraption Company and Philip Thomas." and then starts either the IVR menu or voicemail.`
 
-NYC flavor (use occasionally): subway delays, bodega run, stuck in Times Square tourist traffic, waiting for the L train
-
-Weather-based (use when relevant): rainy day making it hard to get to the subway, rare sunny winter day everyone's outside, too hot to function, snow day vibes
-
-Special dates: Pi Day, tax day, first day of summer, etc. can get playful mentions.
-
-Inside jokes that could be mixed in:
-- Owner is Philip, who likes coffee brewed via aeropress
-- Projects include Postcard (blogging software), Junk Drawer (internal app), Booklet (async community app), Trivet (Ghost blog plugin), QuesoGPT (photo chatbot with Philip's dog), Workshop (blog about work in progress), Toolbox (mac mini hosting all the projects), Press (Print Edition - blog posts by mail, maybe say have you considered subscribing to the print edition?), and Bell (the AI assistant).
-
-Rules:
-- ALWAYS say 'You have reached the Contraption Company' or 'at the Contraption Company office' - never just 'at the Contraption Company' (that is not a place)
-- NEVER use 'we' or 'our' (no royal we) - say 'nobody' or rephrase
-- Keep it professional enough for business and brief.
-- The greeting is spoken by a text-to-speech voice, so write plain prose with no markup, emoji, or stage directions.
-- Always end with: 'Leave a message after the tone.'`
-
-/** Current NYC weather from wttr.in, or "unknown" if it cannot be fetched fast. */
-async function fetchNycWeather(): Promise<string> {
+async function nycWeatherContext(): Promise<NycWeatherSnapshot | null> {
   try {
-    const response = await fetch('https://wttr.in/New+York?format=%c+%t+%w', {
-      signal: AbortSignal.timeout(2_000),
+    return await fetchNycWeatherSnapshot({
+      signal: AbortSignal.timeout(WEATHER_TIMEOUT_MS),
     })
-    if (!response.ok) return 'unknown'
-    return (await response.text()).trim() || 'unknown'
   } catch {
-    return 'unknown'
+    return null
   }
 }
 
 function nycNow(now: Date): string {
   return new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
+    timeZone: NYC_TIME_ZONE,
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -70,28 +55,122 @@ function nycNow(now: Date): string {
   }).format(now)
 }
 
+function nycCalendar(now: Date): {
+  month: number
+  day: number
+  weekday: string
+  hour: number
+} {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: NYC_TIME_ZONE,
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'long',
+    hour: 'numeric',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+  const value = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? ''
+
+  return {
+    month: Number(value('month')),
+    day: Number(value('day')),
+    weekday: value('weekday'),
+    hour: Number(value('hour')),
+  }
+}
+
+function holidayGreeting(now: Date): string | null {
+  const { month, day, weekday } = nycCalendar(now)
+
+  if (month === 1 && day === 1) return 'Happy New Year.'
+  if (month === 7 && day === 4) return 'Happy Independence Day.'
+  if (month === 11 && weekday === 'Thursday' && day >= 22 && day <= 28) {
+    return 'Happy Thanksgiving.'
+  }
+
+  return null
+}
+
+function weatherGreeting(weather: NycWeatherSnapshot | null): string | null {
+  if (!weather) return null
+
+  const description = weather.current.description.toLocaleLowerCase('en-US')
+  if (/chance|possible|likely/.test(description)) return null
+
+  if (/snow|flurr|blizzard|sleet|wintry/.test(description)) {
+    return 'Hello from snowy New York City.'
+  }
+  if (/rain|drizzle|shower|thunderstorm/.test(description)) {
+    return 'Hello from rainy New York City.'
+  }
+
+  return null
+}
+
+function timeGreeting(now: Date): string {
+  const { hour } = nycCalendar(now)
+
+  if (hour >= 5 && hour < 12) return 'Good morning from New York City.'
+  if (hour >= 12 && hour < 17) return 'Good afternoon from New York City.'
+  if (hour >= 17) return 'Good evening from New York City.'
+  return 'Hello from New York City.'
+}
+
+export function contextualGreetingOptions(
+  now: Date,
+  weather: NycWeatherSnapshot | null
+): string[] {
+  return Array.from(
+    new Set(
+      [
+        holidayGreeting(now),
+        weatherGreeting(weather),
+        timeGreeting(now),
+      ].filter((value): value is string => Boolean(value))
+    )
+  )
+}
+
+function selectedGreeting(text: string, options: string[]): string | null {
+  const normalized = text.trim().replace(/\s+/g, ' ')
+  return options.includes(normalized) ? normalized : null
+}
+
 /**
  * Generates a fresh, context-aware greeting for an incoming call. Any failure
  * (gateway outage, budget exhaustion, timeout) falls back to a static
- * greeting so the call always proceeds to recording.
+ * greeting so the call always proceeds to the IVR or voicemail.
  */
 export async function generateGreeting(
   now: Date = new Date()
 ): Promise<string> {
   try {
-    const weather = await fetchNycWeather()
+    const weather = await nycWeatherContext()
+    const options = contextualGreetingOptions(now, weather)
+    const weatherDescription = weather
+      ? `${weather.current.description}, ${weather.current.temperatureC}°C`
+      : 'unknown'
     const { text } = await generateText({
-      model: gateway('anthropic/claude-haiku-4.5'),
-      maxOutputTokens: 200,
-      temperature: 1.0,
+      model: bellModel,
+      reasoning: bellReasoning,
+      providerOptions: getPhoneGreetingProviderOptions(),
+      maxOutputTokens: 40,
       abortSignal: AbortSignal.timeout(GREETING_TIMEOUT_MS),
       maxRetries: 0,
-      experimental_telemetry: { isEnabled: true, functionId: 'phone-greeting' },
+      runtimeContext: { surface: 'phone' },
+      telemetry: {
+        isEnabled: true,
+        functionId: 'phone-greeting',
+        recordInputs: false,
+        recordOutputs: false,
+        includeRuntimeContext: { surface: true },
+      },
       system: SYSTEM_PROMPT,
-      prompt: `Current date and time in New York: ${nycNow(now)}\nCurrent weather: ${weather}`,
+      prompt: `Current date and time in New York City: ${nycNow(now)}\nCurrent weather in New York City: ${weatherDescription}\nApproved opening sentences, in preference order:\n${options.map((option) => `- ${option}`).join('\n')}`,
     })
-    const greeting = text.trim()
-    return greeting || FALLBACK_GREETING
+    const context = selectedGreeting(text, options)
+    return context ? `${context} ${FALLBACK_GREETING}` : FALLBACK_GREETING
   } catch (err) {
     console.error('Failed to generate voicemail greeting:', err)
     return FALLBACK_GREETING

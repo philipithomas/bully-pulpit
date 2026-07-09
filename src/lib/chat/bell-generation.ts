@@ -1,48 +1,16 @@
-import { type GatewayProviderOptions, gateway } from '@ai-sdk/gateway'
+import { gateway } from '@ai-sdk/gateway'
 import { stepCountIs } from 'ai'
 import { fetchPage } from '@/lib/chat/fetch-page-tool'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 
-/** Shared Bell model and tool-loop settings for the web and SMS surfaces. */
-export const BELL_MODEL_ID = 'openai/gpt-5.6-luna'
-export const BELL_FALLBACK_MODEL_IDS = ['openai/gpt-5.4-mini'] as const
-export const bellModel = gateway(BELL_MODEL_ID)
-
-/** Disable reasoning latency for Bell's short, tool-oriented responses. */
-export const bellReasoning = 'none' as const
-
-function bellEnvironment(): 'production' | 'preview' | 'development' {
-  const value = process.env.VERCEL_ENV ?? process.env.NODE_ENV
-  if (value === 'production' || value === 'preview') return value
-  return 'development'
-}
-
-export function getBellProviderOptions(input: {
-  surface: 'web' | 'sms'
-  pseudonymousUser?: string | null
-}) {
-  return {
-    openai: {
-      // Bell does not render reasoning parts, so skip summary generation.
-      reasoningSummary: null,
-    },
-    gateway: {
-      // Pin OpenAI direct and keep the fastest existing fallback for temporary
-      // GPT-5.6 availability issues.
-      order: ['openai'],
-      sort: 'ttft',
-      models: [...BELL_FALLBACK_MODEL_IDS],
-      zeroDataRetention: true,
-      ...(input.pseudonymousUser ? { user: input.pseudonymousUser } : {}),
-      tags: [
-        'feature:bell',
-        `surface:${input.surface}`,
-        `env:${bellEnvironment()}`,
-      ],
-    } satisfies GatewayProviderOptions,
-  }
-}
+export {
+  BELL_FALLBACK_MODEL_IDS,
+  BELL_MODEL_ID,
+  bellModel,
+  bellReasoning,
+  getBellProviderOptions,
+} from '@/lib/chat/bell-model'
 
 export function gatewayGenerationIdFromMetadata(
   metadata: unknown
