@@ -40,11 +40,11 @@ describe('rate limiting', () => {
     ).resolves.toBe('unavailable')
   })
 
-  it('reports unavailable when the configured rule ID is missing', async () => {
-    firewall.mockResolvedValueOnce({
-      rateLimited: false,
-      error: 'not-found',
-    })
+  it.each([
+    ['the configured rule ID is missing', 'not-found' as const],
+    ['the Firewall self-fetch is blocked', 'blocked' as const],
+  ])('reports unavailable when %s', async (_case, error) => {
+    firewall.mockResolvedValueOnce({ rateLimited: true, error })
 
     await expect(
       checkRateLimitStatus('search', 'ip:203.0.113.1', request)

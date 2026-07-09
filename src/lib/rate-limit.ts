@@ -38,10 +38,10 @@ export async function checkRateLimitStatus(
       request,
       rateLimitKey: key,
     })
-    // A missing ID means the protection is not active. Treat it like an
-    // unavailable decision so paid callers take their safe fallback instead
-    // of silently spending without a live limit.
-    if (error === 'not-found') return 'unavailable'
+    // Firewall errors mean the self-fetch could not make a quota decision.
+    // This includes a missing rule and a blocked well-known endpoint. Paid
+    // callers must take their safe fallback instead of reporting a false 429.
+    if (error) return 'unavailable'
     return rateLimited ? 'limited' : 'allowed'
   } catch (err) {
     console.error(`[rate-limit] check failed for rule "${rule}":`, err)
