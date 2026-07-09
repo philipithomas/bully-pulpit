@@ -39,8 +39,10 @@ const NANP_AREA_CODES: Record<string, string> = {
   '929': 'New York City, NY',
 }
 
-function formValue(form: FormData, key: string): string | null {
-  const value = form.get(key)
+type TwilioValueSource = Pick<FormData, 'get'> | Pick<URLSearchParams, 'get'>
+
+function sourceValue(source: TwilioValueSource, key: string): string | null {
+  const value = source.get(key)
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
   return trimmed ? trimmed : null
@@ -70,21 +72,62 @@ export function describePhoneOrigin(
     : `Area code ${areaCode}`
 }
 
-export function twilioWebhookMetadataFromForm(
-  form: FormData,
+function twilioWebhookMetadataFromSource(
+  source: TwilioValueSource,
   phoneNumber: string
 ): TwilioWebhookMetadata {
   const areaCode = nanpAreaCode(phoneNumber)
   return {
-    messageSid: formValue(form, 'MessageSid') ?? formValue(form, 'SmsSid'),
-    callSid: formValue(form, 'CallSid'),
-    callerName: formValue(form, 'CallerName'),
-    fromCity: formValue(form, 'FromCity') ?? formValue(form, 'CallerCity'),
-    fromState: formValue(form, 'FromState') ?? formValue(form, 'CallerState'),
-    fromZip: formValue(form, 'FromZip') ?? formValue(form, 'CallerZip'),
+    messageSid:
+      sourceValue(source, 'MessageSid') ?? sourceValue(source, 'SmsSid'),
+    callSid: sourceValue(source, 'CallSid'),
+    callerName: sourceValue(source, 'CallerName'),
+    fromCity:
+      sourceValue(source, 'FromCity') ?? sourceValue(source, 'CallerCity'),
+    fromState:
+      sourceValue(source, 'FromState') ?? sourceValue(source, 'CallerState'),
+    fromZip: sourceValue(source, 'FromZip') ?? sourceValue(source, 'CallerZip'),
     fromCountry:
-      formValue(form, 'FromCountry') ?? formValue(form, 'CallerCountry'),
+      sourceValue(source, 'FromCountry') ??
+      sourceValue(source, 'CallerCountry'),
     areaCode,
     areaDescription: areaCode ? NANP_AREA_CODES[areaCode] : null,
+  }
+}
+
+export function twilioWebhookMetadataFromForm(
+  form: FormData,
+  phoneNumber: string
+): TwilioWebhookMetadata {
+  return twilioWebhookMetadataFromSource(form, phoneNumber)
+}
+
+export function twilioWebhookMetadataFromSearchParams(
+  searchParams: URLSearchParams,
+  phoneNumber: string
+): TwilioWebhookMetadata {
+  return twilioWebhookMetadataFromSource(searchParams, phoneNumber)
+}
+
+/** Carries initial-call metadata into Twilio's later recording callback. */
+export function appendTwilioWebhookMetadata(
+  searchParams: URLSearchParams,
+  metadata?: TwilioWebhookMetadata | null
+): void {
+  if (!metadata) return
+
+  const forwarded = [
+    ['CallSid', metadata.callSid],
+    ['CallerName', metadata.callerName],
+    ['FromCity', metadata.fromCity],
+    ['FromState', metadata.fromState],
+    ['FromZip', metadata.fromZip],
+    ['FromCountry', metadata.fromCountry],
+  ] as const
+
+  for (const [key, value] of forwarded) {
+    if (typeof value === 'string' && value.trim()) {
+      searchParams.set(key, value.trim())
+    }
   }
 }

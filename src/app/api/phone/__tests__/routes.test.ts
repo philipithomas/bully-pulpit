@@ -78,6 +78,12 @@ describe('POST /api/phone/voice', () => {
       twilioPost('/api/phone/voice', {
         From: '+15551234567',
         To: '+12123473190',
+        CallSid: 'CA123',
+        CallerName: 'Jane Caller',
+        FromCity: 'San Francisco',
+        FromState: 'CA',
+        FromZip: '94105',
+        FromCountry: 'US',
       })
     )
     expect(response.status).toBe(200)
@@ -88,12 +94,25 @@ describe('POST /api/phone/voice', () => {
     expect(xml).not.toContain('/api/phone/voice-menu')
     expect(xml).toContain('/api/phone/recording-status?caller=')
     expect(xml).toContain('caller=%2B15551234567')
+    expect(xml).toContain('CallSid=CA123')
+    expect(xml).toContain('CallerName=Jane+Caller')
+    expect(xml).toContain('FromCity=San+Francisco')
+    expect(xml).toContain('FromState=CA')
+    expect(xml).toContain('FromZip=94105')
     expect(xml).toContain('/api/phone/recording-complete')
     expect(xml).not.toContain('secret=')
     expect(vi.mocked(sendMissedCallNotification)).toHaveBeenCalledWith({
       from: '+15551234567',
       to: '+12123473190',
       greeting: 'You have reached the test suite.',
+      metadata: expect.objectContaining({
+        callSid: 'CA123',
+        callerName: 'Jane Caller',
+        fromCity: 'San Francisco',
+        fromState: 'CA',
+        fromZip: '94105',
+        fromCountry: 'US',
+      }),
     })
   })
 
@@ -124,12 +143,13 @@ describe('POST /api/phone/recording-status', () => {
   it('starts the voicemail workflow for completed recordings', async () => {
     const response = await recordingStatusPost(
       twilioPost(
-        '/api/phone/recording-status?caller=%2B15551234567&called=%2B12123473190',
+        '/api/phone/recording-status?caller=%2B15551234567&called=%2B12123473190&CallSid=CA123&CallerName=Jane+Caller&FromCity=San+Francisco&FromState=CA&FromZip=94105&FromCountry=US',
         {
           RecordingStatus: 'completed',
           RecordingUrl: 'https://api.twilio.com/recordings/RE123',
           RecordingSid: 'RE123',
           RecordingDuration: '42',
+          CallSid: 'CA_CALLBACK',
         }
       )
     )
@@ -141,6 +161,14 @@ describe('POST /api/phone/recording-status', () => {
         from: '+15551234567',
         to: '+12123473190',
         durationSeconds: '42',
+        metadata: expect.objectContaining({
+          callSid: 'CA_CALLBACK',
+          callerName: 'Jane Caller',
+          fromCity: 'San Francisco',
+          fromState: 'CA',
+          fromZip: '94105',
+          fromCountry: 'US',
+        }),
       },
     ])
   })

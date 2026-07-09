@@ -30,6 +30,13 @@ describe('voicemail email', () => {
     toLabel: 'NYC',
     durationSeconds: '42',
     transcription: 'Hey Philip, call me back about the <thing> & stuff.',
+    metadata: {
+      callSid: 'CA123',
+      callerName: 'Jane Caller',
+      fromCity: 'San Francisco',
+      fromState: 'CA',
+      fromZip: '94105',
+    },
     receivedAt,
   }
 
@@ -39,6 +46,10 @@ describe('voicemail email', () => {
     expect(html).toContain('+15551234567')
     expect(html).toContain('+12123473190 (NYC)')
     expect(html).toContain('42 seconds')
+    expect(html).toContain('San Francisco, CA')
+    expect(html).toContain('Jane Caller')
+    expect(html).toContain('94105')
+    expect(html).toContain('CA123')
     expect(html).toContain('2026-06-10 14:23 UTC')
     expect(html).toContain(
       'Hey Philip, call me back about the &lt;thing&gt; &amp; stuff.'
@@ -81,6 +92,10 @@ describe('voicemail email', () => {
     const text = renderVoicemailText(input)
     expect(text).toContain('From: +15551234567')
     expect(text).toContain('To: +12123473190 (NYC)')
+    expect(text).toContain('Origin: San Francisco, CA')
+    expect(text).toContain('Caller name: Jane Caller')
+    expect(text).toContain('ZIP: 94105')
+    expect(text).toContain('Call SID: CA123')
     expect(text).toContain('Transcription:')
     expect(text).toContain(
       'Hey Philip, call me back about the <thing> & stuff.'
@@ -94,6 +109,13 @@ describe('missed call email', () => {
     to: '+14159157592',
     toLabel: 'SF',
     greeting: 'You have reached the Contraption Company office.',
+    metadata: {
+      callSid: 'CA456',
+      callerName: 'Sam Caller',
+      fromCity: 'Brooklyn',
+      fromState: 'NY',
+      fromZip: '11201',
+    },
     receivedAt,
   }
 
@@ -101,12 +123,20 @@ describe('missed call email', () => {
     const html = renderMissedCallEmail(input)
     expect(html).toContain('Incoming call')
     expect(html).toContain('+14159157592 (SF)')
+    expect(html).toContain('Brooklyn, NY')
+    expect(html).toContain('Sam Caller')
+    expect(html).toContain('11201')
+    expect(html).toContain('CA456')
     expect(html).toContain('You have reached the Contraption Company office.')
   })
 
   it('mirrors the content in plaintext', () => {
     const text = renderMissedCallText(input)
     expect(text).toContain('Incoming call')
+    expect(text).toContain('Origin: Brooklyn, NY')
+    expect(text).toContain('Caller name: Sam Caller')
+    expect(text).toContain('ZIP: 11201')
+    expect(text).toContain('Call SID: CA456')
     expect(text).toContain('Greeting played:')
   })
 })

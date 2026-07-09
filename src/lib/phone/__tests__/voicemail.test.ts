@@ -16,6 +16,13 @@ const input = {
   from: '+15551234567',
   to: '+12123473190',
   durationSeconds: '42',
+  metadata: {
+    callSid: 'CA123',
+    callerName: 'Jane Caller',
+    fromCity: 'San Francisco',
+    fromState: 'CA',
+    fromZip: '94105',
+  },
 }
 
 interface StubFetchOptions {
@@ -98,7 +105,15 @@ describe('processVoicemail', () => {
     expect(sent.to).toEqual(['one@example.com', 'two@example.com'])
     expect(sent.subject).toBe('Voicemail from +15551234567 to Phone (42s)')
     expect(sent.html).toContain('Call me back.')
+    expect(sent.html).toContain('San Francisco, CA')
+    expect(sent.html).toContain('Jane Caller')
+    expect(sent.html).toContain('94105')
+    expect(sent.html).toContain('CA123')
     expect(sent.text).toContain('Call me back.')
+    expect(sent.text).toContain('Origin: San Francisco, CA')
+    expect(sent.text).toContain('Caller name: Jane Caller')
+    expect(sent.text).toContain('ZIP: 94105')
+    expect(sent.text).toContain('Call SID: CA123')
     expect(sent.attachment).toEqual(
       expect.objectContaining({
         filename: 'voicemail-RE123.mp3',

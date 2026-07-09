@@ -15,6 +15,7 @@ export async function sendMissedCallNotification(input: {
   from: string
   to: string
   greeting: string
+  metadata?: TwilioWebhookMetadata | null
 }): Promise<void> {
   const toLabel = numberLabel(input.to)
   const payload = {
@@ -22,6 +23,7 @@ export async function sendMissedCallNotification(input: {
     to: input.to,
     toLabel,
     greeting: input.greeting,
+    metadata: input.metadata ?? null,
     receivedAt: new Date(),
   }
   await sendSimpleEmail({

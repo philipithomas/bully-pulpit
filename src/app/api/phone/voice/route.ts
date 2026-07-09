@@ -10,13 +10,14 @@ import {
   voicemailTwiml,
 } from '@/lib/phone/twiml'
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
+import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
 
 /**
  * Twilio voice webhook for incoming calls. Generates a fresh greeting, speaks
  * it with <Say>, and records a voicemail with callbacks into the
- * recording-status and recording-complete routes. The caller and called
- * numbers ride along on the status callback URL because Twilio's recording
- * callbacks do not include them.
+ * recording-status and recording-complete routes. The caller, called number,
+ * and initial caller metadata ride along on the status callback URL because
+ * Twilio's recording callbacks do not include them.
  */
 export async function POST(request: Request) {
   const form = await validatedPhoneWebhookForm(request)
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
 
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
+  const metadata = twilioWebhookMetadataFromForm(form, from)
 
   const greeting = await generateGreeting()
 
@@ -33,13 +35,13 @@ export async function POST(request: Request) {
   // on SES (junk-drawer used a background job for the same reason).
   after(async () => {
     try {
-      await sendMissedCallNotification({ from, to, greeting })
+      await sendMissedCallNotification({ from, to, greeting, metadata })
     } catch (err) {
       console.error('Failed to send missed call notification:', err)
     }
   })
 
-  const callbackUrls = voicemailCallbackUrls({ from, to })
+  const callbackUrls = voicemailCallbackUrls({ from, to, metadata })
 
   if (!(await smsSignupUi())) {
     return twimlResponse(voicemailTwiml({ greeting, ...callbackUrls }))

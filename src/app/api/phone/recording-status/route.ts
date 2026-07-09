@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { start } from 'workflow/api'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
+import {
+  twilioWebhookMetadataFromForm,
+  twilioWebhookMetadataFromSearchParams,
+} from '@/lib/phone/webhook-metadata'
 import { processVoicemailWorkflow } from '@/workflows/process-voicemail'
 
 /**
@@ -27,13 +31,20 @@ export async function POST(request: Request) {
   }
 
   const params = new URL(request.url).searchParams
+  const from = params.get('caller') ?? 'Unknown'
+  const forwardedMetadata = twilioWebhookMetadataFromSearchParams(params, from)
+  const callbackMetadata = twilioWebhookMetadataFromForm(form, from)
   await start(processVoicemailWorkflow, [
     {
       recordingUrl,
       recordingSid,
-      from: params.get('caller') ?? 'Unknown',
+      from,
       to: params.get('called') ?? 'Unknown',
       durationSeconds: String(form.get('RecordingDuration') ?? '0'),
+      metadata: {
+        ...forwardedMetadata,
+        callSid: callbackMetadata.callSid ?? forwardedMetadata.callSid,
+      },
     },
   ])
 

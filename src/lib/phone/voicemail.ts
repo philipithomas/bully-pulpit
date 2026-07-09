@@ -4,6 +4,7 @@ import {
   renderVoicemailText,
 } from '@/lib/email/templates/phone'
 import { numberLabel, phoneNotificationRecipients } from '@/lib/phone/config'
+import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 
 // Voicemail processing. Ported from junk-drawer's ProcessVoicemailJob:
 // download the recording from Twilio, transcribe it, and email the
@@ -17,6 +18,7 @@ export type VoicemailInput = {
   from: string
   to: string
   durationSeconds: string
+  metadata?: TwilioWebhookMetadata | null
 }
 
 /** Audio below this size is a butt-dial or an empty hang-up recording. */
@@ -123,6 +125,7 @@ export async function processVoicemail(
     toLabel,
     durationSeconds: input.durationSeconds,
     transcription,
+    metadata: input.metadata ?? null,
     receivedAt: new Date(),
   }
   await sendEmailWithAttachment({
