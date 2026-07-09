@@ -30,10 +30,12 @@ type Tab = 'messages' | 'call'
 
 export function PhoneClient({
   initialConversations,
+  initialSelectedNumber,
   phoneNumber,
   phoneDisplayNumber,
 }: {
   initialConversations: Conversation[]
+  initialSelectedNumber: string | null
   phoneNumber: string | null
   phoneDisplayNumber: string | null
 }) {
@@ -71,6 +73,7 @@ export function PhoneClient({
       {tab === 'messages' ? (
         <Messages
           initialConversations={initialConversations}
+          initialSelectedNumber={initialSelectedNumber}
           phoneDisplayNumber={phoneDisplayNumber}
           phoneNumber={phoneNumber}
         />
@@ -86,15 +89,17 @@ export function PhoneClient({
 
 function Messages({
   initialConversations,
+  initialSelectedNumber,
   phoneNumber,
   phoneDisplayNumber,
 }: {
   initialConversations: Conversation[]
+  initialSelectedNumber: string | null
   phoneNumber: string | null
   phoneDisplayNumber: string | null
 }) {
   const [conversations, setConversations] = useState(initialConversations)
-  const [selected, setSelected] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string | null>(initialSelectedNumber)
   const [composingNew, setComposingNew] = useState(false)
   const [newTo, setNewTo] = useState('')
   const [messages, setMessages] = useState<SerializedMessage[]>([])
@@ -132,6 +137,10 @@ function Messages({
     },
     [loadThread]
   )
+
+  useEffect(() => {
+    if (initialSelectedNumber) void loadThread(initialSelectedNumber)
+  }, [initialSelectedNumber, loadThread])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on new messages
   useEffect(() => {

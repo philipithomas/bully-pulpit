@@ -19,6 +19,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
+import { trackClientEvent } from '@/lib/analytics/events'
 import { getExternalReferrer } from '@/lib/referrer'
 import { useAuthModal } from '@/stores/auth-store'
 
@@ -48,13 +49,23 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault()
+    trackClientEvent('Newsletter signup submitted', {
+      method: 'email',
+      placement: 'sign_in_modal',
+      newsletter: 'unspecified',
+      signed_in: false,
+    })
     setLoading(true)
 
     try {
       const res = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, source: getExternalReferrer() }),
+        body: JSON.stringify({
+          email,
+          source: getExternalReferrer(),
+          analytics_placement: 'sign_in_modal',
+        }),
       })
 
       if (!res.ok) {
@@ -81,7 +92,11 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
         const res = await fetch('/api/auth/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, code: value }),
+          body: JSON.stringify({
+            email,
+            code: value,
+            analytics_placement: 'sign_in_modal',
+          }),
         })
 
         if (!res.ok) {
@@ -207,7 +222,10 @@ function GoogleSignInSection({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <>
-      <GoogleSignInButton onSuccess={onSuccess} />
+      <GoogleSignInButton
+        analyticsPlacement="sign_in_modal"
+        onSuccess={onSuccess}
+      />
       <p className="text-center font-sans text-xs text-gray-400">or</p>
     </>
   )

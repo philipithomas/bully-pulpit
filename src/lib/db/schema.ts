@@ -4,8 +4,10 @@ import {
   bigserial,
   boolean,
   check,
+  doublePrecision,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -282,6 +284,183 @@ export const smsSends = pgTable(
   ]
 )
 
+/**
+ * One durable Bell thread. `client_conversation_id` is the browser's
+ * sessionStorage UUID and is deliberately separate from the addressable
+ * server ID. SMS numbers remain in text_messages; only a keyed digest is used
+ * here to find the durable thread without copying the phone transcript.
+ */
+export const bellConversations = pgTable(
+  'bell_conversations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clientConversationId: uuid('client_conversation_id').unique(),
+    surface: text('surface').notNull(),
+    status: text('status').notNull().default('active'),
+    subscriberId: bigint('subscriber_id', { mode: 'number' }).references(
+      () => subscribers.id,
+      { onDelete: 'set null' }
+    ),
+    smsSubscriberId: bigint('sms_subscriber_id', {
+      mode: 'number',
+    }).references(() => smsSubscribers.id, { onDelete: 'set null' }),
+    networkIdentityHash: text('network_identity_hash'),
+    networkIdentityPeriod: text('network_identity_period'),
+    smsPhoneHash: text('sms_phone_hash'),
+    firstPagePath: text('first_page_path'),
+    firstPageTitle: text('first_page_title'),
+    lastPagePath: text('last_page_path'),
+    lastPageTitle: text('last_page_title'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [
+    check(
+      'bell_conversations_surface_check',
+      sql`${table.surface} IN ('web', 'sms')`
+    ),
+    check(
+      'bell_conversations_status_check',
+      sql`${table.status} IN ('active', 'completed', 'error')`
+    ),
+    index('idx_bell_conversations_updated').on(
+      table.updatedAt.desc(),
+      table.id.desc()
+    ),
+    index('idx_bell_conversations_subscriber').on(table.subscriberId),
+    index('idx_bell_conversations_sms_subscriber').on(table.smsSubscriberId),
+    index('idx_bell_conversations_network_identity').on(
+      table.networkIdentityHash
+    ),
+    uniqueIndex('idx_bell_conversations_sms_phone').on(table.smsPhoneHash),
+    index('idx_bell_conversations_expiry')
+      .on(table.expiresAt)
+      .where(sql`${table.expiresAt} IS NOT NULL`),
+  ]
+)
+
+/** Canonical message content for Bell. SMS rows link to the transport record. */
+export const bellMessages = pgTable(
+  'bell_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => bellConversations.id, { onDelete: 'cascade' }),
+    role: text('role').notNull(),
+    authorKind: text('author_kind').notNull(),
+    content: text('content').notNull().default(''),
+    parts: jsonb('parts').$type<unknown[] | null>(),
+    clientMessageId: text('client_message_id'),
+    sourceTextMessageId: bigint('source_text_message_id', {
+      mode: 'number',
+    }).references(() => textMessages.id, { onDelete: 'set null' }),
+    replyToMessageId: uuid('reply_to_message_id'),
+    status: text('status').notNull().default('received'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    redactedAt: timestamp('redacted_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [
+    check(
+      'bell_messages_role_check',
+      sql`${table.role} IN ('user', 'assistant', 'system')`
+    ),
+    check(
+      'bell_messages_author_kind_check',
+      sql`${table.authorKind} IN ('visitor', 'bell', 'admin', 'system')`
+    ),
+    check(
+      'bell_messages_status_check',
+      sql`${table.status} IN ('received', 'generating', 'completed', 'aborted', 'error', 'redacted')`
+    ),
+    index('idx_bell_messages_conversation_created').on(
+      table.conversationId,
+      table.createdAt,
+      table.id
+    ),
+    uniqueIndex('idx_bell_messages_client_id').on(
+      table.conversationId,
+      table.clientMessageId
+    ),
+    uniqueIndex('idx_bell_messages_source_text').on(table.sourceTextMessageId),
+  ]
+)
+
+/** One model run for one Bell turn, with aggregate cost and usage metadata. */
+export const bellGenerations = pgTable(
+  'bell_generations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // The browser creates one UUID for each send/regenerate request. It is a
+    // durable idempotency key, not a conversation or message identifier.
+    requestId: uuid('request_id').unique(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => bellConversations.id, { onDelete: 'cascade' }),
+    userMessageId: uuid('user_message_id').references(() => bellMessages.id, {
+      onDelete: 'set null',
+    }),
+    assistantMessageId: uuid('assistant_message_id').references(
+      () => bellMessages.id,
+      { onDelete: 'set null' }
+    ),
+    status: text('status').notNull().default('queued'),
+    model: text('model'),
+    provider: text('provider'),
+    callId: text('call_id'),
+    gatewayGenerationId: text('gateway_generation_id'),
+    traceId: text('trace_id'),
+    workflowRunId: text('workflow_run_id'),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    totalTokens: integer('total_tokens'),
+    cachedInputTokens: integer('cached_input_tokens'),
+    reasoningTokens: integer('reasoning_tokens'),
+    costUsd: doublePrecision('cost_usd'),
+    latencyMs: integer('latency_ms'),
+    finishReason: text('finish_reason'),
+    toolsUsed: jsonb('tools_used').$type<string[] | null>(),
+    errorCode: text('error_code'),
+    errorMessage: text('error_message'),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [
+    check(
+      'bell_generations_status_check',
+      sql`${table.status} IN ('queued', 'running', 'completed', 'aborted', 'error')`
+    ),
+    index('idx_bell_generations_conversation_created').on(
+      table.conversationId,
+      table.createdAt,
+      table.id
+    ),
+    index('idx_bell_generations_status').on(table.status),
+    index('idx_bell_generations_workflow').on(table.workflowRunId),
+  ]
+)
+
 export type Subscriber = typeof subscribers.$inferSelect
 export type NewSubscriber = typeof subscribers.$inferInsert
 export type EmailSend = typeof emailSends.$inferSelect
@@ -299,3 +478,9 @@ export type SmsSubscriber = typeof smsSubscribers.$inferSelect
 export type NewSmsSubscriber = typeof smsSubscribers.$inferInsert
 export type SmsSend = typeof smsSends.$inferSelect
 export type NewSmsSend = typeof smsSends.$inferInsert
+export type BellConversation = typeof bellConversations.$inferSelect
+export type NewBellConversation = typeof bellConversations.$inferInsert
+export type BellMessage = typeof bellMessages.$inferSelect
+export type NewBellMessage = typeof bellMessages.$inferInsert
+export type BellGeneration = typeof bellGenerations.$inferSelect
+export type NewBellGeneration = typeof bellGenerations.$inferInsert

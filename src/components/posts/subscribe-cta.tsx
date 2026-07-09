@@ -6,6 +6,10 @@ import { useAuthContext } from '@/components/auth/auth-provider'
 import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { Spinner } from '@/components/ui/spinner'
+import {
+  type AnalyticsPlacement,
+  trackClientEvent,
+} from '@/lib/analytics/events'
 import { siteConfig } from '@/lib/config'
 import type { Newsletter } from '@/lib/content/types'
 import { newsletterPreferenceKeys } from '@/lib/newsletters'
@@ -27,6 +31,7 @@ export function SubscribeCta({
   smsSignupEnabled,
   smsSignupPhoneNumber = null,
   smsSignupDisplayNumber = null,
+  analyticsPlacement = 'post_footer',
 }: {
   newsletter: Newsletter
   className?: string
@@ -35,6 +40,7 @@ export function SubscribeCta({
   smsSignupEnabled?: boolean
   smsSignupPhoneNumber?: string | null
   smsSignupDisplayNumber?: string | null
+  analyticsPlacement?: AnalyticsPlacement
 }) {
   const { user, preferences, setPreferences, hasSession, loading } =
     useAuthContext()
@@ -48,12 +54,20 @@ export function SubscribeCta({
     hasSession === null ? '[[data-member]_&]:hidden' : ''
 
   const subscribeSignedIn = useCallback(async () => {
+    trackClientEvent('Newsletter preference submitted', {
+      placement: analyticsPlacement,
+      newsletter,
+      subscribed: true,
+    })
     setSaving(true)
     try {
       const res = await fetch('/api/auth/preferences', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [key]: true }),
+        body: JSON.stringify({
+          [key]: true,
+          analytics_placement: analyticsPlacement,
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => null)
@@ -70,7 +84,7 @@ export function SubscribeCta({
     } finally {
       setSaving(false)
     }
-  }, [config.name, key, setPreferences])
+  }, [analyticsPlacement, config.name, key, newsletter, setPreferences])
 
   if (hasSession && loading) return null
   if (user && (!preferences || subscribed)) return null
@@ -103,6 +117,8 @@ export function SubscribeCta({
             enabled={smsSignupEnabled}
             phoneDisplayNumber={smsSignupDisplayNumber}
             phoneNumber={smsSignupPhoneNumber}
+            analyticsPlacement={analyticsPlacement}
+            newsletter={newsletter}
           />
         </>
       ) : (
@@ -115,6 +131,7 @@ export function SubscribeCta({
           smsSignupEnabled={smsSignupEnabled}
           smsSignupPhoneNumber={smsSignupPhoneNumber}
           subscribeEndpoint={subscribeEndpoint}
+          analyticsPlacement={analyticsPlacement}
         />
       )}
     </div>

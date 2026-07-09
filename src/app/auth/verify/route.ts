@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { summarizeNewsletters } from '@/lib/analytics/events'
 import { setSessionCookies, signSession } from '@/lib/auth/jwt'
-import { verifyToken } from '@/lib/auth/login-service'
+import { verifyTokenWithMetadata } from '@/lib/auth/login-service'
 import {
   applyNewsletterOptIns,
   normalizedNewsletters,
@@ -14,15 +15,30 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    let subscriber = await verifyToken(token)
+    const verification = await verifyTokenWithMetadata(token)
+    let subscriber = verification.subscriber
+    const requestedNewsletters =
+      request.nextUrl.searchParams.getAll('newsletter')
     subscriber = await applyNewsletterOptIns(
       subscriber,
-      normalizedNewsletters(request.nextUrl.searchParams.getAll('newsletter'))
+      normalizedNewsletters(requestedNewsletters)
     )
     const jwt = await signSession(subscriber)
-    const response = NextResponse.redirect(
-      new URL('/?signed-in=1', request.url)
+    // Track on the token-free landing page instead of from this request. The
+    // server Analytics SDK derives its event URL from request context, which
+    // would otherwise include the one-time magic token.
+    const destination = new URL('/', request.url)
+    destination.searchParams.set('signed-in', '1')
+    destination.searchParams.set('analytics-signup', 'email-link')
+    destination.searchParams.set(
+      'analytics-newsletter',
+      summarizeNewsletters(requestedNewsletters)
     )
+    destination.searchParams.set(
+      'analytics-new-subscriber',
+      verification.newlyConfirmed ? '1' : '0'
+    )
+    const response = NextResponse.redirect(destination)
     setSessionCookies(response, jwt)
     return response
   } catch {

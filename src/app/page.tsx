@@ -153,6 +153,7 @@ export default async function HomePage() {
 
           {/* Subscribe (hidden when logged in) */}
           <InlineSignupForm
+            analyticsPlacement="homepage"
             hideWhenLoggedIn
             initialSubscriberCount={subscriberCount}
             smsSignupDisplayNumber={smsSignupDisplayNumber}

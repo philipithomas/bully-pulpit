@@ -12,34 +12,47 @@ This site collects minimal data:
 - **Email address**: When you subscribe to a newsletter.
 - **Name**: Only if voluntarily provided.
 - **Email delivery data**: Which emails were sent and delivery errors.
+- **Phone data**: Your phone number, text messages, call metadata, and voicemail when you call, text Bell, or subscribe by phone.
+- **Bell conversations**: Messages, replies, page context, tool use, model usage, and delivery or generation errors. Signed-in web conversations can be linked to your subscriber account. SMS conversations are linked to a phone number, which is a contact address rather than proof of identity.
+- **Anonymous Bell attribution**: A rotating, one-way hash derived from the network address can connect messages in an anonymous web conversation. The Bell database does not store the raw IP address.
 
 ## Analytics
 
-This site uses Vercel Web Analytics and Speed Insights to measure traffic and performance in aggregate. These tools are cookieless and do not track you across sites.
+This site uses Vercel Web Analytics and Speed Insights to measure traffic, feature use, and performance in aggregate. These tools are cookieless and do not track you across sites. Custom events use broad categories. They do not include email addresses, phone numbers, IP addresses, search text, Bell message text, or conversation identifiers. Private account, authentication, unsubscribe, and Printing press pages are excluded from both services.
 
 ## What we do not track
 
 - No open or click tracking in email.
+- No raw search queries in Web Analytics.
 - No advertising or cross-site tracking.
 
 ## Cookies
 
-A single authentication cookie (`bp_token`) is set when you sign in. It is used solely to identify your session. No advertising or tracking cookies are used.
+Two authentication cookies are set when you sign in. `bp_token` identifies your session, and `bp_has_session` lets the interface avoid a signed-out flash before the session loads. No advertising or tracking cookies are used.
 
 ## Email
 
 All emails are sent from mail@philipithomas.com via AWS SES. Each email includes an unsubscribe link. We do not sell or share your email address.
 
+## Bell
+
+Bell conversations are stored on this site so replies can keep their context, model cost and reliability can be reviewed, and failures can be diagnosed. Vercel AI Gateway and the selected AI model provider process each message to produce a reply. Bell requests require zero-data-retention routing through the Gateway. Bell conversation text is not sent to Vercel Web Analytics.
+
+Anonymous web Bell transcripts are deleted 90 days after the latest activity. Signed-in web transcripts are deleted 365 days after the latest activity. SMS conversation records remain until an administrator deletes or redacts them, or you request deletion.
+
 ## Data retention
 
-Your email address is stored as long as you remain subscribed. Upon unsubscribing, your data is retained for record-keeping but no further emails are sent.
+Your email address is stored as long as you remain subscribed. Upon unsubscribing, your subscription record is retained for record-keeping, but no further emails are sent. You can delete your email account data from the account page. To request deletion or redaction of phone or Bell data, email mail@philipithomas.com.
 
 ## Third-party services
 
 - **Vercel**: Vercel hosts and serves this site, including Vercel Web Analytics and Speed Insights.
-- **AI model providers**: AI features route through the Vercel AI Gateway to third-party model providers, currently Anthropic for the Bell assistant and Google for search embeddings when embedding search is enabled. These providers process the messages you send to Bell and search queries sent for embedding in order to generate responses or search results. Under the terms of their APIs, they do not use this content to train models.
+- **AI model providers**: AI features route through the Vercel AI Gateway to third-party model providers, currently OpenAI for Bell and Google for search embeddings when embedding search is enabled. These providers process Bell messages and search queries to generate responses or search results. Under the terms of their APIs, they do not use this content to train models.
 - **AWS SES**: Amazon Simple Email Service delivers all email.
 - **Neon**: Neon hosts the subscriber database.
+- **Twilio**: Twilio carries phone calls and text messages.
+- **Google**: Google provides optional account sign-in.
+- **Automattic Gravatar**: The private subscriber administration page requests avatars using a one-way hash of each subscriber email address.
 
 ## Contact
 

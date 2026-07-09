@@ -24,6 +24,11 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
+import {
+  type AnalyticsPlacement,
+  summarizeNewsletters,
+  trackClientEvent,
+} from '@/lib/analytics/events'
 import type { Newsletter } from '@/lib/content/types'
 import { formatMemberCount } from '@/lib/format-member-count'
 import { defaultSignupNewsletters } from '@/lib/newsletters'
@@ -43,6 +48,7 @@ interface Props {
   smsSignupEnabled?: boolean
   smsSignupPhoneNumber?: string | null
   smsSignupDisplayNumber?: string | null
+  analyticsPlacement?: AnalyticsPlacement
   /**
    * When true and no initial count was provided, fetches the live subscriber
    * count client-side and uses it as the header text ("Join N other subscribers:").
@@ -66,6 +72,7 @@ export function InlineSignupForm({
   smsSignupEnabled,
   smsSignupPhoneNumber = null,
   smsSignupDisplayNumber = null,
+  analyticsPlacement = 'unknown',
   showSubscriberCount = false,
 }: Props) {
   const { user, hasSession, loading: authLoading } = useAuthContext()
@@ -107,6 +114,12 @@ export function InlineSignupForm({
       e.preventDefault()
       if (!email) return
 
+      trackClientEvent('Newsletter signup submitted', {
+        method: 'email',
+        placement: analyticsPlacement,
+        newsletter: summarizeNewsletters(newsletters),
+        signed_in: Boolean(user),
+      })
       setLoading(true)
       try {
         const res = await fetch(subscribeEndpoint, {
@@ -116,6 +129,7 @@ export function InlineSignupForm({
             email,
             source: getExternalReferrer(),
             newsletters,
+            analytics_placement: analyticsPlacement,
           }),
         })
         if (!res.ok) {
@@ -135,7 +149,7 @@ export function InlineSignupForm({
         setLoading(false)
       }
     },
-    [email, newsletters, subscribeEndpoint]
+    [analyticsPlacement, email, newsletters, subscribeEndpoint, user]
   )
 
   const verifyCode = useCallback(
@@ -147,7 +161,12 @@ export function InlineSignupForm({
         const res = await fetch('/api/auth/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, code: value, newsletters }),
+          body: JSON.stringify({
+            email,
+            code: value,
+            newsletters,
+            analytics_placement: analyticsPlacement,
+          }),
         })
         if (!res.ok) {
           const data = await res.json()
@@ -166,7 +185,7 @@ export function InlineSignupForm({
         submittingRef.current = false
       }
     },
-    [email, newsletters]
+    [analyticsPlacement, email, newsletters]
   )
 
   const initialMemberClassName =
@@ -271,6 +290,8 @@ export function InlineSignupForm({
         enabled={smsSignupEnabled}
         phoneDisplayNumber={smsSignupDisplayNumber}
         phoneNumber={smsSignupPhoneNumber}
+        analyticsPlacement={analyticsPlacement}
+        newsletter={summarizeNewsletters(newsletters)}
       />
 
       {step === 'code' ? (
@@ -279,6 +300,7 @@ export function InlineSignupForm({
           email={email}
           loading={loading}
           newsletters={newsletters}
+          analyticsPlacement={analyticsPlacement}
           onCodeChange={setCode}
           onDifferentEmail={handleDifferentEmail}
           onSignedIn={finishSignedIn}
@@ -294,6 +316,7 @@ function SignupConfirmationDialog({
   email,
   loading,
   newsletters,
+  analyticsPlacement,
   onCodeChange,
   onDifferentEmail,
   onSignedIn,
@@ -303,6 +326,7 @@ function SignupConfirmationDialog({
   email: string
   loading: boolean
   newsletters: Newsletter[]
+  analyticsPlacement: AnalyticsPlacement
   onCodeChange: (value: string) => void
   onDifferentEmail: () => void
   onSignedIn: () => void
@@ -371,6 +395,7 @@ function SignupConfirmationDialog({
               <GoogleSignInButton
                 loginHint={email}
                 newsletters={newsletters}
+                analyticsPlacement={analyticsPlacement}
                 onSuccess={handleGoogleSuccess}
               />
             </>

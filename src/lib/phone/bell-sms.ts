@@ -1,18 +1,32 @@
 import { generateText } from 'ai'
+import { bucketDuration, bucketTurn } from '@/lib/analytics/events'
+import { trackServerEvent } from '@/lib/analytics/server'
 import {
+  bellGatewayCost,
   bellModel,
-  bellProviderOptions,
   bellReasoning,
   bellStopWhen,
   bellTools,
+  getBellProviderOptions,
   prepareBellStep,
 } from '@/lib/chat/bell-generation'
+import { smsIdentityHash } from '@/lib/chat/bell-identity'
 import { scrubLeakedToolJson } from '@/lib/chat/scrub-leaked-tool-json'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { siteConfig } from '@/lib/config'
 import { markdownToPlaintext } from '@/lib/content/render-html'
 import {
-  createTextMessage,
+  completeBellGeneration,
+  failBellGeneration,
+  markBellGenerationRunning,
+  setBellGenerationAssistantMessageId,
+} from '@/lib/db/queries/bell-generations'
+import {
+  createBellMessage,
+  updateBellMessage,
+} from '@/lib/db/queries/bell-messages'
+import {
+  createTextMessageWithStatus,
   recentConversationWith,
 } from '@/lib/db/queries/text-messages'
 import type { TextMessage } from '@/lib/db/schema'
@@ -22,6 +36,14 @@ export type BellSmsInput = {
   from: string
   to: string
   inboundMessageId: number
+  conversationId: string
+  userMessageId: string
+  generationId: string
+}
+
+export type BellSmsGenerationResult = {
+  body: string
+  assistantMessageId: string
 }
 
 export const BELL_SMS_PREFIX = '[Bell AI]'
@@ -217,33 +239,125 @@ export function buildBellSmsPrompt(messages: TextMessage[]): string {
 /** Generates one final, transport-ready Bell SMS body. */
 export async function generateBellSmsBody(
   input: BellSmsInput
-): Promise<string> {
+): Promise<BellSmsGenerationResult> {
+  const startedAt = Date.now()
+  await markBellGenerationRunning(input.generationId)
   const history = await recentConversationWith(
     input.from,
     input.inboundMessageId
   )
-  const { text } = await generateText({
-    model: bellModel,
-    reasoning: bellReasoning,
-    providerOptions: bellProviderOptions,
-    maxOutputTokens: 256,
-    maxRetries: 0,
-    abortSignal: AbortSignal.timeout(GENERATION_TIMEOUT_MS),
-    runtimeContext: { surface: 'sms' },
-    telemetry: {
-      isEnabled: true,
-      functionId: 'bell-sms',
-      recordInputs: true,
-      recordOutputs: true,
-      includeRuntimeContext: { surface: true },
-    },
-    system: getSystemPrompt({ surface: 'sms' }),
-    prompt: buildBellSmsPrompt(history),
-    tools: bellTools,
-    stopWhen: bellStopWhen,
-    prepareStep: prepareBellStep,
-  })
-  return formatBellSmsBody(text)
+  try {
+    const generated = await generateText({
+      model: bellModel,
+      reasoning: bellReasoning,
+      providerOptions: getBellProviderOptions({
+        surface: 'sms',
+        pseudonymousUser: `sms:${smsIdentityHash(input.from)}`,
+      }),
+      maxOutputTokens: 256,
+      maxRetries: 0,
+      abortSignal: AbortSignal.timeout(GENERATION_TIMEOUT_MS),
+      runtimeContext: { surface: 'sms' },
+      telemetry: {
+        isEnabled: true,
+        functionId: 'bell-sms',
+        recordInputs: false,
+        recordOutputs: false,
+        includeRuntimeContext: { surface: true },
+      },
+      system: getSystemPrompt({ surface: 'sms' }),
+      prompt: buildBellSmsPrompt(history),
+      tools: bellTools,
+      stopWhen: bellStopWhen,
+      prepareStep: prepareBellStep,
+    })
+    const body = formatBellSmsBody(generated.text)
+    const assistant = await createBellMessage({
+      conversationId: input.conversationId,
+      role: 'assistant',
+      authorKind: 'bell',
+      content: body,
+      parts: null,
+      clientMessageId: `generation:${input.generationId}`,
+      replyToMessageId: input.userMessageId,
+      status: 'generating',
+    })
+    await setBellGenerationAssistantMessageId(
+      input.generationId,
+      assistant.message.id
+    )
+    const gateway = await bellGatewayCost(
+      generated.steps.map((step) => step.providerMetadata)
+    )
+    const toolsUsed = Array.from(
+      new Set(
+        generated.steps.flatMap((step) =>
+          step.toolCalls.map((call) => call.toolName)
+        )
+      )
+    )
+    await completeBellGeneration(input.generationId, {
+      assistantMessageId: assistant.message.id,
+      model: generated.finalStep.model.modelId,
+      provider: generated.finalStep.model.provider,
+      callId: generated.finalStep.callId,
+      gatewayGenerationId: gateway.gatewayGenerationId,
+      inputTokens: generated.usage.inputTokens ?? null,
+      outputTokens: generated.usage.outputTokens ?? null,
+      totalTokens: generated.usage.totalTokens ?? null,
+      cachedInputTokens:
+        generated.usage.inputTokenDetails.cacheReadTokens ?? null,
+      reasoningTokens:
+        generated.usage.outputTokenDetails.reasoningTokens ?? null,
+      costUsd: gateway.costUsd,
+      latencyMs: Date.now() - startedAt,
+      finishReason: generated.finishReason,
+      toolsUsed,
+    })
+    await trackServerEvent(null, 'Bell reply finished', {
+      surface: 'sms',
+      outcome: 'success',
+      duration: bucketDuration(Date.now() - startedAt),
+      finish_reason: smsAnalyticsFinishReason(generated.finishReason),
+      tool_used: toolsUsed.length > 0,
+      turn: bucketTurn(
+        history.filter((message) => message.direction === 'inbound').length
+      ),
+    })
+    return { body, assistantMessageId: assistant.message.id }
+  } catch (error) {
+    await failBellGeneration(input.generationId, error, Date.now() - startedAt)
+    await trackServerEvent(null, 'Bell reply finished', {
+      surface: 'sms',
+      outcome: 'error',
+      duration: bucketDuration(Date.now() - startedAt),
+      finish_reason: 'error',
+      tool_used: false,
+      turn: bucketTurn(
+        history.filter((message) => message.direction === 'inbound').length
+      ),
+    })
+    throw error
+  }
+}
+
+function smsAnalyticsFinishReason(
+  reason: string
+):
+  | 'stop'
+  | 'length'
+  | 'content_filter'
+  | 'tool_calls'
+  | 'error'
+  | 'other'
+  | 'unknown' {
+  if (reason === 'stop' || reason === 'length' || reason === 'error') {
+    return reason
+  }
+  if (reason === 'content-filter') return 'content_filter'
+  if (reason === 'tool-calls') return 'tool_calls'
+  if (reason === 'unknown') return 'unknown'
+  return 'other'
 }
 
 /** Sends one Bell reply. Workflow persists this step result before moving on. */
@@ -258,9 +372,10 @@ export async function sendBellSmsBody(
 export async function recordBellSms(
   input: BellSmsInput,
   body: string,
-  result: SentSms | null
+  result: SentSms | null,
+  assistantMessageId?: string | null
 ): Promise<void> {
-  await createTextMessage({
+  const transport = await createTextMessageWithStatus({
     fromNumber: input.to,
     toNumber: input.from,
     body,
@@ -269,4 +384,26 @@ export async function recordBellSms(
     replyToMessageId: input.inboundMessageId,
     status: result?.status ?? 'failed',
   })
+  const assistant = assistantMessageId
+    ? await updateBellMessage(assistantMessageId, {
+        content: '',
+        parts: null,
+        sourceTextMessageId: transport.message.id,
+        status: result ? 'completed' : 'error',
+      })
+    : (
+        await createBellMessage({
+          conversationId: input.conversationId,
+          role: 'assistant',
+          authorKind: 'bell',
+          content: '',
+          parts: null,
+          sourceTextMessageId: transport.message.id,
+          replyToMessageId: input.userMessageId,
+          status: result ? 'completed' : 'error',
+        })
+      ).message
+  if (assistant) {
+    await setBellGenerationAssistantMessageId(input.generationId, assistant.id)
+  }
 }

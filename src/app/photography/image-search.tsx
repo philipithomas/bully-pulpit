@@ -1,10 +1,23 @@
 'use client'
 
-import { track } from '@vercel/analytics'
 import { Search } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import {
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react'
+import {
+  bucketDuration,
+  bucketQueryLength,
+  bucketResultCount,
+  parseAnalyticsNewsletter,
+  trackClientEvent,
+} from '@/lib/analytics/events'
 
 interface ImageSearchResult {
   id: string
@@ -23,7 +36,6 @@ interface ImageSearchResult {
 interface ImageSearchResponse {
   results?: ImageSearchResult[]
   mode?: 'hybrid' | 'lexical'
-  durationMs?: number
   error?: string
 }
 
@@ -37,6 +49,20 @@ export function PhotographyImageSearch() {
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController>(null)
   const cacheRef = useRef(new Map<string, ImageSearchResult[]>())
+
+  const handleResultClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      trackClientEvent('Search result selected', {
+        surface: 'photography',
+        rank: Number(event.currentTarget.dataset.searchRank) || 1,
+        result_type: 'image',
+        newsletter: parseAnalyticsNewsletter(
+          event.currentTarget.dataset.searchNewsletter
+        ),
+      })
+    },
+    []
+  )
 
   const runSearch = useCallback(async (value: string) => {
     const cached = cacheRef.current.get(value)
@@ -69,13 +95,15 @@ export function PhotographyImageSearch() {
       setResults(nextResults)
       if (cacheRef.current.size > 50) cacheRef.current.clear()
       cacheRef.current.set(value, nextResults)
-      track('Photography Image Search', {
-        query: value,
-        query_length: value.length,
-        results: nextResults.length,
-        search_mode: data?.mode ?? 'unknown',
-        server_duration_ms: data?.durationMs,
-        client_duration_ms: Math.round(performance.now() - started),
+      trackClientEvent('Search completed', {
+        surface: 'photography',
+        query_length: bucketQueryLength(value.length),
+        result_count: bucketResultCount(nextResults.length),
+        search_mode:
+          data?.mode === 'hybrid' || data?.mode === 'lexical'
+            ? data.mode
+            : 'unknown',
+        duration: bucketDuration(performance.now() - started),
       })
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
@@ -157,13 +185,16 @@ export function PhotographyImageSearch() {
 
       {results.length > 0 ? (
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {results.map((result) => {
+          {results.map((result, index) => {
             const image = result.image
             if (!image) return null
             return (
               <Link
                 key={result.id}
                 href={image.url}
+                data-search-rank={index + 1}
+                data-search-newsletter={result.newsletter}
+                onClick={handleResultClick}
                 className="group block min-w-0"
               >
                 <span className="relative block aspect-[4/3] overflow-hidden bg-gray-100">

@@ -1,5 +1,12 @@
+import { trace } from '@opentelemetry/api'
 import { after, NextResponse } from 'next/server'
 import { start } from 'workflow/api'
+import { smsIdentityHash } from '@/lib/chat/bell-identity'
+import {
+  createSmsBellTurn,
+  getOrCreateSmsBellConversation,
+} from '@/lib/db/queries/bell-conversations'
+import { setBellGenerationWorkflowRunId } from '@/lib/db/queries/bell-generations'
 import {
   claimPhoneWebhookEvent,
   findOrCreatePhoneWebhookEvent,
@@ -157,9 +164,28 @@ export async function POST(request: Request) {
     // no durable dedupe key, so keep the admin notification but do not risk
     // sending duplicate AI replies to a malformed/replayed request.
     if (body.trim() && messageSid) {
-      await start(replyToSmsWorkflow, [
-        { from, to, inboundMessageId: inbound.message.id },
+      const smsSubscriber = await findSmsSubscriberByPhoneNumber(from)
+      const conversation = await getOrCreateSmsBellConversation({
+        smsPhoneHash: smsIdentityHash(from),
+        smsSubscriberId: smsSubscriber?.id,
+      })
+      const activeSpan = trace.getActiveSpan()?.spanContext()
+      const turn = await createSmsBellTurn({
+        conversation,
+        inboundTextMessageId: inbound.message.id,
+        traceId: activeSpan?.traceId,
+      })
+      const run = await start(replyToSmsWorkflow, [
+        {
+          from,
+          to,
+          inboundMessageId: inbound.message.id,
+          conversationId: conversation.id,
+          userMessageId: turn.userMessage.id,
+          generationId: turn.generation.id,
+        },
       ])
+      await setBellGenerationWorkflowRunId(turn.generation.id, run.runId)
     }
     if (webhookEvent && lease) {
       const marked = await markPhoneWebhookEventProcessed(

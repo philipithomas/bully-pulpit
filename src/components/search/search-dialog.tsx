@@ -1,12 +1,18 @@
 'use client'
 
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
-import { track } from '@vercel/analytics'
 import { Search } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Spinner } from '@/components/ui/spinner'
+import {
+  bucketDuration,
+  bucketQueryLength,
+  bucketResultCount,
+  parseAnalyticsNewsletter,
+  trackClientEvent,
+} from '@/lib/analytics/events'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
@@ -38,8 +44,9 @@ interface SearchResult {
 interface SearchResponse {
   results: SearchResult[]
   mode?: 'hybrid' | 'lexical'
-  durationMs?: number
 }
+
+type SearchMode = 'hybrid' | 'lexical' | 'unknown'
 
 const NEWSLETTER_COLORS: Record<string, string> = {
   contraption: 'bg-forest',
@@ -81,8 +88,11 @@ export function SearchDialog({
   const [loading, setLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [searchMode, setSearchMode] = useState<SearchMode>('unknown')
   // Client-side cache keyed by query so back-typing repaints instantly
-  const cacheRef = useRef(new Map<string, SearchResult[]>())
+  const cacheRef = useRef(
+    new Map<string, { results: SearchResult[]; mode: SearchMode }>()
+  )
 
   // Focus input and load recent posts when dialog opens
   useEffect(() => {
@@ -91,6 +101,7 @@ export function SearchDialog({
       setResults([])
       setSearchError(null)
       setActiveIndex(0)
+      setSearchMode('unknown')
       setTimeout(() => inputRef.current?.focus(), 50)
 
       if (recentPosts.length === 0) {
@@ -140,16 +151,20 @@ export function SearchDialog({
       if (res.ok) {
         const data = (await res.json()) as SearchResponse
         const results = data.results ?? []
+        const mode: SearchMode =
+          data.mode === 'hybrid' || data.mode === 'lexical'
+            ? data.mode
+            : 'unknown'
         setResults(results)
+        setSearchMode(mode)
         if (cacheRef.current.size > 100) cacheRef.current.clear()
-        cacheRef.current.set(q, results)
-        track('Search', {
-          query: q,
-          query_length: q.length,
-          results: results.length,
-          search_mode: data.mode ?? 'unknown',
-          server_duration_ms: data.durationMs,
-          client_duration_ms: Math.round(performance.now() - started),
+        cacheRef.current.set(q, { results, mode })
+        trackClientEvent('Search completed', {
+          surface: 'site_search',
+          query_length: bucketQueryLength(q.length),
+          result_count: bucketResultCount(results.length),
+          search_mode: mode,
+          duration: bucketDuration(performance.now() - started),
         })
       } else {
         // Surface definitive rejections instead of leaving the previous
@@ -184,10 +199,12 @@ export function SearchDialog({
       }
       const cached = cacheRef.current.get(value)
       if (cached) {
-        setResults(cached)
+        setResults(cached.results)
+        setSearchMode(cached.mode)
         setLoading(false)
         return
       }
+      setSearchMode('unknown')
       setLoading(true)
       fetchResults(value)
     },
@@ -195,17 +212,30 @@ export function SearchDialog({
   )
 
   const navigate = useCallback(
-    (url: string) => {
+    (result: SearchResult, index: number) => {
+      if (query.length >= 2) {
+        trackClientEvent('Search result selected', {
+          surface: 'site_search',
+          rank: index + 1,
+          result_type: result.type ?? 'unknown',
+          newsletter: parseAnalyticsNewsletter(result.newsletter),
+        })
+      }
       onOpenChange(false)
+      const { url } = result
       router.push(url.startsWith('/') ? url : `/${url}`)
     },
-    [router, onOpenChange]
+    [query.length, router, onOpenChange]
   )
 
   const handleAskAI = useCallback(() => {
+    trackClientEvent('Search asked Bell', {
+      had_results: !loading && results.length > 0,
+      search_mode: searchMode,
+    })
     useChatSidebar.getState().openSidebar(query)
     onOpenChange(false)
-  }, [query, onOpenChange])
+  }, [loading, query, results.length, searchMode, onOpenChange])
 
   const showAskAI = query.length >= 2
   const displayResults = query.length < 2 ? recentPosts : results
@@ -238,7 +268,7 @@ export function SearchDialog({
         if (showAskAI && activeIndex === displayResults.length) {
           handleAskAI()
         } else if (displayResults[activeIndex]) {
-          navigate(displayResults[activeIndex].url)
+          navigate(displayResults[activeIndex], activeIndex)
         }
       }
     },
@@ -309,7 +339,7 @@ export function SearchDialog({
                             id={`${baseId}-option-${i}`}
                             aria-selected={i === activeIndex}
                             tabIndex={-1}
-                            onClick={() => navigate(result.url)}
+                            onClick={() => navigate(result, i)}
                             onMouseEnter={() => setActiveIndex(i)}
                             className={cn(
                               'flex w-full gap-3 px-3 py-2.5 text-left transition-colors',

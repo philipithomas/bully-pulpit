@@ -1,5 +1,6 @@
 import { getStepMetadata, RetryableError } from 'workflow'
 import {
+  type BellSmsGenerationResult,
   type BellSmsInput,
   generateBellSmsBody,
   recordBellSms,
@@ -17,7 +18,7 @@ const FALLBACK_BELL_SMS_BODY =
 /** Generates the stable body once so delivery retries do not rewrite it. */
 export async function generateBellSmsStep(
   input: BellSmsInput
-): Promise<string> {
+): Promise<BellSmsGenerationResult> {
   'use step'
   console.log(
     `[replyToSms] generate START inboundMessageId=${input.inboundMessageId}`
@@ -68,13 +69,14 @@ sendBellSmsStep.maxRetries = 5
 export async function recordBellSmsStep(
   input: BellSmsInput,
   body: string,
-  result: SentSms | null
+  result: SentSms | null,
+  assistantMessageId?: string | null
 ): Promise<void> {
   'use step'
   console.log(
     `[replyToSms] record START inboundMessageId=${input.inboundMessageId}`
   )
-  await recordBellSms(input, body, result)
+  await recordBellSms(input, body, result, assistantMessageId)
   console.log(
     `[replyToSms] record DONE inboundMessageId=${input.inboundMessageId}`
   )
@@ -89,20 +91,23 @@ export async function replyToSmsWorkflow(input: BellSmsInput): Promise<void> {
     `[replyToSmsWorkflow] START inboundMessageId=${input.inboundMessageId}`
   )
 
-  let body: string
+  let generated: BellSmsGenerationResult
   try {
-    body = await generateBellSmsStep(input)
+    generated = await generateBellSmsStep(input)
   } catch (err) {
     console.error(
       `[replyToSmsWorkflow] generation failed; using fallback inboundMessageId=${input.inboundMessageId}`,
       err
     )
-    body = FALLBACK_BELL_SMS_BODY
+    generated = {
+      body: FALLBACK_BELL_SMS_BODY,
+      assistantMessageId: '',
+    }
   }
 
   let result: SentSms | null
   try {
-    result = await sendBellSmsStep(input, body)
+    result = await sendBellSmsStep(input, generated.body)
   } catch (err) {
     console.error(
       `[replyToSmsWorkflow] delivery failed; recording failure inboundMessageId=${input.inboundMessageId}`,
@@ -110,7 +115,12 @@ export async function replyToSmsWorkflow(input: BellSmsInput): Promise<void> {
     )
     result = null
   }
-  await recordBellSmsStep(input, body, result)
+  await recordBellSmsStep(
+    input,
+    generated.body,
+    result,
+    generated.assistantMessageId || null
+  )
   console.log(
     `[replyToSmsWorkflow] DONE inboundMessageId=${input.inboundMessageId}`
   )

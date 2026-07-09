@@ -27,6 +27,14 @@ const INPUT = {
   from: '+15551234567',
   to: '+12123473190',
   inboundMessageId: 42,
+  conversationId: '11111111-1111-4111-8111-111111111111',
+  userMessageId: '22222222-2222-4222-8222-222222222222',
+  generationId: '33333333-3333-4333-8333-333333333333',
+}
+
+const GENERATED = {
+  body: '[Bell AI] Answer',
+  assistantMessageId: '44444444-4444-4444-8444-444444444444',
 }
 
 beforeEach(() => {
@@ -51,16 +59,21 @@ afterEach(() => {
 
 describe('replyToSmsWorkflow', () => {
   it('generates once and sends the stable body', async () => {
-    vi.mocked(generateBellSmsBody).mockResolvedValue('[Bell AI] Answer')
+    vi.mocked(generateBellSmsBody).mockResolvedValue(GENERATED)
 
     await replyToSmsWorkflow(INPUT)
 
     expect(generateBellSmsBody).toHaveBeenCalledWith(INPUT)
     expect(sendBellSmsBody).toHaveBeenCalledWith(INPUT, '[Bell AI] Answer')
-    expect(recordBellSms).toHaveBeenCalledWith(INPUT, '[Bell AI] Answer', {
-      sid: 'SM_REPLY',
-      status: 'queued',
-    })
+    expect(recordBellSms).toHaveBeenCalledWith(
+      INPUT,
+      '[Bell AI] Answer',
+      {
+        sid: 'SM_REPLY',
+        status: 'queued',
+      },
+      GENERATED.assistantMessageId
+    )
   })
 
   it('sends a fixed fallback after generation exhausts its retries', async () => {
@@ -75,12 +88,17 @@ describe('replyToSmsWorkflow', () => {
   })
 
   it('records a failed row after delivery exhausts its retries', async () => {
-    vi.mocked(generateBellSmsBody).mockResolvedValue('[Bell AI] Answer')
+    vi.mocked(generateBellSmsBody).mockResolvedValue(GENERATED)
     vi.mocked(sendBellSmsBody).mockRejectedValue(new TypeError('network down'))
 
     await replyToSmsWorkflow(INPUT)
 
-    expect(recordBellSms).toHaveBeenCalledWith(INPUT, '[Bell AI] Answer', null)
+    expect(recordBellSms).toHaveBeenCalledWith(
+      INPUT,
+      '[Bell AI] Answer',
+      null,
+      GENERATED.assistantMessageId
+    )
   })
 })
 
@@ -113,7 +131,8 @@ describe('sendBellSmsStep', () => {
     expect(recordBellSms).toHaveBeenCalledWith(
       INPUT,
       '[Bell AI] Answer',
-      result
+      result,
+      undefined
     )
     expect(sendBellSmsBody).not.toHaveBeenCalled()
   })

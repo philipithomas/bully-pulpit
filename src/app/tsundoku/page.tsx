@@ -186,6 +186,7 @@ export default async function TsundokuPage() {
           </div>
           <SubscribeCta
             newsletter="tsundoku"
+            analyticsPlacement="newsletter_page"
             align="center"
             className="mt-5"
             smsSignupDisplayNumber={smsSignupDisplayNumber}

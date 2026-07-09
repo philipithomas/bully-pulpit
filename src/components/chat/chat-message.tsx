@@ -1,10 +1,20 @@
 import type { UIMessage } from 'ai'
 import Image from 'next/image'
 import Link from 'next/link'
-import type { ComponentPropsWithoutRef } from 'react'
+import {
+  type ComponentPropsWithoutRef,
+  type MouseEvent,
+  useCallback,
+} from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Spinner } from '@/components/ui/spinner'
+import {
+  type AnalyticsNewsletter,
+  analyticsPageType,
+  summarizeNewsletters,
+  trackClientEvent,
+} from '@/lib/analytics/events'
 import { scrubLeakedToolJson } from '@/lib/chat/scrub-leaked-tool-json'
 import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
@@ -51,6 +61,7 @@ interface ToolImage {
 interface ToolResultWithImages {
   title?: string
   url?: string
+  newsletter?: string
   coverImage?: string
   image?: ToolImage
   images?: ToolImage[]
@@ -75,10 +86,10 @@ function parseToolOutput(output: unknown): ToolResultWithImages[] {
 
 function ToolImageResults({
   output,
-  onLocalLinkClick,
+  onCitationClick,
 }: {
   output: unknown
-  onLocalLinkClick?: () => void
+  onCitationClick?: (newsletter: AnalyticsNewsletter) => void
 }) {
   const cards = parseToolOutput(output)
     .flatMap((result) => {
@@ -102,6 +113,9 @@ function ToolImageResults({
         alt: image.alt || result.title || 'Search result image',
         url: image.url || result.url || '/',
         label: image.description || image.alt || result.title || 'Image',
+        newsletter: result.newsletter
+          ? summarizeNewsletters([result.newsletter])
+          : 'unknown',
       }))
     })
     .filter((image) => image.src)
@@ -111,6 +125,17 @@ function ToolImageResults({
     )
     .slice(0, 4)
 
+  const handleCitationClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      onCitationClick?.(
+        summarizeNewsletters([
+          event.currentTarget.dataset.citationNewsletter ?? 'unknown',
+        ])
+      )
+    },
+    [onCitationClick]
+  )
+
   if (cards.length === 0) return null
 
   return (
@@ -119,7 +144,8 @@ function ToolImageResults({
         <Link
           key={image.src}
           href={image.url}
-          onClick={onLocalLinkClick}
+          data-citation-newsletter={image.newsletter}
+          onClick={handleCitationClick}
           className="group min-w-0"
         >
           <Image
@@ -142,12 +168,65 @@ function ToolImageResults({
 const linkClass =
   'underline decoration-gray-300 underline-offset-2 transition-colors hover:decoration-current'
 
+type MarkdownCitationClick = (
+  destinationType: 'post' | 'page' | 'external' | 'unknown',
+  newsletter: AnalyticsNewsletter
+) => void
+
+function TrackedMarkdownLink({
+  href,
+  children,
+  onCitationClick,
+}: {
+  href?: string
+  children: React.ReactNode
+  onCitationClick?: MarkdownCitationClick
+}) {
+  const normalized = (href ?? '')
+    .replace(/^https?:\/\/(www\.)?philipithomas\.com/, '')
+    .replace(/^$/, '/')
+  const isLocal = normalized.startsWith('/')
+  const pageType = analyticsPageType(normalized.split(/[?#]/)[0])
+  const destinationType =
+    pageType === 'post' ? ('post' as const) : ('page' as const)
+  const firstSegment = normalized.split('/').filter(Boolean)[0]
+  const newsletter = firstSegment
+    ? summarizeNewsletters([firstSegment])
+    : 'unknown'
+  const handleLocalClick = useCallback(() => {
+    onCitationClick?.(destinationType, newsletter)
+  }, [destinationType, newsletter, onCitationClick])
+  const handleExternalClick = useCallback(() => {
+    onCitationClick?.('external', 'unknown')
+  }, [onCitationClick])
+
+  if (isLocal) {
+    return (
+      <Link href={normalized} className={linkClass} onClick={handleLocalClick}>
+        {children}
+      </Link>
+    )
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={linkClass}
+      onClick={handleExternalClick}
+    >
+      {children}
+    </a>
+  )
+}
+
 function ChatMarkdown({
   text,
-  onLocalLinkClick,
+  onCitationClick,
 }: {
   text: string
-  onLocalLinkClick?: () => void
+  onCitationClick?: MarkdownCitationClick
 }) {
   return (
     <Markdown
@@ -236,33 +315,11 @@ function ChatMarkdown({
               className="mr-1.5 align-middle accent-gray-700"
             />
           ) : null,
-        a: ({ href, children }) => {
-          const normalized = (href ?? '')
-            .replace(/^https?:\/\/(www\.)?philipithomas\.com/, '')
-            .replace(/^$/, '/')
-          const isLocal = normalized.startsWith('/')
-          if (isLocal) {
-            return (
-              <Link
-                href={normalized}
-                className={linkClass}
-                onClick={onLocalLinkClick}
-              >
-                {children}
-              </Link>
-            )
-          }
-          return (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={linkClass}
-            >
-              {children}
-            </a>
-          )
-        },
+        a: ({ href, children }) => (
+          <TrackedMarkdownLink href={href} onCitationClick={onCitationClick}>
+            {children}
+          </TrackedMarkdownLink>
+        ),
       }}
     >
       {text}
@@ -289,11 +346,29 @@ export function ChatMessage({
 }) {
   const isUser = message.role === 'user'
 
-  const handleLocalLinkClick = () => {
-    if (window.innerWidth >= 1024) {
-      useChatSidebar.getState().setPinned(true)
-    }
-  }
+  const handleCitationClick = useCallback(
+    (
+      destinationType: 'post' | 'page' | 'image' | 'external' | 'unknown',
+      newsletter: AnalyticsNewsletter
+    ) => {
+      if (window.innerWidth >= 1024) {
+        useChatSidebar.getState().setPinned(true)
+      }
+      trackClientEvent('Bell citation selected', {
+        surface: 'web',
+        destination_type: destinationType,
+        newsletter,
+      })
+    },
+    []
+  )
+
+  const handleImageCitationClick = useCallback(
+    (newsletter: AnalyticsNewsletter) => {
+      handleCitationClick('image', newsletter)
+    },
+    [handleCitationClick]
+  )
 
   return (
     <div className={cn('flex', isUser ? 'justify-end' : '')}>
@@ -313,7 +388,7 @@ export function ChatMessage({
               <div key={key}>
                 <ChatMarkdown
                   text={isUser ? part.text : scrubLeakedToolJson(part.text)}
-                  onLocalLinkClick={handleLocalLinkClick}
+                  onCitationClick={isUser ? undefined : handleCitationClick}
                 />
                 {isStreaming &&
                   !isUser &&
@@ -363,7 +438,7 @@ export function ChatMessage({
                   {done && (
                     <ToolImageResults
                       output={output}
-                      onLocalLinkClick={handleLocalLinkClick}
+                      onCitationClick={handleImageCitationClick}
                     />
                   )}
                 </div>
@@ -407,7 +482,7 @@ export function ChatMessage({
                 {done && (
                   <ToolImageResults
                     output={output}
-                    onLocalLinkClick={handleLocalLinkClick}
+                    onCitationClick={handleImageCitationClick}
                   />
                 )}
               </div>

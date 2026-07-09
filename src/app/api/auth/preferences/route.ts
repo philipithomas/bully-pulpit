@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod/v4'
+import { parseAnalyticsPlacement } from '@/lib/analytics/events'
+import { trackServerEvent } from '@/lib/analytics/server'
 import { clearSessionCookies, getSession } from '@/lib/auth/jwt'
 import { siteConfig } from '@/lib/config'
 import {
@@ -20,7 +22,31 @@ const preferencesSchema = z.strictObject({
   subscribed_contraption: z.boolean().optional(),
   subscribed_workshop: z.boolean().optional(),
   subscribed_tsundoku: z.boolean().optional(),
+  analytics_placement: z.string().optional(),
 })
+
+const NEWSLETTER_PREFERENCES = [
+  {
+    requestKey: 'subscribed_contraption',
+    databaseKey: 'subscribedContraption',
+    newsletter: 'contraption',
+  },
+  {
+    requestKey: 'subscribed_workshop',
+    databaseKey: 'subscribedWorkshop',
+    newsletter: 'workshop',
+  },
+  {
+    requestKey: 'subscribed_postcard',
+    databaseKey: 'subscribedPostcard',
+    newsletter: 'postcard',
+  },
+  {
+    requestKey: 'subscribed_tsundoku',
+    databaseKey: 'subscribedTsundoku',
+    newsletter: 'tsundoku',
+  },
+] as const
 
 export async function GET() {
   const session = await getSession()
@@ -79,6 +105,26 @@ export async function PATCH(request: Request) {
       console.error('[auth/preferences] opt-in notification failed:', err)
     }
   }
+
+  const placement = parseAnalyticsPlacement(parsed.data.analytics_placement)
+  await Promise.all(
+    NEWSLETTER_PREFERENCES.flatMap((preference) => {
+      const requested = parsed.data[preference.requestKey]
+      if (
+        requested === undefined ||
+        before[preference.databaseKey] === subscriber[preference.databaseKey]
+      ) {
+        return []
+      }
+      return [
+        trackServerEvent(request, 'Newsletter preference changed', {
+          placement,
+          newsletter: preference.newsletter,
+          subscribed: subscriber[preference.databaseKey],
+        }),
+      ]
+    })
+  )
 
   return NextResponse.json({
     subscriber: serializeSubscriber(subscriber),
