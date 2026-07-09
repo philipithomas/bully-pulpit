@@ -97,8 +97,13 @@ export default async function HomePage() {
               and photography.
             </p>
             <p className="mb-4">
-              I don&apos;t use social media, so this website contains my writing
-              and media.
+              <Link
+                href="/how-to-replace-social-media-with-a-personal-newsletter"
+                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
+              >
+                I don&apos;t use social media
+              </Link>
+              , so this website contains my writing and media.
             </p>
             <p>
               Connect with me on{' '}
