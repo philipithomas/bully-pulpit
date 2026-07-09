@@ -3,6 +3,6 @@ npx lint-staged
 # Enforcement only: content:check fails (printing `run pnpm search:index`) if a
 # content change left the committed search index stale. It does not regenerate
 # here on purpose — that would fire an embedding API call on every content
-# commit. The search-index.yml workflow auto-regenerates on push to main.
+# commit. Run `pnpm search:index`, review the generated diff, then retry.
 pnpm content:check
 pnpm build
