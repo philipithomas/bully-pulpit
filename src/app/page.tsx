@@ -92,36 +92,13 @@ export default async function HomePage() {
           </h1>
           <div className="font-serif text-lg text-gray-900 leading-relaxed mb-8 lg:mb-12 max-w-prose">
             <p className="mb-4">
-              I live in San Francisco. I&apos;m interested in coffee,
-              fermentation, and urbanism.
+              I&apos;m an engineer living in NYC, working at the intersection of
+              math, software, and business. I am interested in urbanism, coffee,
+              and photography.
             </p>
             <p className="mb-4">
-              In the past, I made{' '}
-              <a
-                href="/internal-tools-of-find-ai"
-                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
-              >
-                Find AI
-              </a>
-              ,{' '}
-              <a
-                href="https://techcrunch.com/2020/02/17/pullrequest-snags-remote-developer-hiring-platform-moonlight-in-case-of-startup-buying-startup/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
-              >
-                Moonlight
-              </a>
-              , and{' '}
-              <a
-                href="https://techcrunch.com/2015/10/22/staffjoy-launches-from-yc-fellowship-helping-businesses-automate-their-workforce-scheduling/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
-              >
-                Staffjoy
-              </a>
-              .
+              I don&apos;t use social media, so this website contains my writing
+              and media.
             </p>
             <p>
               Connect with me on{' '}

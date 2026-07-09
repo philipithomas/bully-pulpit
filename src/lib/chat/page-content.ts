@@ -15,7 +15,7 @@ const NOT_FOUND =
 
 // Mirrors the homepage copy in src/app/page.tsx and the newsletter taglines
 // in src/lib/config.ts. Update this summary alongside that copy.
-const HOMEPAGE_SUMMARY = `The homepage of philipithomas.com, the personal website and blog of Philip I. Thomas. Philip crafts digital tools. He lives in San Francisco and is interested in coffee, fermentation, and urbanism. In the past, he made Find AI, Moonlight, and Staffjoy.
+const HOMEPAGE_SUMMARY = `The homepage of philipithomas.com, the personal website and blog of Philip I. Thomas. Philip crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He is interested in urbanism, coffee, and photography. He does not use social media, so this website contains his writing and media. Visitors can connect with him on GitHub and LinkedIn.
 
 He publishes four newsletters:
 - Contraption (/contraption): Projects and essays.
