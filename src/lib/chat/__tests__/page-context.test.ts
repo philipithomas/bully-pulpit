@@ -25,6 +25,13 @@ describe('getPageContextContent', () => {
     expect(result?.title).toBe(page?.frontmatter.title)
   })
 
+  it('injects the public Stargazing ledger into current-page context', () => {
+    const result = getPageContextContent('/stargazing')
+    expect(result?.content).toContain('Silo | London')
+    expect(result?.content).toContain('Osteria Francescana')
+    expect(result?.truncated).toBe(false)
+  })
+
   it('uses the active phone number in contact page context', () => {
     const previous = process.env.PHONE_NUMBER
     process.env.PHONE_NUMBER = '+442079460000'
