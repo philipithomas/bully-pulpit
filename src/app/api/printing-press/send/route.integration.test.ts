@@ -3,11 +3,25 @@ import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Post } from '@/lib/content/types'
 
+const sessionSubscribers = vi.hoisted(() => new Map<string, unknown>())
+
 // Real PGlite database with the real migrations applied (including the
 // (subscriber_id, post_slug) unique index); all of @/lib/db/queries/* runs
 // real SQL against it.
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('next/headers', () => import('@/test/integration/session'))
+vi.mock('@/lib/db/queries/subscribers', async (importActual) => {
+  const actual =
+    await importActual<typeof import('@/lib/db/queries/subscribers')>()
+  return {
+    ...actual,
+    findByUuid: vi.fn((uuid: string) =>
+      sessionSubscribers.has(uuid)
+        ? sessionSubscribers.get(uuid)
+        : actual.findByUuid(uuid)
+    ),
+  }
+})
 
 // The workflow start/status seam: both routes hand off to the durable workflow
 // via start(), and the guards read run liveness via getRun(runId).status. The
@@ -93,7 +107,24 @@ function statusRequest() {
 }
 
 async function signInAs(email: string) {
-  setSessionCookie(await signSession({ uuid: randomUUID(), email, name: null }))
+  const uuid = randomUUID()
+  const subscriber = {
+    id: -1,
+    uuid,
+    email,
+    name: null,
+    confirmedAt: new Date(),
+    subscribedPostcard: false,
+    subscribedContraption: false,
+    subscribedWorkshop: false,
+    subscribedTsundoku: false,
+    source: null,
+    sessionVersion: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+  sessionSubscribers.set(uuid, subscriber)
+  setSessionCookie(await signSession(subscriber))
 }
 
 const signInAsAdmin = () => signInAs('admin@example.com')

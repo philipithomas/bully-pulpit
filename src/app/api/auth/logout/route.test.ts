@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('next/headers', () => import('@/test/integration/session'))
+
 import { POST } from '@/app/api/auth/logout/route'
+import { clearSessionStore } from '@/test/integration/session'
+
+beforeEach(() => {
+  clearSessionStore()
+})
 
 describe('POST /api/auth/logout', () => {
   it('clears the session and onboarding cookies', async () => {
@@ -12,6 +20,13 @@ describe('POST /api/auth/logout', () => {
         .getSetCookie()
         .map((cookie) => cookie.split('=')[0])
         .sort()
-    ).toEqual(['bp_has_session', 'bp_onboarding', 'bp_token'])
+    ).toEqual([
+      '__Host-bp_has_session',
+      '__Host-bp_onboarding',
+      '__Host-bp_token',
+      'bp_has_session',
+      'bp_onboarding',
+      'bp_token',
+    ])
   })
 })

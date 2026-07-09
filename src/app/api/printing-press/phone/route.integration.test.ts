@@ -2,8 +2,22 @@ import { randomUUID } from 'node:crypto'
 import { NextRequest } from 'next/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const sessionSubscribers = vi.hoisted(() => new Map<string, unknown>())
+
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('next/headers', () => import('@/test/integration/session'))
+vi.mock('@/lib/db/queries/subscribers', async (importActual) => {
+  const actual =
+    await importActual<typeof import('@/lib/db/queries/subscribers')>()
+  return {
+    ...actual,
+    findByUuid: vi.fn((uuid: string) =>
+      sessionSubscribers.has(uuid)
+        ? sessionSubscribers.get(uuid)
+        : actual.findByUuid(uuid)
+    ),
+  }
+})
 vi.mock('@/lib/phone/twilio', () => ({
   sendSms: vi.fn(),
   createCall: vi.fn(),
@@ -27,7 +41,24 @@ const OWNER = '+12098677445'
 const SECRET = 'test-webhook-secret'
 
 async function signInAs(email: string) {
-  setSessionCookie(await signSession({ uuid: randomUUID(), email, name: null }))
+  const uuid = randomUUID()
+  const subscriber = {
+    id: -1,
+    uuid,
+    email,
+    name: null,
+    confirmedAt: new Date(),
+    subscribedPostcard: false,
+    subscribedContraption: false,
+    subscribedWorkshop: false,
+    subscribedTsundoku: false,
+    source: null,
+    sessionVersion: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+  sessionSubscribers.set(uuid, subscriber)
+  setSessionCookie(await signSession(subscriber))
 }
 
 function conversationsRequest(qs = '') {

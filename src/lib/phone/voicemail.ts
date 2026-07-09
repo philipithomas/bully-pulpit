@@ -4,6 +4,7 @@ import {
   renderVoicemailText,
 } from '@/lib/email/templates/phone'
 import { numberLabel, phoneNotificationRecipients } from '@/lib/phone/config'
+import { twilioBasicAuthHeader, twilioCredentials } from '@/lib/phone/twilio'
 import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 
 // Voicemail processing. Ported from junk-drawer's ProcessVoicemailJob:
@@ -23,20 +24,92 @@ export type VoicemailInput = {
 
 /** Audio below this size is a butt-dial or an empty hang-up recording. */
 const MIN_AUDIO_BYTES = 1_000
+export const MAX_RECORDING_BYTES = 12 * 1024 * 1024
+const RECORDING_DOWNLOAD_TIMEOUT_MS = 10_000
+const TWILIO_RECORDING_HOSTS = new Set(['api.twilio.com'])
 const OPENAI_TRANSCRIPTIONS_URL =
   'https://api.openai.com/v1/audio/transcriptions'
 const OPENAI_TRANSCRIPTION_MODEL = 'gpt-4o-mini-transcribe'
 
-async function downloadRecording(recordingUrl: string): Promise<Uint8Array> {
-  // Twilio serves recordings in multiple formats; `.mp3` selects the MP3
-  // rendition. fetch follows Twilio's redirect to the media host.
-  const response = await fetch(`${recordingUrl}.mp3`)
+export function twilioRecordingMp3Url(
+  recordingUrl: string,
+  recordingSid: string
+): URL | null {
+  if (!/^RE[A-Za-z0-9]{3,64}$/.test(recordingSid)) return null
+  let url: URL
+  try {
+    url = new URL(recordingUrl)
+  } catch {
+    return null
+  }
+  if (
+    url.protocol !== 'https:' ||
+    !TWILIO_RECORDING_HOSTS.has(url.hostname.toLowerCase()) ||
+    (url.port !== '' && url.port !== '443') ||
+    url.username !== '' ||
+    url.password !== '' ||
+    url.search !== '' ||
+    url.hash !== ''
+  ) {
+    return null
+  }
+  const finalSegment = url.pathname.split('/').filter(Boolean).at(-1)
+  if (finalSegment !== recordingSid) return null
+  url.pathname = `${url.pathname}.mp3`
+  return url
+}
+
+async function boundedResponseBytes(response: Response): Promise<Uint8Array> {
+  const contentLength = response.headers.get('content-length')
+  if (contentLength && /^\d+$/.test(contentLength)) {
+    const declared = Number(contentLength)
+    if (Number.isSafeInteger(declared) && declared > MAX_RECORDING_BYTES) {
+      throw new Error('Twilio recording exceeds the maximum size')
+    }
+  }
+  if (!response.body) throw new Error('Twilio recording response had no body')
+
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > MAX_RECORDING_BYTES) {
+      await reader.cancel().catch(() => undefined)
+      throw new Error('Twilio recording exceeds the maximum size')
+    }
+    chunks.push(value)
+  }
+
+  const bytes = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return bytes
+}
+
+async function downloadRecording(input: VoicemailInput): Promise<Uint8Array> {
+  const url = twilioRecordingMp3Url(input.recordingUrl, input.recordingSid)
+  if (!url) throw new Error('Invalid Twilio recording URL')
+  const { accountSid, authToken } = twilioCredentials()
+
+  const response = await fetch(url, {
+    redirect: 'error',
+    headers: {
+      Authorization: twilioBasicAuthHeader(accountSid, authToken),
+    },
+    signal: AbortSignal.timeout(RECORDING_DOWNLOAD_TIMEOUT_MS),
+  })
   if (!response.ok) {
     throw new Error(
       `Failed to download recording: ${response.status} ${response.statusText}`
     )
   }
-  return new Uint8Array(await response.arrayBuffer())
+  return boundedResponseBytes(response)
 }
 
 async function transcribeAudio(audio: Uint8Array): Promise<string | null> {
@@ -102,7 +175,7 @@ export async function processVoicemail(
   input: VoicemailInput
 ): Promise<'sent' | 'skipped'> {
   const toLabel = numberLabel(input.to)
-  const audio = await downloadRecording(input.recordingUrl)
+  const audio = await downloadRecording(input)
 
   if (audio.byteLength < MIN_AUDIO_BYTES) {
     console.warn(

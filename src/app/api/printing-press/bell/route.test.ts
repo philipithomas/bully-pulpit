@@ -58,6 +58,7 @@ beforeEach(() => {
     uuid: '123e4567-e89b-42d3-a456-426614174099',
     email: 'admin@example.com',
     name: null,
+    sessionVersion: 1,
   })
   vi.mocked(listBellConversations).mockResolvedValue({
     conversations: [],

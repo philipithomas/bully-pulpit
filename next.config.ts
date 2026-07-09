@@ -3,6 +3,7 @@ import type { NextConfig } from 'next'
 import { withWorkflow } from 'workflow/next'
 import { OPTIMIZED_IMAGE_WIDTHS } from '@/lib/content/zoom-image'
 import { getRedirects } from '@/lib/redirects'
+import { CONTENT_SECURITY_POLICY } from '@/lib/security/csp'
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -14,18 +15,7 @@ const securityHeaders = [
   },
   {
     key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com https://accounts.google.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.philipithomas.com",
-      "font-src 'self' https://fonts.philipithomas.com",
-      "img-src 'self' data: https:",
-      "connect-src 'self' https://cloudflareinsights.com https://accounts.google.com https://oauth2.googleapis.com",
-      // 'self' is required by Vercel BotID/Kasada, which frames its bot-check
-      // challenge from a same-origin /…/fp path (withBotId proxies it first-party).
-      "frame-src 'self' https://accounts.google.com https://maps.google.com https://www.google.com https://www.youtube.com https://open.spotify.com https://podcasters.spotify.com",
-      "frame-ancestors 'none'",
-    ].join('; '),
+    value: CONTENT_SECURITY_POLICY,
   },
 ]
 
@@ -55,7 +45,7 @@ const nextConfig: NextConfig = {
       // static page.
       {
         source:
-          '/:path((?!api|_next|feed|sitemap\\.xml|robots|llms|bell\\.vcf).*)',
+          '/:path((?!api|auth|_next|feed|sitemap\\.xml|robots|llms|bell\\.vcf).*)',
         headers: [
           {
             key: 'Cache-Control',
@@ -117,6 +107,17 @@ const nextConfig: NextConfig = {
       // Auth APIs — never cache
       {
         source: '/api/auth/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'private, no-store',
+          },
+        ],
+      },
+      // Browser auth pages carry short-lived verification state and must not
+      // inherit the broad public-page cache above.
+      {
+        source: '/auth/:path*',
         headers: [
           {
             key: 'Cache-Control',

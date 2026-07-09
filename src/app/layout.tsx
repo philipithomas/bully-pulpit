@@ -94,7 +94,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "if(/(?:^|; ?)bp_has_session=/.test(document.cookie))document.documentElement.setAttribute('data-member','')",
+              "if(/(?:^|; ?)(?:__Host-bp_has_session|bp_has_session)=/.test(document.cookie))document.documentElement.setAttribute('data-member','')",
           }}
         />
       </head>

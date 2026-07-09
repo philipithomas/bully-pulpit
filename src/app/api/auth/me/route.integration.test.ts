@@ -42,6 +42,7 @@ async function signIn(subscriber: {
   uuid: string
   email: string
   name: string | null
+  sessionVersion: number
 }) {
   setSessionCookie(await signSession(subscriber))
 }
@@ -120,7 +121,7 @@ describe('GET /api/auth/me', () => {
       .find((cookie) =>
         cookie.startsWith(`${NEW_SUBSCRIBER_ONBOARDING_COOKIE}=`)
       )
-    expect(consumed).toMatch(/^bp_onboarding=;/)
+    expect(consumed).toMatch(/^__Host-bp_onboarding=;/)
   })
 
   it('rejects and consumes a marker issued for another subscriber', async () => {
@@ -146,7 +147,9 @@ describe('GET /api/auth/me', () => {
     expect(
       response.headers
         .getSetCookie()
-        .some((cookie) => cookie.startsWith('bp_onboarding=;'))
+        .some((cookie) =>
+          cookie.startsWith(`${NEW_SUBSCRIBER_ONBOARDING_COOKIE}=;`)
+        )
     ).toBe(true)
   })
 
@@ -155,6 +158,7 @@ describe('GET /api/auth/me', () => {
       uuid: '00000000-0000-4000-8000-000000000000',
       email: 'ghost@example.com',
       name: null,
+      sessionVersion: 1,
     })
 
     const response = await getMe()
@@ -167,12 +171,12 @@ describe('GET /api/auth/me', () => {
     })
 
     const setCookies = response.headers.getSetCookie()
-    const token = setCookies.find((c) => c.startsWith('bp_token='))
-    const flag = setCookies.find((c) => c.startsWith('bp_has_session='))
+    const token = setCookies.find((c) => c.startsWith('__Host-bp_token='))
+    const flag = setCookies.find((c) => c.startsWith('__Host-bp_has_session='))
     expect(token).toBeDefined()
     expect(flag).toBeDefined()
     for (const cookie of [token as string, flag as string]) {
-      expect(cookie).toMatch(/^bp_(token|has_session)=;/)
+      expect(cookie).toMatch(/^__Host-bp_(token|has_session)=;/)
       expect(cookie.toLowerCase()).toMatch(/max-age=0|expires=thu, 01 jan 1970/)
     }
   })
@@ -188,6 +192,6 @@ describe('GET /api/auth/me', () => {
       preferences: null,
       newSubscriberOnboarding: false,
     })
-    expect(response.headers.getSetCookie()).toHaveLength(3)
+    expect(response.headers.getSetCookie()).toHaveLength(6)
   })
 })

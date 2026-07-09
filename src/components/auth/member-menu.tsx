@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { prefetchSignInModal } from '@/components/auth/sign-in-modal-lazy'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
+import { LOGOUT_FAILURE_MESSAGE } from '@/lib/auth/client-logout'
 import { gravatarUrl } from '@/lib/gravatar'
 import { useAuthModal } from '@/stores/auth-store'
 
@@ -77,6 +79,7 @@ function SignedOutControls({ className }: { className?: string }) {
 export function MemberMenu() {
   const { user, hasSession, loading, logout } = useAuthContext()
   const [open, setOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [avatarLoaded, setAvatarLoaded] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -101,6 +104,20 @@ export function MemberMenu() {
       document.removeEventListener('keydown', handleEscape)
     }
   }, [])
+
+  const handleSignOut = useCallback(async () => {
+    if (signingOut) return
+    setSigningOut(true)
+    try {
+      if (await logout()) setOpen(false)
+    } catch {
+      // useAuth normally converts failures to false after showing this toast.
+      // Keep a final boundary here so an unexpected rejection is still handled.
+      toast.error(LOGOUT_FAILURE_MESSAGE)
+    } finally {
+      setSigningOut(false)
+    }
+  }, [logout, signingOut])
 
   // Server pass and hydration: render both presentations and let the
   // pre-paint session hint in the root layout pick the visible one, so the
@@ -211,13 +228,12 @@ export function MemberMenu() {
           )}
           <button
             type="button"
-            onClick={() => {
-              logout()
-              setOpen(false)
-            }}
+            onClick={handleSignOut}
+            disabled={signingOut}
+            aria-busy={signingOut}
             className="block w-full text-left px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-075 border-t border-gray-100 transition-colors duration-200"
           >
-            Sign out
+            {signingOut ? 'Signing out…' : 'Sign out'}
           </button>
         </div>
       </div>

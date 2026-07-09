@@ -64,6 +64,30 @@ export async function findByUuid(uuid: string): Promise<Subscriber | null> {
   return rows[0] ?? null
 }
 
+/**
+ * Invalidates sessions only when the presented token still has the current
+ * version. A stale token must not advance the counter and revoke newer logins.
+ */
+export async function revokeSubscriberSessions(
+  uuid: string,
+  expectedVersion: number
+): Promise<boolean> {
+  const rows = await getDb()
+    .update(subscribers)
+    .set({
+      sessionVersion: sql`${subscribers.sessionVersion} + 1`,
+      updatedAt: sql`NOW()`,
+    })
+    .where(
+      and(
+        eq(subscribers.uuid, uuid),
+        eq(subscribers.sessionVersion, expectedVersion)
+      )
+    )
+    .returning({ uuid: subscribers.uuid })
+  return rows.length > 0
+}
+
 export async function createSubscriber(input: {
   email: string
   name?: string | null

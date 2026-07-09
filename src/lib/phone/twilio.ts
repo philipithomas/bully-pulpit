@@ -37,7 +37,10 @@ export function isRetryableTwilioError(error: unknown): boolean {
   )
 }
 
-function twilioCredentials(): { accountSid: string; authToken: string } {
+export function twilioCredentials(): {
+  accountSid: string
+  authToken: string
+} {
   const accountSid = process.env.TWILIO_SID
   const authToken = twilioSecret()
   if (!accountSid || !authToken) {
@@ -46,7 +49,10 @@ function twilioCredentials(): { accountSid: string; authToken: string } {
   return { accountSid, authToken }
 }
 
-function basicAuthHeader(accountSid: string, authToken: string): string {
+export function twilioBasicAuthHeader(
+  accountSid: string,
+  authToken: string
+): string {
   return `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`
 }
 
@@ -76,7 +82,7 @@ export async function sendSms(input: {
     {
       method: 'POST',
       headers: {
-        Authorization: basicAuthHeader(accountSid, authToken),
+        Authorization: twilioBasicAuthHeader(accountSid, authToken),
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: form,
@@ -123,7 +129,7 @@ export async function createCall(input: {
     {
       method: 'POST',
       headers: {
-        Authorization: basicAuthHeader(accountSid, authToken),
+        Authorization: twilioBasicAuthHeader(accountSid, authToken),
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({

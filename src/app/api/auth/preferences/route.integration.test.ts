@@ -39,6 +39,7 @@ async function signIn(subscriber: {
   uuid: string
   email: string
   name: string | null
+  sessionVersion: number
 }) {
   setSessionCookie(await signSession(subscriber))
 }
@@ -100,17 +101,18 @@ describe('GET', () => {
     expect(stored.subscribedTsundoku).toBe(true)
   })
 
-  it('returns 404 when the session subscriber no longer exists', async () => {
+  it('returns 401 when the session subscriber no longer exists', async () => {
     await signIn({
       uuid: '00000000-0000-4000-8000-000000000000',
       email: 'ghost@example.com',
       name: null,
+      sessionVersion: 1,
     })
 
     const response = await GET()
-    expect(response.status).toBe(404)
+    expect(response.status).toBe(401)
     expect(await response.json()).toEqual({
-      error: 'Failed to load preferences',
+      error: 'Unauthorized',
     })
   })
 })
@@ -281,13 +283,13 @@ describe('DELETE', () => {
     expect(await db.select().from(emailSends)).toHaveLength(0)
 
     const setCookies = response.headers.getSetCookie()
-    const token = setCookies.find((c) => c.startsWith('bp_token='))
-    const flag = setCookies.find((c) => c.startsWith('bp_has_session='))
+    const token = setCookies.find((c) => c.startsWith('__Host-bp_token='))
+    const flag = setCookies.find((c) => c.startsWith('__Host-bp_has_session='))
     expect(token).toBeDefined()
     expect(flag).toBeDefined()
     // Both cookies are emptied and expired in the past.
     for (const cookie of [token as string, flag as string]) {
-      expect(cookie).toMatch(/^bp_(token|has_session)=;/)
+      expect(cookie).toMatch(/^__Host-bp_(token|has_session)=;/)
       expect(cookie.toLowerCase()).toMatch(/max-age=0|expires=thu, 01 jan 1970/)
     }
   })

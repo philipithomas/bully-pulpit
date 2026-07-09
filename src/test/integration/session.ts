@@ -22,7 +22,7 @@ export async function headers() {
 }
 
 export function setSessionCookie(jwt: string) {
-  store.set('bp_token', jwt)
+  store.set('__Host-bp_token', jwt)
 }
 
 export function setCookie(name: string, value: string) {

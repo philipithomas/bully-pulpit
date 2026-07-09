@@ -13,6 +13,15 @@ vi.mock('next/server', async (importOriginal) => {
 vi.mock('workflow/api', () => ({
   start: vi.fn(async () => ({ runId: 'run_test' })),
 }))
+vi.mock('@/lib/db/queries/phone-webhook-events', () => ({
+  findOrCreatePhoneWebhookEvent: vi.fn(async () => ({
+    event: { id: 1, processedAt: null },
+    inserted: true,
+  })),
+  claimPhoneWebhookEvent: vi.fn(async () => new Date('2026-01-01T00:00:00Z')),
+  markPhoneWebhookEventProcessed: vi.fn(async () => true),
+  releasePhoneWebhookEvent: vi.fn(async () => undefined),
+}))
 vi.mock('@/lib/phone/greeting', () => ({
   generateGreeting: vi.fn(async () => 'You have reached the test suite.'),
 }))
@@ -30,6 +39,10 @@ import { start } from 'workflow/api'
 import { POST as recordingCompletePost } from '@/app/api/phone/recording-complete/route'
 import { POST as recordingStatusPost } from '@/app/api/phone/recording-status/route'
 import { POST as voicePost } from '@/app/api/phone/voice/route'
+import {
+  claimPhoneWebhookEvent,
+  findOrCreatePhoneWebhookEvent,
+} from '@/lib/db/queries/phone-webhook-events'
 import { smsSignupUi } from '@/lib/flags'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 import { twilioPostRequest } from '@/test/twilio'
@@ -52,6 +65,20 @@ function twilioPost(
 beforeEach(() => {
   process.env.TWILIO_SECRET = AUTH_TOKEN
   vi.mocked(smsSignupUi).mockResolvedValue(false)
+  vi.mocked(findOrCreatePhoneWebhookEvent).mockResolvedValue({
+    event: {
+      id: 1,
+      eventKey: 'recording:RE123',
+      eventType: 'recording-status',
+      processingAt: null,
+      processedAt: null,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    },
+    inserted: true,
+  })
+  vi.mocked(claimPhoneWebhookEvent).mockResolvedValue(
+    new Date('2026-01-01T00:00:00Z')
+  )
 })
 
 afterEach(() => {
@@ -197,6 +224,42 @@ describe('POST /api/phone/recording-status', () => {
       })
     )
     expect(response.status).toBe(400)
+  })
+
+  it('rejects a signed callback whose recording url is not Twilio', async () => {
+    const response = await recordingStatusPost(
+      twilioPost('/api/phone/recording-status', {
+        RecordingStatus: 'completed',
+        RecordingUrl: 'https://attacker.example/recordings/RE123',
+        RecordingSid: 'RE123',
+      })
+    )
+    expect(response.status).toBe(400)
+    expect(vi.mocked(start)).not.toHaveBeenCalled()
+  })
+
+  it('deduplicates repeated callbacks by RecordingSid', async () => {
+    vi.mocked(findOrCreatePhoneWebhookEvent).mockResolvedValueOnce({
+      event: {
+        id: 1,
+        eventKey: 'recording:RE123',
+        eventType: 'recording-status',
+        processingAt: null,
+        processedAt: new Date('2026-01-01T00:00:00Z'),
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+      },
+      inserted: false,
+    })
+    const response = await recordingStatusPost(
+      twilioPost('/api/phone/recording-status', {
+        RecordingStatus: 'completed',
+        RecordingUrl: 'https://api.twilio.com/recordings/RE123',
+        RecordingSid: 'RE123',
+      })
+    )
+    expect(response.status).toBe(202)
+    expect(await response.json()).toEqual({ status: 'duplicate' })
+    expect(vi.mocked(start)).not.toHaveBeenCalled()
   })
 })
 

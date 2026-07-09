@@ -311,7 +311,10 @@ export function BellThreadClient({
     try {
       const response = await fetch(
         `/api/printing-press/bell/${conversation.id}/redact`,
-        { method: 'POST' }
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
       )
       const result = (await response.json().catch(() => null)) as {
         error?: string
@@ -352,7 +355,10 @@ export function BellThreadClient({
     try {
       const response = await fetch(
         `/api/printing-press/bell/${conversation.id}`,
-        { method: 'DELETE' }
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+        }
       )
       const result = (await response.json().catch(() => null)) as {
         error?: string

@@ -13,6 +13,7 @@ const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''
 
 interface GoogleCodeResponse {
   code: string
+  state?: string
   error?: string
 }
 
@@ -38,6 +39,7 @@ declare global {
             client_id: string
             scope: string
             login_hint?: string
+            state?: string
             ux_mode: 'popup' | 'redirect'
             callback: (response: GoogleCodeResponse) => void
             error_callback?: (error: GoogleErrorResponse) => void
@@ -164,23 +166,36 @@ function useGoogleAuth({
   const available = useGoogleSignInAvailable()
   const normalizedLoginHint = normalizeGoogleLoginHint(loginHint)
   const [loading, setLoading] = useState(false)
-  const clientRef = useRef<{ requestCode: () => void } | null>(null)
   const onSuccessRef = useRef(onSuccess)
   const newslettersRef = useRef(newsletters)
   onSuccessRef.current = onSuccess
   newslettersRef.current = newsletters
 
-  useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) return
+  const requestSignIn = useCallback(async () => {
+    if (loading) return
+    trackClientEvent('Newsletter signup submitted', {
+      method: 'google',
+      placement: analyticsPlacement,
+      newsletter: summarizeNewsletters(newslettersRef.current),
+      signed_in: false,
+    })
+    setLoading(true)
+    try {
+      await loadGoogleScript()
+      const stateResponse = await fetch('/api/auth/google/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (!stateResponse.ok) throw new Error('Could not start Google sign-in')
+      const statePayload = (await stateResponse.json()) as { state?: unknown }
+      if (typeof statePayload.state !== 'string') {
+        throw new Error('Could not start Google sign-in')
+      }
 
-    let cancelled = false
-
-    const initClient = () => {
-      if (cancelled) return
-
-      clientRef.current = window.google!.accounts.oauth2.initCodeClient({
+      const client = window.google!.accounts.oauth2.initCodeClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: 'openid email profile',
+        state: statePayload.state,
         ...(normalizedLoginHint ? { login_hint: normalizedLoginHint } : {}),
         ux_mode: 'popup',
         callback: async (response: GoogleCodeResponse) => {
@@ -194,6 +209,7 @@ function useGoogleAuth({
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 code: response.code,
+                state: response.state,
                 analytics_placement: analyticsPlacement,
                 ...(newslettersRef.current?.length
                   ? { newsletters: newslettersRef.current }
@@ -225,28 +241,16 @@ function useGoogleAuth({
           setLoading(false)
         },
       })
+      client.requestCode()
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Could not start Google sign-in'
+      )
+      setLoading(false)
     }
-
-    // Load failure is surfaced by useGoogleSignInAvailable (components hide)
-    loadGoogleScript().then(initClient, () => {})
-
-    return () => {
-      cancelled = true
-      clientRef.current = null
-    }
-  }, [analyticsPlacement, normalizedLoginHint])
-
-  const requestSignIn = useCallback(() => {
-    if (loading || !clientRef.current) return
-    trackClientEvent('Newsletter signup submitted', {
-      method: 'google',
-      placement: analyticsPlacement,
-      newsletter: summarizeNewsletters(newslettersRef.current),
-      signed_in: false,
-    })
-    setLoading(true)
-    clientRef.current.requestCode()
-  }, [analyticsPlacement, loading])
+  }, [analyticsPlacement, loading, normalizedLoginHint])
 
   return { requestSignIn, loading, available }
 }
