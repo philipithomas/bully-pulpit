@@ -1,5 +1,9 @@
 import { after, NextResponse } from 'next/server'
-import { findOrCreatePhoneWebhookEvent } from '@/lib/db/queries/phone-webhook-events'
+import {
+  claimPhoneWebhookEvent,
+  findOrCreatePhoneWebhookEvent,
+  markPhoneWebhookEventProcessed,
+} from '@/lib/db/queries/phone-webhook-events'
 import {
   findSmsSubscriberByPhoneNumber,
   subscribeSmsNumber,
@@ -66,7 +70,8 @@ async function sendVoiceSignupMessage(input: {
 
 /**
  * Handles the DTMF choice from /api/phone/voice. 1 or timeout goes to voicemail;
- * 2 subscribes the caller ID to the all-newsletters SMS list.
+ * 2 subscribes a new caller ID to the all-newsletters SMS list. A caller that
+ * previously sent STOP must reactivate from the handset before Twilio can send.
  */
 export async function POST(request: Request) {
   const form = await validatedPhoneWebhookForm(request)
@@ -104,6 +109,27 @@ export async function POST(request: Request) {
     }
 
     const existing = await findSmsSubscriberByPhoneNumber(from)
+    if (existing && !existing.confirmedAt) {
+      if (webhookEvent) {
+        const lease = await claimPhoneWebhookEvent(webhookEvent.event.id)
+        const marked = lease
+          ? await markPhoneWebhookEventProcessed(webhookEvent.event.id, lease)
+          : false
+        if (!marked) {
+          return twimlResponse(
+            sayAndHangupTwiml(
+              'This phone menu request was already handled. Goodbye.'
+            )
+          )
+        }
+      }
+      return twimlResponse(
+        sayAndHangupTwiml(
+          'To resubscribe to new-post texts, send START or UNSTOP from this phone to the number you called. Goodbye.'
+        )
+      )
+    }
+
     const confirmationFrom = sitePhoneNumber()
     await subscribeSmsNumber({
       phoneNumber: from,

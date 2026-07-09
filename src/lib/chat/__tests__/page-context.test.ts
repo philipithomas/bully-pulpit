@@ -25,6 +25,19 @@ describe('getPageContextContent', () => {
     expect(result?.title).toBe(page?.frontmatter.title)
   })
 
+  it('uses the active phone number in contact page context', () => {
+    const previous = process.env.PHONE_NUMBER
+    process.env.PHONE_NUMBER = '+442079460000'
+    try {
+      const result = getPageContextContent('/contact')
+      expect(result?.content).toContain('Telephone: +442079460000')
+      expect(result?.content).not.toContain('+1 212 347 3190')
+    } finally {
+      if (previous === undefined) delete process.env.PHONE_NUMBER
+      else process.env.PHONE_NUMBER = previous
+    }
+  })
+
   it('handles a trailing slash', () => {
     const post = getAllPosts()[0]
     expect(getPageContextContent(`/${post.slug}/`)?.slug).toBe(post.slug)

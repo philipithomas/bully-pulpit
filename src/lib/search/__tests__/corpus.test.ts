@@ -159,7 +159,7 @@ describe('chunkPage', () => {
     expect(chunks[0]).toEqual({
       seq: 0,
       kind: 'title',
-      text: 'Contact',
+      text: 'Contact. Email, telephone, and postal contact information.',
     })
     expect(chunks.map((chunk) => chunk.text).join('\n')).toContain(
       'mail@philipithomas.com'
@@ -359,13 +359,12 @@ describe('buildCorpus', () => {
       title: 'Contact',
       url: '/contact',
       newsletter: 'page',
+      description: 'Email, telephone, and postal contact information.',
       coverImage: '',
     })
-    expect(contact?.chunks.map((chunk) => chunk.text).join('\n')).toContain(
-      'mail@philipithomas.com'
-    )
-    expect(contact?.chunks.map((chunk) => chunk.text).join('\n')).toContain(
-      '+1 212 347 3190'
-    )
+    const contactText = contact?.chunks.map((chunk) => chunk.text).join('\n')
+    expect(contactText).toContain('mail@philipithomas.com')
+    expect(contactText).not.toContain('+1 212 347 3190')
+    expect(contactText).not.toMatch(/\+\d[\d ]{6,}/)
   })
 })
