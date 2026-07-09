@@ -1,4 +1,4 @@
-export type SmsCommand = 'subscribe' | 'unsubscribe'
+export type SmsCommand = 'subscribe' | 'unsubscribe' | 'help'
 
 const SUBSCRIBE_COMMANDS = new Set(['SUBSCRIBE', 'START', 'JOIN'])
 const UNSUBSCRIBE_COMMANDS = new Set([
@@ -11,6 +11,7 @@ const UNSUBSCRIBE_COMMANDS = new Set([
   'REVOKE',
   'OPTOUT',
 ])
+const HELP_COMMANDS = new Set(['HELP', 'INFO'])
 
 export function smsCommandForBody(
   body: string,
@@ -19,6 +20,7 @@ export function smsCommandForBody(
   const normalizedOptOutType = optOutType?.trim().toUpperCase()
   if (normalizedOptOutType === 'START') return 'subscribe'
   if (normalizedOptOutType === 'STOP') return 'unsubscribe'
+  if (normalizedOptOutType === 'HELP') return 'help'
 
   const normalized = body
     .trim()
@@ -26,5 +28,6 @@ export function smsCommandForBody(
     .replace(/[.!?]+$/g, '')
   if (SUBSCRIBE_COMMANDS.has(normalized)) return 'subscribe'
   if (UNSUBSCRIBE_COMMANDS.has(normalized)) return 'unsubscribe'
+  if (HELP_COMMANDS.has(normalized)) return 'help'
   return null
 }

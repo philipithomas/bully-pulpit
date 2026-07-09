@@ -48,22 +48,34 @@ the SMS option and the voice webhook records voicemail without offering
 "press 2" SMS signup. When the flag is on, the voice webhook plays the
 generated greeting, then offers "press 1" for voicemail and "press 2" to
 subscribe the caller ID to SMS updates. No input falls through to voicemail.
-The SMS webhook stores inbound replies, handles `SUBSCRIBE` and `STOP`, and
-emails admins about normal replies.
-`SUBSCRIBE` replies with a written confirmation that includes the STOP
-instruction. Voice-menu signups send the same confirmation SMS when Twilio
-accepts it; if that confirmation send fails, the spoken confirmation still tells
-the caller to text STOP at any time.
+The SMS webhook stores inbound replies, handles `SUBSCRIBE`, `HELP`, and `STOP`,
+and emails admins about normal replies. `SUBSCRIBE` replies with a branded
+confirmation that identifies the recurring new-post message type, says that
+frequency varies and message and data rates may apply, and includes both HELP
+and STOP instructions. `HELP` returns the support address and repeats the
+frequency, rate, and STOP details. Voice-menu signups send the same subscription
+confirmation SMS when Twilio accepts it; if that confirmation send fails, the
+spoken confirmation still tells the caller to text STOP at any time.
+
+When a number becomes active through either a `SUBSCRIBE` text or the voice
+menu, the app also sends one Bell onboarding MMS with the contact card at
+`https://www.philipithomas.com/bell.vcf`. Repeating `SUBSCRIBE` while the number
+is active does not resend the onboarding message. A new activation after an
+unsubscribe does. The public `/bell.vcf` permalink returns a vCard 3.0 contact
+named Bell with the sending number, the Philip I. Thomas organization and
+website, and an embedded Bell contact image. On iPhone, Messages opens the
+attachment in the native contact preview, but the person must manually create
+or update the contact. The site cannot save the contact silently.
 New SMS opt-ins, whether they come from a `SUBSCRIBE` text or the voice menu,
 also email admins with the source path, Twilio webhook metadata such as city,
 state, caller name, message SID, or call SID when Twilio provides it, and an
 area-code hint for common US/Canada numbers.
-STOP handling is both Twilio-aware and application-layer: Twilio may apply its
-own opt-out behavior and include `OptOutType=STOP`/`START` in the webhook. The
-app still syncs local `sms_subscribers` state, avoids sending a duplicate app
-reply when Twilio already sent one, and marks any pending unsent `sms_sends`
-rows for that number as skipped so retry cannot send an old post after someone
-opts out.
+Keyword handling is both Twilio-aware and application-layer: Twilio may apply
+its own START, STOP, or HELP behavior and include `OptOutType` in the webhook.
+The app still syncs local `sms_subscribers` state for START and STOP, avoids
+sending a duplicate app reply when Twilio already sent one, and marks any
+pending unsent `sms_sends` rows for that number as skipped so retry cannot send
+an old post after someone opts out.
 
 Newsletter SMS delivery runs inside the same Vercel Workflow as email delivery:
 the admin send page enqueues `sms_sends` rows after the email pass, sends them
@@ -83,9 +95,11 @@ WORKFLOW_SMOKE_BASE_URL=https://www.philipithomas.com CRON_SECRET=$CRON_SECRET p
 ```
 
 Then confirm the production flag is still off before launch. With the flag on in
-preview, send `SUBSCRIBE` and `STOP` to `PHONE_NUMBER`, call it and press both
-menu options, and confirm `/printing-press/phone` shows the inbound and outbound
-thread history.
+preview, send `SUBSCRIBE`, `HELP`, and `STOP` to `PHONE_NUMBER`, call it and
+press both menu options, and confirm `/printing-press/phone` shows the inbound
+and outbound thread history. Use a fresh or unsubscribed number to verify that
+both text and voice signup paths send the Bell card once. Open the attachment on
+an actual iPhone, confirm the Bell image and fields appear, and save it manually.
 
 ## Content
 
