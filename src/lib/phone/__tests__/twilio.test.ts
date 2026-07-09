@@ -55,6 +55,43 @@ describe('sendSms', () => {
     expect(String(init?.body)).toContain('Body=hi')
   })
 
+  it('adds the media URL when sending an MMS', async () => {
+    const fetchMock = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify({ sid: 'MM9', status: 'queued' }), {
+          status: 201,
+        })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await sendSms({
+      ...smsInput,
+      mediaUrl: 'https://www.philipithomas.com/bell.vcf?source=sms&v=1',
+    })
+
+    const [, init] = fetchMock.mock.calls[0]
+    const form = new URLSearchParams(String(init?.body))
+    expect(form.get('MediaUrl')).toBe(
+      'https://www.philipithomas.com/bell.vcf?source=sms&v=1'
+    )
+  })
+
+  it('omits the media URL for an SMS', async () => {
+    const fetchMock = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify({ sid: 'SM9', status: 'queued' }), {
+          status: 201,
+        })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await sendSms(smsInput)
+
+    const [, init] = fetchMock.mock.calls[0]
+    const form = new URLSearchParams(String(init?.body))
+    expect(form.has('MediaUrl')).toBe(false)
+  })
+
   it('throws with Twilio error detail on rejection', async () => {
     vi.stubGlobal(
       'fetch',

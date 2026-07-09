@@ -4,6 +4,7 @@ import {
   emptyTwiml,
   escapeXml,
   goodbyeTwiml,
+  mediaMessageTwiml,
   messageTwiml,
   sayAndHangupTwiml,
   twimlResponse,
@@ -97,6 +98,34 @@ describe('messageTwiml', () => {
   it('replies with escaped SMS body text', () => {
     const xml = messageTwiml('Subscribed & ready.')
     expect(xml).toContain('<Message>Subscribed &amp; ready.</Message>')
+  })
+})
+
+describe('mediaMessageTwiml', () => {
+  it('replies with an MMS body and media attachment', () => {
+    const xml = mediaMessageTwiml({
+      body: 'Meet Bell & add the contact.',
+      mediaUrl: 'https://www.philipithomas.com/bell.vcf?source=sms&v=1',
+    })
+
+    expect(xml).toContain('<Body>Meet Bell &amp; add the contact.</Body>')
+    expect(xml).toContain(
+      '<Media>https://www.philipithomas.com/bell.vcf?source=sms&amp;v=1</Media>'
+    )
+  })
+
+  it('xml-escapes values before interpolation', () => {
+    const xml = mediaMessageTwiml({
+      body: '<Bell> says "hello"',
+      mediaUrl: 'https://example.com/<bell>.vcf?owner=Philip&kind=contact',
+    })
+
+    expect(xml).not.toContain('<Bell>')
+    expect(xml).not.toContain('<bell>')
+    expect(xml).toContain('&lt;Bell&gt; says &quot;hello&quot;')
+    expect(xml).toContain(
+      'https://example.com/&lt;bell&gt;.vcf?owner=Philip&amp;kind=contact'
+    )
   })
 })
 

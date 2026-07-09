@@ -79,6 +79,20 @@ export function messageTwiml(body: string): string {
 </Response>`
 }
 
+/** Replies to an inbound message with an MMS body and media attachment. */
+export function mediaMessageTwiml(input: {
+  body: string
+  mediaUrl: string
+}): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>
+    <Body>${escapeXml(input.body)}</Body>
+    <Media>${escapeXml(input.mediaUrl)}</Media>
+  </Message>
+</Response>`
+}
+
 /**
  * Bridges a click-to-call: spoken once the owner's phone answers, it dials the
  * destination presenting `callerId` (an owned Twilio number). Ported from
