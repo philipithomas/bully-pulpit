@@ -1,12 +1,11 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { typeaheadEmbeddingSearch } from '@/lib/flags'
 import { hybridSearchPosts, type SearchScope } from '@/lib/search/hybrid'
 
 /**
- * Search serves typeahead and photography queries. Typeahead can disable the
- * runtime embedding arm through a Vercel flag; other callers keep the full
- * hybrid path.
+ * Search serves typeahead and photography queries. Typeahead requests choose
+ * a cheap lexical first pass or a hybrid enrichment pass explicitly. Other
+ * callers keep the full hybrid path.
  */
 
 interface SearchResult {
@@ -39,6 +38,8 @@ export async function GET(request: NextRequest) {
   const rawScope = request.nextUrl.searchParams.get('scope')
   const scope: SearchScope = rawScope === 'images' ? 'images' : 'posts'
   const isTypeahead = request.nextUrl.searchParams.get('source') === 'typeahead'
+  const isHybridTypeahead =
+    isTypeahead && request.nextUrl.searchParams.get('phase') === 'hybrid'
 
   if (!q || q.length < 2) {
     return NextResponse.json({ results: [] })
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const started = performance.now()
-    const useVector = isTypeahead ? await typeaheadEmbeddingSearch() : true
+    const useVector = !isTypeahead || isHybridTypeahead
     const search = await hybridSearchPosts(q, { scope, useVector })
     const durationMs = Math.round(performance.now() - started)
     const results: SearchResult[] = search.results.map((result) => ({
