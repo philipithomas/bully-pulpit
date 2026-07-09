@@ -61,30 +61,26 @@ import {
 import { sendSms } from '@/lib/phone/twilio'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { db, resetDb } from '@/test/integration/db'
+import { twilioPostRequest } from '@/test/twilio'
 import { replyToSmsWorkflow } from '@/workflows/reply-to-sms'
 
 const SECRET = 'test-webhook-secret'
 let mediaSendCount = 0
 
-function smsRequest(form: Record<string, string>, secret = SECRET) {
-  return new Request(
-    `https://philipithomas.com/api/phone/sms?secret=${secret}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(form).toString(),
-    }
+function smsRequest(form: Record<string, string>, signature?: string) {
+  return twilioPostRequest(
+    'https://philipithomas.com/api/phone/sms',
+    form,
+    SECRET,
+    { signature }
   )
 }
 
-function voiceMenuRequest(form: Record<string, string>, secret = SECRET) {
-  return new Request(
-    `https://philipithomas.com/api/phone/voice-menu?secret=${secret}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(form).toString(),
-    }
+function voiceMenuRequest(form: Record<string, string>) {
+  return twilioPostRequest(
+    'https://philipithomas.com/api/phone/voice-menu',
+    form,
+    SECRET
   )
 }
 
@@ -122,9 +118,9 @@ afterEach(async () => {
 })
 
 describe('POST /api/phone/sms', () => {
-  it('rejects a wrong secret without touching the database', async () => {
+  it('rejects an invalid signature without touching the database', async () => {
     const response = await smsPost(
-      smsRequest({ From: '+1', To: '+2', Body: 'x' }, 'wrong')
+      smsRequest({ From: '+1', To: '+2', Body: 'x' }, 'invalid')
     )
     expect(response.status).toBe(401)
     expect(await db.select().from(textMessages)).toHaveLength(0)

@@ -6,7 +6,7 @@ import {
 } from '@/lib/db/queries/sms-subscribers'
 import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { smsSignupUi } from '@/lib/flags'
-import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
+import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { sendBellContactOnboarding } from '@/lib/phone/bell-contact-onboarding'
 import { isE164, numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import { sendSmsSignupNotification } from '@/lib/phone/notifications'
@@ -69,11 +69,11 @@ async function sendVoiceSignupMessage(input: {
  * 2 subscribes the caller ID to the all-newsletters SMS list.
  */
 export async function POST(request: Request) {
-  if (!isAuthorizedPhoneWebhook(request)) {
+  const form = await validatedPhoneWebhookForm(request)
+  if (!form) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const form = await request.formData()
   const digits = String(form.get('Digits') ?? '')
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')

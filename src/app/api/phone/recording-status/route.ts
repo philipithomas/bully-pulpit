@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { start } from 'workflow/api'
-import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
+import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { processVoicemailWorkflow } from '@/workflows/process-voicemail'
 
 /**
@@ -11,11 +11,11 @@ import { processVoicemailWorkflow } from '@/workflows/process-voicemail'
  * callbacks, so durability has to live on this side.
  */
 export async function POST(request: Request) {
-  if (!isAuthorizedPhoneWebhook(request)) {
+  const form = await validatedPhoneWebhookForm(request)
+  if (!form) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const form = await request.formData()
   if (String(form.get('RecordingStatus')) !== 'completed') {
     return NextResponse.json({ status: 'ignored' }, { status: 202 })
   }

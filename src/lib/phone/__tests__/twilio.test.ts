@@ -10,7 +10,7 @@ const smsInput = { from: '+12123473190', to: '+15551234567', body: 'hi' }
 const callInput = {
   from: '+12123473190',
   to: '+12098677445',
-  twimlUrl: 'https://philipithomas.com/api/phone/connect?secret=x',
+  twimlUrl: 'https://philipithomas.com/api/phone/connect?target=%2B15551234567',
 }
 
 beforeEach(() => {

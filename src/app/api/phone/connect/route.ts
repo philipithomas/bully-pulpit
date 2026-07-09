@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { isAuthorizedPhoneWebhook } from '@/lib/phone/auth'
+import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { isE164, requireSitePhoneNumber } from '@/lib/phone/config'
 import { connectCallTwiml, twimlResponse } from '@/lib/phone/twiml'
 
@@ -9,13 +9,13 @@ import { connectCallTwiml, twimlResponse } from '@/lib/phone/twiml'
  * destination. The destination rides along on the URL because Twilio's call
  * callback does not echo the trigger's parameters.
  *
- * Hardening: the shared webhook secret is validated first (fail closed), then
+ * Hardening: Twilio's request signature is validated first (fail closed), then
  * the target is re-validated server-side before it reaches the TwiML, and the
  * caller id comes from server config. Values are XML-escaped by
  * connectCallTwiml.
  */
 export async function POST(request: Request) {
-  if (!isAuthorizedPhoneWebhook(request)) {
+  if (!(await validatedPhoneWebhookForm(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -19,6 +19,7 @@ import { textMessages } from '@/lib/db/schema'
 import { createCall, sendSms } from '@/lib/phone/twilio'
 import { db, resetDb } from '@/test/integration/db'
 import { clearSessionStore, setSessionCookie } from '@/test/integration/session'
+import { twilioPostRequest } from '@/test/twilio'
 
 const NYC = '+12123473190'
 const ALICE = '+15551110001'
@@ -237,7 +238,7 @@ describe('POST /api/printing-press/phone/call (click-to-call trigger)', () => {
     expect(vi.mocked(createCall)).not.toHaveBeenCalled()
   })
 
-  it('rings the owner first with a secret-bearing connect callback', async () => {
+  it('rings the owner first with a signed connect callback', async () => {
     await signInAs('admin@example.com')
     vi.mocked(createCall).mockResolvedValueOnce({
       sid: 'CA9',
@@ -257,8 +258,8 @@ describe('POST /api/printing-press/phone/call (click-to-call trigger)', () => {
     expect(call.from).toBe(NYC)
     expect(call.to).toBe(OWNER)
     expect(call.twimlUrl).toContain('/api/phone/connect?')
-    expect(call.twimlUrl).toContain(`secret=${SECRET}`)
     expect(call.twimlUrl).toContain(`target=${encodeURIComponent(ALICE)}`)
+    expect(call.twimlUrl).not.toContain('secret=')
     expect(call.twimlUrl).not.toContain('callerId=')
   })
 })
@@ -272,30 +273,24 @@ describe('POST /api/phone/connect (click-to-call callback)', () => {
     delete process.env.TWILIO_SECRET
   })
 
-  function connectRequest(qs: string) {
-    return new Request(`https://philipithomas.com/api/phone/connect?${qs}`, {
-      method: 'POST',
-    })
+  function connectRequest(target: string, signature?: string) {
+    const url = new URL('https://philipithomas.com/api/phone/connect')
+    url.searchParams.set('target', target)
+    return twilioPostRequest(url.toString(), {}, SECRET, { signature })
   }
 
-  it('rejects a bad secret', async () => {
-    const response = await connectPost(
-      connectRequest(`secret=wrong&target=${ALICE}`)
-    )
+  it('rejects an invalid signature', async () => {
+    const response = await connectPost(connectRequest(ALICE, 'invalid'))
     expect(response.status).toBe(401)
   })
 
   it('rejects a non-E.164 target', async () => {
-    const response = await connectPost(
-      connectRequest(`secret=${SECRET}&target=evil`)
-    )
+    const response = await connectPost(connectRequest('evil'))
     expect(response.status).toBe(400)
   })
 
   it('returns XML-escaped Dial TwiML', async () => {
-    const response = await connectPost(
-      connectRequest(`secret=${SECRET}&target=${encodeURIComponent(ALICE)}`)
-    )
+    const response = await connectPost(connectRequest(ALICE))
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Type')).toContain('text/xml')
     const xml = await response.text()
