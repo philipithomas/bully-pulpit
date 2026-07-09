@@ -40,6 +40,9 @@ describe('voicemailTwiml', () => {
     expect(xml).toContain(
       '<Say voice="Polly.Matthew-Neural">You have reached the Contraption Company &amp; friends.</Say>'
     )
+    expect(xml).toContain(
+      '<Say voice="Polly.Matthew-Neural">Leave a message after the tone.</Say>'
+    )
   })
 
   it('records with escaped callback urls', () => {
@@ -50,6 +53,16 @@ describe('voicemailTwiml', () => {
     expect(xml).toContain(
       'action="https://philipithomas.com/api/phone/recording-complete"'
     )
+  })
+
+  it('can start voicemail without repeating a contextual greeting', () => {
+    const instructionOnly = voicemailTwiml({
+      recordingStatusUrl: 'https://philipithomas.com/recording-status',
+      recordingCompleteUrl: 'https://philipithomas.com/recording-complete',
+    })
+
+    expect(instructionOnly.match(/<Say /g)).toHaveLength(1)
+    expect(instructionOnly).toContain('Leave a message after the tone.')
   })
 })
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchNycWeatherSnapshot,
   nwsHourlyForecastUrl,
@@ -7,6 +7,10 @@ import {
   parseNwsPointResponse,
   parseNwsWindSpeedKph,
 } from '@/lib/weather/nyc'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('nwsPointUrl', () => {
   it('requests the NYC Weather.gov point metadata', () => {
@@ -175,7 +179,43 @@ describe('fetchNycWeatherSnapshot', () => {
         signal: expect.any(AbortSignal),
       })
     )
+  })
 
-    vi.unstubAllGlobals()
+  it('uses one caller deadline for both Weather.gov requests', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json({
+            properties: {
+              forecastHourly:
+                'https://api.weather.gov/gridpoints/OKX/33,42/forecast/hourly',
+            },
+          })
+        )
+        .mockResolvedValueOnce(
+          Response.json({
+            properties: {
+              periods: [
+                {
+                  startTime: '2026-07-08T19:00:00-04:00',
+                  temperature: 25,
+                  temperatureUnit: 'C',
+                  shortForecast: 'Clear',
+                  windSpeed: '17 km/h',
+                  isDaytime: false,
+                },
+              ],
+            },
+          })
+        )
+    )
+    const signal = new AbortController().signal
+
+    await fetchNycWeatherSnapshot({ signal })
+
+    expect(vi.mocked(fetch).mock.calls[0]?.[1]?.signal).toBe(signal)
+    expect(vi.mocked(fetch).mock.calls[1]?.[1]?.signal).toBe(signal)
   })
 })

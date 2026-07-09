@@ -187,7 +187,6 @@ export async function POST(request: Request) {
 
   return twimlResponse(
     voicemailTwiml({
-      greeting: 'Leave a message after the tone.',
       ...voicemailCallbackUrls({ from, to, metadata }),
     })
   )

@@ -150,7 +150,10 @@ export function parseNwsWindSpeedKph(value: unknown): number | null {
   return match ? Number(match[0]) : null
 }
 
-async function fetchNwsJson<T>(url: string): Promise<T> {
+async function fetchNwsJson<T>(
+  url: string,
+  signal = AbortSignal.timeout(2_000)
+): Promise<T> {
   const response = await fetch(url, {
     cache: 'force-cache',
     headers: {
@@ -158,7 +161,7 @@ async function fetchNwsJson<T>(url: string): Promise<T> {
       'User-Agent': NWS_USER_AGENT,
     },
     next: { revalidate: WEATHER_REVALIDATE_SECONDS },
-    signal: AbortSignal.timeout(2_000),
+    signal,
   })
 
   if (!response.ok) {
@@ -168,10 +171,18 @@ async function fetchNwsJson<T>(url: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export async function fetchNycWeatherSnapshot(): Promise<NycWeatherSnapshot> {
-  const point = await fetchNwsJson<NwsPointResponse>(nwsPointUrl())
+export async function fetchNycWeatherSnapshot(
+  options: { signal?: AbortSignal } = {}
+): Promise<NycWeatherSnapshot> {
+  const point = await fetchNwsJson<NwsPointResponse>(
+    nwsPointUrl(),
+    options.signal
+  )
   const forecastUrl = nwsHourlyForecastUrl(parseNwsPointResponse(point))
-  const forecast = await fetchNwsJson<NwsHourlyForecastResponse>(forecastUrl)
+  const forecast = await fetchNwsJson<NwsHourlyForecastResponse>(
+    forecastUrl,
+    options.signal
+  )
 
   return parseNwsHourlyForecastResponse(forecast)
 }
