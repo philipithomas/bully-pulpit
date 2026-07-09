@@ -32,6 +32,42 @@ describe('getPageText', () => {
     expect(text).not.toMatch(/^#{1,6}\s/m)
   })
 
+  it('uses the active phone number in contact page text', () => {
+    const previous = process.env.PHONE_NUMBER
+    process.env.PHONE_NUMBER = '+442079460000'
+    try {
+      const text = getPageText('/contact')
+      expect(text).toContain('Telephone: +442079460000')
+      expect(text).not.toContain('+1 212 347 3190')
+    } finally {
+      if (previous === undefined) delete process.env.PHONE_NUMBER
+      else process.env.PHONE_NUMBER = previous
+    }
+  })
+
+  it('omits the telephone from contact page text when it is unconfigured', () => {
+    const previous = process.env.PHONE_NUMBER
+    delete process.env.PHONE_NUMBER
+    try {
+      const text = getPageText('/contact')
+      expect(text).not.toContain('Telephone:')
+      expect(text).not.toContain('+1 212 347 3190')
+    } finally {
+      if (previous !== undefined) process.env.PHONE_NUMBER = previous
+    }
+  })
+
+  it('omits an invalid phone number from contact page text', () => {
+    const previous = process.env.PHONE_NUMBER
+    process.env.PHONE_NUMBER = 'not-a-phone-number'
+    try {
+      expect(getPageText('/contact')).not.toContain('Telephone:')
+    } finally {
+      if (previous === undefined) delete process.env.PHONE_NUMBER
+      else process.env.PHONE_NUMBER = previous
+    }
+  })
+
   it('returns the plaintext of a post', () => {
     const post = getAllPosts()[0]
     const text = getPageText(`/${post.slug}`)

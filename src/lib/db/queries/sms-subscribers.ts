@@ -240,8 +240,17 @@ export async function unsubscribeSmsNumber(
   if (input.processedPhoneWebhookEventId) {
     await db.execute(sql`
       WITH unsubscribed AS (
-        UPDATE sms_subscribers
-        SET
+        INSERT INTO sms_subscribers
+          (
+            phone_number,
+            confirmed_at,
+            subscribed_postcard,
+            subscribed_contraption,
+            subscribed_workshop,
+            subscribed_tsundoku
+          )
+        VALUES (${phoneNumber}, NULL, false, false, false, false)
+        ON CONFLICT (phone_number) DO UPDATE SET
           confirmed_at = NULL,
           subscribed_postcard = false,
           subscribed_contraption = false,
@@ -251,7 +260,6 @@ export async function unsubscribeSmsNumber(
           bell_contact_card_processing_at = NULL,
           bell_contact_card_sent_at = NULL,
           updated_at = NOW()
-        WHERE phone_number = ${phoneNumber}
         RETURNING id
       ),
       skipped_sends AS (
@@ -271,19 +279,29 @@ export async function unsubscribeSmsNumber(
   }
 
   const rows = await db
-    .update(smsSubscribers)
-    .set({
+    .insert(smsSubscribers)
+    .values({
+      phoneNumber,
       confirmedAt: null,
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
       subscribedTsundoku: false,
-      bellContactCardClaimId: null,
-      bellContactCardProcessingAt: null,
-      bellContactCardSentAt: null,
-      updatedAt: sql`NOW()`,
     })
-    .where(eq(smsSubscribers.phoneNumber, phoneNumber))
+    .onConflictDoUpdate({
+      target: smsSubscribers.phoneNumber,
+      set: {
+        confirmedAt: null,
+        subscribedPostcard: false,
+        subscribedContraption: false,
+        subscribedWorkshop: false,
+        subscribedTsundoku: false,
+        bellContactCardClaimId: null,
+        bellContactCardProcessingAt: null,
+        bellContactCardSentAt: null,
+        updatedAt: sql`NOW()`,
+      },
+    })
     .returning()
   const subscriber = rows[0] ?? null
   if (subscriber) {

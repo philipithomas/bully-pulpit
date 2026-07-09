@@ -525,13 +525,111 @@ describe('POST /api/phone/sms', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(await response.text()).toContain('You are unsubscribed')
+    const xml = await response.text()
+    expect(xml).toContain('You are unsubscribed')
+    expect(xml).toContain('START or UNSTOP')
     const [subscriber] = await db.select().from(smsSubscribers)
     expect(subscriber.confirmedAt).toBeNull()
     expect(subscriber.subscribedContraption).toBe(false)
     expect(subscriber.bellContactCardProcessingAt).toBeNull()
     expect(subscriber.bellContactCardSentAt).toBeNull()
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  it('does not reactivate a stopped number with an app-only subscribe word', async () => {
+    const phoneNumber = '+15551234567'
+    const stopResponse = await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'STOP',
+        MessageSid: 'SM_STOP',
+      })
+    )
+    expect(await stopResponse.text()).toContain('START or UNSTOP')
+    const [tombstone] = await db.select().from(smsSubscribers)
+    expect(tombstone).toMatchObject({
+      phoneNumber,
+      confirmedAt: null,
+      subscribedPostcard: false,
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedTsundoku: false,
+    })
+    vi.mocked(sendSms).mockClear()
+    vi.mocked(sendSimpleEmail).mockClear()
+
+    const form = {
+      From: phoneNumber,
+      To: '+12123473190',
+      Body: 'SUBSCRIBE',
+      MessageSid: 'SM_UNSAFE_RESUB',
+    }
+    const response = await smsPost(smsRequest(form))
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('<Response></Response>')
+    await flushAfterTasks()
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.confirmedAt).toBeNull()
+    expect(subscriber.subscribedPostcard).toBe(false)
+    expect(subscriber.subscribedContraption).toBe(false)
+    expect(subscriber.subscribedWorkshop).toBe(false)
+    expect(subscriber.subscribedTsundoku).toBe(false)
+    expect(subscriber.bellContactCardSentAt).toBeNull()
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+
+    const duplicate = await smsPost(smsRequest(form))
+    expect(await duplicate.text()).toContain('<Response></Response>')
+  })
+
+  it.each([
+    'UNSTOP',
+    'YES',
+  ])('reactivates local state for Twilio keyword %s without OptOutType', async (keyword) => {
+    const phoneNumber = '+15551234567'
+    await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'SUBSCRIBE',
+        MessageSid: 'SM_SUB',
+      })
+    )
+    await flushAfterTasks()
+    await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'STOP',
+        MessageSid: 'SM_STOP',
+      })
+    )
+    vi.mocked(sendSms).mockClear()
+
+    const response = await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: keyword,
+        MessageSid: `SM_${keyword}`,
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain(SMS_SUBSCRIBE_CONFIRMATION)
+    await flushAfterTasks()
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.confirmedAt).toBeInstanceOf(Date)
+    expect(subscriber.subscribedPostcard).toBe(true)
+    expect(vi.mocked(sendSms)).toHaveBeenCalledWith({
+      from: '+12123473190',
+      to: phoneNumber,
+      body: SMS_BELL_CONTACT_ONBOARDING,
+      mediaUrl: 'https://www.philipithomas.com/bell.vcf',
+    })
     expect(start).not.toHaveBeenCalled()
   })
 
@@ -564,6 +662,7 @@ describe('POST /api/phone/sms', () => {
     const resubscribe = await smsPost(
       smsRequest({
         ...subscribeForm,
+        Body: 'START',
         MessageSid: 'SM_RESUB',
       })
     )
@@ -701,12 +800,32 @@ describe('POST /api/phone/sms', () => {
     expect(sendSimpleEmail).not.toHaveBeenCalled()
   })
 
-  it('adds the one-time Bell card after a Twilio-managed START reply', async () => {
+  it('reactivates stopped state from authoritative Twilio START metadata', async () => {
+    const phoneNumber = '+15551234567'
+    await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'SUBSCRIBE',
+        MessageSid: 'SM_SUB',
+      })
+    )
+    await flushAfterTasks()
+    await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'STOP',
+        MessageSid: 'SM_STOP',
+      })
+    )
+    vi.mocked(sendSms).mockClear()
+
     const response = await smsPost(
       smsRequest({
-        From: '+15551234567',
+        From: phoneNumber,
         To: '+12123473190',
-        Body: 'START',
+        Body: 'CUSTOM-OPT-IN',
         MessageSid: 'SM_START',
         OptOutType: 'START',
       })
@@ -720,7 +839,7 @@ describe('POST /api/phone/sms', () => {
     await flushAfterTasks()
     expect(vi.mocked(sendSms)).toHaveBeenCalledWith({
       from: '+12123473190',
-      to: '+15551234567',
+      to: phoneNumber,
       body: SMS_BELL_CONTACT_ONBOARDING,
       mediaUrl: 'https://www.philipithomas.com/bell.vcf',
     })
@@ -910,6 +1029,44 @@ describe('POST /api/phone/voice-menu', () => {
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
     const [subscriber] = await db.select().from(smsSubscribers)
     expect(subscriber.confirmedAt).toBeNull()
+  })
+
+  it('requires handset reactivation when a stopped caller presses 2 again', async () => {
+    vi.mocked(smsSignupUi).mockResolvedValue(true)
+    const phoneNumber = '+14155551234'
+    await smsPost(
+      smsRequest({
+        From: phoneNumber,
+        To: '+12123473190',
+        Body: 'STOP',
+        MessageSid: 'SM_STOP',
+      })
+    )
+    vi.mocked(sendSms).mockClear()
+    vi.mocked(sendSimpleEmail).mockClear()
+
+    const voiceForm = {
+      From: phoneNumber,
+      To: '+12123473190',
+      Digits: '2',
+      CallSid: 'CA_RESUB',
+    }
+    const response = await voiceMenuPost(voiceMenuRequest(voiceForm))
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(xml).toContain('send START or UNSTOP from this phone')
+    expect(xml).not.toContain('You are subscribed')
+    await flushAfterTasks()
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.confirmedAt).toBeNull()
+    expect(subscriber.subscribedPostcard).toBe(false)
+    expect(subscriber.bellContactCardSentAt).toBeNull()
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+
+    const duplicate = await voiceMenuPost(voiceMenuRequest(voiceForm))
+    expect(await duplicate.text()).toContain('already handled')
   })
 
   it('still gives spoken STOP instructions when voice confirmation SMS fails', async () => {
