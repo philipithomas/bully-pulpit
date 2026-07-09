@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { summarizeNewsletters } from '@/lib/analytics/events'
-import { setSessionCookies, signSession } from '@/lib/auth/jwt'
+import {
+  setNewSubscriberOnboardingCookie,
+  setSessionCookies,
+  signSession,
+} from '@/lib/auth/jwt'
 import { verifyTokenWithMetadata } from '@/lib/auth/login-service'
 import {
   applyNewsletterOptIns,
@@ -40,6 +44,11 @@ export async function GET(request: NextRequest) {
     )
     const response = NextResponse.redirect(destination)
     setSessionCookies(response, jwt)
+    await setNewSubscriberOnboardingCookie(
+      response,
+      subscriber,
+      verification.newlyConfirmed
+    )
     return response
   } catch {
     return NextResponse.redirect(new URL('/?error=invalid-token', request.url))

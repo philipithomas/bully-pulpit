@@ -15,8 +15,9 @@ vi.mock('jose', async (importOriginal) => {
   }
 })
 
-import { jwtVerify } from 'jose'
+import { decodeJwt, jwtVerify } from 'jose'
 import { POST } from '@/app/api/auth/google/route'
+import { NEW_SUBSCRIBER_ONBOARDING_COOKIE } from '@/lib/auth/jwt'
 import { subscribers } from '@/lib/db/schema'
 import { db, resetDb } from '@/test/integration/db'
 
@@ -116,6 +117,11 @@ describe('POST /api/auth/google', () => {
     expect(body.user.email).toBe('bar@gmail.com')
     expect(body.user.subscribed_workshop).toBe(true)
     expect(response.cookies.get('bp_has_session')?.value).toBe('1')
+    expect(
+      response.headers
+        .getSetCookie()
+        .some((cookie) => cookie.startsWith('bp_onboarding=;'))
+    ).toBe(true)
 
     const typedEmail = await subscriberByEmail('foo@gmail.com')
     expect(typedEmail.confirmedAt).toBeNull()
@@ -127,5 +133,23 @@ describe('POST /api/auth/google', () => {
     expect(googleAccount.subscribedContraption).toBe(false)
     expect(googleAccount.subscribedPostcard).toBe(false)
     expect(googleAccount.subscribedTsundoku).toBe(false)
+  })
+
+  it('sets onboarding when Google creates and confirms a new subscriber', async () => {
+    const response = await POST(
+      googlePost({
+        code: 'oauth-code',
+        email: 'bar@gmail.com',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const subscriber = await subscriberByEmail('bar@gmail.com')
+    const marker = response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value
+    expect(marker).toBeTruthy()
+    expect(decodeJwt(marker as string)).toMatchObject({
+      sub: subscriber.uuid,
+      purpose: 'new-subscriber-onboarding',
+    })
   })
 })

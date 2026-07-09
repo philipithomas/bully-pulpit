@@ -16,6 +16,7 @@ export type AnalyticsPlacement =
   | 'post_footer'
   | 'newsletter_page'
   | 'sign_in_modal'
+  | 'onboarding'
   | 'member_menu'
   | 'account'
   | 'unknown'
@@ -193,6 +194,7 @@ const ANALYTICS_PLACEMENTS = new Set<AnalyticsPlacement>([
   'post_footer',
   'newsletter_page',
   'sign_in_modal',
+  'onboarding',
   'member_menu',
   'account',
   'unknown',

@@ -27,16 +27,19 @@ export function useAuth() {
   // both anonymous visitors and returning members.
   const [hasSession, setHasSession] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showNewSubscriberOnboarding, setShowNewSubscriberOnboarding] =
+    useState(false)
 
   useEffect(() => {
     const present = hasSessionCookie()
     setHasSession(present)
     if (!present) {
+      setShowNewSubscriberOnboarding(false)
       setLoading(false)
       return
     }
 
-    fetch('/api/auth/me')
+    fetch('/api/auth/me?consume_onboarding=1')
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load session')
         return res.json()
@@ -45,16 +48,21 @@ export function useAuth() {
         (data: {
           user: AuthUser | null
           preferences?: SubscriberPreferences | null
+          newSubscriberOnboarding?: boolean
         }) => {
           const nextUser = data.user ?? null
           setUser(nextUser)
           setPreferences(nextUser ? (data.preferences ?? null) : null)
+          setShowNewSubscriberOnboarding(
+            Boolean(nextUser && data.newSubscriberOnboarding)
+          )
           if (!nextUser) setHasSession(false)
         }
       )
       .catch(() => {
         setUser(null)
         setPreferences(null)
+        setShowNewSubscriberOnboarding(false)
         setHasSession(false)
       })
       .finally(() => setLoading(false))
@@ -66,8 +74,13 @@ export function useAuth() {
     document.cookie = 'bp_has_session=; path=/; max-age=0'
     setUser(null)
     setPreferences(null)
+    setShowNewSubscriberOnboarding(false)
     setHasSession(false)
     document.documentElement.removeAttribute('data-member')
+  }, [])
+
+  const dismissNewSubscriberOnboarding = useCallback(() => {
+    setShowNewSubscriberOnboarding(false)
   }, [])
 
   return {
@@ -77,5 +90,7 @@ export function useAuth() {
     hasSession,
     loading,
     logout,
+    showNewSubscriberOnboarding,
+    dismissNewSubscriberOnboarding,
   }
 }

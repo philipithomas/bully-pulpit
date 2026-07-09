@@ -23,6 +23,10 @@ vi.mock('node:dns/promises', () => ({
 import { POST as verifyPost } from '@/app/api/auth/verify/route'
 import { POST as subscribePost } from '@/app/api/subscribe/route'
 import { GET as verifyMagicLinkGet } from '@/app/auth/verify/route'
+import {
+  NEW_SUBSCRIBER_ONBOARDING_COOKIE,
+  verifyNewSubscriberOnboardingCookie,
+} from '@/lib/auth/jwt'
 import { siteConfig } from '@/lib/config'
 import { MAX_VERIFICATION_ATTEMPTS } from '@/lib/db/queries/logins'
 import { logins, subscribers } from '@/lib/db/schema'
@@ -148,6 +152,16 @@ describe('POST /api/auth/verify', () => {
     expect(payload.sub).toBe(created.uuid)
     expect(payload.email).toBe('reader@example.com')
     expect(res.cookies.get('bp_has_session')?.value).toBe('1')
+    const onboardingMarker = res.cookies.get(
+      NEW_SUBSCRIBER_ONBOARDING_COOKIE
+    )?.value
+    expect(onboardingMarker).toBeTruthy()
+    expect(
+      await verifyNewSubscriberOnboardingCookie(
+        onboardingMarker as string,
+        created.uuid
+      )
+    ).toBe(true)
     const setCookie = res.headers.getSetCookie().join('; ')
     expect(setCookie).toContain('bp_token=')
     expect(setCookie).toContain('HttpOnly')
@@ -173,6 +187,11 @@ describe('POST /api/auth/verify', () => {
 
     const res2 = await verify('reader@example.com', freshCode)
     expect(res2.status).toBe(200)
+    expect(
+      res2.headers
+        .getSetCookie()
+        .some((cookie) => cookie.startsWith('bp_onboarding=;'))
+    ).toBe(true)
 
     // ...but no second admin notification for an already-confirmed subscriber.
     expect(adminNotificationCalls()).toHaveLength(1)
@@ -322,6 +341,11 @@ describe('POST /api/auth/verify', () => {
       'https://www.philipithomas.com/?signed-in=1&analytics-signup=email-link&analytics-newsletter=contraption&analytics-new-subscriber=0'
     )
     expect(res.cookies.get('bp_has_session')?.value).toBe('1')
+    expect(
+      res.headers
+        .getSetCookie()
+        .some((cookie) => cookie.startsWith('bp_onboarding=;'))
+    ).toBe(true)
 
     const after = await subscriberByEmail('contraption-reader@example.com')
     expect(after.subscribedContraption).toBe(true)
@@ -329,5 +353,32 @@ describe('POST /api/auth/verify', () => {
     expect(after.subscribedPostcard).toBe(false)
     expect(after.subscribedTsundoku).toBe(false)
     expect(adminNotificationCalls()).toHaveLength(0)
+  })
+
+  it('sets onboarding only when a magic link first confirms the subscriber', async () => {
+    await subscribe('new-reader@example.com')
+    const subscriber = await subscriberByEmail('new-reader@example.com')
+    const { token } = await latestMagicLogin(subscriber.id)
+
+    const response = await verifyMagicLinkGet(
+      new NextRequest(
+        `https://www.philipithomas.com/auth/verify?token=${token}`
+      )
+    )
+
+    expect(response.headers.get('location')).toContain(
+      'analytics-new-subscriber=1'
+    )
+    const marker = response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value
+    expect(marker).toBeTruthy()
+    expect(
+      await verifyNewSubscriberOnboardingCookie(
+        marker as string,
+        subscriber.uuid
+      )
+    ).toBe(true)
+    expect(
+      (await subscriberByEmail('new-reader@example.com')).confirmedAt
+    ).not.toBeNull()
   })
 })

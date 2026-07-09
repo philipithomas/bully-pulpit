@@ -137,6 +137,45 @@ describe('PATCH', () => {
     expect(row.name).toBe('Reader')
   })
 
+  it('persists all four onboarding choices in one update', async () => {
+    const subscriber = await seedSubscriber({
+      subscribedContraption: true,
+      subscribedWorkshop: false,
+      subscribedPostcard: true,
+      subscribedTsundoku: false,
+    })
+    await signIn(subscriber)
+
+    const response = await PATCH(
+      patchRequest({
+        subscribed_contraption: false,
+        subscribed_workshop: true,
+        subscribed_postcard: false,
+        subscribed_tsundoku: true,
+        analytics_placement: 'onboarding',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect((await response.json()).preferences).toEqual({
+      email: 'reader@example.com',
+      subscribed_contraption: false,
+      subscribed_workshop: true,
+      subscribed_postcard: false,
+      subscribed_tsundoku: true,
+    })
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.uuid, subscriber.uuid))
+    expect(row).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTsundoku: true,
+    })
+  })
+
   it('notifies the admin when a signed-in subscriber opts into Tsundoku', async () => {
     const subscriber = await seedSubscriber({ subscribedTsundoku: false })
     await signIn(subscriber)

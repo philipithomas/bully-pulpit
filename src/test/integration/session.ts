@@ -25,6 +25,10 @@ export function setSessionCookie(jwt: string) {
   store.set('bp_token', jwt)
 }
 
+export function setCookie(name: string, value: string) {
+  store.set(name, value)
+}
+
 export function clearSessionStore() {
   store.clear()
 }

@@ -1,13 +1,22 @@
+import { NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('next/headers', () => import('@/test/integration/session'))
 
 import { GET } from '@/app/api/auth/me/route'
-import { signSession } from '@/lib/auth/jwt'
+import {
+  NEW_SUBSCRIBER_ONBOARDING_COOKIE,
+  setNewSubscriberOnboardingCookie,
+  signSession,
+} from '@/lib/auth/jwt'
 import { subscribers } from '@/lib/db/schema'
 import { db, resetDb } from '@/test/integration/db'
-import { clearSessionStore, setSessionCookie } from '@/test/integration/session'
+import {
+  clearSessionStore,
+  setCookie,
+  setSessionCookie,
+} from '@/test/integration/session'
 
 beforeEach(async () => {
   clearSessionStore()
@@ -37,12 +46,22 @@ async function signIn(subscriber: {
   setSessionCookie(await signSession(subscriber))
 }
 
+function getMe(consumeOnboarding = false) {
+  const url = new URL('http://localhost/api/auth/me')
+  if (consumeOnboarding) url.searchParams.set('consume_onboarding', '1')
+  return GET(new Request(url))
+}
+
 describe('GET /api/auth/me', () => {
   it('returns an empty auth payload without a session', async () => {
-    const response = await GET()
+    const response = await getMe()
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ user: null, preferences: null })
+    expect(await response.json()).toEqual({
+      user: null,
+      preferences: null,
+      newSubscriberOnboarding: false,
+    })
     expect(response.headers.getSetCookie()).toHaveLength(0)
   })
 
@@ -53,7 +72,7 @@ describe('GET /api/auth/me', () => {
     })
     await signIn(subscriber)
 
-    const response = await GET()
+    const response = await getMe()
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
@@ -70,7 +89,66 @@ describe('GET /api/auth/me', () => {
         subscribed_postcard: true,
         subscribed_tsundoku: true,
       },
+      newSubscriberOnboarding: false,
     })
+  })
+
+  it('returns and consumes a valid onboarding marker for this subscriber', async () => {
+    const subscriber = await seedSubscriber()
+    await signIn(subscriber)
+    const markerResponse = NextResponse.json({ ok: true })
+    await setNewSubscriberOnboardingCookie(markerResponse, subscriber, true)
+    setCookie(
+      NEW_SUBSCRIBER_ONBOARDING_COOKIE,
+      markerResponse.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value ?? ''
+    )
+
+    const pollingResponse = await getMe()
+    expect(await pollingResponse.json()).toMatchObject({
+      newSubscriberOnboarding: false,
+    })
+    expect(pollingResponse.headers.getSetCookie()).toHaveLength(0)
+
+    const response = await getMe(true)
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      user: { uuid: subscriber.uuid },
+      newSubscriberOnboarding: true,
+    })
+    const consumed = response.headers
+      .getSetCookie()
+      .find((cookie) =>
+        cookie.startsWith(`${NEW_SUBSCRIBER_ONBOARDING_COOKIE}=`)
+      )
+    expect(consumed).toMatch(/^bp_onboarding=;/)
+  })
+
+  it('rejects and consumes a marker issued for another subscriber', async () => {
+    const subscriber = await seedSubscriber()
+    await signIn(subscriber)
+    const markerResponse = NextResponse.json({ ok: true })
+    await setNewSubscriberOnboardingCookie(
+      markerResponse,
+      { uuid: '00000000-0000-4000-8000-000000000002' },
+      true
+    )
+    setCookie(
+      NEW_SUBSCRIBER_ONBOARDING_COOKIE,
+      markerResponse.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value ?? ''
+    )
+
+    const response = await getMe(true)
+
+    expect(await response.json()).toMatchObject({
+      user: { uuid: subscriber.uuid },
+      newSubscriberOnboarding: false,
+    })
+    expect(
+      response.headers
+        .getSetCookie()
+        .some((cookie) => cookie.startsWith('bp_onboarding=;'))
+    ).toBe(true)
   })
 
   it('clears session cookies when the session subscriber no longer exists', async () => {
@@ -80,10 +158,14 @@ describe('GET /api/auth/me', () => {
       name: null,
     })
 
-    const response = await GET()
+    const response = await getMe()
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ user: null, preferences: null })
+    expect(await response.json()).toEqual({
+      user: null,
+      preferences: null,
+      newSubscriberOnboarding: false,
+    })
 
     const setCookies = response.headers.getSetCookie()
     const token = setCookies.find((c) => c.startsWith('bp_token='))
@@ -99,10 +181,14 @@ describe('GET /api/auth/me', () => {
   it('clears session cookies for an invalid token', async () => {
     setSessionCookie('not-a-real-jwt')
 
-    const response = await GET()
+    const response = await getMe()
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ user: null, preferences: null })
-    expect(response.headers.getSetCookie()).toHaveLength(2)
+    expect(await response.json()).toEqual({
+      user: null,
+      preferences: null,
+      newSubscriberOnboarding: false,
+    })
+    expect(response.headers.getSetCookie()).toHaveLength(3)
   })
 })
