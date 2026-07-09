@@ -32,7 +32,12 @@ const WORLDS_BEST_2024 = `${WORLDS_BEST_ARCHIVE}2024`
 export const stargazingRestaurants: readonly StargazingRestaurant[] = [
   { name: 'The Progress', city: 'San Francisco', stars: 1 },
   { name: 'Spruce', city: 'San Francisco', stars: 1 },
-  { name: 'Terra', city: 'St. Helena', stars: 1 },
+  {
+    name: 'Terra',
+    city: 'St. Helena',
+    stars: 1,
+    searchAliases: ['Terra Restaurant'],
+  },
   {
     name: 'The Restaurant at Meadowood',
     city: 'St. Helena',
@@ -155,6 +160,8 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
   { name: '7 Adams', city: 'San Francisco', stars: 1 },
   { name: 'Frances', city: 'San Francisco', stars: 1 },
   { name: 'Sushi Masuda', city: 'Tokyo', stars: 2 },
+  { name: 'Takumi Tatsuhiro', city: 'Tokyo', stars: 1 },
+  { name: 'Yaesu Sushi Umi', city: 'Tokyo', stars: 2 },
   { name: 'Mister Jiu’s', city: 'San Francisco', stars: 1 },
   {
     name: 'Sons & Daughters',
