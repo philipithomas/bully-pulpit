@@ -1022,6 +1022,11 @@ describe('POST /api/phone/voice-menu', () => {
         From: '+14155551234',
         To: '+12123473190',
         Digits: '2',
+        CallSid: 'CA_VOICEMAIL',
+        CallerName: 'Jane Caller',
+        FromCity: 'San Francisco',
+        FromState: 'CA',
+        FromZip: '94105',
       })
     )
 
@@ -1029,6 +1034,11 @@ describe('POST /api/phone/voice-menu', () => {
     const xml = await response.text()
     expect(xml).toContain('Leave a message after the tone.')
     expect(xml).toContain('<Record maxLength="120"')
+    expect(xml).toContain('CallSid=CA_VOICEMAIL')
+    expect(xml).toContain('CallerName=Jane+Caller')
+    expect(xml).toContain('FromCity=San+Francisco')
+    expect(xml).toContain('FromState=CA')
+    expect(xml).toContain('FromZip=94105')
     expect(await db.select().from(smsSubscribers)).toHaveLength(0)
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
   })

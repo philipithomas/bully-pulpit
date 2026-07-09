@@ -128,6 +128,20 @@ function renderPhoneNotificationText(input: {
   return lines.join('\n')
 }
 
+function callerMetadataDetails(
+  phoneNumber: string,
+  metadata?: TwilioWebhookMetadata | null
+): Array<[string, string]> {
+  const details: Array<[string, string]> = []
+  const origin = describePhoneOrigin(phoneNumber, metadata)
+  if (origin) details.push(['Origin', origin])
+  if (metadata?.callerName) details.push(['Caller name', metadata.callerName])
+  if (metadata?.fromZip) details.push(['ZIP', metadata.fromZip])
+  if (metadata?.messageSid) details.push(['Message SID', metadata.messageSid])
+  if (metadata?.callSid) details.push(['Call SID', metadata.callSid])
+  return details
+}
+
 // --- Voicemail ---
 
 export type VoicemailEmailInput = {
@@ -136,6 +150,7 @@ export type VoicemailEmailInput = {
   toLabel: string
   durationSeconds: string
   transcription: string
+  metadata?: TwilioWebhookMetadata | null
   receivedAt: Date
 }
 
@@ -145,6 +160,7 @@ function voicemailContent(input: VoicemailEmailInput) {
     details: [
       ['From', input.from],
       ['To', `${input.to} (${input.toLabel})`],
+      ...callerMetadataDetails(input.from, input.metadata),
       ['Duration', `${input.durationSeconds} seconds`],
       ['Received', formatTimestamp(input.receivedAt)],
     ] as Array<[string, string]>,
@@ -172,6 +188,7 @@ export type MissedCallEmailInput = {
   to: string
   toLabel: string
   greeting: string
+  metadata?: TwilioWebhookMetadata | null
   receivedAt: Date
 }
 
@@ -181,6 +198,7 @@ function missedCallContent(input: MissedCallEmailInput) {
     details: [
       ['From', input.from],
       ['To', `${input.to} (${input.toLabel})`],
+      ...callerMetadataDetails(input.from, input.metadata),
       ['Received', formatTimestamp(input.receivedAt)],
     ] as Array<[string, string]>,
     sectionTitle: 'Greeting played',
@@ -259,12 +277,7 @@ function smsSignupContent(input: SmsSignupEmailInput) {
     ['Source', signupSourceLabel(input.source)],
     ['To', `${input.to} (${input.toLabel})`],
   ]
-  const origin = describePhoneOrigin(input.phoneNumber, metadata)
-  if (origin) details.push(['Origin', origin])
-  if (metadata?.callerName) details.push(['Caller name', metadata.callerName])
-  if (metadata?.fromZip) details.push(['ZIP', metadata.fromZip])
-  if (metadata?.messageSid) details.push(['Message SID', metadata.messageSid])
-  if (metadata?.callSid) details.push(['Call SID', metadata.callSid])
+  details.push(...callerMetadataDetails(input.phoneNumber, metadata))
   details.push(['Received', formatTimestamp(input.receivedAt)])
 
   return {
