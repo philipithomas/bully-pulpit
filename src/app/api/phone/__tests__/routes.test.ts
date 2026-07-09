@@ -106,7 +106,11 @@ describe('POST /api/phone/voice', () => {
     const xml = await response.text()
     expect(xml).toContain('<Gather')
     expect(xml).toContain('/api/phone/voice-menu?secret=test-webhook-secret')
-    expect(xml).toContain('Press 2 to subscribe to text message updates.')
+    expect(xml).toContain(
+      'Press 2 to subscribe to recurring new-post texts from philipithomas.com.'
+    )
+    expect(xml).toContain('Frequency varies. Message and data rates may apply.')
+    expect(xml).toContain('Text STOP to unsubscribe or HELP for help.')
   })
 })
 

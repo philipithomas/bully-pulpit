@@ -4,6 +4,8 @@ import {
   emptyTwiml,
   escapeXml,
   goodbyeTwiml,
+  mediaMessageTwiml,
+  messagesTwiml,
   messageTwiml,
   sayAndHangupTwiml,
   twimlResponse,
@@ -66,7 +68,11 @@ describe('voiceMenuTwiml', () => {
       '<Gather action="https://philipithomas.com/api/phone/voice-menu?secret=s" method="POST" input="dtmf" numDigits="1" timeout="6">'
     )
     expect(xml).toContain('Press 1 to leave a voicemail.')
-    expect(xml).toContain('Press 2 to subscribe to text message updates.')
+    expect(xml).toContain(
+      'Press 2 to subscribe to recurring new-post texts from philipithomas.com.'
+    )
+    expect(xml).toContain('Frequency varies. Message and data rates may apply.')
+    expect(xml).toContain('Text STOP to unsubscribe or HELP for help.')
     expect(xml).toContain('<Record maxLength="120"')
   })
 })
@@ -97,6 +103,54 @@ describe('messageTwiml', () => {
   it('replies with escaped SMS body text', () => {
     const xml = messageTwiml('Subscribed & ready.')
     expect(xml).toContain('<Message>Subscribed &amp; ready.</Message>')
+  })
+})
+
+describe('mediaMessageTwiml', () => {
+  it('replies with an MMS body and media attachment', () => {
+    const xml = mediaMessageTwiml({
+      body: 'Meet Bell & add the contact.',
+      mediaUrl: 'https://www.philipithomas.com/bell.vcf?source=sms&v=1',
+    })
+
+    expect(xml).toContain('<Body>Meet Bell &amp; add the contact.</Body>')
+    expect(xml).toContain(
+      '<Media>https://www.philipithomas.com/bell.vcf?source=sms&amp;v=1</Media>'
+    )
+  })
+
+  it('xml-escapes values before interpolation', () => {
+    const xml = mediaMessageTwiml({
+      body: '<Bell> says "hello"',
+      mediaUrl: 'https://example.com/<bell>.vcf?owner=Philip&kind=contact',
+    })
+
+    expect(xml).not.toContain('<Bell>')
+    expect(xml).not.toContain('<bell>')
+    expect(xml).toContain('&lt;Bell&gt; says &quot;hello&quot;')
+    expect(xml).toContain(
+      'https://example.com/&lt;bell&gt;.vcf?owner=Philip&amp;kind=contact'
+    )
+  })
+})
+
+describe('messagesTwiml', () => {
+  it('keeps a confirmation SMS ahead of an onboarding MMS', () => {
+    const xml = messagesTwiml([
+      { body: 'Subscribed.' },
+      {
+        body: 'Meet Bell.',
+        mediaUrl: 'https://www.philipithomas.com/bell.vcf',
+      },
+    ])
+
+    expect(xml.indexOf('<Message>Subscribed.</Message>')).toBeLessThan(
+      xml.indexOf('<Body>Meet Bell.</Body>')
+    )
+    expect(xml.match(/<Message>/g)).toHaveLength(2)
+    expect(xml).toContain(
+      '<Media>https://www.philipithomas.com/bell.vcf</Media>'
+    )
   })
 })
 

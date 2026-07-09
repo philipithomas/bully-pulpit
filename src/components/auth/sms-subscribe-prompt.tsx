@@ -55,8 +55,9 @@ export function SmsSubscribePrompt({
         className="font-sans text-gray-700 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950"
       >
         {displayNumber}
-      </a>
-      .
+      </a>{' '}
+      for recurring new-post texts. Message frequency varies. Message and data
+      rates may apply. Reply STOP to unsubscribe or HELP for help.
     </p>
   )
 }
