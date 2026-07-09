@@ -13,7 +13,11 @@ describe('stargazing filtering and sorting', () => {
       'name',
       'ascending'
     )
-    expect(london.map((restaurant) => restaurant.name)).toEqual(['Silo'])
+    expect(london.map((restaurant) => restaurant.name)).toEqual([
+      'Gymkhana',
+      'Lyle’s',
+      'Silo',
+    ])
 
     const noma = filterAndSortRestaurants(
       stargazingRestaurants,
@@ -36,6 +40,14 @@ describe('stargazing filtering and sorting', () => {
       'Café Boulud',
       'Café China',
     ])
+
+    const lyles = filterAndSortRestaurants(
+      stargazingRestaurants,
+      "Lyle's of London",
+      'name',
+      'ascending'
+    )
+    expect(lyles.map((restaurant) => restaurant.name)).toEqual(['Lyle’s'])
   })
 
   it('sorts star counts high to low', () => {

@@ -24,7 +24,8 @@ export interface StargazingRestaurant {
 
 const WORLDS_BEST_ARCHIVE =
   'https://www.theworlds50best.com/restaurants/best-in-the-world/previous-list/'
-const WORLDS_BEST_2023 = 'https://www.theworlds50best.com/previous-list/2023'
+const WORLDS_BEST_2018 = `${WORLDS_BEST_ARCHIVE}2018`
+const WORLDS_BEST_2021 = `${WORLDS_BEST_ARCHIVE}2021`
 
 export const stargazingRestaurants: readonly StargazingRestaurant[] = [
   { name: 'The Progress', city: 'San Francisco', stars: 1 },
@@ -34,6 +35,7 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     name: 'The Restaurant at Meadowood',
     city: 'St. Helena',
     stars: 3,
+    searchAliases: ['Restaurant at Meadowood'],
   },
   {
     name: 'Bouchon',
@@ -54,8 +56,8 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     city: 'Mexico City',
     stars: 2,
     worldsBest: {
-      rank: 20,
-      url: WORLDS_BEST_ARCHIVE,
+      rank: 13,
+      url: WORLDS_BEST_2018,
     },
   },
   { name: 'Octavia', city: 'San Francisco', stars: 1 },
@@ -65,7 +67,7 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     stars: 3,
     worldsBest: {
       rank: 26,
-      url: WORLDS_BEST_ARCHIVE,
+      url: WORLDS_BEST_2018,
     },
     searchAliases: ['NYC'],
   },
@@ -119,8 +121,8 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     city: 'Mexico City',
     stars: 2,
     worldsBest: {
-      rank: 9,
-      url: WORLDS_BEST_2023,
+      rank: 11,
+      url: WORLDS_BEST_2018,
     },
   },
   {
@@ -179,6 +181,53 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     stars: 0,
     distinction: 'Selected',
   },
+  {
+    name: 'L’Atelier de Robuchon',
+    city: 'Paris',
+    stars: 2,
+    searchAliases: ["L'Atelier de Robuchon"],
+  },
+  { name: 'Il Palagio', city: 'Florence', stars: 1 },
+  { name: 'ABaC', city: 'Barcelona', stars: 3 },
+  {
+    name: 'Tickets',
+    city: 'Barcelona',
+    stars: 1,
+    worldsBest: {
+      rank: 32,
+      url: WORLDS_BEST_2018,
+    },
+    searchAliases: ['Tickets tapas bar'],
+  },
+  { name: 'Nico', city: 'San Francisco', stars: 1 },
+  {
+    name: 'Lyle’s',
+    city: 'London',
+    stars: 1,
+    searchAliases: ["Lyle's of London", 'Lyles'],
+  },
+  { name: 'Angler', city: 'San Francisco', stars: 1 },
+  {
+    name: 'Don Julio',
+    city: 'Buenos Aires',
+    stars: 1,
+    worldsBest: {
+      rank: 13,
+      url: WORLDS_BEST_2021,
+    },
+  },
+  {
+    name: 'Cosme',
+    city: 'New York City',
+    stars: 0,
+    distinction: 'Selected',
+    worldsBest: {
+      rank: 22,
+      url: WORLDS_BEST_2021,
+    },
+    searchAliases: ['NYC'],
+  },
+  { name: 'Gymkhana', city: 'London', stars: 1 },
   {
     name: 'Eleven Madison Park',
     city: 'New York City',
@@ -239,7 +288,7 @@ export function stargazingPublicText(): string {
   return [
     stargazingSummary,
     'I enjoy fine dining as a lens to explore local culture and craftspeople performing at the highest level.',
-    'I count each restaurant once. Star totals use a representative Michelin rating around my visit, with some grace for nearby promotions, closures, and places the Guide reached later. Visit dates stay private.',
+    'I count each restaurant once. Michelin stars reflect the rating at the time I visited, with some grace for nearby promotions and places the Guide reached later. World rankings reflect the list at the time I visited. Visit dates stay private.',
     'Restaurants:',
     ...rows,
   ].join('\n')

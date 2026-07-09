@@ -17,7 +17,7 @@ const WORLD_KEYS = new Set(['rank', 'url', 'numberOneWhileVisited'])
 
 describe('stargazing restaurant data', () => {
   it('keeps one public row per restaurant', () => {
-    expect(stargazingRestaurants).toHaveLength(36)
+    expect(stargazingRestaurants).toHaveLength(46)
     const names = stargazingRestaurants.map((restaurant) =>
       restaurant.name.toLocaleLowerCase()
     )
@@ -26,11 +26,24 @@ describe('stargazing restaurant data', () => {
 
   it('derives the public headline totals from the rows', () => {
     expect(stargazingStats).toEqual({
-      restaurants: 36,
-      starredRestaurants: 30,
-      stars: 47,
+      restaurants: 46,
+      starredRestaurants: 39,
+      stars: 59,
       numberOneRestaurants: 3,
     })
+  })
+
+  it('includes the additional archive rows and visit-time rankings', () => {
+    const restaurants = new Map(
+      stargazingRestaurants.map((restaurant) => [restaurant.name, restaurant])
+    )
+    expect(restaurants.get('L’Atelier de Robuchon')?.stars).toBe(2)
+    expect(restaurants.get('ABaC')?.stars).toBe(3)
+    expect(restaurants.get('Tickets')?.worldsBest?.rank).toBe(32)
+    expect(restaurants.get('Pujol')?.worldsBest?.rank).toBe(13)
+    expect(restaurants.get('Quintonil')?.worldsBest?.rank).toBe(11)
+    expect(restaurants.get('Don Julio')?.worldsBest?.rank).toBe(13)
+    expect(restaurants.get('Cosme')?.worldsBest?.rank).toBe(22)
   })
 
   it('keeps Bib Gourmands only when they also have a World ranking', () => {
@@ -62,6 +75,8 @@ describe('stargazing restaurant data', () => {
     expect(text).toContain('Noma | Copenhagen')
     expect(text).toContain('Eleven Madison Park')
     expect(text).toContain('Osteria Francescana')
+    expect(text).toContain('Don Julio | Buenos Aires')
+    expect(text).toContain('Tickets | Barcelona')
     expect(text).not.toMatch(/\b20\d{2}\b|Former|Historical|Closed/)
   })
 })
