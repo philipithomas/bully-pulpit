@@ -1,0 +1,2 @@
+ALTER TABLE "sms_subscribers" ADD COLUMN "bell_contact_card_processing_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "sms_subscribers" ADD COLUMN "bell_contact_card_sent_at" timestamp with time zone;

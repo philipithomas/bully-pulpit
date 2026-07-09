@@ -1,6 +1,6 @@
 {
-  "id": "ba3d1407-1df2-4a63-99f5-c6e9998deb93",
-  "prevId": "b56b6d9d-8888-4058-be2d-62d3c855df89",
+  "id": "316fd5f9-1357-4645-8dec-5daba900798b",
+  "prevId": "ba3d1407-1df2-4a63-99f5-c6e9998deb93",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -726,6 +726,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "bell_contact_card_processing_at": {
+          "name": "bell_contact_card_processing_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bell_contact_card_sent_at": {
+          "name": "bell_contact_card_sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "source": {
           "name": "source",
