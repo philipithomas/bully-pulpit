@@ -133,7 +133,8 @@ export function SearchDialog({
     abortRef.current = controller
     const started = performance.now()
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+      const params = new URLSearchParams({ q, source: 'typeahead' })
+      const res = await fetch(`/api/search?${params}`, {
         signal: controller.signal,
       })
       if (res.ok) {
@@ -173,9 +174,8 @@ export function SearchDialog({
       setSearchError(null)
       // Abort the previous in-flight request synchronously so a stale response
       // can never paint over a newer query. There is no debounce: the route
-      // falls back to fast BM25 locally when vector query embedding is
-      // unavailable, and this abort + per-query cache keep the latest query
-      // authoritative.
+      // can run fast BM25 locally when the typeahead embedding flag is off,
+      // and this abort + per-query cache keep the latest query authoritative.
       abortRef.current?.abort()
       if (value.length < 2) {
         setResults([])
