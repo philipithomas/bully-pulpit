@@ -93,8 +93,7 @@ export function Header() {
   }, [])
 
   // Give the expressive bell one restrained ring on the second page view.
-  // The visible Bell AI label carries discovery afterward, and reduced-motion
-  // visitors receive no animation through the global CSS guard.
+  // Reduced-motion visitors receive no animation through the global CSS guard.
   useEffect(() => {
     if (!pathname) return
     if (countedBellPathRef.current === pathname) return
@@ -179,17 +178,13 @@ export function Header() {
             onClick={handleOpenBell}
             onMouseEnter={prefetchChat}
             onFocus={prefetchChat}
-            aria-label="Open Bell AI"
-            className="group -my-3 flex items-center gap-1.5 py-3"
+            aria-label="Open Bell"
+            className="p-3 -m-3"
           >
             <BellIcon
-              className={`h-[18px] w-[18px] text-gray-400 transition-colors group-hover:text-gray-600 ${nudgeBell ? 'bell-discovery-nudge' : ''}`}
+              className={`h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600 ${nudgeBell ? 'bell-discovery-nudge' : ''}`}
               aria-hidden="true"
             />
-            <span className="font-sans text-xs text-gray-500 transition-colors group-hover:text-gray-700">
-              Bell
-            </span>
-            <span className="font-sans text-[9px] text-gray-400">AI</span>
           </button>
           <MemberMenu />
         </nav>
