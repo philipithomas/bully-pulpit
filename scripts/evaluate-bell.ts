@@ -149,6 +149,13 @@ async function main() {
           title: testCase.page.title,
           content: testCase.page.content,
           truncated: false,
+          source: {
+            type: 'page' as const,
+            title: testCase.page.title,
+            url: testCase.page.path ?? `/eval-${testCase.id}`,
+            publishedAt: null,
+            newsletter: 'page' as const,
+          },
         }
       : getPageContextContent(testCase.page?.path)
     const system = getSystemPrompt({

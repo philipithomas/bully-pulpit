@@ -550,6 +550,36 @@ body:has(> * [data-bg="gray-050"]) {
   }
 }
 
+@keyframes bell-discovery-nudge {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-12deg);
+  }
+  40% {
+    transform: rotate(10deg);
+  }
+  60% {
+    transform: rotate(-7deg);
+  }
+  80% {
+    transform: rotate(4deg);
+  }
+}
+
+.bell-discovery-nudge {
+  animation: bell-discovery-nudge 700ms ease-in-out 2;
+  transform-origin: 50% 10%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bell-discovery-nudge {
+    animation: none;
+  }
+}
+
 .animate-caret-blink {
   animation: caret-blink 1.2s ease-out infinite;
 }

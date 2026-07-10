@@ -4,7 +4,11 @@ import { fetchPost } from '@/lib/chat/fetch-post-tool'
 const callOptions = { toolCallId: 'test-call', messages: [], context: {} }
 
 interface FetchPostOutput {
+  type: 'post' | 'page'
   title: string
+  url: string
+  publishedAt: string | null
+  newsletter: string | null
   outline: { heading: string; anchor: string; url: string }[]
   content: string
   error?: string
@@ -19,6 +23,10 @@ describe('fetchPost tool outline', () => {
   it('returns the heading outline with anchors and section urls', async () => {
     const result = await run('finding-a-software-job')
     expect(result.error).toBeUndefined()
+    expect(result.type).toBe('post')
+    expect(result.url).toBe('/finding-a-software-job')
+    expect(result.publishedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(result.newsletter).toBe('contraption')
     expect(result.outline.length).toBeGreaterThan(0)
 
     const timeline = result.outline.find((h) => h.heading === 'Timeline')
@@ -45,6 +53,8 @@ describe('fetchPost tool outline', () => {
   it('builds outlines for pages too', async () => {
     const result = await run('colophon')
     expect(result.error).toBeUndefined()
+    expect(result.type).toBe('page')
+    expect(result.url).toBe('/colophon')
     expect(result.outline.length).toBeGreaterThan(0)
     for (const entry of result.outline) {
       expect(entry.url).toBe(`/colophon#${entry.anchor}`)

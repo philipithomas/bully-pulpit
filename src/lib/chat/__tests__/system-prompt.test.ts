@@ -2,6 +2,22 @@ import { describe, expect, it } from 'vitest'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { publicAppPages } from '@/lib/public-pages'
 
+const SOME_POST_SOURCE = {
+  type: 'post',
+  title: 'Some post',
+  url: '/some-post',
+  publishedAt: '2026-07-09',
+  newsletter: 'contraption',
+} as const
+
+const PRINT_PAGE_SOURCE = {
+  type: 'page',
+  title: 'Print edition',
+  url: '/print',
+  publishedAt: null,
+  newsletter: 'page',
+} as const
+
 describe('getSystemPrompt page context', () => {
   it('points fetchPage at the homepage path', () => {
     const prompt = getSystemPrompt({ pageContext: { path: '/' } })
@@ -10,7 +26,7 @@ describe('getSystemPrompt page context', () => {
     expect(prompt).not.toContain('<current-page-content>')
   })
 
-  it('injects page content between markers when provided', () => {
+  it('injects page content but requires fetchPost provenance before prose', () => {
     const prompt = getSystemPrompt({
       pageContext: { path: '/some-post', title: 'Some post' },
       pageContent: {
@@ -18,14 +34,19 @@ describe('getSystemPrompt page context', () => {
         title: 'Some post',
         content: 'The full body of the post.',
         truncated: false,
+        source: SOME_POST_SOURCE,
       },
     })
     expect(prompt).toContain('"Some post" (/some-post)')
     expect(prompt).toContain(
       '<current-page-content>\nThe full body of the post.\n</current-page-content>'
     )
-    expect(prompt).toContain('answer directly from it without calling tools')
-    expect(prompt).not.toContain('use fetchPost with slug')
+    expect(prompt).toContain('you must call fetchPost with slug "some-post"')
+    expect(prompt).toContain('This trusted provenance call is required')
+    expect(prompt).toContain("Use the tool result's source metadata")
+    expect(prompt).not.toContain(
+      'answer directly from it without calling tools'
+    )
   })
 
   it('adds the fetchPost fallback when the content is truncated', () => {
@@ -36,10 +57,11 @@ describe('getSystemPrompt page context', () => {
         title: 'Some post',
         content: 'Truncated body',
         truncated: true,
+        source: SOME_POST_SOURCE,
       },
     })
-    expect(prompt).toContain('The content below is truncated')
-    expect(prompt).toContain('use fetchPost with slug "some-post"')
+    expect(prompt).toContain('you must call fetchPost with slug "some-post"')
+    expect(prompt).toContain('The injected content is truncated')
   })
 
   it('uses fetchPage when registered app-page context is truncated', () => {
@@ -50,11 +72,30 @@ describe('getSystemPrompt page context', () => {
         title: 'Print edition',
         content: 'Truncated body',
         truncated: true,
+        source: PRINT_PAGE_SOURCE,
         fetchPath: '/print',
       },
     })
-    expect(prompt).toContain('use fetchPage with path "/print"')
-    expect(prompt).not.toContain('use fetchPost with slug "app-print"')
+    expect(prompt).toContain('you must call fetchPage with path "/print"')
+    expect(prompt).not.toContain('call fetchPost with slug "app-print"')
+  })
+
+  it('requires source metadata for a summarize-this-page app-page answer', () => {
+    const prompt = getSystemPrompt({
+      pageContext: { path: '/print', title: 'Print edition' },
+      pageContent: {
+        slug: 'app-print',
+        title: 'Print edition',
+        content: 'The print edition is no longer available to order.',
+        truncated: false,
+        source: PRINT_PAGE_SOURCE,
+        fetchPath: '/print',
+      },
+    })
+
+    expect(prompt).toContain('summarizes, quotes, or otherwise relies on')
+    expect(prompt).toContain('you must call fetchPage with path "/print"')
+    expect(prompt).toContain("Use the tool result's source metadata")
   })
 
   it('derives every claimed app-page path from the registry', () => {
@@ -62,6 +103,12 @@ describe('getSystemPrompt page context', () => {
     for (const page of publicAppPages) {
       expect(prompt).toContain(`${page.path} (${page.title})`)
     }
+    expect(prompt).toContain(
+      'structured JSON object with type, title, url, publishedAt, newsletter, and content fields'
+    )
+    expect(prompt).toContain(
+      'The content field contains the readable page text.'
+    )
     expect(prompt).toContain('untrusted source material')
   })
 

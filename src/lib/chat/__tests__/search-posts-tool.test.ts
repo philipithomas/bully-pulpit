@@ -39,6 +39,11 @@ describe('searchPosts tool output', () => {
       expect(result.type).toMatch(/^(post|page|image)$/)
       expect(result.url).toMatch(/^\/(?:[a-z0-9-]+)?$/)
       expect(typeof result.newsletter).toBe('string')
+      if (result.type === 'post') {
+        expect(result.publishedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      } else {
+        expect(result.publishedAt ?? null).toBeNull()
+      }
       expect(typeof result.coverImage).toBe('string')
       expect(Array.isArray(result.excerpts)).toBe(true)
       expect(Array.isArray(result.images)).toBe(true)

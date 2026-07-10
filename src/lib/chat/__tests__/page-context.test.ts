@@ -13,6 +13,13 @@ describe('getPageContextContent', () => {
     expect(result).not.toBeNull()
     expect(result?.slug).toBe(post.slug)
     expect(result?.title).toBe(post.frontmatter.title)
+    expect(result?.source).toEqual({
+      type: 'post',
+      title: post.frontmatter.title,
+      url: `/${post.slug}`,
+      publishedAt: post.frontmatter.publishedAt,
+      newsletter: post.newsletter,
+    })
     expect(result?.content.length).toBeGreaterThan(0)
     expect(result?.content.length).toBeLessThanOrEqual(PAGE_CONTENT_MAX_CHARS)
   })
@@ -23,6 +30,13 @@ describe('getPageContextContent', () => {
     const result = getPageContextContent('/colophon')
     expect(result).not.toBeNull()
     expect(result?.title).toBe(page?.frontmatter.title)
+    expect(result?.source).toEqual({
+      type: 'page',
+      title: page?.frontmatter.title,
+      url: '/colophon',
+      publishedAt: page?.frontmatter.publishedAt ?? null,
+      newsletter: 'page',
+    })
   })
 
   it('injects the public Stargazing ledger into current-page context', () => {
@@ -57,11 +71,21 @@ describe('getPageContextContent', () => {
       title: 'Home',
       fetchPath: '/',
       truncated: false,
+      source: {
+        type: 'page',
+        title: 'Home',
+        url: '/',
+        publishedAt: null,
+        newsletter: 'page',
+      },
     })
     expect(home?.content).toContain('Philip I. Thomas')
 
     const print = getPageContextContent('/print')
     expect(print?.content).toContain('no longer available to order')
+
+    const workshop = getPageContextContent('/workshop')
+    expect(workshop?.source.newsletter).toBe('workshop')
   })
 
   it('returns null for unknown paths', () => {

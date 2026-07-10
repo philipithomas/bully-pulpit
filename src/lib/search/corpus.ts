@@ -59,6 +59,7 @@ export interface CorpusPost {
   title: string
   url: string
   newsletter: string
+  publishedAt?: string | null
   description: string
   coverImage: string
   coverAlt: string
@@ -478,6 +479,7 @@ export function buildCorpusFromPosts(
     title: post.frontmatter.title,
     url: `/${post.slug}`,
     newsletter: post.newsletter,
+    publishedAt: post.frontmatter.publishedAt,
     description:
       post.frontmatter.subtitle ?? post.frontmatter.description ?? '',
     coverImage: post.frontmatter.coverImage ?? '',
@@ -494,6 +496,7 @@ export function buildCorpusFromPages(pages: Page[]): CorpusPost[] {
     title: page.frontmatter.title,
     url: `/${page.slug}`,
     newsletter: 'page',
+    publishedAt: page.frontmatter.publishedAt ?? null,
     description:
       page.frontmatter.subtitle ?? page.frontmatter.description ?? '',
     coverImage: page.frontmatter.coverImage ?? '',
@@ -512,6 +515,7 @@ export function buildCorpusFromPublicAppPages(
     title: page.title,
     url: page.path,
     newsletter: 'page',
+    publishedAt: null,
     description: page.description,
     coverImage: '',
     coverAlt: '',

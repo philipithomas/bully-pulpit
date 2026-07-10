@@ -4,6 +4,7 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
 import { PanelRight, PanelRightClose, RotateCcw, X } from 'lucide-react'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import {
   type MouseEvent,
   useCallback,
@@ -20,9 +21,18 @@ import {
   bucketTurn,
   trackClientEvent,
 } from '@/lib/analytics/events'
+import { createBellChat } from '@/lib/chat/bell-chat'
 import { chatErrorMessage } from '@/lib/chat/chat-error-message'
+import { BELL_DISCOVERY_OPENED_KEY } from '@/lib/chat/discovery'
+import {
+  type BellStarterQuestion,
+  bellStarterQuestions,
+} from '@/lib/chat/starter-questions'
 import { cn } from '@/lib/utils'
-import { useChatSidebar } from '@/stores/chat-store'
+import {
+  scriptedChatMessageShowsStarterPrompts,
+  useChatSidebar,
+} from '@/stores/chat-store'
 
 function messageText(message: { parts: UIMessage['parts'] }) {
   return message.parts
@@ -32,20 +42,51 @@ function messageText(message: { parts: UIMessage['parts'] }) {
     .trim()
 }
 
+function StarterQuestions({
+  pathname,
+  onSuggestionSelect,
+}: {
+  pathname: string
+  onSuggestionSelect: (suggestion: BellStarterQuestion) => void
+}) {
+  const suggestions = useMemo(() => bellStarterQuestions(pathname), [pathname])
+  const handleSuggestionClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const kind = event.currentTarget.dataset.suggestionKind
+      const suggestion = suggestions.find(
+        (candidate) => candidate.kind === kind
+      )
+      if (suggestion) onSuggestionSelect(suggestion)
+    },
+    [onSuggestionSelect, suggestions]
+  )
+
+  return (
+    <div className="flex flex-wrap justify-center gap-2">
+      {suggestions.map((suggestion) => (
+        <button
+          key={suggestion.kind}
+          type="button"
+          data-suggestion-kind={suggestion.kind}
+          onClick={handleSuggestionClick}
+          className="rounded-full border border-gray-100 px-3 py-1.5 font-sans text-xs text-gray-600 transition-colors hover:border-gray-200 hover:text-gray-950"
+        >
+          {suggestion.text}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function WelcomeScreen({
   userName,
+  pathname,
   onSuggestionSelect,
 }: {
   userName?: string | null
-  onSuggestionSelect: (suggestion: string) => void
+  pathname: string
+  onSuggestionSelect: (suggestion: BellStarterQuestion) => void
 }) {
-  const handleSuggestionClick = useCallback(
-    (event: MouseEvent<HTMLButtonElement>) => {
-      onSuggestionSelect(event.currentTarget.value)
-    },
-    [onSuggestionSelect]
-  )
-
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
       <Image src="/images/bell.svg" alt="Bell" width={48} height={48} />
@@ -54,32 +95,22 @@ function WelcomeScreen({
           {userName ? `Hey ${userName}, this is Bell.` : 'Hey, this is Bell.'}
         </p>
         <p className="mt-1 font-serif text-sm text-gray-500">
-          I can search Philip&apos;s writing and photos, then answer questions
-          about his essays and projects.
+          I can search Philip&apos;s archive. Ask me about his writing,
+          photographs, and projects.
         </p>
       </div>
-      <div className="mt-2 flex flex-wrap justify-center gap-2">
-        {[
-          'Summarize this page',
-          'Photos of coffee',
-          'All mentions of craft-focused books',
-        ].map((q) => (
-          <button
-            key={q}
-            type="button"
-            value={q}
-            onClick={handleSuggestionClick}
-            className="rounded-full border border-gray-100 px-3 py-1.5 font-sans text-xs text-gray-600 transition-colors hover:border-gray-200 hover:text-gray-950"
-          >
-            {q}
-          </button>
-        ))}
+      <div className="mt-2">
+        <StarterQuestions
+          pathname={pathname}
+          onSuggestionSelect={onSuggestionSelect}
+        />
       </div>
     </div>
   )
 }
 
 export function ChatSidebar() {
+  const pathname = usePathname()
   const {
     open,
     pinned,
@@ -141,6 +172,34 @@ export function ChatSidebar() {
   // each reply exactly once instead of re-reading partial text on every chunk.
   const [announcement, setAnnouncement] = useState('')
 
+  const chat = useMemo(
+    () =>
+      createBellChat({
+        chatId,
+        transport,
+        onFinish: ({
+          chatId: finishedChatId,
+          message,
+          messages: finishedMessages,
+          isAbort,
+          isError,
+        }) => {
+          saveMessages(finishedChatId, finishedMessages)
+          if (
+            useChatSidebar.getState().chatId !== finishedChatId ||
+            isAbort ||
+            isError ||
+            message.role !== 'assistant'
+          ) {
+            return
+          }
+          const text = messageText(message)
+          if (text) setAnnouncement(text)
+        },
+      }),
+    [chatId, saveMessages, transport]
+  )
+
   const {
     messages,
     sendMessage,
@@ -150,15 +209,8 @@ export function ChatSidebar() {
     error,
     regenerate,
   } = useChat({
-    id: chatId,
-    transport,
+    chat,
     experimental_throttle: 50,
-    onFinish: ({ message, isAbort, isError }) => {
-      saveMessagesFromRef()
-      if (isAbort || isError || message.role !== 'assistant') return
-      const text = messageText(message)
-      if (text) setAnnouncement(text)
-    },
   })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lastHandoffChatIdRef = useRef('')
@@ -192,20 +244,19 @@ export function ChatSidebar() {
   const wasOpenRef = useRef(false)
   useEffect(() => {
     if (open && !wasOpenRef.current) {
+      try {
+        sessionStorage.setItem(BELL_DISCOVERY_OPENED_KEY, 'true')
+      } catch {
+        // Analytics and opening Bell do not depend on browser storage.
+      }
       trackClientEvent('Bell opened', {
         entry_source: entrySource,
         signed_in: Boolean(user),
-        page_type: analyticsPageType(window.location.pathname),
+        page_type: analyticsPageType(pathname),
       })
     }
     wasOpenRef.current = open
-  }, [entrySource, open, user])
-
-  const saveMessagesFromRef = useCallback(() => {
-    if (messagesRef.current.length > 0) {
-      saveMessages(chatId, messagesRef.current)
-    }
-  }, [chatId, saveMessages])
+  }, [entrySource, open, pathname, user])
 
   // Hydrate useChat from sessionStorage on mount (once).
   // Uses refs so the effect deps stay empty without lying to the linter.
@@ -417,10 +468,18 @@ export function ChatSidebar() {
   const isSubmitted = status === 'submitted'
   const isError = status === 'error'
   const showWelcome = messages.length === 0 && !isSubmitted
+  const showScriptedStarters =
+    messages.length === 1 && scriptedChatMessageShowsStarterPrompts(messages[0])
 
   const handleSuggestionSelect = useCallback(
-    (suggestion: string) => submitMessage(suggestion, 'suggestion'),
-    [submitMessage]
+    (suggestion: BellStarterQuestion) => {
+      trackClientEvent('Bell suggestion selected', {
+        page_type: analyticsPageType(pathname),
+        suggestion: suggestion.kind,
+      })
+      submitMessage(suggestion.text, 'suggestion')
+    },
+    [pathname, submitMessage]
   )
 
   return (
@@ -496,14 +555,20 @@ export function ChatSidebar() {
           {showWelcome ? (
             <WelcomeScreen
               userName={user?.name}
+              pathname={pathname}
               onSuggestionSelect={handleSuggestionSelect}
             />
           ) : (
             <div className="flex flex-col gap-4">
-              {messages.map((message) => (
+              {messages.map((message, index) => (
                 <ChatMessage
                   key={message.id}
                   message={message}
+                  turn={bucketTurn(
+                    messages
+                      .slice(0, index + 1)
+                      .filter((candidate) => candidate.role === 'user').length
+                  )}
                   isStreaming={
                     isStreaming &&
                     message === messages[messages.length - 1] &&
@@ -511,6 +576,15 @@ export function ChatSidebar() {
                   }
                 />
               ))}
+
+              {showScriptedStarters ? (
+                <div className="px-2 pt-1">
+                  <StarterQuestions
+                    pathname={pathname}
+                    onSuggestionSelect={handleSuggestionSelect}
+                  />
+                </div>
+              ) : null}
 
               {/* Thinking indicator before streaming starts */}
               {isSubmitted && <ThinkingIndicator />}
