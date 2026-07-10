@@ -1,8 +1,10 @@
+import { decodeJwt } from 'jose'
 import { NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   NEW_SUBSCRIBER_ONBOARDING_COOKIE,
   setNewSubscriberOnboardingCookie,
+  signSession,
   verifyNewSubscriberOnboardingCookie,
 } from '@/lib/auth/jwt'
 
@@ -20,6 +22,11 @@ describe('new subscriber onboarding marker', () => {
 
     const marker = response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value
     expect(marker).toBeTruthy()
+    expect(decodeJwt(marker as string)).toMatchObject({
+      iss: 'https://www.philipithomas.com',
+      aud: 'philipithomas.com:new-subscriber-onboarding',
+      purpose: 'new-subscriber-onboarding',
+    })
     expect(
       await verifyNewSubscriberOnboardingCookie(
         marker as string,
@@ -37,6 +44,7 @@ describe('new subscriber onboarding marker', () => {
       .getSetCookie()
       .find((value) => value.startsWith(`${NEW_SUBSCRIBER_ONBOARDING_COOKIE}=`))
     expect(cookie).toContain('HttpOnly')
+    expect(cookie).toContain('Secure')
     expect(cookie).toContain('Max-Age=900')
     expect(cookie).toContain('SameSite=lax')
   })
@@ -52,6 +60,19 @@ describe('new subscriber onboarding marker', () => {
         subscriber.uuid
       )
     ).toBe(false)
+  })
+
+  it('does not accept a subscriber session token as an onboarding marker', async () => {
+    const session = await signSession({
+      ...subscriber,
+      email: 'reader@example.com',
+      name: null,
+      sessionVersion: 1,
+    })
+
+    await expect(
+      verifyNewSubscriberOnboardingCookie(session, subscriber.uuid)
+    ).resolves.toBe(false)
   })
 
   it('does not clear an existing marker for a duplicate valid completion', async () => {

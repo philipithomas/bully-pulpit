@@ -15,7 +15,7 @@ interface AuthContextType {
   setPreferences: Dispatch<SetStateAction<SubscriberPreferences | null>>
   hasSession: boolean | null
   loading: boolean
-  logout: () => Promise<void>
+  logout: () => Promise<boolean>
   showNewSubscriberOnboarding: boolean
   dismissNewSubscriberOnboarding: () => void
 }
@@ -26,7 +26,7 @@ const AuthContext = createContext<AuthContextType>({
   setPreferences: () => {},
   hasSession: null,
   loading: true,
-  logout: async () => {},
+  logout: async () => false,
   showNewSubscriberOnboarding: false,
   dismissNewSubscriberOnboarding: () => {},
 })

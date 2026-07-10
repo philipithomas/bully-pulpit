@@ -20,18 +20,24 @@ vi.mock('jose', async (importOriginal) => {
 
 import { decodeJwt, jwtVerify } from 'jose'
 import { POST } from '@/app/api/auth/google/route'
+import { GOOGLE_OAUTH_STATE_COOKIE } from '@/lib/auth/google-oauth-state'
 import { NEW_SUBSCRIBER_ONBOARDING_COOKIE } from '@/lib/auth/jwt'
 import { subscribers } from '@/lib/db/schema'
 import { db, resetDb } from '@/test/integration/db'
 
 function googlePost(body: unknown): Request {
+  const state = 'server-issued-state'
   return new Request('http://localhost/api/auth/google', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       'x-forwarded-for': '203.0.113.9',
+      cookie: `${GOOGLE_OAUTH_STATE_COOKIE}=${state}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      ...(body as Record<string, unknown>),
+      state,
+    }),
   })
 }
 
@@ -74,6 +80,23 @@ afterEach(() => {
 })
 
 describe('POST /api/auth/google', () => {
+  it('rejects missing or mismatched state before contacting Google', async () => {
+    const response = await POST(
+      new Request('http://localhost/api/auth/google', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          cookie: `${GOOGLE_OAUTH_STATE_COOKIE}=server-issued-state`,
+        },
+        body: JSON.stringify({ code: 'oauth-code', state: 'attacker-state' }),
+      })
+    )
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Invalid OAuth state' })
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it('rejects oversized JSON before BotID or the Google token exchange', async () => {
     const response = await POST(googlePost({ code: 'x'.repeat(20_000) }))
 
@@ -119,12 +142,11 @@ describe('POST /api/auth/google', () => {
     const body = await response.json()
     expect(body.user.email).toBe('bar@gmail.com')
     expect(body.user.subscribed_workshop).toBe(true)
-    expect(response.cookies.get('bp_has_session')?.value).toBe('1')
-    expect(
-      response.headers
-        .getSetCookie()
-        .some((cookie) => cookie.startsWith('bp_onboarding='))
-    ).toBe(false)
+    expect(response.cookies.get('__Host-bp_has_session')?.value).toBe('1')
+    expect(response.cookies.get(GOOGLE_OAUTH_STATE_COOKIE)?.value).toBe('')
+    expect(response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)).toBe(
+      undefined
+    )
 
     const typedEmail = await subscriberByEmail('foo@gmail.com')
     expect(typedEmail.confirmedAt).toBeNull()

@@ -142,8 +142,8 @@ describe('POST /api/auth/verify', () => {
     expect(body.user.email).toBe('reader@example.com')
     expect(body.user.confirmed_at).not.toBeNull()
 
-    // The bp_token cookie carries a real JWT for this subscriber, httpOnly.
-    const jwt = res.cookies.get('bp_token')?.value
+    // The __Host- cookie carries a real JWT for this subscriber, httpOnly.
+    const jwt = res.cookies.get('__Host-bp_token')?.value
     expect(jwt).toBeTruthy()
     const { payload } = await jwtVerify(
       jwt as string,
@@ -151,7 +151,10 @@ describe('POST /api/auth/verify', () => {
     )
     expect(payload.sub).toBe(created.uuid)
     expect(payload.email).toBe('reader@example.com')
-    expect(res.cookies.get('bp_has_session')?.value).toBe('1')
+    expect(payload.iss).toBe('https://www.philipithomas.com')
+    expect(payload.aud).toBe('philipithomas.com:subscriber-session')
+    expect(payload.sessionVersion).toBe(1)
+    expect(res.cookies.get('__Host-bp_has_session')?.value).toBe('1')
     const onboardingMarker = res.cookies.get(
       NEW_SUBSCRIBER_ONBOARDING_COOKIE
     )?.value
@@ -163,7 +166,9 @@ describe('POST /api/auth/verify', () => {
       )
     ).toBe(true)
     const setCookie = res.headers.getSetCookie().join('; ')
-    expect(setCookie).toContain('bp_token=')
+    expect(setCookie).toContain('__Host-bp_token=')
+    expect(setCookie).toContain('Secure')
+    expect(setCookie).not.toContain('Domain=')
     expect(setCookie).toContain('HttpOnly')
 
     // DB state: subscriber confirmed, the code login marked verified.
@@ -187,11 +192,7 @@ describe('POST /api/auth/verify', () => {
 
     const res2 = await verify('reader@example.com', freshCode)
     expect(res2.status).toBe(200)
-    expect(
-      res2.headers
-        .getSetCookie()
-        .some((cookie) => cookie.startsWith('bp_onboarding='))
-    ).toBe(false)
+    expect(res2.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)).toBe(undefined)
 
     // ...but no second admin notification for an already-confirmed subscriber.
     expect(adminNotificationCalls()).toHaveLength(1)
@@ -340,12 +341,8 @@ describe('POST /api/auth/verify', () => {
     expect(res.headers.get('location')).toBe(
       'https://www.philipithomas.com/?signed-in=1&analytics-signup=email-link&analytics-newsletter=contraption&analytics-new-subscriber=0'
     )
-    expect(res.cookies.get('bp_has_session')?.value).toBe('1')
-    expect(
-      res.headers
-        .getSetCookie()
-        .some((cookie) => cookie.startsWith('bp_onboarding='))
-    ).toBe(false)
+    expect(res.cookies.get('__Host-bp_has_session')?.value).toBe('1')
+    expect(res.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)).toBe(undefined)
 
     const after = await subscriberByEmail('contraption-reader@example.com')
     expect(after.subscribedContraption).toBe(true)

@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
 import { start } from 'workflow/api'
+import {
+  claimPhoneWebhookEvent,
+  findOrCreatePhoneWebhookEvent,
+  markPhoneWebhookEventProcessed,
+  releasePhoneWebhookEvent,
+} from '@/lib/db/queries/phone-webhook-events'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
+import { twilioRecordingMp3Url } from '@/lib/phone/voicemail'
 import {
   twilioWebhookMetadataFromForm,
   twilioWebhookMetadataFromSearchParams,
@@ -29,24 +36,55 @@ export async function POST(request: Request) {
   if (typeof recordingUrl !== 'string' || typeof recordingSid !== 'string') {
     return NextResponse.json({ error: 'Missing recording' }, { status: 400 })
   }
+  if (!twilioRecordingMp3Url(recordingUrl, recordingSid)) {
+    return NextResponse.json({ error: 'Invalid recording' }, { status: 400 })
+  }
+
+  const webhookEvent = await findOrCreatePhoneWebhookEvent({
+    eventKey: `recording:${recordingSid}`,
+    eventType: 'recording-status',
+  })
+  if (webhookEvent.event.processedAt) {
+    return NextResponse.json({ status: 'duplicate' }, { status: 202 })
+  }
+  const lease = await claimPhoneWebhookEvent(webhookEvent.event.id)
+  if (!lease) {
+    return NextResponse.json({ status: 'duplicate' }, { status: 202 })
+  }
 
   const params = new URL(request.url).searchParams
   const from = params.get('caller') ?? 'Unknown'
   const forwardedMetadata = twilioWebhookMetadataFromSearchParams(params, from)
   const callbackMetadata = twilioWebhookMetadataFromForm(form, from)
-  await start(processVoicemailWorkflow, [
-    {
-      recordingUrl,
-      recordingSid,
-      from,
-      to: params.get('called') ?? 'Unknown',
-      durationSeconds: String(form.get('RecordingDuration') ?? '0'),
-      metadata: {
-        ...forwardedMetadata,
-        callSid: callbackMetadata.callSid ?? forwardedMetadata.callSid,
+  try {
+    await start(processVoicemailWorkflow, [
+      {
+        recordingUrl,
+        recordingSid,
+        from,
+        to: params.get('called') ?? 'Unknown',
+        durationSeconds: String(form.get('RecordingDuration') ?? '0'),
+        metadata: {
+          ...forwardedMetadata,
+          callSid: callbackMetadata.callSid ?? forwardedMetadata.callSid,
+        },
       },
-    },
-  ])
+    ])
+    const marked = await markPhoneWebhookEventProcessed(
+      webhookEvent.event.id,
+      lease
+    )
+    if (!marked) {
+      throw new Error('Could not complete recording webhook claim')
+    }
+  } catch (error) {
+    await releasePhoneWebhookEvent(webhookEvent.event.id, lease)
+    console.error('[phone/recording-status] enqueue failed:', error)
+    return NextResponse.json(
+      { error: 'Could not queue recording' },
+      { status: 503 }
+    )
+  }
 
   return NextResponse.json({ status: 'accepted' }, { status: 202 })
 }

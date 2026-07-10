@@ -1,6 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import {
+  LOGOUT_FAILURE_MESSAGE,
+  logoutAndClearClientSession,
+} from '@/lib/auth/client-logout'
 import type { SubscriberPreferences } from '@/lib/auth/preferences'
 
 export interface AuthUser {
@@ -11,9 +16,13 @@ export interface AuthUser {
 }
 
 function hasSessionCookie(): boolean {
-  return document.cookie
-    .split(';')
-    .some((c) => c.trim().startsWith('bp_has_session='))
+  return document.cookie.split(';').some((c) => {
+    const cookie = c.trim()
+    return (
+      cookie.startsWith('__Host-bp_has_session=') ||
+      cookie.startsWith('bp_has_session=')
+    )
+  })
 }
 
 export function useAuth() {
@@ -68,15 +77,25 @@ export function useAuth() {
       .finally(() => setLoading(false))
   }, [])
 
-  const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    // biome-ignore lint/suspicious/noDocumentCookie: clearing session indicator
-    document.cookie = 'bp_has_session=; path=/; max-age=0'
-    setUser(null)
-    setPreferences(null)
-    setShowNewSubscriberOnboarding(false)
-    setHasSession(false)
-    document.documentElement.removeAttribute('data-member')
+  const logout = useCallback(async (): Promise<boolean> => {
+    try {
+      await logoutAndClearClientSession(() => {
+        // biome-ignore lint/suspicious/noDocumentCookie: clearing session indicator
+        document.cookie = '__Host-bp_has_session=; path=/; max-age=0; Secure'
+        // Remove the pre-migration indicator if it still exists.
+        // biome-ignore lint/suspicious/noDocumentCookie: migration cleanup
+        document.cookie = 'bp_has_session=; path=/; max-age=0'
+        setUser(null)
+        setPreferences(null)
+        setShowNewSubscriberOnboarding(false)
+        setHasSession(false)
+        document.documentElement.removeAttribute('data-member')
+      })
+      return true
+    } catch {
+      toast.error(LOGOUT_FAILURE_MESSAGE)
+      return false
+    }
   }, [])
 
   const dismissNewSubscriberOnboarding = useCallback(() => {

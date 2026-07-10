@@ -5,7 +5,11 @@ vi.mock('@/lib/email/ses', () => ({
 }))
 
 import { sendEmailWithAttachment } from '@/lib/email/ses'
-import { processVoicemail } from '@/lib/phone/voicemail'
+import {
+  MAX_RECORDING_BYTES,
+  processVoicemail,
+  twilioRecordingMp3Url,
+} from '@/lib/phone/voicemail'
 
 const mockedSend = vi.mocked(sendEmailWithAttachment)
 const openAiTranscriptionsUrl = 'https://api.openai.com/v1/audio/transcriptions'
@@ -27,6 +31,7 @@ const input = {
 
 interface StubFetchOptions {
   recordingStatus?: number
+  recordingHeaders?: HeadersInit
   transcription?: {
     status?: number
     statusText?: string
@@ -43,6 +48,7 @@ function stubRecording(bytes: number, options: StubFetchOptions = {}) {
       if (href === recordingUrl) {
         return new Response(new Uint8Array(bytes), {
           status: options.recordingStatus ?? 200,
+          headers: options.recordingHeaders,
         })
       }
       if (href === openAiTranscriptionsUrl) {
@@ -74,12 +80,16 @@ describe('processVoicemail', () => {
     process.env.ADMIN_EMAILS = 'one@example.com, two@example.com'
     process.env.OPENAI_API_KEY = 'test-openai-key'
     process.env.PHONE_NUMBER = '+12123473190'
+    process.env.TWILIO_SID = 'AC_test'
+    process.env.TWILIO_SECRET = 'token_test'
   })
 
   afterEach(() => {
     delete process.env.ADMIN_EMAILS
     delete process.env.OPENAI_API_KEY
     delete process.env.PHONE_NUMBER
+    delete process.env.TWILIO_SID
+    delete process.env.TWILIO_SECRET
     vi.clearAllMocks()
     vi.unstubAllGlobals()
   })
@@ -90,8 +100,19 @@ describe('processVoicemail', () => {
     await expect(processVoicemail(input)).resolves.toBe('sent')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.twilio.com/recordings/RE123.mp3'
+      new URL('https://api.twilio.com/recordings/RE123.mp3'),
+      expect.objectContaining({
+        redirect: 'error',
+        headers: {
+          Authorization: `Basic ${Buffer.from('AC_test:token_test').toString('base64')}`,
+        },
+        signal: expect.any(AbortSignal),
+      })
     )
+    const [, recordingInit] = fetchMock.mock.calls[0]
+    expect(recordingInit?.headers).toEqual({
+      Authorization: `Basic ${Buffer.from('AC_test:token_test').toString('base64')}`,
+    })
     const [transcriptionCall] = transcriptionCalls(fetchMock)
     expect(transcriptionCall?.[1]).toEqual(
       expect.objectContaining({
@@ -181,5 +202,66 @@ describe('processVoicemail', () => {
       'Failed to download recording: 404'
     )
     expect(transcriptionCalls(fetchMock)).toEqual([])
+  })
+
+  it('fails closed before fetching when Twilio credentials are missing', async () => {
+    delete process.env.TWILIO_SECRET
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(processVoicemail(input)).rejects.toThrow(
+      'Missing TWILIO_SID or TWILIO_SECRET'
+    )
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-Twilio, non-HTTPS, credentialed, and SID-mismatched urls', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    for (const recordingUrl of [
+      'http://api.twilio.com/recordings/RE123',
+      'https://attacker.example/recordings/RE123',
+      'https://user:secret@api.twilio.com/recordings/RE123',
+      'https://api.twilio.com/recordings/RE999',
+      'https://api.twilio.com/recordings/RE123?redirect=attacker',
+    ]) {
+      await expect(
+        processVoicemail({ ...input, recordingUrl })
+      ).rejects.toThrow('Invalid Twilio recording URL')
+    }
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects a declared recording above the byte limit', async () => {
+    stubRecording(1, {
+      recordingHeaders: {
+        'content-length': String(MAX_RECORDING_BYTES + 1),
+      },
+    })
+    await expect(processVoicemail(input)).rejects.toThrow(
+      'Twilio recording exceeds the maximum size'
+    )
+    expect(mockedSend).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unannounced stream above the byte limit', async () => {
+    stubRecording(MAX_RECORDING_BYTES + 1)
+    await expect(processVoicemail(input)).rejects.toThrow(
+      'Twilio recording exceeds the maximum size'
+    )
+    expect(mockedSend).not.toHaveBeenCalled()
+  })
+})
+
+describe('twilioRecordingMp3Url', () => {
+  it('accepts the exact Twilio recording resource and adds the rendition', () => {
+    expect(
+      twilioRecordingMp3Url(
+        'https://api.twilio.com/2010-04-01/Accounts/AC123/Recordings/RE123',
+        'RE123'
+      )?.href
+    ).toBe(
+      'https://api.twilio.com/2010-04-01/Accounts/AC123/Recordings/RE123.mp3'
+    )
   })
 })

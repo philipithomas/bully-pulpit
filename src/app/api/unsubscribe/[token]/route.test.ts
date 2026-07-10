@@ -37,6 +37,7 @@ function makeSubscriber(overrides: Partial<Subscriber> = {}): Subscriber {
     subscribedWorkshop: true,
     subscribedTsundoku: false,
     source: null,
+    sessionVersion: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

@@ -4,32 +4,23 @@ import { isAdmin } from '@/lib/auth/admin'
 import {
   clearNewSubscriberOnboardingCookie,
   clearSessionCookies,
-  getSession,
+  getVerifiedSession,
+  LEGACY_NEW_SUBSCRIBER_ONBOARDING_COOKIE,
+  LEGACY_TOKEN_COOKIE,
   NEW_SUBSCRIBER_ONBOARDING_COOKIE,
+  TOKEN_COOKIE,
   verifyNewSubscriberOnboardingCookie,
 } from '@/lib/auth/jwt'
-import {
-  findByUuid,
-  serializeSubscriberPreferences,
-} from '@/lib/db/queries/subscribers'
+import { serializeSubscriberPreferences } from '@/lib/db/queries/subscribers'
 
 export async function GET(request: Request) {
   const store = await cookies()
-  const session = await getSession()
+  const verified = await getVerifiedSession()
   const shouldConsumeOnboarding =
     new URL(request.url).searchParams.get('consume_onboarding') === '1'
 
-  if (session) {
-    const subscriber = await findByUuid(session.uuid)
-    if (!subscriber) {
-      const response = NextResponse.json({
-        user: null,
-        preferences: null,
-        newSubscriberOnboarding: false,
-      })
-      clearSessionCookies(response)
-      return response
-    }
+  if (verified) {
+    const { subscriber } = verified
 
     // Some surfaces poll this route only to detect a newly shared session. Do
     // not let those background checks consume the one-time onboarding marker.
@@ -53,14 +44,19 @@ export async function GET(request: Request) {
     return response
   }
 
-  // No valid session. If a stale/invalid bp_token cookie is present, clear it so
+  // No valid session. If a stale/invalid session cookie is present, clear it so
   // the client stops re-fetching /api/auth/me on every load (self-healing).
   const response = NextResponse.json({
     user: null,
     preferences: null,
     newSubscriberOnboarding: false,
   })
-  if (store.get('bp_token') || store.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)) {
+  if (
+    store.get(TOKEN_COOKIE) ||
+    store.get(LEGACY_TOKEN_COOKIE) ||
+    store.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE) ||
+    store.get(LEGACY_NEW_SUBSCRIBER_ONBOARDING_COOKIE)
+  ) {
     clearSessionCookies(response)
   }
   return response

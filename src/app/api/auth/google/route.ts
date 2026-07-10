@@ -8,6 +8,10 @@ import {
 } from '@/lib/analytics/events'
 import { trackServerEvent } from '@/lib/analytics/server'
 import {
+  clearGoogleOAuthStateCookie,
+  verifyGoogleOAuthState,
+} from '@/lib/auth/google-oauth-state'
+import {
   setNewSubscriberOnboardingCookie,
   setSessionCookies,
   signSession,
@@ -23,6 +27,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 
 const googleAuthBodySchema = z.strictObject({
   code: z.string().max(4_096).optional(),
+  state: z.string().max(128).optional(),
   // The email typed before opening the Google popup is deliberately ignored.
   // It remains an accepted legacy field so identity always comes from the
   // verified ID token without breaking an in-flight client.
@@ -35,6 +40,15 @@ const GOOGLE_JWKS = createRemoteJWKSet(
   new URL('https://www.googleapis.com/oauth2/v3/certs')
 )
 
+function googleJson(
+  body: Record<string, unknown>,
+  init?: { status?: number }
+): NextResponse {
+  const response = NextResponse.json(body, init)
+  clearGoogleOAuthStateCookie(response)
+  return response
+}
+
 export async function POST(request: Request) {
   const parsedBody = await readJsonBody(
     request,
@@ -42,28 +56,31 @@ export async function POST(request: Request) {
     PUBLIC_JSON_BODY_MAX_BYTES
   )
   if (!parsedBody.ok) {
-    return NextResponse.json(
+    return googleJson(
       { error: parsedBody.error },
       { status: parsedBody.status }
     )
   }
 
-  const { code, newsletters, analytics_placement } = parsedBody.data
+  const { code, state, newsletters, analytics_placement } = parsedBody.data
   if (!code) {
-    return NextResponse.json(
+    return googleJson(
       { error: 'Authorization code is required' },
       { status: 400 }
     )
   }
+  if (!verifyGoogleOAuthState(request, state)) {
+    return googleJson({ error: 'Invalid OAuth state' }, { status: 403 })
+  }
 
   const { isBot } = await checkBotId()
   if (isBot) {
-    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    return googleJson({ error: 'Access denied' }, { status: 403 })
   }
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
   if (!(await checkRateLimit('auth-google', `ip:${ip}`, request))) {
-    return NextResponse.json(
+    return googleJson(
       { error: 'Too many attempts. Please try again later.' },
       { status: 429 }
     )
@@ -88,7 +105,7 @@ export async function POST(request: Request) {
         '[auth/google] Token exchange failed:',
         await tokenRes.text()
       )
-      return NextResponse.json(
+      return googleJson(
         { error: 'Google authentication failed' },
         { status: 400 }
       )
@@ -107,7 +124,7 @@ export async function POST(request: Request) {
     const requestedNewsletters = normalizedNewsletters(newsletters)
 
     if (!email || !payload.email_verified) {
-      return NextResponse.json(
+      return googleJson(
         { error: 'Email not verified by Google' },
         { status: 400 }
       )
@@ -127,6 +144,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({
       user: serializeSubscriber(subscriber),
     })
+    clearGoogleOAuthStateCookie(response)
     setSessionCookies(response, jwt)
     await setNewSubscriberOnboardingCookie(response, subscriber, newlyConfirmed)
 
@@ -152,7 +170,7 @@ export async function POST(request: Request) {
     return response
   } catch (err) {
     console.error('[auth/google] Error:', err)
-    return NextResponse.json(
+    return googleJson(
       { error: 'Google authentication failed' },
       { status: 500 }
     )

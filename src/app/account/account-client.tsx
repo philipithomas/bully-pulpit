@@ -109,6 +109,7 @@ export function AccountClient() {
     try {
       const res = await fetch('/api/auth/preferences', {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
       })
       if (res.ok) {
         await logout()
@@ -126,6 +127,10 @@ export function AccountClient() {
       setDeleting(false)
     }
   }, [logout])
+
+  const handleSignOut = useCallback(async () => {
+    if (await logout()) router.push('/')
+  }, [logout, router])
 
   if (loading) {
     return <PreferencesPageSkeleton title="Account" />
@@ -258,10 +263,7 @@ export function AccountClient() {
         <div className="flex items-center justify-between border-t border-gray-200 pt-8">
           <button
             type="button"
-            onClick={async () => {
-              await logout()
-              router.push('/')
-            }}
+            onClick={handleSignOut}
             className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
           >
             Sign out

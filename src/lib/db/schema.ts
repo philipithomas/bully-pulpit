@@ -33,6 +33,9 @@ export const subscribers = pgTable(
     subscribedWorkshop: boolean('subscribed_workshop').notNull().default(true),
     subscribedTsundoku: boolean('subscribed_tsundoku').notNull().default(false),
     source: text('source'),
+    // Every session JWT snapshots this value. Incrementing it invalidates all
+    // previously issued sessions without keeping a server-side token list.
+    sessionVersion: integer('session_version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -2,10 +2,9 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod/v4'
 import { parseAnalyticsPlacement } from '@/lib/analytics/events'
 import { trackServerEvent } from '@/lib/analytics/server'
-import { clearSessionCookies, getSession } from '@/lib/auth/jwt'
+import { clearSessionCookies, getVerifiedSession } from '@/lib/auth/jwt'
 import {
   deleteWithData,
-  findByUuid,
   prefsFromBody,
   serializeSubscriber,
   serializeSubscriberPreferences,
@@ -41,25 +40,16 @@ const NEWSLETTER_PREFERENCES = [
 ] as const
 
 export async function GET() {
-  const session = await getSession()
-  if (!session) {
+  const verified = await getVerifiedSession()
+  if (!verified) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
-  const subscriber = await findByUuid(session.uuid)
-  if (!subscriber) {
-    return NextResponse.json(
-      { error: 'Failed to load preferences' },
-      { status: 404 }
-    )
-  }
-
-  return NextResponse.json(serializeSubscriberPreferences(subscriber))
+  return NextResponse.json(serializeSubscriberPreferences(verified.subscriber))
 }
 
 export async function PATCH(request: Request) {
-  const session = await getSession()
-  if (!session) {
+  const verified = await getVerifiedSession()
+  if (!verified) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -74,13 +64,10 @@ export async function PATCH(request: Request) {
       { status: 400 }
     )
   }
-  const before = await findByUuid(session.uuid)
-  if (!before) {
-    return NextResponse.json({ error: 'Update failed' }, { status: 404 })
-  }
+  const before = verified.subscriber
 
   const subscriber = await updateSubscriber(
-    session.uuid,
+    verified.session.uuid,
     prefsFromBody(parsed.data)
   )
   if (!subscriber) {
@@ -114,15 +101,12 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE() {
-  const session = await getSession()
-  if (!session) {
+  const verified = await getVerifiedSession()
+  if (!verified) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const subscriber = await findByUuid(session.uuid)
-  if (subscriber) {
-    await deleteWithData(subscriber.id)
-  }
+  await deleteWithData(verified.subscriber.id)
 
   const response = NextResponse.json({ ok: true })
   clearSessionCookies(response)
