@@ -399,6 +399,30 @@ describe('POST retry', () => {
     expect(await latestRunId()).toBe('run-2')
   })
 
+  it('blocks retry when a newer run replaces a terminal run during its status probe', async () => {
+    await signInAsAdmin()
+    const alice = await seedSubscriber('alice@example.com')
+    const failedRow = await seedSendRow(alice.id, { sendError: 'boom' })
+    await recordSendRun(SLUG, 'run-old')
+    mockedGetRun.mockReturnValue({
+      get status() {
+        return recordSendRun(SLUG, 'run-new').then(() => 'completed' as const)
+      },
+    } as unknown as ReturnType<typeof getRun>)
+
+    const res = await retryPost(request('retry', { slug: SLUG }))
+
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({
+      error: 'A send for this post is already in progress.',
+    })
+    expect(mockedStart).not.toHaveBeenCalled()
+    expect(await latestRunId()).toBe('run-new')
+    expect(
+      (await allRows()).find((row) => row.id === failedRow.id)?.sendError
+    ).toBe('boom')
+  })
+
   it('blocks retry while an accepted run is temporarily missing during resilient start', async () => {
     await signInAsAdmin()
     const alice = await seedSubscriber('alice@example.com')
@@ -585,6 +609,29 @@ describe('GET send status', () => {
     })
     expect((await second.json()).active).toBe(false)
     expect(mockedGetRun).not.toHaveBeenCalled()
+  })
+
+  it('preserves send status when the Workflow probe fails transiently', async () => {
+    await signInAsAdmin()
+    await recordSendRun(SLUG, 'run-unknown')
+    mockedGetRun.mockReturnValue({
+      get status() {
+        return Promise.reject(new Error('Workflow backend unavailable'))
+      },
+    } as unknown as ReturnType<typeof getRun>)
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+
+    const res = await statusGet(statusRequest(), {
+      params: Promise.resolve({ slug: SLUG }),
+    })
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).active).toBe(true)
+    expect(await latestRunId()).toBe('run-unknown')
+    expect(consoleError).toHaveBeenCalledTimes(1)
+    consoleError.mockRestore()
   })
 
   it('prunes a stale missing run once and does not probe it again', async () => {

@@ -35,6 +35,43 @@ export async function isSendRunActive(slug: string): Promise<boolean> {
   return isRunActive(run)
 }
 
+/**
+ * Read-only status surfaces stay available when Workflow cannot be reached.
+ * Unknown state must render as active so the UI never offers a competing send.
+ */
+export async function isSendRunActiveForDisplay(
+  slug: string
+): Promise<boolean> {
+  const run = await latestRunBySlug(slug)
+  if (!run) return false
+  return isRunActiveForDisplay(run)
+}
+
+async function isRunActiveForDisplay(run: RecordedSendRun): Promise<boolean> {
+  try {
+    return await isRunActive(run)
+  } catch (error) {
+    console.error(
+      `[send-guard] Could not inspect Workflow run ${run.runId}:`,
+      error
+    )
+    return true
+  }
+}
+
+/**
+ * Prunes the exact inactive row and returns the conservative active state.
+ *
+ * A missed conditional delete means another request changed the row during the
+ * remote status probe. Treat that race as active so mutation guards cannot
+ * start a competing workflow. A concurrent cleanup may cause one extra active
+ * read, which is safer than a duplicate newsletter send.
+ */
+async function pruneInactiveRun(postSlug: string, runId: string) {
+  const deleted = await deleteSendRunIfMatches(postSlug, runId)
+  return !deleted
+}
+
 async function isRunActive({
   postSlug,
   runId,
@@ -54,8 +91,7 @@ async function isRunActive({
 
     // completed/failed/cancelled are terminal. Forget the row so future Posts
     // page loads do not probe the same historical run forever.
-    await deleteSendRunIfMatches(postSlug, runId)
-    return false
+    return pruneInactiveRun(postSlug, runId)
   } catch (error) {
     if (WorkflowRunNotFoundError.is(error)) {
       if (Date.now() - startedAt.getTime() < SEND_RUN_NOT_FOUND_GRACE_MS) {
@@ -67,8 +103,7 @@ async function isRunActive({
 
       // Outside the resilient-start window, a typed missing result means the
       // runtime pruned or never knew this run. Remove the stale local guard.
-      await deleteSendRunIfMatches(postSlug, runId)
-      return false
+      return pruneInactiveRun(postSlug, runId)
     }
 
     // A timeout, throttle, or backend error does not prove that the run died.
@@ -96,15 +131,7 @@ export async function activeSendRunSlugs(): Promise<Set<string>> {
       while (nextIndex < runs.length) {
         const run = runs[nextIndex]
         nextIndex += 1
-        try {
-          if (await isRunActive(run)) active.add(run.postSlug)
-        } catch (error) {
-          console.error(
-            `[send-guard] Could not inspect Workflow run ${run.runId}:`,
-            error
-          )
-          active.add(run.postSlug)
-        }
+        if (await isRunActiveForDisplay(run)) active.add(run.postSlug)
       }
     }
   )

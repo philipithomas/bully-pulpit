@@ -5,7 +5,7 @@ import { type SendStats, sendStatsBySlug } from '@/lib/db/queries/email-sends'
 import { smsSendStatsBySlug } from '@/lib/db/queries/sms-sends'
 import { countEligibleSms } from '@/lib/db/queries/sms-subscribers'
 import { countEligible, isNewsletter } from '@/lib/db/queries/subscribers'
-import { isSendRunActive } from '@/lib/email/send-guard'
+import { isSendRunActiveForDisplay } from '@/lib/email/send-guard'
 
 type CombinedSendStats = SendStats & { skipped: number }
 type SmsStats = SendStats & { skipped: number }
@@ -40,7 +40,7 @@ export async function GET(
       smsSendStatsBySlug(slug),
       newsletter ? countEligible(newsletter, slug) : Promise.resolve(0),
       newsletter ? countEligibleSms(newsletter, slug) : Promise.resolve(0),
-      isSendRunActive(slug),
+      isSendRunActiveForDisplay(slug),
     ])
   const stats = combineSendStats(emailStats, smsStats)
 

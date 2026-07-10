@@ -10,6 +10,7 @@ import {
 import {
   activeSendRunSlugs,
   isSendRunActive,
+  isSendRunActiveForDisplay,
   SEND_RUN_NOT_FOUND_GRACE_MS,
 } from '@/lib/email/send-guard'
 
@@ -87,6 +88,16 @@ describe('isSendRunActive', () => {
     )
   })
 
+  it('reports a terminal run as active when cleanup loses a replacement race', async () => {
+    mockedLatestRunBySlug.mockResolvedValue(recordedRun('post', 'run-old'))
+    mockedGetRun.mockReturnValue(runStatus('completed'))
+    mockedDeleteSendRunIfMatches.mockResolvedValue(false)
+
+    await expect(isSendRunActive('post')).resolves.toBe(true)
+
+    expect(mockedDeleteSendRunIfMatches).toHaveBeenCalledWith('post', 'run-old')
+  })
+
   it('keeps a recently accepted missing run active during resilient start', async () => {
     mockedLatestRunBySlug.mockResolvedValue(recordedRun('post', 'run-missing'))
     mockedGetRun.mockReturnValue(
@@ -114,6 +125,20 @@ describe('isSendRunActive', () => {
     )
   })
 
+  it('reports a stale missing run as active when cleanup loses a replacement race', async () => {
+    mockedLatestRunBySlug.mockResolvedValue(
+      recordedRun('post', 'run-old', SEND_RUN_NOT_FOUND_GRACE_MS + 1)
+    )
+    mockedGetRun.mockReturnValue(
+      runStatus(Promise.reject(new WorkflowRunNotFoundError('run-old')))
+    )
+    mockedDeleteSendRunIfMatches.mockResolvedValue(false)
+
+    await expect(isSendRunActive('post')).resolves.toBe(true)
+
+    expect(mockedDeleteSendRunIfMatches).toHaveBeenCalledWith('post', 'run-old')
+  })
+
   it('keeps the row and fails closed when status lookup fails transiently', async () => {
     const failure = new Error('Workflow backend unavailable')
     mockedLatestRunBySlug.mockResolvedValue(recordedRun('post', 'run-unknown'))
@@ -133,6 +158,26 @@ describe('isSendRunActive', () => {
     )
 
     expect(mockedDeleteSendRunIfMatches).not.toHaveBeenCalled()
+  })
+})
+
+describe('isSendRunActiveForDisplay', () => {
+  it('preserves read-only status with a conservative active result', async () => {
+    const failure = new Error('Workflow backend unavailable')
+    mockedLatestRunBySlug.mockResolvedValue(recordedRun('post', 'run-unknown'))
+    mockedGetRun.mockReturnValue(runStatus(Promise.reject(failure)))
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+
+    await expect(isSendRunActiveForDisplay('post')).resolves.toBe(true)
+
+    expect(mockedDeleteSendRunIfMatches).not.toHaveBeenCalled()
+    expect(consoleError).toHaveBeenCalledWith(
+      '[send-guard] Could not inspect Workflow run run-unknown:',
+      failure
+    )
+    consoleError.mockRestore()
   })
 })
 
