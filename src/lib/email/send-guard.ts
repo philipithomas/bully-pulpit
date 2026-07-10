@@ -1,5 +1,12 @@
 import { getRun } from 'workflow/api'
-import { allLatestRunIds, latestRunIdBySlug } from '@/lib/db/queries/send-runs'
+import { WorkflowRunNotFoundError } from 'workflow/errors'
+import {
+  allLatestRunIds,
+  deleteSendRunIfMatches,
+  latestRunIdBySlug,
+} from '@/lib/db/queries/send-runs'
+
+const RUN_STATUS_CONCURRENCY = 8
 
 /**
  * Whether a workflow run for this post is genuinely still in flight.
@@ -19,28 +26,75 @@ import { allLatestRunIds, latestRunIdBySlug } from '@/lib/db/queries/send-runs'
 export async function isSendRunActive(slug: string): Promise<boolean> {
   const runId = await latestRunIdBySlug(slug)
   if (!runId) return false
-  return isRunActive(runId)
+  return isRunActive(slug, runId)
 }
 
-async function isRunActive(runId: string): Promise<boolean> {
+async function isRunActive(slug: string, runId: string): Promise<boolean> {
   try {
     const status = await getRun(runId).status
-    return status === 'pending' || status === 'running'
-  } catch {
-    // The runtime no longer knows this run (expired/pruned). Treat as not
-    // active so a stalled send is never permanently un-resumable; the unique
-    // enqueue index plus per-row sendable re-reads bound any duplicate risk.
+    if (status === 'pending' || status === 'running') return true
+
+    if (
+      status !== 'completed' &&
+      status !== 'failed' &&
+      status !== 'cancelled'
+    ) {
+      throw new Error(`Unknown Workflow run status: ${String(status)}`)
+    }
+
+    // completed/failed/cancelled are terminal. Forget the row so future Posts
+    // page loads do not probe the same historical run forever.
+    await deleteSendRunIfMatches(slug, runId)
     return false
+  } catch (error) {
+    if (WorkflowRunNotFoundError.is(error)) {
+      // The runtime pruned or never knew this run. It cannot be live, and the
+      // local row would otherwise cause the same failed probe on every load.
+      await deleteSendRunIfMatches(slug, runId)
+      return false
+    }
+
+    // A timeout, throttle, or backend error does not prove that the run died.
+    // Mutation guards must fail closed rather than risk starting a second run.
+    throw error
   }
 }
 
-/** Post slugs whose latest recorded send run is still pending or running. */
+/**
+ * Post slugs whose latest recorded send run is still pending or running.
+ *
+ * Terminal and missing rows are pruned after their first observation. Probes
+ * use a small worker pool so a one-time cleanup of historical rows does not
+ * fan out an unbounded number of remote Workflow requests. Unknown failures
+ * stay recorded and render conservatively as active until a later probe can
+ * establish a terminal state.
+ */
 export async function activeSendRunSlugs(): Promise<Set<string>> {
   const runs = await allLatestRunIds()
-  const active = await Promise.all(
-    Object.entries(runs).map(async ([slug, runId]) =>
-      (await isRunActive(runId)) ? slug : null
-    )
+  const entries = Object.entries(runs)
+  const active = new Set<string>()
+  let nextIndex = 0
+
+  const workers = Array.from(
+    { length: Math.min(RUN_STATUS_CONCURRENCY, entries.length) },
+    async () => {
+      while (nextIndex < entries.length) {
+        const entry = entries[nextIndex]
+        nextIndex += 1
+        const [slug, runId] = entry
+        try {
+          if (await isRunActive(slug, runId)) active.add(slug)
+        } catch (error) {
+          console.error(
+            `[send-guard] Could not inspect Workflow run ${runId}:`,
+            error
+          )
+          active.add(slug)
+        }
+      }
+    }
   )
-  return new Set(active.filter((slug): slug is string => Boolean(slug)))
+
+  await Promise.all(workers)
+  return active
 }

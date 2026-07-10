@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { WorkflowRunNotFoundError } from 'workflow/errors'
 import type { Post } from '@/lib/content/types'
 
 const sessionSubscribers = vi.hoisted(() => new Map<string, unknown>())
@@ -86,11 +87,13 @@ function stubRunStatus(status: WorkflowRunStatus) {
   } as unknown as ReturnType<typeof getRun>)
 }
 
-/** Makes getRun throw, as it does when the runtime no longer knows the run. */
+/** Makes the status lookup reject when the runtime no longer knows the run. */
 function stubRunMissing() {
-  mockedGetRun.mockImplementation(() => {
-    throw new Error('WorkflowRunNotFoundError')
-  })
+  mockedGetRun.mockReturnValue({
+    get status() {
+      return Promise.reject(new WorkflowRunNotFoundError('expired-run'))
+    },
+  } as unknown as ReturnType<typeof getRun>)
 }
 
 function request(path: 'send' | 'retry', body: unknown) {
@@ -399,6 +402,28 @@ describe('POST retry', () => {
     expect(mockedStart).toHaveBeenCalledWith(sendNewsletterWorkflow, [SLUG])
   })
 
+  it('does not start a competing run when status lookup fails transiently', async () => {
+    await signInAsAdmin()
+    const alice = await seedSubscriber('alice@example.com')
+    await seedSendRow(alice.id)
+    await recordSendRun(SLUG, 'run-unknown')
+    mockedGetRun.mockReturnValue({
+      get status() {
+        return Promise.reject(new Error('Workflow backend unavailable'))
+      },
+    } as unknown as ReturnType<typeof getRun>)
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+
+    const res = await retryPost(request('retry', { slug: SLUG }))
+
+    expect(res.status).toBe(500)
+    expect(mockedStart).not.toHaveBeenCalled()
+    expect(await latestRunId()).toBe('run-unknown')
+    consoleError.mockRestore()
+  })
+
   it('heals failed rows, starts the workflow, and reports the reset count', async () => {
     await signInAsAdmin()
     const alice = await seedSubscriber('alice@example.com')
@@ -524,6 +549,14 @@ describe('GET send status', () => {
 
     expect(res.status).toBe(200)
     expect((await res.json()).active).toBe(false)
+    expect(await latestRunId()).toBeNull()
+
+    mockedGetRun.mockClear()
+    const second = await statusGet(statusRequest(), {
+      params: Promise.resolve({ slug: SLUG }),
+    })
+    expect((await second.json()).active).toBe(false)
+    expect(mockedGetRun).not.toHaveBeenCalled()
   })
 })
 

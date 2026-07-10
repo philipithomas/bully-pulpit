@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { sendRuns } from '@/lib/db/schema'
 
@@ -38,4 +38,22 @@ export async function allLatestRunIds(): Promise<Record<string, string>> {
     .select({ postSlug: sendRuns.postSlug, runId: sendRuns.runId })
     .from(sendRuns)
   return Object.fromEntries(rows.map((row) => [row.postSlug, row.runId]))
+}
+
+/**
+ * Removes a terminal run only if it is still the latest run for this post.
+ *
+ * The run-status probe and this delete are separated by a remote request. A
+ * retry may start and replace the row during that gap, so matching both the
+ * slug and run id is what prevents an old probe from deleting the fresh run.
+ */
+export async function deleteSendRunIfMatches(
+  postSlug: string,
+  runId: string
+): Promise<boolean> {
+  const deleted = await getDb()
+    .delete(sendRuns)
+    .where(and(eq(sendRuns.postSlug, postSlug), eq(sendRuns.runId, runId)))
+    .returning({ postSlug: sendRuns.postSlug })
+  return deleted.length > 0
 }
