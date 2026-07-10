@@ -8,6 +8,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import {
   mergeTypeaheadResults,
   TYPEAHEAD_RESULT_LIMIT,
+  typeaheadResultUrl,
 } from '@/components/search/typeahead-results'
 import { Spinner } from '@/components/ui/spinner'
 import {
@@ -272,7 +273,7 @@ export function SearchDialog({
         })
       }
       onOpenChange(false)
-      const { url } = result
+      const url = typeaheadResultUrl(result)
       router.push(url.startsWith('/') ? url : `/${url}`)
     },
     [query.length, router, onOpenChange]
