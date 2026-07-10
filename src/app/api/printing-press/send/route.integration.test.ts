@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
+import { eq } from 'drizzle-orm'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { WorkflowRunNotFoundError } from 'workflow/errors'
 import type { Post } from '@/lib/content/types'
 
 const sessionSubscribers = vi.hoisted(() => new Map<string, unknown>())
@@ -52,10 +54,12 @@ import { latestRunIdBySlug, recordSendRun } from '@/lib/db/queries/send-runs'
 import { SMS_SEND_SKIPPED_UNSUBSCRIBED } from '@/lib/db/queries/sms-sends'
 import {
   emailSends,
+  sendRuns,
   smsSends,
   smsSubscribers,
   subscribers,
 } from '@/lib/db/schema'
+import { SEND_RUN_NOT_FOUND_GRACE_MS } from '@/lib/email/send-guard'
 import { db, resetDb } from '@/test/integration/db'
 import { clearSessionStore, setSessionCookie } from '@/test/integration/session'
 import { sendNewsletterWorkflow } from '@/workflows/send-newsletter'
@@ -86,11 +90,13 @@ function stubRunStatus(status: WorkflowRunStatus) {
   } as unknown as ReturnType<typeof getRun>)
 }
 
-/** Makes getRun throw, as it does when the runtime no longer knows the run. */
-function stubRunMissing() {
-  mockedGetRun.mockImplementation(() => {
-    throw new Error('WorkflowRunNotFoundError')
-  })
+/** Makes the status lookup reject when the runtime no longer knows the run. */
+function stubRunMissing(runId = 'expired-run') {
+  mockedGetRun.mockReturnValue({
+    get status() {
+      return Promise.reject(new WorkflowRunNotFoundError(runId))
+    },
+  } as unknown as ReturnType<typeof getRun>)
 }
 
 function request(path: 'send' | 'retry', body: unknown) {
@@ -179,6 +185,13 @@ function allRows() {
 
 /** The runId the route persisted for SLUG (via the real send_runs query). */
 const latestRunId = () => latestRunIdBySlug(SLUG)
+
+async function ageRecordedRun(runId: string, ageMs: number) {
+  await db
+    .update(sendRuns)
+    .set({ startedAt: new Date(Date.now() - ageMs) })
+    .where(eq(sendRuns.runId, runId))
+}
 
 beforeEach(async () => {
   clearSessionStore()
@@ -386,17 +399,81 @@ describe('POST retry', () => {
     expect(await latestRunId()).toBe('run-2')
   })
 
-  it('resumes a stalled send when the runtime no longer knows the recorded run', async () => {
+  it('blocks retry when a newer run replaces a terminal run during its status probe', async () => {
+    await signInAsAdmin()
+    const alice = await seedSubscriber('alice@example.com')
+    const failedRow = await seedSendRow(alice.id, { sendError: 'boom' })
+    await recordSendRun(SLUG, 'run-old')
+    mockedGetRun.mockReturnValue({
+      get status() {
+        return recordSendRun(SLUG, 'run-new').then(() => 'completed' as const)
+      },
+    } as unknown as ReturnType<typeof getRun>)
+
+    const res = await retryPost(request('retry', { slug: SLUG }))
+
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({
+      error: 'A send for this post is already in progress.',
+    })
+    expect(mockedStart).not.toHaveBeenCalled()
+    expect(await latestRunId()).toBe('run-new')
+    expect(
+      (await allRows()).find((row) => row.id === failedRow.id)?.sendError
+    ).toBe('boom')
+  })
+
+  it('blocks retry while an accepted run is temporarily missing during resilient start', async () => {
+    await signInAsAdmin()
+    const alice = await seedSubscriber('alice@example.com')
+    await seedSendRow(alice.id)
+    await recordSendRun(SLUG, 'recent-missing-run')
+    stubRunMissing('recent-missing-run')
+
+    const res = await retryPost(request('retry', { slug: SLUG }))
+
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({
+      error: 'A send for this post is already in progress.',
+    })
+    expect(mockedStart).not.toHaveBeenCalled()
+    expect(await latestRunId()).toBe('recent-missing-run')
+  })
+
+  it('resumes a stalled send when a missing run is older than the grace window', async () => {
     await signInAsAdmin()
     const alice = await seedSubscriber('alice@example.com')
     await seedSendRow(alice.id) // stranded pending row
     await recordSendRun(SLUG, 'expired-run')
+    await ageRecordedRun('expired-run', SEND_RUN_NOT_FOUND_GRACE_MS + 1_000)
     stubRunMissing()
 
     const res = await retryPost(request('retry', { slug: SLUG }))
 
     expect(res.status).toBe(200)
     expect(mockedStart).toHaveBeenCalledWith(sendNewsletterWorkflow, [SLUG])
+  })
+
+  it('does not start a competing run when status lookup fails transiently', async () => {
+    await signInAsAdmin()
+    const alice = await seedSubscriber('alice@example.com')
+    await seedSendRow(alice.id)
+    await recordSendRun(SLUG, 'run-unknown')
+    mockedGetRun.mockReturnValue({
+      get status() {
+        return Promise.reject(new Error('Workflow backend unavailable'))
+      },
+    } as unknown as ReturnType<typeof getRun>)
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+
+    const res = await retryPost(request('retry', { slug: SLUG }))
+
+    expect(res.status).toBe(500)
+    expect(mockedStart).not.toHaveBeenCalled()
+    expect(await latestRunId()).toBe('run-unknown')
+    consoleError.mockRestore()
   })
 
   it('heals failed rows, starts the workflow, and reports the reset count', async () => {
@@ -524,6 +601,61 @@ describe('GET send status', () => {
 
     expect(res.status).toBe(200)
     expect((await res.json()).active).toBe(false)
+    expect(await latestRunId()).toBeNull()
+
+    mockedGetRun.mockClear()
+    const second = await statusGet(statusRequest(), {
+      params: Promise.resolve({ slug: SLUG }),
+    })
+    expect((await second.json()).active).toBe(false)
+    expect(mockedGetRun).not.toHaveBeenCalled()
+  })
+
+  it('preserves send status when the Workflow probe fails transiently', async () => {
+    await signInAsAdmin()
+    await recordSendRun(SLUG, 'run-unknown')
+    mockedGetRun.mockReturnValue({
+      get status() {
+        return Promise.reject(new Error('Workflow backend unavailable'))
+      },
+    } as unknown as ReturnType<typeof getRun>)
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+
+    const res = await statusGet(statusRequest(), {
+      params: Promise.resolve({ slug: SLUG }),
+    })
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).active).toBe(true)
+    expect(await latestRunId()).toBe('run-unknown')
+    expect(consoleError).toHaveBeenCalledTimes(1)
+    consoleError.mockRestore()
+  })
+
+  it('prunes a stale missing run once and does not probe it again', async () => {
+    await signInAsAdmin()
+    await recordSendRun(SLUG, 'stale-missing-run')
+    await ageRecordedRun(
+      'stale-missing-run',
+      SEND_RUN_NOT_FOUND_GRACE_MS + 1_000
+    )
+    stubRunMissing('stale-missing-run')
+
+    const first = await statusGet(statusRequest(), {
+      params: Promise.resolve({ slug: SLUG }),
+    })
+
+    expect((await first.json()).active).toBe(false)
+    expect(await latestRunId()).toBeNull()
+
+    mockedGetRun.mockClear()
+    const second = await statusGet(statusRequest(), {
+      params: Promise.resolve({ slug: SLUG }),
+    })
+    expect((await second.json()).active).toBe(false)
+    expect(mockedGetRun).not.toHaveBeenCalled()
   })
 })
 

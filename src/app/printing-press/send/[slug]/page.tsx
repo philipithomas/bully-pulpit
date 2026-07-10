@@ -7,7 +7,7 @@ import { smsSendStatsBySlug } from '@/lib/db/queries/sms-sends'
 import { countEligibleSms } from '@/lib/db/queries/sms-subscribers'
 import { countEligible, isNewsletter } from '@/lib/db/queries/subscribers'
 import { renderNewsletterPreview } from '@/lib/email/send'
-import { isSendRunActive } from '@/lib/email/send-guard'
+import { isSendRunActiveForDisplay } from '@/lib/email/send-guard'
 import { isNewsletterSendingEnabled } from '@/lib/newsletters'
 
 type CombinedSendStats = SendStats & { skipped: number }
@@ -49,7 +49,7 @@ export default async function SendPage({
       countEligibleSms(post.newsletter, slug),
       sendStatsBySlug(slug),
       smsSendStatsBySlug(slug),
-      isSendRunActive(slug),
+      isSendRunActiveForDisplay(slug),
     ])
 
   return (
