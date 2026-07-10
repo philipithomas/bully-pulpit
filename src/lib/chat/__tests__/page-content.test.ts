@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { getPageText, PAGE_TEXT_MAX_CHARS } from '@/lib/chat/page-content'
+import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPostsByNewsletter } from '@/lib/content/loader'
 
 describe('getPageText', () => {
   it('summarizes the homepage', () => {
     const text = getPageText('/')
-    expect(text).toContain('Philip I. Thomas')
+    expect(text).toContain(siteConfig.author)
     expect(text).toContain('Contraption (/contraption)')
     expect(text).toContain('Workshop (/workshop)')
     expect(text).toContain('Postcard (/postcard)')

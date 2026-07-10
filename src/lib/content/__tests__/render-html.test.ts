@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { siteConfig } from '@/lib/config'
 import { getAllPosts } from '@/lib/content/loader'
 import {
   markdownToPlaintext,
@@ -112,7 +113,7 @@ describe('renderEmailHeaderHtml', () => {
 
   it('always includes author byline as link', () => {
     const html = renderEmailHeaderHtml('My Post', siteUrl, 'my-post')
-    expect(html).toContain('Philip I. Thomas</a>')
+    expect(html).toContain(`${siteConfig.author}</a>`)
     expect(html).toContain('href="https://www.philipithomas.com"')
     expect(html).toContain('font-size: 14px')
     expect(html).toContain('font-weight: 500')
@@ -217,7 +218,7 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('2025-03-01')
     expect(html).toContain('Full Post</a></h1>')
     expect(html).toContain('The subtitle</p>')
-    expect(html).toContain('Philip I. Thomas</a>')
+    expect(html).toContain(`${siteConfig.author}</a>`)
     expect(html).toContain(
       'src="https://www.philipithomas.com/_next/image?url=%2Fimages%2Fcovers%2Fhero.jpg'
     )

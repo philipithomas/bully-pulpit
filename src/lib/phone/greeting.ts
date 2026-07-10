@@ -4,6 +4,7 @@ import {
   bellReasoning,
   getPhoneGreetingProviderOptions,
 } from '@/lib/chat/bell-model'
+import { siteIdentity } from '@/lib/site-identity'
 import {
   fetchNycWeatherSnapshot,
   type NycWeatherSnapshot,
@@ -13,8 +14,7 @@ import {
 // TwilioVoicemailController#generate_dynamic_greeting, rewritten on the AI
 // Gateway instead of a direct provider client.
 
-export const FALLBACK_GREETING =
-  'You have reached the Contraption Company and Philip Thomas.'
+export const FALLBACK_GREETING = `You have reached the Contraption Company and ${siteIdentity.name}.`
 
 // Twilio gives voice webhooks 15 seconds to respond before playing an
 // application error to the caller. The shared weather fetch gets one 2 second
@@ -30,7 +30,7 @@ The application supplies an ordered list of approved sentences derived from the 
 
 The approved options are already calm, welcoming, professional, inclusive, and politically neutral. Do not rewrite, combine, embellish, or explain them. Do not add humor, an excuse for the unanswered call, company identification, an IVR instruction, quotation marks, emoji, or commentary.
 
-The application adds "You have reached the Contraption Company and Philip Thomas." and then starts either the IVR menu or voicemail.`
+The application adds "${FALLBACK_GREETING}" and then starts either the IVR menu or voicemail.`
 
 async function nycWeatherContext(): Promise<NycWeatherSnapshot | null> {
   try {
