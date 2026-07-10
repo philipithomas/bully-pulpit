@@ -2,23 +2,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getRun } from 'workflow/api'
 import { WorkflowRunNotFoundError } from 'workflow/errors'
 import {
-  allLatestRunIds,
+  allLatestRuns,
   deleteSendRunIfMatches,
-  latestRunIdBySlug,
+  latestRunBySlug,
+  type RecordedSendRun,
 } from '@/lib/db/queries/send-runs'
-import { activeSendRunSlugs, isSendRunActive } from '@/lib/email/send-guard'
+import {
+  activeSendRunSlugs,
+  isSendRunActive,
+  SEND_RUN_NOT_FOUND_GRACE_MS,
+} from '@/lib/email/send-guard'
 
 vi.mock('workflow/api', () => ({ getRun: vi.fn() }))
 vi.mock('@/lib/db/queries/send-runs', () => ({
-  allLatestRunIds: vi.fn(),
+  allLatestRuns: vi.fn(),
   deleteSendRunIfMatches: vi.fn(),
-  latestRunIdBySlug: vi.fn(),
+  latestRunBySlug: vi.fn(),
 }))
 
 const mockedGetRun = vi.mocked(getRun)
-const mockedAllLatestRunIds = vi.mocked(allLatestRunIds)
+const mockedAllLatestRuns = vi.mocked(allLatestRuns)
 const mockedDeleteSendRunIfMatches = vi.mocked(deleteSendRunIfMatches)
-const mockedLatestRunIdBySlug = vi.mocked(latestRunIdBySlug)
+const mockedLatestRunBySlug = vi.mocked(latestRunBySlug)
 
 type WorkflowRunStatus =
   | 'pending'
@@ -33,12 +38,24 @@ function runStatus(status: WorkflowRunStatus | Promise<WorkflowRunStatus>) {
   } as unknown as ReturnType<typeof getRun>
 }
 
+function recordedRun(
+  postSlug: string,
+  runId: string,
+  ageMs = 0
+): RecordedSendRun {
+  return {
+    postSlug,
+    runId,
+    startedAt: new Date(Date.now() - ageMs),
+  }
+}
+
 beforeEach(() => {
   mockedGetRun.mockReset()
-  mockedAllLatestRunIds.mockReset()
+  mockedAllLatestRuns.mockReset()
   mockedDeleteSendRunIfMatches.mockReset()
   mockedDeleteSendRunIfMatches.mockResolvedValue(true)
-  mockedLatestRunIdBySlug.mockReset()
+  mockedLatestRunBySlug.mockReset()
 })
 
 describe('isSendRunActive', () => {
@@ -46,7 +63,7 @@ describe('isSendRunActive', () => {
     'pending',
     'running',
   ] as const)('keeps a %s run recorded and reports it active', async (status) => {
-    mockedLatestRunIdBySlug.mockResolvedValue('run-live')
+    mockedLatestRunBySlug.mockResolvedValue(recordedRun('post', 'run-live'))
     mockedGetRun.mockReturnValue(runStatus(status))
 
     await expect(isSendRunActive('post')).resolves.toBe(true)
@@ -59,7 +76,7 @@ describe('isSendRunActive', () => {
     'failed',
     'cancelled',
   ] as const)('prunes a %s run and reports it inactive', async (status) => {
-    mockedLatestRunIdBySlug.mockResolvedValue('run-terminal')
+    mockedLatestRunBySlug.mockResolvedValue(recordedRun('post', 'run-terminal'))
     mockedGetRun.mockReturnValue(runStatus(status))
 
     await expect(isSendRunActive('post')).resolves.toBe(false)
@@ -70,8 +87,21 @@ describe('isSendRunActive', () => {
     )
   })
 
-  it('prunes a run the Workflow runtime no longer knows', async () => {
-    mockedLatestRunIdBySlug.mockResolvedValue('run-missing')
+  it('keeps a recently accepted missing run active during resilient start', async () => {
+    mockedLatestRunBySlug.mockResolvedValue(recordedRun('post', 'run-missing'))
+    mockedGetRun.mockReturnValue(
+      runStatus(Promise.reject(new WorkflowRunNotFoundError('run-missing')))
+    )
+
+    await expect(isSendRunActive('post')).resolves.toBe(true)
+
+    expect(mockedDeleteSendRunIfMatches).not.toHaveBeenCalled()
+  })
+
+  it('prunes a missing run after the resilient-start grace expires', async () => {
+    mockedLatestRunBySlug.mockResolvedValue(
+      recordedRun('post', 'run-missing', SEND_RUN_NOT_FOUND_GRACE_MS + 1)
+    )
     mockedGetRun.mockReturnValue(
       runStatus(Promise.reject(new WorkflowRunNotFoundError('run-missing')))
     )
@@ -86,7 +116,7 @@ describe('isSendRunActive', () => {
 
   it('keeps the row and fails closed when status lookup fails transiently', async () => {
     const failure = new Error('Workflow backend unavailable')
-    mockedLatestRunIdBySlug.mockResolvedValue('run-unknown')
+    mockedLatestRunBySlug.mockResolvedValue(recordedRun('post', 'run-unknown'))
     mockedGetRun.mockReturnValue(runStatus(Promise.reject(failure)))
 
     await expect(isSendRunActive('post')).rejects.toBe(failure)
@@ -95,7 +125,7 @@ describe('isSendRunActive', () => {
   })
 
   it('keeps the row and fails closed on an unknown future status', async () => {
-    mockedLatestRunIdBySlug.mockResolvedValue('run-future')
+    mockedLatestRunBySlug.mockResolvedValue(recordedRun('post', 'run-future'))
     mockedGetRun.mockReturnValue(runStatus('paused' as WorkflowRunStatus))
 
     await expect(isSendRunActive('post')).rejects.toThrow(
@@ -108,18 +138,23 @@ describe('isSendRunActive', () => {
 
 describe('activeSendRunSlugs', () => {
   it('prunes proven-dead rows but preserves unknown runs as active', async () => {
-    mockedAllLatestRunIds.mockResolvedValue({
-      'post-running': 'run-running',
-      'post-pending': 'run-pending',
-      'post-completed': 'run-completed',
-      'post-failed': 'run-failed',
-      'post-cancelled': 'run-cancelled',
-      'post-missing': 'run-missing',
-      'post-unknown': 'run-unknown',
-    })
+    mockedAllLatestRuns.mockResolvedValue([
+      recordedRun('post-running', 'run-running'),
+      recordedRun('post-pending', 'run-pending'),
+      recordedRun('post-completed', 'run-completed'),
+      recordedRun('post-failed', 'run-failed'),
+      recordedRun('post-cancelled', 'run-cancelled'),
+      recordedRun('post-missing-recent', 'run-missing-recent'),
+      recordedRun(
+        'post-missing-stale',
+        'run-missing-stale',
+        SEND_RUN_NOT_FOUND_GRACE_MS + 1
+      ),
+      recordedRun('post-unknown', 'run-unknown'),
+    ])
     mockedGetRun.mockImplementation((runId) => {
       const status = runId.replace('run-', '')
-      if (status === 'missing') {
+      if (status.startsWith('missing')) {
         return runStatus(Promise.reject(new WorkflowRunNotFoundError(runId)))
       }
       if (status === 'unknown') {
@@ -132,7 +167,12 @@ describe('activeSendRunSlugs', () => {
       .mockImplementation(() => undefined)
 
     await expect(activeSendRunSlugs()).resolves.toEqual(
-      new Set(['post-running', 'post-pending', 'post-unknown'])
+      new Set([
+        'post-running',
+        'post-pending',
+        'post-missing-recent',
+        'post-unknown',
+      ])
     )
 
     expect(mockedDeleteSendRunIfMatches.mock.calls).toEqual(
@@ -140,7 +180,7 @@ describe('activeSendRunSlugs', () => {
         ['post-completed', 'run-completed'],
         ['post-failed', 'run-failed'],
         ['post-cancelled', 'run-cancelled'],
-        ['post-missing', 'run-missing'],
+        ['post-missing-stale', 'run-missing-stale'],
       ])
     )
     expect(mockedDeleteSendRunIfMatches).toHaveBeenCalledTimes(4)
@@ -149,13 +189,10 @@ describe('activeSendRunSlugs', () => {
   })
 
   it('limits the one-time historical cleanup to eight concurrent probes', async () => {
-    const runs = Object.fromEntries(
-      Array.from({ length: 18 }, (_, index) => [
-        `post-${index}`,
-        `run-${index}`,
-      ])
+    const runs = Array.from({ length: 18 }, (_, index) =>
+      recordedRun(`post-${index}`, `run-${index}`)
     )
-    mockedAllLatestRunIds.mockResolvedValue(runs)
+    mockedAllLatestRuns.mockResolvedValue(runs)
     const resolveStatus: Array<(status: WorkflowRunStatus) => void> = []
     mockedGetRun.mockImplementation(() =>
       runStatus(

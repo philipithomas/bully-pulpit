@@ -1,12 +1,16 @@
 import { getRun } from 'workflow/api'
 import { WorkflowRunNotFoundError } from 'workflow/errors'
 import {
-  allLatestRunIds,
+  allLatestRuns,
   deleteSendRunIfMatches,
-  latestRunIdBySlug,
+  latestRunBySlug,
+  type RecordedSendRun,
 } from '@/lib/db/queries/send-runs'
 
 const RUN_STATUS_CONCURRENCY = 8
+// Workflow 4.6's resilient start retries a temporarily missing accepted run
+// for 10 seconds. Keep three times that horizon for backend propagation margin.
+export const SEND_RUN_NOT_FOUND_GRACE_MS = 30_000
 
 /**
  * Whether a workflow run for this post is genuinely still in flight.
@@ -20,16 +24,22 @@ const RUN_STATUS_CONCURRENCY = 8
  *
  * Instead we persist the runId of each start (recordSendRun) and ask the
  * Workflow runtime for its real status. Only pending/running counts as live;
- * completed/failed/cancelled (or a runId the runtime no longer knows) means the
- * run is done and a retry/send may take over the leftover pending rows.
+ * completed/failed/cancelled means the run is done and a retry/send may take
+ * over the leftover pending rows. A typed missing run is treated as live for a
+ * short grace period because Workflow resilient start can accept a run before
+ * its status is visible.
  */
 export async function isSendRunActive(slug: string): Promise<boolean> {
-  const runId = await latestRunIdBySlug(slug)
-  if (!runId) return false
-  return isRunActive(slug, runId)
+  const run = await latestRunBySlug(slug)
+  if (!run) return false
+  return isRunActive(run)
 }
 
-async function isRunActive(slug: string, runId: string): Promise<boolean> {
+async function isRunActive({
+  postSlug,
+  runId,
+  startedAt,
+}: RecordedSendRun): Promise<boolean> {
   try {
     const status = await getRun(runId).status
     if (status === 'pending' || status === 'running') return true
@@ -44,13 +54,20 @@ async function isRunActive(slug: string, runId: string): Promise<boolean> {
 
     // completed/failed/cancelled are terminal. Forget the row so future Posts
     // page loads do not probe the same historical run forever.
-    await deleteSendRunIfMatches(slug, runId)
+    await deleteSendRunIfMatches(postSlug, runId)
     return false
   } catch (error) {
     if (WorkflowRunNotFoundError.is(error)) {
-      // The runtime pruned or never knew this run. It cannot be live, and the
-      // local row would otherwise cause the same failed probe on every load.
-      await deleteSendRunIfMatches(slug, runId)
+      if (Date.now() - startedAt.getTime() < SEND_RUN_NOT_FOUND_GRACE_MS) {
+        // Resilient start can enqueue an accepted run before its run_created
+        // record is queryable. Keep the only local guard until that propagation
+        // window is safely past, or a later probe reports a real status.
+        return true
+      }
+
+      // Outside the resilient-start window, a typed missing result means the
+      // runtime pruned or never knew this run. Remove the stale local guard.
+      await deleteSendRunIfMatches(postSlug, runId)
       return false
     }
 
@@ -63,33 +80,30 @@ async function isRunActive(slug: string, runId: string): Promise<boolean> {
 /**
  * Post slugs whose latest recorded send run is still pending or running.
  *
- * Terminal and missing rows are pruned after their first observation. Probes
- * use a small worker pool so a one-time cleanup of historical rows does not
- * fan out an unbounded number of remote Workflow requests. Unknown failures
- * stay recorded and render conservatively as active until a later probe can
- * establish a terminal state.
+ * Terminal and stale-missing rows are pruned after their first authoritative
+ * observation. Recent missing and unknown runs stay recorded and render
+ * conservatively as active. Probes use a small worker pool so a one-time
+ * cleanup of historical rows cannot fan out unbounded remote requests.
  */
 export async function activeSendRunSlugs(): Promise<Set<string>> {
-  const runs = await allLatestRunIds()
-  const entries = Object.entries(runs)
+  const runs = await allLatestRuns()
   const active = new Set<string>()
   let nextIndex = 0
 
   const workers = Array.from(
-    { length: Math.min(RUN_STATUS_CONCURRENCY, entries.length) },
+    { length: Math.min(RUN_STATUS_CONCURRENCY, runs.length) },
     async () => {
-      while (nextIndex < entries.length) {
-        const entry = entries[nextIndex]
+      while (nextIndex < runs.length) {
+        const run = runs[nextIndex]
         nextIndex += 1
-        const [slug, runId] = entry
         try {
-          if (await isRunActive(slug, runId)) active.add(slug)
+          if (await isRunActive(run)) active.add(run.postSlug)
         } catch (error) {
           console.error(
-            `[send-guard] Could not inspect Workflow run ${runId}:`,
+            `[send-guard] Could not inspect Workflow run ${run.runId}:`,
             error
           )
-          active.add(slug)
+          active.add(run.postSlug)
         }
       }
     }

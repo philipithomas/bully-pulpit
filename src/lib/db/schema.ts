@@ -114,9 +114,10 @@ export const emailSends = pgTable(
 // sendNewsletterWorkflow start. The send/retry guards ask the Workflow runtime
 // for its status: pending/running blocks a second start (which would double-send),
 // while completed/failed/cancelled means any leftover pending email_sends rows
-// are a STALLED send that retry is meant to resume. Terminal/missing rows are
-// conditionally pruned once observed, so the admin Posts page does not probe the
-// historical archive forever. Pending rows alone cannot distinguish these states.
+// are a STALLED send that retry is meant to resume. Terminal and stale-missing
+// rows are conditionally pruned once observed, so the admin Posts page does not
+// probe the historical archive forever. Pending rows alone cannot distinguish
+// these states.
 export const sendRuns = pgTable('send_runs', {
   postSlug: text('post_slug').primaryKey(),
   runId: text('run_id').notNull(),

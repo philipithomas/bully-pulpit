@@ -4,7 +4,9 @@ vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 
 import {
   allLatestRunIds,
+  allLatestRuns,
   deleteSendRunIfMatches,
+  latestRunBySlug,
   latestRunIdBySlug,
   recordSendRun,
 } from '@/lib/db/queries/send-runs'
@@ -22,6 +24,30 @@ describe('send run records', () => {
       alpha: 'alpha-new',
       beta: 'beta-run',
     })
+
+    const runs = await allLatestRuns()
+    expect(runs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          postSlug: 'alpha',
+          runId: 'alpha-new',
+          startedAt: expect.any(Date),
+        }),
+        expect.objectContaining({
+          postSlug: 'beta',
+          runId: 'beta-run',
+          startedAt: expect.any(Date),
+        }),
+      ])
+    )
+    expect(runs).toHaveLength(2)
+    await expect(latestRunBySlug('alpha')).resolves.toEqual(
+      expect.objectContaining({
+        postSlug: 'alpha',
+        runId: 'alpha-new',
+        startedAt: expect.any(Date),
+      })
+    )
   })
 
   it('cannot delete a newer run using an old status probe', async () => {
