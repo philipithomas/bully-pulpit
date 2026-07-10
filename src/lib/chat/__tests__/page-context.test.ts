@@ -4,6 +4,7 @@ import {
   PAGE_CONTENT_MAX_CHARS,
   toPlaintext,
 } from '@/lib/chat/page-context'
+import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPageBySlug } from '@/lib/content/loader'
 
 describe('getPageContextContent', () => {
@@ -79,7 +80,7 @@ describe('getPageContextContent', () => {
         newsletter: 'page',
       },
     })
-    expect(home?.content).toContain('Philip I. Thomas')
+    expect(home?.content).toContain(siteConfig.author)
 
     const print = getPageContextContent('/print')
     expect(print?.content).toContain('no longer available to order')

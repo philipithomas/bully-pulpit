@@ -756,10 +756,6 @@ body.dark-viewport header img.dark-viewport-invert {
   filter: invert(1);
 }
 
-body.dark-viewport header .wordmark {
-  color: var(--color-white);
-}
-
 body.dark-viewport header nav a {
   color: #b1ada6;
 }

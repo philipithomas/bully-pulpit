@@ -74,8 +74,8 @@ voice menu, the app also sends one Bell onboarding MMS with the contact card at
 is active does not resend the onboarding message. After an unsubscribe, only a
 Twilio-recognized handset opt-in such as START, UNSTOP, or YES reactivates the
 local subscription and sends the card again. The public `/bell.vcf` permalink
-returns a vCard 3.0 contact named Bell with the sending number, the Philip I.
-Thomas organization and website, and an embedded Bell contact image. On iPhone, Messages opens the
+returns a vCard 3.0 contact named Bell with the sending number, the configured
+site organization and website, and an embedded Bell contact image. On iPhone, Messages opens the
 attachment in the native contact preview, but the person must manually create
 or update the contact. The site cannot save the contact silently.
 New SMS opt-ins, whether they come from a `SUBSCRIBE` text or the voice menu,

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-10T03:54:46.270Z",
+  "generatedAt": "2026-07-10T22:03:33.729Z",
   "posts": {
     "farewell": {
       "related": [
@@ -549,15 +549,15 @@
       "related": [
         {
           "slug": "introducing-tsundoku",
-          "score": 0.1431682
+          "score": 0.1543372
         },
         {
           "slug": "2023-10",
-          "score": 0.2057169
+          "score": 0.2152081
         },
         {
-          "slug": "2026-07",
-          "score": 0.2078976
+          "slug": "code-as-content-and-digital-proprioception",
+          "score": 0.2206891
         }
       ]
     },

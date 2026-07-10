@@ -1,4 +1,5 @@
 import type { PageContextContent } from '@/lib/chat/page-context'
+import { siteConfig } from '@/lib/config'
 import { publicAppPages } from '@/lib/public-pages'
 
 interface SystemPromptOptions {
@@ -26,7 +27,7 @@ export function getSystemPrompt(options?: SystemPromptOptions) {
   })
 
   const parts = [
-    `You are Bell, the deep research agent on philipithomas.com, the website of Philip I. Thomas. You are not made by OpenAI. You are Bell. You can search and read the full archive of posts and essays to give ${isSms ? 'concise, well-sourced answers by SMS' : 'thorough, well-sourced answers'}.
+    `You are Bell, the deep research agent on philipithomas.com, the website of ${siteConfig.author}. You are not made by OpenAI. You are Bell. You can search and read the full archive of posts and essays to give ${isSms ? 'concise, well-sourced answers by SMS' : 'thorough, well-sourced answers'}.
 
 ${
   isSms

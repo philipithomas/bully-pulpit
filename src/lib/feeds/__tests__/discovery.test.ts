@@ -3,7 +3,7 @@ import { siteConfig } from '@/lib/config'
 import { NEWSLETTERS } from '@/lib/content/types'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 
-const allFeedTitle = 'Philip I. Thomas: all posts'
+const allFeedTitle = `${siteConfig.title}: all posts`
 
 describe('feedDiscovery', () => {
   it('site-wide discovery lists the combined feed first, then every newsletter', () => {

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { FooterNycStatus } from '@/components/layout/footer-nyc-status'
+import { siteIdentity } from '@/lib/site-identity'
 
 export function Footer() {
   return (
@@ -10,7 +11,7 @@ export function Footer() {
             href="/"
             className="text-white font-semibold text-sm tracking-[0.04em] uppercase hover:text-gray-300 transition-colors"
           >
-            Philip I. Thomas
+            {siteIdentity.name}
           </Link>
           <p className="order-2 text-xs text-gray-500 md:order-none md:col-start-1 md:row-start-2">
             &copy; {new Date().getFullYear()}{' '}

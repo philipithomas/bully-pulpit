@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { sanitizePageTitle } from '@/lib/chat/sanitize-title'
+import { siteConfig } from '@/lib/config'
 
 describe('sanitizePageTitle', () => {
   it('keeps a clean title unchanged', () => {
-    expect(sanitizePageTitle('Some post | Philip I. Thomas')).toBe(
-      'Some post | Philip I. Thomas'
-    )
+    const title = `Some post | ${siteConfig.title}`
+    expect(sanitizePageTitle(title)).toBe(title)
   })
 
   it('flattens newlines and double quotes into a single inert line', () => {

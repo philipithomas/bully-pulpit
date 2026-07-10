@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { buildMimeMessage, type MimeMessageInput } from '@/lib/email/mime'
+import { siteIdentity } from '@/lib/site-identity'
 
 function build(overrides: Partial<MimeMessageInput> = {}): string {
   return new TextDecoder().decode(
     buildMimeMessage({
-      from: 'Philip I. Thomas <mail@philipithomas.com>',
+      from: `${siteIdentity.name} <mail@philipithomas.com>`,
       to: ['admin@example.com'],
       subject: 'Subscriber backup 2026-06-01',
       text: 'The attached CSV contains all 2 subscribers as of 2026-06-01.',
@@ -42,7 +43,7 @@ describe('buildMimeMessage', () => {
     const message = build()
     const boundary = boundaryOf(message)
     expect(message).toContain(
-      'From: Philip I. Thomas <mail@philipithomas.com>\r\n'
+      `From: ${siteIdentity.name} <mail@philipithomas.com>\r\n`
     )
     expect(message).toContain('To: admin@example.com\r\n')
     expect(message).toContain('Subject: Subscriber backup 2026-06-01\r\n')

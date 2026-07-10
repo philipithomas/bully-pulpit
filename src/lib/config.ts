@@ -1,10 +1,10 @@
 import { requireEnv } from '@/lib/env'
+import { siteIdentity } from '@/lib/site-identity'
 
 const staticConfig = {
-  title: 'Philip I. Thomas',
-  description:
-    'Philip Thomas is an engineer living in New York City, working at the intersection of math, software, and business.',
-  author: 'Philip I. Thomas',
+  title: siteIdentity.name,
+  description: siteIdentity.description,
+  author: siteIdentity.name,
   email: 'mail@philipithomas.com',
   image: '/og-image.png',
   favicon: '/favicon.ico',
@@ -63,7 +63,7 @@ export const siteConfig = {
     if (process.env.NODE_ENV === 'development') {
       return 'http://localhost:3000'
     }
-    return 'https://www.philipithomas.com'
+    return siteIdentity.productionUrl
   },
   /** '[PREVIEW] ' / '[DEVELOPMENT] ' outside production, '' in production. */
   get emailSubjectPrefix(): string {
@@ -89,13 +89,12 @@ export const siteConfig = {
     return process.env.GOOGLE_CLIENT_SECRET ?? ''
   },
   get sesFromEmail() {
-    // A bare address in SES_FROM_EMAIL loses the sender name in inboxes, so
-    // wrap it like the legacy service did; an already-formatted value with a
-    // display name passes through.
+    // SES_FROM_EMAIL supplies the mailbox only. The public display name always
+    // comes from the shared identity so environment config cannot make it stale.
     const configured = process.env.SES_FROM_EMAIL ?? 'mail@philipithomas.com'
-    return configured.includes('<')
-      ? configured
-      : `${staticConfig.author} <${configured}>`
+    const formattedAddress = configured.match(/<([^<>]+)>\s*$/)?.[1]
+    const address = (formattedAddress ?? configured).trim()
+    return `${staticConfig.author} <${address}>`
   },
   get awsRegion() {
     return process.env.AWS_REGION ?? 'us-east-1'

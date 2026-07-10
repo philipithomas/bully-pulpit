@@ -5,6 +5,7 @@ import {
   BELL_CONTACT_PHOTO_BASE64,
   renderBellContactCard,
 } from '@/lib/bell-contact-card'
+import { siteIdentity } from '@/lib/site-identity'
 import { renderVCard } from '@/lib/vcard'
 
 function unfold(value: string): string {
@@ -19,7 +20,7 @@ describe('renderVCard', () => {
     expect(unfolded).toContain('BEGIN:VCARD\r\nVERSION:3.0\r\n')
     expect(unfolded).toContain('N:;Bell;;;\r\n')
     expect(unfolded).toContain('FN:Bell\r\n')
-    expect(unfolded).toContain('ORG:Philip I. Thomas\r\n')
+    expect(unfolded).toContain(`ORG:${siteIdentity.name}\r\n`)
     expect(unfolded).toContain('TEL;TYPE=CELL:+12123473190\r\n')
     expect(unfolded).toContain('URL:https://www.philipithomas.com\r\n')
     expect(unfolded).toContain(

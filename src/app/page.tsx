@@ -39,7 +39,7 @@ export default async function HomePage() {
   // both srcSets, so the hidden slot resolves to the same URL as the visible
   // one (a single fetch per device) instead of two priority preloads.
   const { props: desktopPortrait } = getImageProps({
-    alt: 'Philip I. Thomas',
+    alt: siteConfig.author,
     src: '/images/portrait.jpg',
     width: 600,
     height: 750,
@@ -51,7 +51,7 @@ export default async function HomePage() {
   const smsSignupPhoneNumber = sitePhoneNumber()
   const smsSignupDisplayNumber = sitePhoneDisplayNumber()
   const { props: mobilePortrait } = getImageProps({
-    alt: 'Philip I. Thomas',
+    alt: siteConfig.author,
     src: '/images/philip-horizontal.jpg',
     width: 1024,
     height: 656,

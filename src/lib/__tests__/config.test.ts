@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { siteConfig } from '@/lib/config'
+import { siteIdentity } from '@/lib/site-identity'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -74,19 +75,21 @@ describe('siteConfig.sesFromEmail', () => {
   it('wraps a bare address with the display name', () => {
     vi.stubEnv('SES_FROM_EMAIL', 'mail@philipithomas.com')
     expect(siteConfig.sesFromEmail).toBe(
-      'Philip I. Thomas <mail@philipithomas.com>'
+      `${siteIdentity.name} <mail@philipithomas.com>`
     )
   })
 
-  it('passes through an already-formatted From', () => {
+  it('replaces an environment display name with the public name', () => {
     vi.stubEnv('SES_FROM_EMAIL', 'Custom Name <hi@example.com>')
-    expect(siteConfig.sesFromEmail).toBe('Custom Name <hi@example.com>')
+    expect(siteConfig.sesFromEmail).toBe(
+      `${siteIdentity.name} <hi@example.com>`
+    )
   })
 
   it('defaults to the named production address', () => {
     vi.stubEnv('SES_FROM_EMAIL', undefined)
     expect(siteConfig.sesFromEmail).toBe(
-      'Philip I. Thomas <mail@philipithomas.com>'
+      `${siteIdentity.name} <mail@philipithomas.com>`
     )
   })
 })

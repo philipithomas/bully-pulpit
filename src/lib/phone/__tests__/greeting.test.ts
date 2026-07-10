@@ -169,7 +169,7 @@ describe('generateGreeting', () => {
     'Hello from snowy New York City.',
     'The weather has a flair for drama today.',
     'Leave a message after the tone.',
-    'You have reached the Contraption Company and Philip Thomas.',
+    'You have reached the Contraption Company and an unexpected caller.',
     'Good evening! It is hilarious outside.',
   ])('drops a model opener outside the verified options: %s', async (text) => {
     // biome-ignore lint/suspicious/noExplicitAny: partial generateText result

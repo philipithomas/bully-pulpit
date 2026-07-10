@@ -1,3 +1,4 @@
+import { siteIdentity } from '@/lib/site-identity'
 import { renderVCard } from '@/lib/vcard'
 
 export const BELL_CONTACT_PHOTO_BASE64 =
@@ -6,9 +7,9 @@ export const BELL_CONTACT_PHOTO_BASE64 =
 export function renderBellContactCard(phoneNumber: string): string {
   return renderVCard({
     name: 'Bell',
-    organization: 'Philip I. Thomas',
+    organization: siteIdentity.name,
     phoneNumber,
-    website: 'https://www.philipithomas.com',
+    website: siteIdentity.productionUrl,
     photo: { base64: BELL_CONTACT_PHOTO_BASE64, type: 'PNG' },
   })
 }
