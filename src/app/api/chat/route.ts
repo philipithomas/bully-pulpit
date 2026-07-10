@@ -10,7 +10,10 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod/v4'
 import { bucketDuration, bucketTurn } from '@/lib/analytics/events'
 import { trackServerEvent } from '@/lib/analytics/server'
-import { getSession } from '@/lib/auth/jwt'
+import {
+  getVerifiedSession,
+  SessionLookupUnavailableError,
+} from '@/lib/auth/jwt'
 import {
   bellGatewayCost,
   bellModel,
@@ -44,7 +47,6 @@ import {
   createBellMessage,
   textFromBellParts,
 } from '@/lib/db/queries/bell-messages'
-import { findByUuid } from '@/lib/db/queries/subscribers'
 import { readJsonBody } from '@/lib/http/json-body'
 import { checkRateLimitStatus } from '@/lib/rate-limit'
 
@@ -124,11 +126,28 @@ export async function POST(request: Request) {
 
   // These checks read only request or cookie headers and can run together once
   // the cheap local trust-boundary validation has succeeded.
-  const [rateLimit, { isBot }, session] = await Promise.all([
+  let sessionLookupUnavailable = false
+  const verifiedSessionPromise = getVerifiedSession().catch((error) => {
+    if (!(error instanceof SessionLookupUnavailableError)) throw error
+    sessionLookupUnavailable = true
+    console.error('[api/chat] session lookup failed:', error)
+    return null
+  })
+  const [rateLimit, { isBot }, verifiedSession] = await Promise.all([
     checkRateLimitStatus('chat', `ip:${ip}`, request),
     checkBotId(),
-    getSession(),
+    verifiedSessionPromise,
   ])
+
+  if (sessionLookupUnavailable) {
+    return NextResponse.json(
+      { error: 'Bell is temporarily unavailable. Please try again later.' },
+      {
+        status: 503,
+        headers: { 'Cache-Control': 'private, no-store' },
+      }
+    )
+  }
 
   if (rateLimit === 'limited') {
     return NextResponse.json(
@@ -146,7 +165,7 @@ export async function POST(request: Request) {
   if (isBot) {
     return NextResponse.json({ error: 'Access denied.' }, { status: 403 })
   }
-  const subscriber = session ? await findByUuid(session.uuid) : null
+  const subscriber = verifiedSession?.subscriber ?? null
   const networkIdentity = subscriber ? null : networkIdentityForRequest(request)
   const conversation = await getOrCreateWebBellConversation({
     clientConversationId: body.id,

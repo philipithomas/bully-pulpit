@@ -3,7 +3,11 @@ import type { NextConfig } from 'next'
 import { withWorkflow } from 'workflow/next'
 import { OPTIMIZED_IMAGE_WIDTHS } from '@/lib/content/zoom-image'
 import { getRedirects } from '@/lib/redirects'
-import { CONTENT_SECURITY_POLICY } from '@/lib/security/csp'
+import {
+  CONTENT_SECURITY_POLICY,
+  CONTENT_SECURITY_POLICY_REPORT_ONLY,
+  CSP_REPORTING_ENDPOINTS,
+} from '@/lib/security/csp'
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -16,6 +20,14 @@ const securityHeaders = [
   {
     key: 'Content-Security-Policy',
     value: CONTENT_SECURITY_POLICY,
+  },
+  {
+    key: 'Content-Security-Policy-Report-Only',
+    value: CONTENT_SECURITY_POLICY_REPORT_ONLY,
+  },
+  {
+    key: 'Reporting-Endpoints',
+    value: CSP_REPORTING_ENDPOINTS,
   },
 ]
 

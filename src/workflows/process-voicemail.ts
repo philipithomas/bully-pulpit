@@ -1,3 +1,5 @@
+import { getStepMetadata } from 'workflow'
+import { markPhoneWebhookEventProcessed } from '@/lib/db/queries/phone-webhook-events'
 import { processVoicemail, type VoicemailInput } from '@/lib/phone/voicemail'
 
 // Durable voicemail processing — the Vercel Workflow replacement for
@@ -10,6 +12,25 @@ import { processVoicemail, type VoicemailInput } from '@/lib/phone/voicemail'
 // and the step completing can duplicate the notification on retry, which is
 // acceptable for a personal voicemail inbox.
 
+export type ProcessVoicemailWorkflowInput = {
+  webhookEventId: number
+  webhookLease: string
+  voicemail: VoicemailInput
+}
+
+async function acceptWebhookLease(
+  webhookEventId: number,
+  webhookLease: string
+): Promise<boolean> {
+  'use step'
+  const processingAt = new Date(webhookLease)
+  if (Number.isNaN(processingAt.getTime())) return false
+  const { stepId } = getStepMetadata()
+  return markPhoneWebhookEventProcessed(webhookEventId, processingAt, stepId)
+}
+
+acceptWebhookLease.maxRetries = 5
+
 async function transcribeAndNotify(
   input: VoicemailInput
 ): Promise<'sent' | 'skipped'> {
@@ -21,8 +42,16 @@ transcribeAndNotify.maxRetries = 5
 
 /** Transcribes one completed Twilio recording and emails the result. */
 export async function processVoicemailWorkflow(
-  input: VoicemailInput
-): Promise<'sent' | 'skipped'> {
+  input: ProcessVoicemailWorkflowInput
+): Promise<'sent' | 'skipped' | 'duplicate'> {
   'use workflow'
-  return transcribeAndNotify(input)
+  // This is the first durable step. If webhook delivery, the route response,
+  // or workflow enqueue is ambiguous, only the run holding the exact current
+  // database lease can consume it and proceed to external side effects.
+  const accepted = await acceptWebhookLease(
+    input.webhookEventId,
+    input.webhookLease
+  )
+  if (!accepted) return 'duplicate'
+  return transcribeAndNotify(input.voicemail)
 }

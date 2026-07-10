@@ -86,6 +86,18 @@ export type VerifiedSession = {
 }
 
 /**
+ * The session token was valid, but current subscriber state could not be
+ * checked. Callers must fail closed instead of treating this as an anonymous
+ * or invalid session.
+ */
+export class SessionLookupUnavailableError extends Error {
+  constructor(cause: unknown) {
+    super('Subscriber session lookup unavailable', { cause })
+    this.name = 'SessionLookupUnavailableError'
+  }
+}
+
+/**
  * Verifies token integrity and scope without consulting subscriber state.
  * Logout uses this so a database outage cannot turn a valid token into an
  * anonymous request and silently skip the revocation attempt.
@@ -122,7 +134,8 @@ export async function getSessionClaims(): Promise<Session | null> {
 
 /**
  * Verifies the cookie and current subscriber row together. Callers that need
- * preferences can reuse the row instead of performing a second lookup.
+ * preferences can reuse the row instead of performing a second lookup. Null
+ * means invalid session state; lookup failures throw so callers fail closed.
  */
 export async function getVerifiedSession(): Promise<VerifiedSession | null> {
   const claims = await getSessionClaims()
@@ -145,12 +158,15 @@ export async function getVerifiedSession(): Promise<VerifiedSession | null> {
       },
       subscriber,
     }
-  } catch {
-    return null
+  } catch (error) {
+    throw new SessionLookupUnavailableError(error)
   }
 }
 
-/** Reads and verifies the session cookie. Returns null if absent or invalid. */
+/**
+ * Reads and verifies the session cookie. Returns null if absent or invalid and
+ * propagates subscriber lookup failures.
+ */
 export async function getSession(): Promise<Session | null> {
   return (await getVerifiedSession())?.session ?? null
 }

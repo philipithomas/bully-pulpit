@@ -42,6 +42,8 @@ import { POST as voicePost } from '@/app/api/phone/voice/route'
 import {
   claimPhoneWebhookEvent,
   findOrCreatePhoneWebhookEvent,
+  markPhoneWebhookEventProcessed,
+  releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
 import { smsSignupUi } from '@/lib/flags'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
@@ -72,6 +74,7 @@ beforeEach(() => {
       eventType: 'recording-status',
       processingAt: null,
       processedAt: null,
+      processedStepId: null,
       createdAt: new Date('2026-01-01T00:00:00Z'),
     },
     inserted: true,
@@ -190,21 +193,27 @@ describe('POST /api/phone/recording-status', () => {
     expect(response.status).toBe(202)
     expect(vi.mocked(start)).toHaveBeenCalledWith(expect.anything(), [
       {
-        recordingUrl: 'https://api.twilio.com/recordings/RE123',
-        recordingSid: 'RE123',
-        from: '+15551234567',
-        to: '+12123473190',
-        durationSeconds: '42',
-        metadata: expect.objectContaining({
-          callSid: 'CA_CALLBACK',
-          callerName: 'Jane Caller',
-          fromCity: 'San Francisco',
-          fromState: 'CA',
-          fromZip: '94105',
-          fromCountry: 'US',
-        }),
+        webhookEventId: 1,
+        webhookLease: '2026-01-01T00:00:00.000Z',
+        voicemail: {
+          recordingUrl: 'https://api.twilio.com/recordings/RE123',
+          recordingSid: 'RE123',
+          from: '+15551234567',
+          to: '+12123473190',
+          durationSeconds: '42',
+          metadata: expect.objectContaining({
+            callSid: 'CA_CALLBACK',
+            callerName: 'Jane Caller',
+            fromCity: 'San Francisco',
+            fromState: 'CA',
+            fromZip: '94105',
+            fromCountry: 'US',
+          }),
+        },
       },
     ])
+    expect(markPhoneWebhookEventProcessed).not.toHaveBeenCalled()
+    expect(releasePhoneWebhookEvent).not.toHaveBeenCalled()
   })
 
   it('ignores non-completed statuses', async () => {
@@ -246,6 +255,7 @@ describe('POST /api/phone/recording-status', () => {
         eventType: 'recording-status',
         processingAt: null,
         processedAt: new Date('2026-01-01T00:00:00Z'),
+        processedStepId: null,
         createdAt: new Date('2026-01-01T00:00:00Z'),
       },
       inserted: false,
@@ -260,6 +270,44 @@ describe('POST /api/phone/recording-status', () => {
     expect(response.status).toBe(202)
     expect(await response.json()).toEqual({ status: 'duplicate' })
     expect(vi.mocked(start)).not.toHaveBeenCalled()
+  })
+
+  it('does not start another workflow while the webhook lease is held', async () => {
+    vi.mocked(claimPhoneWebhookEvent).mockResolvedValueOnce(null)
+
+    const response = await recordingStatusPost(
+      twilioPost('/api/phone/recording-status', {
+        RecordingStatus: 'completed',
+        RecordingUrl: 'https://api.twilio.com/recordings/RE123',
+        RecordingSid: 'RE123',
+      })
+    )
+
+    expect(response.status).toBe(202)
+    expect(await response.json()).toEqual({ status: 'duplicate' })
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  it('releases the exact lease when workflow start definitively fails', async () => {
+    vi.mocked(start).mockRejectedValueOnce(new Error('workflow unavailable'))
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const response = await recordingStatusPost(
+      twilioPost('/api/phone/recording-status', {
+        RecordingStatus: 'completed',
+        RecordingUrl: 'https://api.twilio.com/recordings/RE123',
+        RecordingSid: 'RE123',
+      })
+    )
+
+    expect(response.status).toBe(503)
+    expect(releasePhoneWebhookEvent).toHaveBeenCalledWith(
+      1,
+      new Date('2026-01-01T00:00:00Z')
+    )
+    expect(markPhoneWebhookEventProcessed).not.toHaveBeenCalled()
+    expect(consoleError).toHaveBeenCalledOnce()
+    consoleError.mockRestore()
   })
 })
 

@@ -3,7 +3,6 @@ import { start } from 'workflow/api'
 import {
   claimPhoneWebhookEvent,
   findOrCreatePhoneWebhookEvent,
-  markPhoneWebhookEventProcessed,
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
@@ -59,24 +58,21 @@ export async function POST(request: Request) {
   try {
     await start(processVoicemailWorkflow, [
       {
-        recordingUrl,
-        recordingSid,
-        from,
-        to: params.get('called') ?? 'Unknown',
-        durationSeconds: String(form.get('RecordingDuration') ?? '0'),
-        metadata: {
-          ...forwardedMetadata,
-          callSid: callbackMetadata.callSid ?? forwardedMetadata.callSid,
+        webhookEventId: webhookEvent.event.id,
+        webhookLease: lease.toISOString(),
+        voicemail: {
+          recordingUrl,
+          recordingSid,
+          from,
+          to: params.get('called') ?? 'Unknown',
+          durationSeconds: String(form.get('RecordingDuration') ?? '0'),
+          metadata: {
+            ...forwardedMetadata,
+            callSid: callbackMetadata.callSid ?? forwardedMetadata.callSid,
+          },
         },
       },
     ])
-    const marked = await markPhoneWebhookEventProcessed(
-      webhookEvent.event.id,
-      lease
-    )
-    if (!marked) {
-      throw new Error('Could not complete recording webhook claim')
-    }
   } catch (error) {
     await releasePhoneWebhookEvent(webhookEvent.event.id, lease)
     console.error('[phone/recording-status] enqueue failed:', error)
