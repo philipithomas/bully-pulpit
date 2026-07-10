@@ -348,5 +348,5 @@ export function stargazingPublicText(): string {
 }
 
 export function stargazingPageContent(content: string): string {
-  return `${content}\n\n${stargazingSummary}\n\n## Restaurants\n\n${stargazingRestaurantRowsText()}\n\n## My personal top list\n\n${stargazingFavoritesText()}`
+  return `${stargazingSummary}\n\n${content}\n\n## Restaurants\n\n${stargazingRestaurantRowsText()}\n\n## My personal top list\n\n${stargazingFavoritesText()}`
 }

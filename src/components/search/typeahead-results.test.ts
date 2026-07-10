@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   mergeTypeaheadResults,
   TYPEAHEAD_RESULT_LIMIT,
+  typeaheadResultUrl,
 } from '@/components/search/typeahead-results'
 
 function result(slug: string) {
@@ -35,5 +36,30 @@ describe('mergeTypeaheadResults', () => {
 
     expect(combined).toHaveLength(TYPEAHEAD_RESULT_LIMIT)
     expect(combined.slice(0, 8)).toEqual(lexical)
+  })
+})
+
+describe('typeaheadResultUrl', () => {
+  it('prefers the displayed image URL over the result URL', () => {
+    expect(
+      typeaheadResultUrl({
+        url: '/post',
+        image: { url: '/post#direct-image' },
+        images: [{ url: '/post#matched-image' }],
+      })
+    ).toBe('/post#direct-image')
+  })
+
+  it('uses the first matched image URL when there is no direct image', () => {
+    expect(
+      typeaheadResultUrl({
+        url: '/post',
+        images: [{ url: '/post#matched-image' }],
+      })
+    ).toBe('/post#matched-image')
+  })
+
+  it('falls back to the result URL when there is no displayed image', () => {
+    expect(typeaheadResultUrl({ url: '/post', images: [] })).toBe('/post')
   })
 })
