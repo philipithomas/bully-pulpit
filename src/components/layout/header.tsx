@@ -166,10 +166,10 @@ export function Header() {
             onMouseEnter={prefetchSearch}
             onFocus={prefetchSearch}
             aria-label="Search"
-            className="p-3 -m-3"
+            className="group p-3 -m-3 cursor-pointer"
           >
             <Search
-              className="h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600"
+              className="h-[18px] w-[18px] text-gray-400 transition-colors group-hover:text-gray-600"
               aria-hidden="true"
             />
           </button>
@@ -179,10 +179,10 @@ export function Header() {
             onMouseEnter={prefetchChat}
             onFocus={prefetchChat}
             aria-label="Open Bell"
-            className="p-3 -m-3"
+            className="group p-3 -m-3 cursor-pointer"
           >
             <BellIcon
-              className={`h-[18px] w-[18px] text-gray-400 transition-colors hover:text-gray-600 ${nudgeBell ? 'bell-discovery-nudge' : ''}`}
+              className={`h-[18px] w-[18px] text-gray-400 transition-colors group-hover:text-gray-600 ${nudgeBell ? 'bell-discovery-nudge' : ''}`}
               aria-hidden="true"
             />
           </button>
