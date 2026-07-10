@@ -224,7 +224,7 @@ export const smsSubscribers = pgTable(
       .notNull()
       .default(true),
     subscribedWorkshop: boolean('subscribed_workshop').notNull().default(true),
-    subscribedTsundoku: boolean('subscribed_tsundoku').notNull().default(true),
+    subscribedTsundoku: boolean('subscribed_tsundoku').notNull().default(false),
     bellContactCardClaimId: uuid('bell_contact_card_claim_id'),
     bellContactCardProcessingAt: timestamp('bell_contact_card_processing_at', {
       withTimezone: true,

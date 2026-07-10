@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const afterTasks = vi.hoisted(() => [] as Promise<void>[])
@@ -125,6 +126,19 @@ afterEach(async () => {
 })
 
 describe('POST /api/phone/sms', () => {
+  it('excludes historical Tsundoku-only rows from SMS eligibility', async () => {
+    await db.insert(smsSubscribers).values({
+      phoneNumber: '+15551234567',
+      confirmedAt: new Date(),
+      subscribedPostcard: false,
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedTsundoku: true,
+    })
+
+    expect(await countEligibleSms('tsundoku', 'archived-post')).toBe(0)
+  })
+
   it('rejects an invalid signature without touching the database', async () => {
     const response = await smsPost(
       smsRequest({ From: '+1', To: '+2', Body: 'x' }, 'invalid')
@@ -329,7 +343,7 @@ describe('POST /api/phone/sms', () => {
       subscribedPostcard: true,
       subscribedContraption: true,
       subscribedWorkshop: true,
-      subscribedTsundoku: true,
+      subscribedTsundoku: false,
       source: 'sms:phone',
     })
     expect(subscribers[0].confirmedAt).toBeInstanceOf(Date)
@@ -374,6 +388,10 @@ describe('POST /api/phone/sms', () => {
     }
     await smsPost(smsRequest(form))
     await flushAfterTasks()
+    await db
+      .update(smsSubscribers)
+      .set({ subscribedTsundoku: true })
+      .where(eq(smsSubscribers.phoneNumber, form.From))
     vi.mocked(sendSimpleEmail).mockClear()
     vi.mocked(sendSms).mockClear()
 
@@ -389,6 +407,8 @@ describe('POST /api/phone/sms', () => {
     await flushAfterTasks()
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+    const [subscriber] = await db.select().from(smsSubscribers)
+    expect(subscriber.subscribedTsundoku).toBe(true)
   })
 
   it('retries the Bell card after Twilio rejects the first MMS', async () => {
@@ -945,7 +965,7 @@ describe('POST /api/phone/voice-menu', () => {
       subscribedPostcard: true,
       subscribedContraption: true,
       subscribedWorkshop: true,
-      subscribedTsundoku: true,
+      subscribedTsundoku: false,
       source: 'call:phone',
     })
     await flushAfterTasks()

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { preload } from 'react-dom'
 import '@/styles/globals.css'
 import { AuthProvider } from '@/components/auth/auth-provider'
+import { LazyNewSubscriberOnboarding } from '@/components/auth/new-subscriber-onboarding-lazy'
 import { LazySignInModal } from '@/components/auth/sign-in-modal-lazy'
 import { SignInToast } from '@/components/auth/sign-in-toast'
 import { Footer } from '@/components/layout/footer'
@@ -113,6 +114,7 @@ export default function RootLayout({
             </main>
             <Footer />
             <LazySignInModal />
+            <LazyNewSubscriberOnboarding />
             <SignInToast />
             <Toaster />
             <CoverPreload />

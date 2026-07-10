@@ -164,6 +164,26 @@ describe('POST /api/printing-press/send-test', () => {
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
   })
 
+  it.each([
+    'email',
+    'sms',
+  ] as const)('blocks archived newsletter %s test delivery', async (channel) => {
+    await signInAs('admin@example.com')
+    vi.mocked(getPostBySlug).mockReturnValue({
+      ...POST_DATA,
+      newsletter: 'tsundoku',
+    })
+
+    const response = await POST(request({ slug: SLUG, channel }))
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({
+      error: 'This newsletter is archived and cannot be sent.',
+    })
+    expect(vi.mocked(sendNewsletterEmail)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
+  })
+
   it('reports when the owner phone is missing', async () => {
     await signInAs('admin@example.com')
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})

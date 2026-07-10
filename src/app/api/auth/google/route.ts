@@ -7,7 +7,11 @@ import {
   summarizeNewsletters,
 } from '@/lib/analytics/events'
 import { trackServerEvent } from '@/lib/analytics/server'
-import { setSessionCookies, signSession } from '@/lib/auth/jwt'
+import {
+  setNewSubscriberOnboardingCookie,
+  setSessionCookies,
+  signSession,
+} from '@/lib/auth/jwt'
 import {
   createOrRetrieve,
   normalizedNewsletters,
@@ -124,6 +128,7 @@ export async function POST(request: Request) {
       user: serializeSubscriber(subscriber),
     })
     setSessionCookies(response, jwt)
+    await setNewSubscriberOnboardingCookie(response, subscriber, newlyConfirmed)
 
     const placement = parseAnalyticsPlacement(analytics_placement)
     await Promise.all([

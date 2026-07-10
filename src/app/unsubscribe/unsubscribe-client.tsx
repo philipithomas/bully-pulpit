@@ -22,7 +22,6 @@ interface Preferences {
   subscribed_postcard: boolean
   subscribed_contraption: boolean
   subscribed_workshop: boolean
-  subscribed_tsundoku: boolean
 }
 
 function UnsubscribeContent() {

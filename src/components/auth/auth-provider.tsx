@@ -16,6 +16,8 @@ interface AuthContextType {
   hasSession: boolean | null
   loading: boolean
   logout: () => Promise<void>
+  showNewSubscriberOnboarding: boolean
+  dismissNewSubscriberOnboarding: () => void
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,6 +27,8 @@ const AuthContext = createContext<AuthContextType>({
   hasSession: null,
   loading: true,
   logout: async () => {},
+  showNewSubscriberOnboarding: false,
+  dismissNewSubscriberOnboarding: () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

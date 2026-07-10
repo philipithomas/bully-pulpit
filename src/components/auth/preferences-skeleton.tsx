@@ -1,4 +1,5 @@
 import { Skeleton } from '@/components/ui/skeleton'
+import { acceptingSubscriptionNewsletters } from '@/lib/newsletters'
 
 /**
  * Placeholder for the newsletter toggle rows on the account and
@@ -8,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 export function NewsletterRowsSkeleton() {
   return (
     <div className="space-y-3">
-      {['contraption', 'workshop', 'postcard', 'tsundoku'].map((key) => (
+      {acceptingSubscriptionNewsletters.map((key) => (
         <div
           key={key}
           className="flex items-center justify-between border border-gray-200 bg-white px-4 py-3"

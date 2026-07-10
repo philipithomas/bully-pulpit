@@ -6,7 +6,11 @@ import {
   summarizeNewsletters,
 } from '@/lib/analytics/events'
 import { trackServerEvent } from '@/lib/analytics/server'
-import { setSessionCookies, signSession } from '@/lib/auth/jwt'
+import {
+  setNewSubscriberOnboardingCookie,
+  setSessionCookies,
+  signSession,
+} from '@/lib/auth/jwt'
 import {
   InvalidTokenError,
   verifyTokenWithMetadata,
@@ -74,6 +78,11 @@ export async function POST(request: Request) {
       user: serializeSubscriber(subscriber),
     })
     setSessionCookies(response, jwt)
+    await setNewSubscriberOnboardingCookie(
+      response,
+      subscriber,
+      verification.newlyConfirmed
+    )
     await trackServerEvent(request, 'Newsletter signup completed', {
       method: 'email_code',
       placement: parseAnalyticsPlacement(analytics_placement),

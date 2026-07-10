@@ -12,7 +12,11 @@ import {
 } from '@/lib/analytics/events'
 import { siteConfig } from '@/lib/config'
 import type { Newsletter } from '@/lib/content/types'
-import { newsletterPreferenceKeys } from '@/lib/newsletters'
+import {
+  type ActiveNewsletter,
+  isNewsletterAcceptingSubscriptions,
+  newsletterPreferenceKeys,
+} from '@/lib/newsletters'
 
 // What a subscriber receives, per newsletter: Contraption sends essays,
 // Workshop sends work in progress notes, Postcard sends monthly updates.
@@ -23,16 +27,7 @@ const newsletterNoun: Record<Newsletter, string> = {
   tsundoku: 'photos',
 }
 
-export function SubscribeCta({
-  newsletter,
-  className = 'mt-16',
-  align = 'start',
-  subscribeEndpoint,
-  smsSignupEnabled,
-  smsSignupPhoneNumber = null,
-  smsSignupDisplayNumber = null,
-  analyticsPlacement = 'post_footer',
-}: {
+interface SubscribeCtaProps {
   newsletter: Newsletter
   className?: string
   align?: 'start' | 'center'
@@ -41,14 +36,31 @@ export function SubscribeCta({
   smsSignupPhoneNumber?: string | null
   smsSignupDisplayNumber?: string | null
   analyticsPlacement?: AnalyticsPlacement
+}
+
+export function SubscribeCta(props: SubscribeCtaProps) {
+  if (!isNewsletterAcceptingSubscriptions(props.newsletter)) return null
+  return <ActiveSubscribeCta {...props} newsletter={props.newsletter} />
+}
+
+function ActiveSubscribeCta({
+  newsletter,
+  className = 'mt-16',
+  align = 'start',
+  subscribeEndpoint,
+  smsSignupEnabled,
+  smsSignupPhoneNumber = null,
+  smsSignupDisplayNumber = null,
+  analyticsPlacement = 'post_footer',
+}: Omit<SubscribeCtaProps, 'newsletter'> & {
+  newsletter: ActiveNewsletter
 }) {
   const { user, preferences, setPreferences, hasSession, loading } =
     useAuthContext()
   const [saving, setSaving] = useState(false)
   const key = newsletterPreferenceKeys[newsletter]
   const config = siteConfig.newsletters[newsletter]
-  const buttonClassName =
-    newsletter === 'tsundoku' ? 'btn btn-sun' : 'btn btn-primary'
+  const buttonClassName = 'btn btn-primary'
   const subscribed = preferences ? Boolean(preferences[key]) : false
   const initialMemberClassName =
     hasSession === null ? '[[data-member]_&]:hidden' : ''

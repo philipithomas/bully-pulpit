@@ -79,7 +79,10 @@ describe('without a session cookie', () => {
 
 describe('GET', () => {
   it('returns the subscriber preferences for a valid session', async () => {
-    const subscriber = await seedSubscriber({ subscribedWorkshop: false })
+    const subscriber = await seedSubscriber({
+      subscribedWorkshop: false,
+      subscribedTsundoku: true,
+    })
     await signIn(subscriber)
 
     const response = await GET()
@@ -89,8 +92,12 @@ describe('GET', () => {
       subscribed_contraption: true,
       subscribed_workshop: false,
       subscribed_postcard: true,
-      subscribed_tsundoku: false,
     })
+    const [stored] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.uuid, subscriber.uuid))
+    expect(stored.subscribedTsundoku).toBe(true)
   })
 
   it('returns 404 when the session subscriber no longer exists', async () => {
@@ -123,7 +130,6 @@ describe('PATCH', () => {
       subscribed_workshop: false,
       subscribed_contraption: true,
       subscribed_postcard: true,
-      subscribed_tsundoku: false,
     })
 
     const [row] = await db
@@ -137,12 +143,57 @@ describe('PATCH', () => {
     expect(row.name).toBe('Reader')
   })
 
-  it('notifies the admin when a signed-in subscriber opts into Tsundoku', async () => {
-    const subscriber = await seedSubscriber({ subscribedTsundoku: false })
+  it('persists active onboarding choices without touching inactive subscriptions', async () => {
+    const subscriber = await seedSubscriber({
+      subscribedContraption: true,
+      subscribedWorkshop: false,
+      subscribedPostcard: true,
+      subscribedTsundoku: true,
+    })
     await signIn(subscriber)
 
-    const response = await PATCH(patchRequest({ subscribed_tsundoku: true }))
+    const response = await PATCH(
+      patchRequest({
+        subscribed_contraption: false,
+        subscribed_workshop: true,
+        subscribed_postcard: false,
+        analytics_placement: 'onboarding',
+      })
+    )
+
     expect(response.status).toBe(200)
+    expect((await response.json()).preferences).toEqual({
+      email: 'reader@example.com',
+      subscribed_contraption: false,
+      subscribed_workshop: true,
+      subscribed_postcard: false,
+    })
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.uuid, subscriber.uuid))
+    expect(row).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTsundoku: true,
+    })
+  })
+
+  it.each([
+    true,
+    false,
+  ])('rejects archived Tsundoku mutations (%s) and preserves historical data', async (requested) => {
+    const subscriber = await seedSubscriber({ subscribedTsundoku: true })
+    await signIn(subscriber)
+
+    const response = await PATCH(
+      patchRequest({ subscribed_tsundoku: requested })
+    )
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Invalid preferences in request body',
+    })
 
     const [row] = await db
       .select()
@@ -150,11 +201,7 @@ describe('PATCH', () => {
       .where(eq(subscribers.uuid, subscriber.uuid))
     expect(row.subscribedTsundoku).toBe(true)
 
-    expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
-    const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
-    expect(message.subject).toBe('Tsundoku opt-in: reader@example.com')
-    expect(message.html).toContain('Tsundoku opt-in')
-    expect(message.html).toContain('reader@example.com')
+    expect(sendSimpleEmail).not.toHaveBeenCalled()
   })
 
   it('returns 400 (not 500) for a malformed JSON body', async () => {

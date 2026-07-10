@@ -16,6 +16,7 @@ export type AnalyticsPlacement =
   | 'post_footer'
   | 'newsletter_page'
   | 'sign_in_modal'
+  | 'onboarding'
   | 'member_menu'
   | 'account'
   | 'unknown'
@@ -89,7 +90,7 @@ export interface AnalyticsEventProperties {
     newsletter: AnalyticsNewsletter
   }
   'Bell opened': {
-    entry_source: 'header' | 'search' | 'other'
+    entry_source: 'header' | 'search' | 'onboarding' | 'other'
     signed_in: boolean
     page_type: AnalyticsPageType
   }
@@ -193,6 +194,7 @@ const ANALYTICS_PLACEMENTS = new Set<AnalyticsPlacement>([
   'post_footer',
   'newsletter_page',
   'sign_in_modal',
+  'onboarding',
   'member_menu',
   'account',
   'unknown',

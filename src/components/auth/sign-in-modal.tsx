@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { EmailCodeConfirmationDialog } from '@/components/auth/email-code-confirmation-dialog'
 import {
   GoogleSignInButton,
   useGoogleSignInAvailable,
@@ -13,11 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from '@/components/ui/input-otp'
 import { Spinner } from '@/components/ui/spinner'
 import { trackClientEvent } from '@/lib/analytics/events'
 import { getExternalReferrer } from '@/lib/referrer'
@@ -40,47 +36,66 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
     setLoading(false)
   }, [])
 
-  function handleClose(isOpen: boolean) {
-    if (!isOpen) {
-      closeModal()
-      setTimeout(reset, 200)
-    }
-  }
-
-  async function handleEmailSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    trackClientEvent('Newsletter signup submitted', {
-      method: 'email',
-      placement: 'sign_in_modal',
-      newsletter: 'unspecified',
-      signed_in: false,
-    })
-    setLoading(true)
-
-    try {
-      const res = await fetch('/api/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          source: getExternalReferrer(),
-          analytics_placement: 'sign_in_modal',
-        }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        toast.error(data.error ?? 'Could not sign in. Try again.')
-        return
+  const handleClose = useCallback(
+    (isOpen: boolean) => {
+      if (!isOpen) {
+        closeModal()
+        setTimeout(reset, 200)
       }
+    },
+    [closeModal, reset]
+  )
+  const handleDifferentEmail = useCallback(() => {
+    setStep('email')
+    setCode('')
+  }, [])
+  const handleCodeDialogClose = useCallback(
+    () => handleClose(false),
+    [handleClose]
+  )
+  const handleEmailChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) =>
+      setEmail(event.currentTarget.value),
+    []
+  )
 
-      setStep('code')
-    } catch {
-      toast.error('Could not sign in. Try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const handleEmailSubmit = useCallback(
+    async (event: React.FormEvent) => {
+      event.preventDefault()
+      trackClientEvent('Newsletter signup submitted', {
+        method: 'email',
+        placement: 'sign_in_modal',
+        newsletter: 'unspecified',
+        signed_in: false,
+      })
+      setLoading(true)
+
+      try {
+        const res = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            source: getExternalReferrer(),
+            analytics_placement: 'sign_in_modal',
+          }),
+        })
+
+        if (!res.ok) {
+          const data = await res.json()
+          toast.error(data.error ?? 'Could not sign in. Try again.')
+          return
+        }
+
+        setStep('code')
+      } catch {
+        toast.error('Could not sign in. Try again.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [email]
+  )
 
   const verifyCode = useCallback(
     async (value: string) => {
@@ -122,92 +137,57 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
     [email, closeModal, onSuccess]
   )
 
+  if (step === 'code') {
+    return (
+      <EmailCodeConfirmationDialog
+        open={open}
+        code={code}
+        email={email}
+        loading={loading}
+        onCodeChange={setCode}
+        onClose={handleCodeDialogClose}
+        onDifferentEmail={handleDifferentEmail}
+        onVerifyCode={verifyCode}
+      />
+    )
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
-        {step === 'email' ? (
-          <>
-            <DialogHeader>
-              <DialogTitle>Sign in or join</DialogTitle>
-              <DialogDescription>
-                Enter your email to sign in or create an account.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-6 space-y-4">
-              <GoogleSignInSection onSuccess={onSuccess} />
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
-                <input
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  aria-label="Email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  required
-                  className="w-full border border-gray-300 bg-white px-4 py-3 text-sm pointer-coarse:text-base font-sans text-gray-900 placeholder:text-gray-400"
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-gray-950 text-white py-3 text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50"
-                >
-                  {loading ? (
-                    <Spinner className="h-4 w-4 mx-auto" />
-                  ) : (
-                    'Continue with email'
-                  )}
-                </button>
-              </form>
-            </div>
-          </>
-        ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle>Check your email</DialogTitle>
-              <DialogDescription>
-                Check {email} for a 6-digit code.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-6 space-y-4">
-              <InputOTP
-                maxLength={6}
-                value={code}
-                onChange={setCode}
-                onComplete={verifyCode}
-                disabled={loading}
-                autoFocus
-                aria-label="6-digit code"
-                containerClassName="justify-center"
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-              {loading && (
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                  <Spinner className="h-3.5 w-3.5" />
-                  <span>Verifying</span>
-                </div>
+        <DialogHeader>
+          <DialogTitle>Sign in or join</DialogTitle>
+          <DialogDescription>
+            Enter your email to sign in or create an account.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="mt-6 space-y-4">
+          <GoogleSignInSection onSuccess={onSuccess} />
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <input
+              type="email"
+              name="email"
+              autoComplete="email"
+              aria-label="Email address"
+              value={email}
+              onChange={handleEmailChange}
+              placeholder="your@email.com"
+              required
+              className="w-full border border-gray-300 bg-white px-4 py-3 text-sm pointer-coarse:text-base font-sans text-gray-900 placeholder:text-gray-400"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gray-950 text-white py-3 text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50"
+            >
+              {loading ? (
+                <Spinner className="h-4 w-4 mx-auto" />
+              ) : (
+                'Continue with email'
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  setStep('email')
-                  setCode('')
-                }}
-                className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                Use a different email
-              </button>
-            </div>
-          </>
-        )}
+            </button>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   )

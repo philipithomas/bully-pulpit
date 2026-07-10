@@ -30,6 +30,7 @@ describe('analytics buckets', () => {
 describe('analytics dimensions', () => {
   it('rejects arbitrary placement values', () => {
     expect(parseAnalyticsPlacement('homepage')).toBe('homepage')
+    expect(parseAnalyticsPlacement('onboarding')).toBe('onboarding')
     expect(parseAnalyticsPlacement('reader@example.com')).toBe('unknown')
     expect(parseAnalyticsPlacement(null)).toBe('unknown')
   })

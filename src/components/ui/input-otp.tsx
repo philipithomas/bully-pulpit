@@ -44,24 +44,23 @@ function InputOTPSlot({
 }) {
   const inputOTPContext = React.useContext(OTPInputContext)
   const { char, hasFakeCaret, isActive } = inputOTPContext?.slots[index] ?? {}
-  const allFilled = inputOTPContext?.slots.every((s) => s.char) ?? false
 
   return (
     <div
       data-slot="input-otp-slot"
-      data-active={isActive || allFilled}
+      data-active={isActive}
       className={cn(
-        'relative flex h-10 w-10 items-center justify-center border-y border-r border-input bg-card font-mono text-lg transition-all first:border-l data-[active=true]:border-foreground',
+        'relative -ml-px flex h-10 w-10 items-center justify-center border border-input bg-card font-mono text-lg transition-colors first:ml-0 data-[active=true]:z-10 data-[active=true]:border-gray-900',
         className
       )}
       {...props}
     >
       {char}
-      {hasFakeCaret && (
+      {hasFakeCaret ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="h-4 w-px animate-caret-blink bg-gray-900 duration-1000" />
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

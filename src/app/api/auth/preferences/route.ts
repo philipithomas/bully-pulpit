@@ -3,7 +3,6 @@ import { z } from 'zod/v4'
 import { parseAnalyticsPlacement } from '@/lib/analytics/events'
 import { trackServerEvent } from '@/lib/analytics/server'
 import { clearSessionCookies, getSession } from '@/lib/auth/jwt'
-import { siteConfig } from '@/lib/config'
 import {
   deleteWithData,
   findByUuid,
@@ -12,7 +11,6 @@ import {
   serializeSubscriberPreferences,
   updateSubscriber,
 } from '@/lib/db/queries/subscribers'
-import { sendNewsletterOptInNotification } from '@/lib/email/send'
 
 // Mirrors the shape prefsFromBody/updateSubscriber consume: booleans for the
 // newsletter flags, an optional name, and no unknown keys.
@@ -21,7 +19,6 @@ const preferencesSchema = z.strictObject({
   subscribed_postcard: z.boolean().optional(),
   subscribed_contraption: z.boolean().optional(),
   subscribed_workshop: z.boolean().optional(),
-  subscribed_tsundoku: z.boolean().optional(),
   analytics_placement: z.string().optional(),
 })
 
@@ -40,11 +37,6 @@ const NEWSLETTER_PREFERENCES = [
     requestKey: 'subscribed_postcard',
     databaseKey: 'subscribedPostcard',
     newsletter: 'postcard',
-  },
-  {
-    requestKey: 'subscribed_tsundoku',
-    databaseKey: 'subscribedTsundoku',
-    newsletter: 'tsundoku',
   },
 ] as const
 
@@ -93,17 +85,6 @@ export async function PATCH(request: Request) {
   )
   if (!subscriber) {
     return NextResponse.json({ error: 'Update failed' }, { status: 404 })
-  }
-
-  if (!before.subscribedTsundoku && subscriber.subscribedTsundoku) {
-    try {
-      await sendNewsletterOptInNotification(
-        subscriber.email,
-        siteConfig.newsletters.tsundoku.name
-      )
-    } catch (err) {
-      console.error('[auth/preferences] opt-in notification failed:', err)
-    }
   }
 
   const placement = parseAnalyticsPlacement(parsed.data.analytics_placement)

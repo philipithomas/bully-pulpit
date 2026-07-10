@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { guardAdmin } from '@/lib/auth/admin'
 import { parseCsv } from '@/lib/csv'
 import { type ImportRow, importSubscribers } from '@/lib/db/queries/subscribers'
+import { isNewsletterAcceptingSubscriptions } from '@/lib/newsletters'
 
 const truthy = (v: string | undefined) =>
   /^(true|1|yes|y)$/i.test((v ?? '').trim())
@@ -39,12 +40,12 @@ export async function POST(request: NextRequest) {
   const srcIdx = col('source')
 
   // Dedupe by email — a single INSERT … ON CONFLICT can't touch a row twice.
-  // A column that's absent entirely defaults to subscribed/confirmed for NEW
-  // rows only (the common "here's my list, sign them up" case) — existing rows
-  // keep their current flags, so a bare email list can't re-subscribe someone
-  // who opted out. A present-but-blank cell means false. Source is optional
-  // free text; importSubscribers backfills it without overwriting a real
-  // captured referrer on existing rows.
+  // An absent newsletter column uses the current signup default for NEW rows
+  // only. Existing rows keep their current flags, so a bare email list cannot
+  // re-subscribe someone who opted out. For an inactive newsletter, explicit
+  // true preserves an existing subscription but cannot create or reactivate
+  // one; false may opt out. Source is optional free text; importSubscribers
+  // backfills it without overwriting a real captured referrer on existing rows.
   const byEmail = new Map<string, ImportRow>()
   let skipped = 0
   for (const r of rows.slice(1)) {
@@ -57,10 +58,22 @@ export async function POST(request: NextRequest) {
     byEmail.set(email, {
       email,
       name: nameIdx >= 0 ? r[nameIdx]?.trim() || null : null,
-      postcard: pIdx < 0 ? true : truthy(r[pIdx]),
-      contraption: cIdx < 0 ? true : truthy(r[cIdx]),
-      workshop: wIdx < 0 ? true : truthy(r[wIdx]),
-      tsundoku: tIdx < 0 ? true : truthy(r[tIdx]),
+      postcard:
+        pIdx < 0
+          ? isNewsletterAcceptingSubscriptions('postcard')
+          : truthy(r[pIdx]),
+      contraption:
+        cIdx < 0
+          ? isNewsletterAcceptingSubscriptions('contraption')
+          : truthy(r[cIdx]),
+      workshop:
+        wIdx < 0
+          ? isNewsletterAcceptingSubscriptions('workshop')
+          : truthy(r[wIdx]),
+      tsundoku:
+        tIdx < 0
+          ? isNewsletterAcceptingSubscriptions('tsundoku')
+          : truthy(r[tIdx]),
       confirmed: confIdx < 0 ? true : truthy(r[confIdx]),
       source: srcIdx >= 0 ? r[srcIdx]?.trim() || null : null,
     })

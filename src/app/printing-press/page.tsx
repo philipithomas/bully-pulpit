@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth/admin'
 import { getAllPosts, getPostBySlug } from '@/lib/content/loader'
 import { allSendStats, lastCompletedSend } from '@/lib/db/queries/email-sends'
 import { subscriberStats } from '@/lib/db/queries/subscribers'
+import { isNewsletterSendingEnabled } from '@/lib/newsletters'
 import { isRecent, SEND_NUDGE_WINDOW_MS } from '@/lib/printing-press'
 
 function n(value: number): string {
@@ -28,6 +29,7 @@ export default async function OverviewPage() {
   const readyToSend = getAllPosts().filter(
     (p) =>
       !p.frontmatter.draft &&
+      isNewsletterSendingEnabled(p.newsletter) &&
       !sends[p.slug] &&
       isRecent(p.frontmatter.publishedAt, SEND_NUDGE_WINDOW_MS)
   )
@@ -47,10 +49,8 @@ export default async function OverviewPage() {
               <span className="text-indigo">Postcard</span> reaches{' '}
               {n(stats.postcard)} of them,{' '}
               <span className="text-forest">Contraption</span>{' '}
-              {n(stats.contraption)},{' '}
-              <span className="text-walnut">Workshop</span> {n(stats.workshop)},
-              and <span className="text-sun">Tsundoku</span>{' '}
-              <span>{n(stats.tsundoku)}.</span>
+              {n(stats.contraption)}, and{' '}
+              <span className="text-walnut">Workshop</span> {n(stats.workshop)}.
             </>
           )}
         </p>

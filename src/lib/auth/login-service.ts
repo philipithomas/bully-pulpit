@@ -82,7 +82,6 @@ function subscribedNewsletterNames(subscriber: Subscriber): string[] {
   if (subscriber.subscribedContraption) names.push('Contraption')
   if (subscriber.subscribedWorkshop) names.push('Workshop')
   if (subscriber.subscribedPostcard) names.push('Postcard')
-  if (subscriber.subscribedTsundoku) names.push('Tsundoku')
   return names
 }
 
