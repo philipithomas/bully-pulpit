@@ -11,7 +11,7 @@
     "start": "next start",
     "check": "biome check .",
     "test": "vitest run",
-    "search:posts": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/search-posts.ts",
+    "search:posts": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local --env-file-if-exists=.env.development.local scripts/search-posts.ts",
     "search:index": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/generate-search-index.ts",
     "bell:eval": "tsx scripts/check-bell-evals.ts",
     "bell:eval:live": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env.development.local --env-file-if-exists=.env scripts/evaluate-bell.ts",

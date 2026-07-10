@@ -168,6 +168,18 @@ describe('chunkPage', () => {
       'mail@philipithomas.com'
     )
   })
+
+  it('keeps the Stargazing headline summary at the page root', () => {
+    const page = getPageBySlug('stargazing')
+    expect(page).not.toBeNull()
+
+    const summaryChunk = chunkPage(page!).find((chunk) =>
+      chunk.text.includes('Michelin-starred restaurants')
+    )
+
+    expect(summaryChunk).toBeDefined()
+    expect(summaryChunk?.heading).toBeUndefined()
+  })
 })
 
 describe('chunkPublicAppPage', () => {
