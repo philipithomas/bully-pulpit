@@ -304,7 +304,7 @@ export default async function SlugPage({ params }: Props) {
                 className="w-9 h-9 rounded-full"
               />
               <span
-                className={`font-sans text-sm font-medium text-gray-600 ${accentHoverText[post.newsletter]} transition-colors duration-300`}
+                className={`font-sans text-sm font-medium uppercase tracking-[0.04em] text-gray-600 ${accentHoverText[post.newsletter]} transition-colors duration-300`}
               >
                 {siteConfig.author}
               </span>
