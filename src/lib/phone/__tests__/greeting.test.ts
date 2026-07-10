@@ -51,6 +51,23 @@ describe('contextualGreetingOptions', () => {
     ])
   })
 
+  it.each([
+    [0, 'New York City'],
+    [1, 'NYC'],
+    [2, 'New York'],
+    [3, 'Brooklyn'],
+  ])('rotates the location form across calls at second %i', (second, location) => {
+    const now = new Date(ORDINARY_AFTERNOON)
+    now.setUTCSeconds(second)
+
+    expect(
+      contextualGreetingOptions(now, {
+        ...weather,
+        current: { ...weather.current, description: 'clear' },
+      })
+    ).toEqual([`Good afternoon from ${location}.`])
+  })
+
   it('does not offer weather or holiday copy without supporting context', () => {
     expect(
       contextualGreetingOptions(ORDINARY_AFTERNOON, {
@@ -97,14 +114,21 @@ describe('generateGreeting', () => {
     vi.restoreAllMocks()
   })
 
-  it('adds the fixed company identification after an approved opener', async () => {
+  it.each([
+    [0, 'Good evening from New York City.'],
+    [1, 'Good evening from NYC.'],
+    [2, 'Good evening from New York.'],
+    [3, 'Good evening from Brooklyn.'],
+  ])('adds the fixed company identification after approved opener at second %i: %s', async (second, text) => {
+    const now = new Date(JULY_FOURTH_EVENING)
+    now.setUTCSeconds(second)
     mockedGenerateText.mockResolvedValueOnce({
-      text: '  Good evening from New York City.  ',
+      text: `  ${text}  `,
       // biome-ignore lint/suspicious/noExplicitAny: partial generateText result
     } as any)
 
-    await expect(generateGreeting(JULY_FOURTH_EVENING)).resolves.toBe(
-      `Good evening from New York City. ${FALLBACK_GREETING}`
+    await expect(generateGreeting(now)).resolves.toBe(
+      `${text} ${FALLBACK_GREETING}`
     )
   })
 
@@ -135,10 +159,10 @@ describe('generateGreeting', () => {
         ],
       },
     })
-    expect(call.prompt).toContain('Saturday, July 4, 2026 at 7:00 PM')
     expect(call.prompt).toContain(
-      'Current weather in New York City: rain showers, 19°C'
+      'Current local date and time: Saturday, July 4, 2026 at 7:00 PM'
     )
+    expect(call.prompt).toContain('Current local weather: rain showers, 19°C')
   })
 
   it('asks the model to select exact receptionist-ready copy', async () => {
@@ -153,6 +177,11 @@ describe('generateGreeting', () => {
     const system = String(call.system)
     expect(system).toContain('professional telephone receptionist')
     expect(system).toContain('Return one sentence from that list exactly')
+    expect(system).toContain(
+      '"New York City," "NYC," "New York," and "Brooklyn."'
+    )
+    expect(system).toContain('rotates its local wording across calls')
+    expect(system).toContain('Do not substitute a different form')
     expect(system).toContain('Do not rewrite, combine, embellish, or explain')
     expect(system).toContain('Do not add humor, an excuse')
     expect(system).not.toContain('Give a witty, deadpan excuse')
@@ -246,7 +275,7 @@ describe('generateGreeting', () => {
       `Good afternoon from New York City. ${FALLBACK_GREETING}`
     )
     const call = mockedGenerateText.mock.calls[0][0]
-    expect(call.prompt).toContain('Current weather in New York City: unknown')
+    expect(call.prompt).toContain('Current local weather: unknown')
     expect(call.prompt).not.toContain('rainy New York City')
   })
 })
