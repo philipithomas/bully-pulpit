@@ -1,7 +1,18 @@
 import { NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
+const databaseFault = vi.hoisted(() => ({ unavailable: false }))
+
+vi.mock('@/lib/db/client', async () => {
+  const integrationDb = await import('@/test/integration/db')
+  return {
+    ...integrationDb,
+    getDb: () => {
+      if (databaseFault.unavailable) throw new Error('database unavailable')
+      return integrationDb.db
+    },
+  }
+})
 vi.mock('next/headers', () => import('@/test/integration/session'))
 
 import { GET } from '@/app/api/auth/me/route'
@@ -19,6 +30,7 @@ import {
 } from '@/test/integration/session'
 
 beforeEach(async () => {
+  databaseFault.unavailable = false
   clearSessionStore()
   await resetDb()
 })
@@ -193,5 +205,38 @@ describe('GET /api/auth/me', () => {
       newSubscriberOnboarding: false,
     })
     expect(response.headers.getSetCookie()).toHaveLength(6)
+  })
+
+  it('clears session cookies when the subscriber session version does not match', async () => {
+    const subscriber = await seedSubscriber()
+    await signIn({ ...subscriber, sessionVersion: 2 })
+
+    const response = await getMe()
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      user: null,
+      preferences: null,
+      newSubscriberOnboarding: false,
+    })
+    expect(response.headers.getSetCookie()).toHaveLength(6)
+  })
+
+  it('keeps cookies and returns 503 when subscriber state cannot be checked', async () => {
+    const subscriber = await seedSubscriber()
+    await signIn(subscriber)
+    databaseFault.unavailable = true
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const response = await getMe()
+
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({
+      error: 'Authentication is temporarily unavailable',
+    })
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(response.headers.getSetCookie()).toHaveLength(0)
+    expect(consoleError).toHaveBeenCalledOnce()
+    consoleError.mockRestore()
   })
 })

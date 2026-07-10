@@ -44,14 +44,24 @@ export async function claimPhoneWebhookEvent(id: number): Promise<Date | null> {
   return rows.length > 0 ? processingAt : null
 }
 
-/** Marks the accepted side effects complete, but only for the current lease. */
+/**
+ * Atomically consumes the current lease. Workflows use this as authorization
+ * to proceed; synchronous routes may consume after their side effects. A step
+ * ID makes the write retry-safe: the same durable step can recover a lost
+ * database acknowledgement, while a distinct run stays a loser.
+ */
 export async function markPhoneWebhookEventProcessed(
   id: number,
-  processingAt: Date
+  processingAt: Date,
+  processedStepId?: string
 ): Promise<boolean> {
   const rows = await getDb()
     .update(phoneWebhookEvents)
-    .set({ processingAt: null, processedAt: sql`NOW()` })
+    .set({
+      processingAt: null,
+      processedAt: sql`NOW()`,
+      ...(processedStepId ? { processedStepId } : {}),
+    })
     .where(
       and(
         eq(phoneWebhookEvents.id, id),
@@ -60,7 +70,20 @@ export async function markPhoneWebhookEventProcessed(
       )
     )
     .returning({ id: phoneWebhookEvents.id })
-  return rows.length > 0
+  if (rows.length > 0) return true
+  if (!processedStepId) return false
+
+  const completedByThisStep = await getDb()
+    .select({ id: phoneWebhookEvents.id })
+    .from(phoneWebhookEvents)
+    .where(
+      and(
+        eq(phoneWebhookEvents.id, id),
+        eq(phoneWebhookEvents.processedStepId, processedStepId)
+      )
+    )
+    .limit(1)
+  return completedByThisStep.length > 0
 }
 
 /** Releases the current lease when notification or workflow enqueue fails. */

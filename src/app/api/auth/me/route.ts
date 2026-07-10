@@ -8,14 +8,29 @@ import {
   LEGACY_NEW_SUBSCRIBER_ONBOARDING_COOKIE,
   LEGACY_TOKEN_COOKIE,
   NEW_SUBSCRIBER_ONBOARDING_COOKIE,
+  SessionLookupUnavailableError,
   TOKEN_COOKIE,
+  type VerifiedSession,
   verifyNewSubscriberOnboardingCookie,
 } from '@/lib/auth/jwt'
 import { serializeSubscriberPreferences } from '@/lib/db/queries/subscribers'
 
 export async function GET(request: Request) {
   const store = await cookies()
-  const verified = await getVerifiedSession()
+  let verified: VerifiedSession | null
+  try {
+    verified = await getVerifiedSession()
+  } catch (error) {
+    if (!(error instanceof SessionLookupUnavailableError)) throw error
+    console.error('[auth/me] session lookup failed:', error)
+    return NextResponse.json(
+      { error: 'Authentication is temporarily unavailable' },
+      {
+        status: 503,
+        headers: { 'Cache-Control': 'private, no-store' },
+      }
+    )
+  }
   const shouldConsumeOnboarding =
     new URL(request.url).searchParams.get('consume_onboarding') === '1'
 

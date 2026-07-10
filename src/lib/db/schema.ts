@@ -207,6 +207,7 @@ export const phoneWebhookEvents = pgTable(
     eventType: text('event_type').notNull(),
     processingAt: timestamp('processing_at', { withTimezone: true }),
     processedAt: timestamp('processed_at', { withTimezone: true }),
+    processedStepId: text('processed_step_id'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -12,9 +12,10 @@ vi.mock('botid/server', () => ({
 vi.mock('@/lib/rate-limit', () => ({
   checkRateLimitStatus: vi.fn(async () => 'allowed'),
 }))
-vi.mock('@/lib/auth/jwt', () => ({
-  getSession: vi.fn(async () => null),
-}))
+vi.mock('@/lib/auth/jwt', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/auth/jwt')>()
+  return { ...actual, getVerifiedSession: vi.fn(async () => null) }
+})
 vi.mock('@/lib/chat/bell-generation', () => ({
   bellGatewayCost: vi.fn(),
   bellModel: {},
@@ -39,15 +40,19 @@ vi.mock('@/lib/db/queries/bell-messages', () => ({
   createBellMessage: vi.fn(),
   textFromBellParts: vi.fn(() => 'Hello'),
 }))
-vi.mock('@/lib/db/queries/subscribers', () => ({ findByUuid: vi.fn() }))
 
 import { CHAT_BODY_MAX_BYTES, POST } from '@/app/api/chat/route'
-import { findByUuid } from '@/lib/db/queries/subscribers'
+import {
+  getVerifiedSession,
+  SessionLookupUnavailableError,
+} from '@/lib/auth/jwt'
+import { getOrCreateWebBellConversation } from '@/lib/db/queries/bell-conversations'
 import { checkRateLimitStatus } from '@/lib/rate-limit'
 
 const rateLimit = vi.mocked(checkRateLimitStatus)
 const botId = vi.mocked(checkBotId)
-const findSubscriber = vi.mocked(findByUuid)
+const verifiedSession = vi.mocked(getVerifiedSession)
+const findConversation = vi.mocked(getOrCreateWebBellConversation)
 const model = vi.mocked(streamText)
 
 const validBody = {
@@ -80,6 +85,7 @@ describe('POST /api/chat request bounds', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     rateLimit.mockResolvedValue('allowed')
+    verifiedSession.mockResolvedValue(null)
     botId.mockResolvedValue({
       isBot: false,
     } as Awaited<ReturnType<typeof checkBotId>>)
@@ -91,7 +97,8 @@ describe('POST /api/chat request bounds', () => {
     expect(response.status).toBe(400)
     expect(rateLimit).not.toHaveBeenCalled()
     expect(botId).not.toHaveBeenCalled()
-    expect(findSubscriber).not.toHaveBeenCalled()
+    expect(verifiedSession).not.toHaveBeenCalled()
+    expect(findConversation).not.toHaveBeenCalled()
     expect(model).not.toHaveBeenCalled()
   })
 
@@ -114,7 +121,8 @@ describe('POST /api/chat request bounds', () => {
     expect(response.status).toBe(413)
     expect(rateLimit).not.toHaveBeenCalled()
     expect(botId).not.toHaveBeenCalled()
-    expect(findSubscriber).not.toHaveBeenCalled()
+    expect(verifiedSession).not.toHaveBeenCalled()
+    expect(findConversation).not.toHaveBeenCalled()
     expect(model).not.toHaveBeenCalled()
   })
 
@@ -126,11 +134,12 @@ describe('POST /api/chat request bounds', () => {
     expect(response.status).toBe(415)
     expect(rateLimit).not.toHaveBeenCalled()
     expect(botId).not.toHaveBeenCalled()
-    expect(findSubscriber).not.toHaveBeenCalled()
+    expect(verifiedSession).not.toHaveBeenCalled()
+    expect(findConversation).not.toHaveBeenCalled()
     expect(model).not.toHaveBeenCalled()
   })
 
-  it('returns 429 without database or model work when limited', async () => {
+  it('returns 429 without conversation or model work when limited', async () => {
     rateLimit.mockResolvedValue('limited')
 
     const response = await POST(chatRequest(JSON.stringify(validBody)))
@@ -141,7 +150,8 @@ describe('POST /api/chat request bounds', () => {
       'ip:203.0.113.9',
       expect.any(Request)
     )
-    expect(findSubscriber).not.toHaveBeenCalled()
+    expect(verifiedSession).toHaveBeenCalledOnce()
+    expect(findConversation).not.toHaveBeenCalled()
     expect(model).not.toHaveBeenCalled()
   })
 
@@ -183,7 +193,7 @@ describe('POST /api/chat request bounds', () => {
     expect(rateLimit).toHaveBeenCalledOnce()
   })
 
-  it('returns 503 without database or model work when limiting is unavailable', async () => {
+  it('returns 503 without conversation or model work when limiting is unavailable', async () => {
     rateLimit.mockResolvedValue('unavailable')
 
     const response = await POST(chatRequest(JSON.stringify(validBody)))
@@ -192,7 +202,27 @@ describe('POST /api/chat request bounds', () => {
     expect(await response.json()).toEqual({
       error: 'Bell is temporarily unavailable. Please try again later.',
     })
-    expect(findSubscriber).not.toHaveBeenCalled()
+    expect(verifiedSession).toHaveBeenCalledOnce()
+    expect(findConversation).not.toHaveBeenCalled()
     expect(model).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when current subscriber state cannot be checked', async () => {
+    verifiedSession.mockRejectedValueOnce(
+      new SessionLookupUnavailableError(new Error('database unavailable'))
+    )
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const response = await POST(chatRequest(JSON.stringify(validBody)))
+
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({
+      error: 'Bell is temporarily unavailable. Please try again later.',
+    })
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(findConversation).not.toHaveBeenCalled()
+    expect(model).not.toHaveBeenCalled()
+    expect(consoleError).toHaveBeenCalledOnce()
+    consoleError.mockRestore()
   })
 })

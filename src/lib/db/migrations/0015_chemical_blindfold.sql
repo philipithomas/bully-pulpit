@@ -1,0 +1,1 @@
+ALTER TABLE "phone_webhook_events" ADD COLUMN "processed_step_id" text;

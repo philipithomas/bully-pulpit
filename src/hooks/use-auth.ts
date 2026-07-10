@@ -8,6 +8,8 @@ import {
 } from '@/lib/auth/client-logout'
 import type { SubscriberPreferences } from '@/lib/auth/preferences'
 
+const SESSION_RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000] as const
+
 export interface AuthUser {
   uuid: string
   email: string
@@ -48,33 +50,62 @@ export function useAuth() {
       return
     }
 
-    fetch('/api/auth/me?consume_onboarding=1')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to load session')
-        return res.json()
-      })
-      .then(
-        (data: {
+    let cancelled = false
+    let retryAttempt = 0
+    let retryTimer: number | null = null
+
+    const scheduleRetry = () => {
+      if (cancelled) return
+      // A failed lookup is unresolved auth, not a confirmed anonymous session.
+      // Keep the cookie-backed member presentation in place while retrying.
+      setHasSession(true)
+      setLoading(true)
+      const delay =
+        SESSION_RETRY_DELAYS_MS[
+          Math.min(retryAttempt, SESSION_RETRY_DELAYS_MS.length - 1)
+        ]
+      retryAttempt += 1
+      retryTimer = window.setTimeout(() => {
+        retryTimer = null
+        void loadSession()
+      }, delay)
+    }
+
+    const loadSession = async () => {
+      try {
+        const response = await fetch('/api/auth/me?consume_onboarding=1')
+        if (!response.ok) {
+          scheduleRetry()
+          return
+        }
+        const data = (await response.json()) as {
           user: AuthUser | null
           preferences?: SubscriberPreferences | null
           newSubscriberOnboarding?: boolean
-        }) => {
-          const nextUser = data.user ?? null
-          setUser(nextUser)
-          setPreferences(nextUser ? (data.preferences ?? null) : null)
-          setShowNewSubscriberOnboarding(
-            Boolean(nextUser && data.newSubscriberOnboarding)
-          )
-          if (!nextUser) setHasSession(false)
         }
-      )
-      .catch(() => {
-        setUser(null)
-        setPreferences(null)
-        setShowNewSubscriberOnboarding(false)
-        setHasSession(false)
-      })
-      .finally(() => setLoading(false))
+        if (cancelled) return
+
+        const nextUser = data.user ?? null
+        setUser(nextUser)
+        setPreferences(nextUser ? (data.preferences ?? null) : null)
+        setShowNewSubscriberOnboarding(
+          Boolean(nextUser && data.newSubscriberOnboarding)
+        )
+        // A successful anonymous payload is authoritative invalid/missing
+        // session state. It remains the only fetch outcome that removes the
+        // cookie-backed client session hint.
+        setHasSession(Boolean(nextUser))
+        setLoading(false)
+      } catch {
+        scheduleRetry()
+      }
+    }
+
+    void loadSession()
+    return () => {
+      cancelled = true
+      if (retryTimer !== null) window.clearTimeout(retryTimer)
+    }
   }, [])
 
   const logout = useCallback(async (): Promise<boolean> => {
