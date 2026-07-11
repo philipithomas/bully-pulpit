@@ -23,10 +23,13 @@ export const FALLBACK_GREETING = `You have reached the Contraption Company and $
 const WEATHER_TIMEOUT_MS = 2_000
 const GREETING_TIMEOUT_MS = 8_000
 const NYC_TIME_ZONE = 'America/New_York'
+const NYC_LOCATION_FORMS = ['New York City', 'NYC', 'New York', 'Brooklyn']
 
-const SYSTEM_PROMPT = `Select one short opening sentence for a professional telephone receptionist in New York City.
+const SYSTEM_PROMPT = `Select one short opening sentence for a professional telephone receptionist in New York.
 
-The application supplies an ordered list of approved sentences derived from the verified local time, vetted holiday, and current Weather.gov conditions. Return one sentence from that list exactly as written. Prefer the first option unless another supplied option sounds more natural.
+The application supplies a list of approved sentences derived from the verified local time, vetted holiday, and current Weather.gov conditions. Return one sentence from that list exactly as written.
+
+The application rotates its local wording across calls among "New York City," "NYC," "New York," and "Brooklyn." The supplied options already use the location form selected for this call. Do not substitute a different form.
 
 The approved options are already calm, welcoming, professional, inclusive, and politically neutral. Do not rewrite, combine, embellish, or explain them. Do not add humor, an excuse for the unanswered call, company identification, an IVR instruction, quotation marks, emoji, or commentary.
 
@@ -92,41 +95,52 @@ function holidayGreeting(now: Date): string | null {
   return null
 }
 
-function weatherGreeting(weather: NycWeatherSnapshot | null): string | null {
+function locationForm(now: Date): string {
+  return NYC_LOCATION_FORMS[now.getUTCSeconds() % NYC_LOCATION_FORMS.length]
+}
+
+function weatherGreeting(
+  weather: NycWeatherSnapshot | null,
+  location: string
+): string | null {
   if (!weather) return null
 
   const description = weather.current.description.toLocaleLowerCase('en-US')
   if (/chance|possible|likely/.test(description)) return null
 
   if (/snow|flurr|blizzard|sleet|wintry/.test(description)) {
-    return 'Hello from snowy New York City.'
+    return `Hello from snowy ${location}.`
   }
   if (/rain|drizzle|shower|thunderstorm/.test(description)) {
-    return 'Hello from rainy New York City.'
+    return `Hello from rainy ${location}.`
   }
 
   return null
 }
 
-function timeGreeting(now: Date): string {
+function timeGreeting(now: Date, location: string): string {
   const { hour } = nycCalendar(now)
+  let opening = 'Hello'
 
-  if (hour >= 5 && hour < 12) return 'Good morning from New York City.'
-  if (hour >= 12 && hour < 17) return 'Good afternoon from New York City.'
-  if (hour >= 17) return 'Good evening from New York City.'
-  return 'Hello from New York City.'
+  if (hour >= 5 && hour < 12) opening = 'Good morning'
+  if (hour >= 12 && hour < 17) opening = 'Good afternoon'
+  if (hour >= 17) opening = 'Good evening'
+
+  return `${opening} from ${location}.`
 }
 
 export function contextualGreetingOptions(
   now: Date,
   weather: NycWeatherSnapshot | null
 ): string[] {
+  const location = locationForm(now)
+
   return Array.from(
     new Set(
       [
         holidayGreeting(now),
-        weatherGreeting(weather),
-        timeGreeting(now),
+        weatherGreeting(weather, location),
+        timeGreeting(now, location),
       ].filter((value): value is string => Boolean(value))
     )
   )
@@ -167,7 +181,7 @@ export async function generateGreeting(
         includeRuntimeContext: { surface: true },
       },
       system: SYSTEM_PROMPT,
-      prompt: `Current date and time in New York City: ${nycNow(now)}\nCurrent weather in New York City: ${weatherDescription}\nApproved opening sentences, in preference order:\n${options.map((option) => `- ${option}`).join('\n')}`,
+      prompt: `Current local date and time: ${nycNow(now)}\nCurrent local weather: ${weatherDescription}\nApproved opening sentences:\n${options.map((option) => `- ${option}`).join('\n')}`,
     })
     const context = selectedGreeting(text, options)
     return context ? `${context} ${FALLBACK_GREETING}` : FALLBACK_GREETING
