@@ -24,6 +24,7 @@ import {
 } from '@/lib/db/queries/text-messages'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { sendBellContactOnboarding } from '@/lib/phone/bell-contact-onboarding'
+import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
 import { numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import {
   sendIncomingSmsNotification,
@@ -43,8 +44,9 @@ import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { replyToSmsWorkflow } from '@/workflows/reply-to-sms'
 
-const BELL_RATE_LIMIT_MESSAGE =
-  '[Bell AI] Too many messages. Please try again later.'
+const BELL_RATE_LIMIT_MESSAGE = fixedBellSmsBody(
+  'Too many messages. Please try again later.'
+)
 
 /**
  * Twilio SMS webhook. Stores the inbound message and ignores duplicate

@@ -84,6 +84,9 @@ describe('voiceMenuTwiml', () => {
     expect(xml).toContain(
       'Press 2 to subscribe to recurring new-post texts from philipithomas.com.'
     )
+    expect(xml).toContain(
+      'A new or reactivated subscription includes one Bell contact-card multimedia message.'
+    )
     expect(xml).toContain('Frequency varies. Message and data rates may apply.')
     expect(xml).toContain('Text STOP to unsubscribe or HELP for help.')
     expect(xml).toContain('<Record maxLength="120"')

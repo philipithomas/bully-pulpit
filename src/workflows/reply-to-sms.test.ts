@@ -16,6 +16,7 @@ import {
   recordBellSms,
   sendBellSmsBody,
 } from '@/lib/phone/bell-sms'
+import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
 import { TwilioApiError } from '@/lib/phone/twilio'
 import {
   recordBellSmsStep,
@@ -83,7 +84,7 @@ describe('replyToSmsWorkflow', () => {
 
     expect(sendBellSmsBody).toHaveBeenCalledWith(
       INPUT,
-      '[Bell AI] I could not answer that right now. Please try again.'
+      fixedBellSmsBody('I could not answer that right now. Please try again.')
     )
   })
 

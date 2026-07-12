@@ -47,7 +47,7 @@ export function voiceMenuTwiml(input: {
 <Response>
   <Say voice="${SAY_VOICE}">${escapeXml(input.greeting)}</Say>
   <Gather action="${escapeXml(input.menuActionUrl)}" method="POST" input="dtmf" numDigits="1" timeout="6">
-    <Say voice="${SAY_VOICE}">Press 1 to leave a voicemail. Press 2 to subscribe to recurring new-post texts from philipithomas.com. Frequency varies. Message and data rates may apply. Text STOP to unsubscribe or HELP for help.</Say>
+    <Say voice="${SAY_VOICE}">Press 1 to leave a voicemail. Press 2 to subscribe to recurring new-post texts from philipithomas.com. A new or reactivated subscription includes one Bell contact-card multimedia message. Frequency varies. Message and data rates may apply. Text STOP to unsubscribe or HELP for help.</Say>
   </Gather>
   <Say voice="${SAY_VOICE}">Leave a message after the tone.</Say>
   <Record maxLength="120" recordingStatusCallback="${escapeXml(input.recordingStatusUrl)}" recordingStatusCallbackMethod="POST" action="${escapeXml(input.recordingCompleteUrl)}" method="POST" />

@@ -30,6 +30,10 @@ import {
   recentConversationWith,
 } from '@/lib/db/queries/text-messages'
 import type { TextMessage } from '@/lib/db/schema'
+import {
+  BELL_SMS_COMPLIANCE_FOOTER,
+  BELL_SMS_PREFIX,
+} from '@/lib/phone/bell-sms-copy'
 import { type SentSms, sendSms } from '@/lib/phone/twilio'
 
 export type BellSmsInput = {
@@ -46,7 +50,7 @@ export type BellSmsGenerationResult = {
   assistantMessageId: string
 }
 
-export const BELL_SMS_PREFIX = '[Bell AI]'
+export { BELL_SMS_COMPLIANCE_FOOTER, BELL_SMS_PREFIX }
 
 // Twilio recommends keeping messages below 320 characters. These budgets fit
 // within two concatenated toll-free segments after accounting for encoding:
@@ -139,39 +143,45 @@ function truncateWithEncoding(
   return finishTruncatedCandidate(candidate, value)
 }
 
-function truncateToSmsBudget(value: string): string {
-  const measurement = smsUnits(value)
+function truncateToSmsBudget(value: string, suffix = ''): string {
+  const completeValue = `${value}${suffix}`
+  const measurement = smsUnits(completeValue)
   const limit =
     measurement.encoding === 'GSM-7'
       ? BELL_SMS_MAX_GSM_UNITS
       : BELL_SMS_MAX_UCS2_UNITS
-  if (measurement.units <= limit) return value
+  if (measurement.units <= limit) return completeValue
+
+  const suffixUnits =
+    measurement.encoding === 'GSM-7' ? smsUnits(suffix).units : suffix.length
+  const contentLimit = limit - suffixUnits
 
   if (measurement.encoding === 'UCS-2') {
     // If the GSM-safe prefix already fills the larger GSM budget before the
     // first Unicode grapheme, that later grapheme would be truncated anyway.
     // Keep the useful 300-unit prefix instead of shrinking it to 132 units.
+    const gsmContentLimit = BELL_SMS_MAX_GSM_UNITS - smsUnits(suffix).units
     let gsmUnits = 0
     let reachedGsmBudget = false
     for (const { segment } of SMS_SEGMENTER.segment(value)) {
-      if (gsmUnits >= BELL_SMS_MAX_GSM_UNITS - 3) {
+      if (gsmUnits >= gsmContentLimit - 3) {
         reachedGsmBudget = true
         break
       }
       const segmentMeasurement = smsUnits(segment)
       if (segmentMeasurement.encoding === 'UCS-2') break
-      if (gsmUnits + segmentMeasurement.units > BELL_SMS_MAX_GSM_UNITS - 3) {
+      if (gsmUnits + segmentMeasurement.units > gsmContentLimit - 3) {
         reachedGsmBudget = true
         break
       }
       gsmUnits += segmentMeasurement.units
     }
     if (reachedGsmBudget) {
-      return truncateWithEncoding(value, 'GSM-7', BELL_SMS_MAX_GSM_UNITS)
+      return `${truncateWithEncoding(value, 'GSM-7', gsmContentLimit)}${suffix}`
     }
   }
 
-  return truncateWithEncoding(value, measurement.encoding, limit)
+  return `${truncateWithEncoding(value, measurement.encoding, contentLimit)}${suffix}`
 }
 
 function normalizeSmsTypography(value: string): string {
@@ -191,16 +201,29 @@ function normalizeSmsTypography(value: string): string {
     .trim()
 }
 
+function stripBellSmsComplianceFooter(value: string): string {
+  let stripped = value.trimEnd()
+  while (stripped.endsWith(BELL_SMS_COMPLIANCE_FOOTER)) {
+    stripped = stripped.slice(0, -BELL_SMS_COMPLIANCE_FOOTER.length).trimEnd()
+  }
+  return stripped
+}
+
 /** Converts defensive Markdown output to one bounded, prefixed SMS body. */
 export function formatBellSmsBody(markdown: string): string {
   const scrubbed = scrubLeakedToolJson(markdown)
     .replace(/<((?:https?:\/\/|mailto:)[^>\s]+)>/g, '$1')
     .replace(/~~([^~]+)~~/g, '$1')
-  const plain = normalizeSmsTypography(
-    markdownToPlaintext(scrubbed, 10_000, { preserveParagraphs: true })
-  ).replace(/^\[Bell AI\]\s*/i, '')
+  const plain = stripBellSmsComplianceFooter(
+    normalizeSmsTypography(
+      markdownToPlaintext(scrubbed, 10_000, { preserveParagraphs: true })
+    ).replace(/^\[Bell AI\]\s*/i, '')
+  )
   const content = plain || FALLBACK_TEXT
-  return truncateToSmsBudget(`${BELL_SMS_PREFIX} ${content}`)
+  return truncateToSmsBudget(
+    `${BELL_SMS_PREFIX} ${content}`,
+    ` ${BELL_SMS_COMPLIANCE_FOOTER}`
+  )
 }
 
 export const FALLBACK_BELL_SMS_BODY = formatBellSmsBody(FALLBACK_TEXT)
