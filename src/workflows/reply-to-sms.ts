@@ -6,14 +6,16 @@ import {
   recordBellSms,
   sendBellSmsBody,
 } from '@/lib/phone/bell-sms'
+import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
 import type { SentSms } from '@/lib/phone/twilio'
 import { isRetryableTwilioError, TwilioApiError } from '@/lib/phone/twilio'
 
 // Keep the workflow-scope fallback sandbox-safe. Importing the formatted
 // constant from bell-sms would pull its filesystem-backed search tool graph
 // into the workflow orchestrator instead of confining it to use-step code.
-const FALLBACK_BELL_SMS_BODY =
-  '[Bell AI] I could not answer that right now. Please try again.'
+const FALLBACK_BELL_SMS_BODY = fixedBellSmsBody(
+  'I could not answer that right now. Please try again.'
+)
 
 /** Generates the stable body once so delivery retries do not rewrite it. */
 export async function generateBellSmsStep(

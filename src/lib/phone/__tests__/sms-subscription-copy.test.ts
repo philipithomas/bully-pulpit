@@ -9,14 +9,14 @@ import {
 describe('SMS subscription copy', () => {
   it('includes the required subscription disclosures', () => {
     expect(SMS_SUBSCRIBE_CONFIRMATION).toBe(
-      'philipithomas.com: You are subscribed to new-post texts. Frequency varies. Message and data rates may apply. Reply HELP for help or STOP to unsubscribe.'
+      'philipithomas.com: You are subscribed to recurring new-post texts. Frequency varies. Message and data rates may apply. Reply HELP for help or STOP to unsubscribe.'
     )
-    expect(SMS_SUBSCRIBE_CONFIRMATION).toHaveLength(152)
+    expect(SMS_SUBSCRIBE_CONFIRMATION).toHaveLength(162)
   })
 
   it('introduces the Bell contact card without promising AI replies', () => {
     expect(SMS_BELL_CONTACT_ONBOARDING).toBe(
-      'Meet Bell, the little bell that carries new posts from Philip. Add the attached contact card so the next text has a face.'
+      'philipithomas.com: Meet Bell, the little bell that carries new posts from Philip. Add the attached contact card so the next text has a face. Reply STOP to unsubscribe.'
     )
   })
 
@@ -29,7 +29,7 @@ describe('SMS subscription copy', () => {
 
   it('tells app-handled STOP senders how to reactivate', () => {
     expect(SMS_UNSUBSCRIBE_CONFIRMATION).toBe(
-      'You are unsubscribed from SMS updates. Reply START or UNSTOP to resubscribe.'
+      'philipithomas.com: You are unsubscribed from new-post texts. No further messages will be sent. Reply START or UNSTOP to resubscribe.'
     )
   })
 })

@@ -27,6 +27,55 @@ interface SmsSubscribePromptProps {
   variant?: 'form' | 'homepage'
 }
 
+export function SmsSubscribeDisclosure({
+  displayNumber,
+  onSmsOpen,
+  phoneNumber,
+}: {
+  displayNumber: string
+  onSmsOpen: () => void
+  phoneNumber: string
+}) {
+  return (
+    <>
+      <span className="block">
+        Text{' '}
+        <span className="font-sans font-medium text-gray-800">SUBSCRIBE</span>{' '}
+        to{' '}
+        <a
+          href={`sms:${phoneNumber}?body=SUBSCRIBE`}
+          onClick={onSmsOpen}
+          className="font-sans text-gray-700 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950"
+        >
+          {displayNumber}
+        </a>{' '}
+        to consent to recurring automated new-post texts from The Contraption
+        Company LLC through philipithomas.com at this number.
+      </span>
+      <span className="mt-4 block text-sm text-gray-500">
+        A new or reactivated signup includes one Bell contact-card MMS. Message
+        frequency varies. Message and data rates may apply. Reply STOP to
+        unsubscribe or HELP for help. Consent is not a condition of purchase.
+        See the{' '}
+        <a
+          href="/terms#text-messaging"
+          className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950"
+        >
+          terms of service
+        </a>{' '}
+        and{' '}
+        <a
+          href="/privacy#text-messaging"
+          className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950"
+        >
+          privacy policy
+        </a>
+        .
+      </span>
+    </>
+  )
+}
+
 export function SmsSubscribePrompt({
   enabled,
   phoneNumber,
@@ -102,25 +151,11 @@ export function SmsSubscribePrompt({
         <DialogHeader className="text-left">
           <DialogTitle>Subscribe by SMS</DialogTitle>
           <DialogDescription className="font-serif text-base leading-relaxed text-gray-600">
-            <span className="block">
-              Text{' '}
-              <span className="font-sans font-medium text-gray-800">
-                SUBSCRIBE
-              </span>{' '}
-              to{' '}
-              <a
-                href={`sms:${phoneNumber}?body=SUBSCRIBE`}
-                onClick={handleSmsOpen}
-                className="font-sans text-gray-700 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950"
-              >
-                {displayNumber}
-              </a>{' '}
-              for recurring new-post texts.
-            </span>
-            <span className="mt-4 block text-sm text-gray-500">
-              Message frequency varies. Message and data rates may apply. Reply
-              STOP to unsubscribe or HELP for help.
-            </span>
+            <SmsSubscribeDisclosure
+              displayNumber={displayNumber}
+              onSmsOpen={handleSmsOpen}
+              phoneNumber={phoneNumber}
+            />
           </DialogDescription>
         </DialogHeader>
       </DialogContent>

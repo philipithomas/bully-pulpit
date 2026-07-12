@@ -61,6 +61,7 @@ import {
 } from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { smsSignupUi } from '@/lib/flags'
+import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
 import {
   SMS_BELL_CONTACT_ONBOARDING,
   SMS_HELP_RESPONSE,
@@ -921,9 +922,8 @@ describe('POST /api/phone/sms', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(await response.text()).toContain(
-      '[Bell AI] Too many messages. Please try again later.'
-    )
+    const body = fixedBellSmsBody('Too many messages. Please try again later.')
+    expect(await response.text()).toContain(body)
     expect(checkRateLimit).toHaveBeenCalledWith(
       'chat',
       'phone:+15551234567',
@@ -933,6 +933,7 @@ describe('POST /api/phone/sms', () => {
     const rows = await db.select().from(textMessages)
     expect(rows).toHaveLength(2)
     expect(rows[1]).toMatchObject({
+      body,
       direction: 'outbound',
       status: 'queued',
       replyToMessageId: rows[0].id,

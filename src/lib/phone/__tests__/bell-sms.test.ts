@@ -41,6 +41,7 @@ import {
 } from '@/lib/db/queries/text-messages'
 import type { TextMessage } from '@/lib/db/schema'
 import {
+  BELL_SMS_COMPLIANCE_FOOTER,
   BELL_SMS_MAX_GSM_UNITS,
   BELL_SMS_MAX_UCS2_UNITS,
   BELL_SMS_PREFIX,
@@ -110,7 +111,8 @@ describe('SMS encoding budget', () => {
   it('keeps a long GSM reply inside the two-segment budget', () => {
     const body = formatBellSmsBody('word '.repeat(200))
     expect(body).toMatch(/^\[Bell AI\] /)
-    expect(body).toMatch(/\.\.\.$/)
+    expect(body).toContain('...')
+    expect(body).toMatch(new RegExp(`${BELL_SMS_COMPLIANCE_FOOTER}$`))
     expect(smsUnits(body)).toMatchObject({
       encoding: 'GSM-7',
       units: expect.any(Number),
@@ -124,6 +126,7 @@ describe('SMS encoding budget', () => {
     expect(measurement.encoding).toBe('UCS-2')
     expect(measurement.units).toBeLessThanOrEqual(BELL_SMS_MAX_UCS2_UNITS)
     expect(body).not.toMatch(/[\uD800-\uDBFF]$/)
+    expect(body).toMatch(new RegExp(`${BELL_SMS_COMPLIANCE_FOOTER}$`))
   })
 
   it('does not let Unicode beyond the retained prefix shrink a GSM reply', () => {
@@ -146,15 +149,25 @@ describe('formatBellSmsBody', () => {
       '{"query":"hello"}\n## **Read** [the post](/hello). “Useful”—brief…'
     )
     expect(body).toBe(
-      '[Bell AI] Read the post (https://www.philipithomas.com/hello). "Useful"-brief...'
+      '[Bell AI] Read the post (https://www.philipithomas.com/hello). "Useful"-brief... philipithomas.com: Reply STOP to end.'
     )
     expect(body).not.toContain('**')
     expect(body).not.toContain('](')
   })
 
   it('adds the prefix exactly once and falls back on empty output', () => {
-    expect(formatBellSmsBody('[Bell AI] Hello')).toBe('[Bell AI] Hello')
+    expect(formatBellSmsBody('[Bell AI] Hello')).toBe(
+      '[Bell AI] Hello philipithomas.com: Reply STOP to end.'
+    )
     expect(formatBellSmsBody('   ')).toBe(FALLBACK_BELL_SMS_BODY)
+  })
+
+  it('keeps the application footer exactly once', () => {
+    const body = formatBellSmsBody(
+      `Hello ${BELL_SMS_COMPLIANCE_FOOTER} ${BELL_SMS_COMPLIANCE_FOOTER}`
+    )
+
+    expect(body).toBe(`[Bell AI] Hello ${BELL_SMS_COMPLIANCE_FOOTER}`)
   })
 
   it('preserves autolinks while removing strikethrough and table pipes', () => {
@@ -163,7 +176,7 @@ describe('formatBellSmsBody', () => {
         'See <https://www.philipithomas.com/contact> and ~~ignore~~ | pipes.'
       )
     ).toBe(
-      '[Bell AI] See https://www.philipithomas.com/contact and ignore pipes.'
+      '[Bell AI] See https://www.philipithomas.com/contact and ignore pipes. philipithomas.com: Reply STOP to end.'
     )
   })
 
@@ -171,7 +184,8 @@ describe('formatBellSmsBody', () => {
     const body = formatBellSmsBody(
       `${'Context '.repeat(22)}https://www.philipithomas.com/${'long-slug-'.repeat(30)}`
     )
-    expect(body).toMatch(/\.\.\.$/)
+    expect(body).toContain('...')
+    expect(body).toMatch(new RegExp(`${BELL_SMS_COMPLIANCE_FOOTER}$`))
     expect(body).not.toContain('https://')
   })
 
@@ -180,7 +194,7 @@ describe('formatBellSmsBody', () => {
       formatBellSmsBody(
         '{"path":"/contact"}{"query":"coffee","scope":"images"}Answer.'
       )
-    ).toBe('[Bell AI] Answer.')
+    ).toBe('[Bell AI] Answer. philipithomas.com: Reply STOP to end.')
   })
 })
 
@@ -231,7 +245,7 @@ describe('Bell SMS generation and delivery', () => {
     } as any)
 
     await expect(generateBellSmsBody(INPUT)).resolves.toEqual({
-      body: '[Bell AI] It is about the new Workshop post.',
+      body: '[Bell AI] It is about the new Workshop post. philipithomas.com: Reply STOP to end.',
       assistantMessageId: '44444444-4444-4444-8444-444444444444',
     })
     expect(recentConversationWith).toHaveBeenCalledWith(INPUT.from, 9)
