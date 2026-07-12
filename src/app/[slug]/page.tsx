@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 import { SetNewsletter } from '@/components/layout/newsletter-context'
 import { ContactPage } from '@/components/pages/contact-page'
 import { StargazingPage } from '@/components/pages/stargazing-page'
+import { TextMessagingPage } from '@/components/pages/text-messaging-page'
 import {
   createHeadingComponents,
   mdxComponents,
@@ -209,6 +210,10 @@ export default async function SlugPage({ params }: Props) {
 
   if (page?.slug === 'stargazing') {
     return <StargazingPage page={page} />
+  }
+
+  if (page?.slug === 'text-messaging') {
+    return <TextMessagingPage page={page} />
   }
 
   // Build-time syntax highlighting; the singleton resolves once per worker.

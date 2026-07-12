@@ -2,90 +2,9 @@ import { SetNewsletter } from '@/components/layout/newsletter-context'
 import { JsonLd } from '@/components/seo/json-ld'
 import type { Page } from '@/lib/content/types'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
-import { SMS_SUBSCRIBE_CONFIRMATION } from '@/lib/phone/sms-subscription-copy'
 
 const mapSrc =
   'https://maps.google.com/maps?q=40.747157,-73.984165&z=12&output=embed'
-
-export function SmsConsentSection({
-  phoneDisplayNumber,
-  phoneNumber,
-}: {
-  phoneDisplayNumber: string
-  phoneNumber: string
-}) {
-  return (
-    <>
-      {/* biome-ignore lint/correctness/useUniqueElementIds: canonical contact-page anchor renders once */}
-      <section
-        id="text-messaging"
-        className="mt-16 max-w-2xl border-gray-200 border-t pt-12"
-      >
-        <h2 className="font-sans font-semibold text-2xl text-gray-950 tracking-tight sm:text-3xl">
-          Subscribe by text
-        </h2>
-        <div className="mt-6 space-y-5 font-serif text-gray-700 text-lg leading-relaxed">
-          <p>
-            Text <strong className="font-sans font-semibold">SUBSCRIBE</strong>{' '}
-            to{' '}
-            <a
-              href={`sms:${phoneNumber}?body=SUBSCRIBE`}
-              className="underline decoration-gray-300 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
-            >
-              {phoneDisplayNumber}
-            </a>{' '}
-            to consent to recurring automated new-post texts from The
-            Contraption Company LLC through philipithomas.com.
-          </p>
-          <p>
-            The texts announce new Contraption, Workshop, and Postcard posts. A
-            new or reactivated subscription also sends one Bell contact-card
-            MMS. Message frequency varies. Message and data rates may apply.
-          </p>
-          <p>
-            For a first-time subscription, text SUBSCRIBE, START, or JOIN. After
-            sending STOP, text START, UNSTOP, or YES to reactivate. SUBSCRIBE
-            and JOIN do not reactivate a stopped subscription.
-          </p>
-          <p>
-            Reply STOP to unsubscribe or HELP for help. Consent is not a
-            condition of purchase. Mobile opt-in data is not shared with third
-            parties or affiliates for marketing or promotional purposes.
-          </p>
-          <p>
-            Texting a question instead requests one direct automated reply from
-            Bell. It does not subscribe you to recurring new-post notifications.
-          </p>
-          <p>
-            Read the{' '}
-            <a
-              href="/terms#text-messaging"
-              className="underline decoration-gray-300 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
-            >
-              text messaging terms
-            </a>{' '}
-            and{' '}
-            <a
-              href="/privacy#text-messaging"
-              className="underline decoration-gray-300 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
-            >
-              privacy policy
-            </a>
-            .
-          </p>
-          <div>
-            <p className="font-sans font-semibold text-gray-900 text-sm">
-              Confirmation message
-            </p>
-            <blockquote className="mt-2 border-gray-300 border-l-2 pl-4 text-base">
-              {SMS_SUBSCRIBE_CONFIRMATION}
-            </blockquote>
-          </div>
-        </div>
-      </section>
-    </>
-  )
-}
 
 export function ContactPage({ page }: { page: Page }) {
   const phoneNumber = sitePhoneNumber()
@@ -173,13 +92,6 @@ export function ContactPage({ page }: { page: Page }) {
             />
           </div>
         </div>
-
-        {phoneNumber ? (
-          <SmsConsentSection
-            phoneDisplayNumber={phoneDisplayNumber ?? phoneNumber}
-            phoneNumber={phoneNumber}
-          />
-        ) : null}
       </div>
     </article>
   )
