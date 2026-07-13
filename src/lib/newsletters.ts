@@ -16,6 +16,22 @@ export const newsletterStatus = {
   tsundoku: { active: false },
 } as const satisfies Record<Newsletter, { active: boolean }>
 
+/**
+ * Channel-specific delivery presentation stays declarative so a future
+ * photography newsletter can opt in without adding slug checks to the send
+ * workflow. The cover is attached only when the post actually has one.
+ */
+export const newsletterDelivery = {
+  contraption: { smsMedia: null },
+  workshop: { smsMedia: null },
+  postcard: { smsMedia: null },
+  tsundoku: { smsMedia: 'cover' },
+} as const satisfies Record<Newsletter, { smsMedia: 'cover' | null }>
+
+export function newsletterUsesCoverMms(newsletter: Newsletter): boolean {
+  return newsletterDelivery[newsletter].smsMedia === 'cover'
+}
+
 export const INACTIVE_NEWSLETTER_SEND_ERROR =
   'Skipped: newsletter distribution is inactive'
 

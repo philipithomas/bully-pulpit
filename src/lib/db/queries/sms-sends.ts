@@ -29,6 +29,7 @@ export async function bulkCreateQueuedSms(input: {
   postSlug: string
   newsletter: string
   body: string
+  mediaUrl?: string
 }): Promise<number[]> {
   if (!isNewsletterSendingEnabled(input.newsletter)) return []
   const ids: number[] = []
@@ -39,12 +40,13 @@ export async function bulkCreateQueuedSms(input: {
     if (!newsletterColumn) continue
     const result = await getDb().execute<{ id: number }>(sql`
       INSERT INTO ${smsSends}
-        (sms_subscriber_id, post_slug, newsletter, body, next_attempt_at)
+        (sms_subscriber_id, post_slug, newsletter, body, media_url, next_attempt_at)
       SELECT
         ${smsSubscribers.id},
         ${input.postSlug},
         ${input.newsletter},
         ${input.body},
+        ${input.mediaUrl ?? null},
         NOW()
       FROM ${smsSubscribers}
       WHERE ${and(

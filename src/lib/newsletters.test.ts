@@ -6,10 +6,12 @@ import {
   defaultSignupNewsletters,
   isNewsletterAcceptingSubscriptions,
   isNewsletterSendingEnabled,
+  newsletterDelivery,
   newsletterList,
   newsletterPreferenceKeys,
   newsletterRows,
   newsletterStatus,
+  newsletterUsesCoverMms,
 } from '@/lib/newsletters'
 
 describe('newsletter metadata', () => {
@@ -38,5 +40,11 @@ describe('newsletter metadata', () => {
     expect(isNewsletterAcceptingSubscriptions('tsundoku')).toBe(false)
     expect(isNewsletterSendingEnabled('tsundoku')).toBe(false)
     expect(newsletterStatus.tsundoku).toEqual({ active: false })
+  })
+
+  it('keeps cover MMS a newsletter capability instead of a slug check', () => {
+    expect(newsletterDelivery.tsundoku).toEqual({ smsMedia: 'cover' })
+    expect(newsletterUsesCoverMms('tsundoku')).toBe(true)
+    expect(newsletterUsesCoverMms('contraption')).toBe(false)
   })
 })

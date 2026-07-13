@@ -691,6 +691,25 @@ describe('sendNewsletterWorkflow', () => {
     expect(await allSmsRows()).toHaveLength(0)
   })
 
+  it('snapshots the MMS cover URL when queuing a send', async () => {
+    const subscriber = await seedSmsSubscriber({
+      phoneNumber: '+15551234567',
+    })
+    const mediaUrl =
+      'https://www.philipithomas.com/api/phone/newsletter-cover/hello-world?v=cover'
+
+    const ids = await bulkCreateQueuedSms({
+      smsSubscriberIds: [subscriber.id],
+      postSlug: SLUG,
+      newsletter: 'contraption',
+      body: 'Contraption: Hello world',
+      mediaUrl,
+    })
+
+    expect(ids).toHaveLength(1)
+    expect(smsRowFor(await allSmsRows(), subscriber.id).mediaUrl).toBe(mediaUrl)
+  })
+
   it('refuses to queue an archived newsletter at the SMS query boundary', async () => {
     const subscriber = await seedSmsSubscriber({
       phoneNumber: '+15551234567',
