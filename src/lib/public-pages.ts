@@ -1,6 +1,7 @@
 import { siteConfig } from '@/lib/config'
 import { getPages, getPostsByNewsletter } from '@/lib/content/loader'
 import type { Newsletter } from '@/lib/content/types'
+import { resumePublicText } from '@/lib/resume'
 
 export const PUBLIC_APP_PAGE_PATHS = [
   '/',
@@ -10,6 +11,7 @@ export const PUBLIC_APP_PAGE_PATHS = [
   '/tsundoku',
   '/photography',
   '/print',
+  '/resume',
   '/sitemap',
 ] as const
 
@@ -125,6 +127,17 @@ The newsletters are available by email and RSS, and the homepage has a signup fo
     searchText: `Print edition. Every newsletter was printed and mailed to subscribers. ${PRINT_EDITION_STATUS_TEXT} The launch essay is Introducing the print edition (/introducing-the-print-edition).`,
     bellText: () =>
       `The Print edition page describes an experiment that printed and mailed Philip's newsletters to subscribers. ${PRINT_EDITION_STATUS_TEXT} The launch essay, Introducing the print edition, is at /introducing-the-print-edition.`,
+    humanSitemap: true,
+    xmlSitemap: true,
+  },
+  {
+    id: 'app-resume',
+    path: '/resume',
+    title: 'Résumé',
+    description:
+      'Work experience and education for engineer and product builder Philip I. Thomas.',
+    searchText: resumePublicText,
+    bellText: () => resumePublicText,
     humanSitemap: true,
     xmlSitemap: true,
   },
