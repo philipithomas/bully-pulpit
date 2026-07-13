@@ -14,8 +14,8 @@ import {
 } from '@/components/posts/mdx-components'
 import { accentHoverText } from '@/components/posts/newsletter-accent'
 import { PostNavigation } from '@/components/posts/post-navigation'
+import { PostSubscribeCta } from '@/components/posts/post-subscribe-cta'
 import { RelatedPosts } from '@/components/posts/related-posts'
-import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { JsonLd } from '@/components/seo/json-ld'
 import { SpotifyEmbed } from '@/components/ui/spotify-embed'
 import { YouTubeEmbed } from '@/components/ui/youtube-embed'
@@ -370,7 +370,7 @@ export default async function SlugPage({ params }: Props) {
 
         {/* Subscribe CTA for posts */}
         {post && (
-          <SubscribeCta
+          <PostSubscribeCta
             newsletter={post.newsletter}
             smsSignupDisplayNumber={smsSignupDisplayNumber}
             smsSignupPhoneNumber={smsSignupPhoneNumber}
