@@ -25,28 +25,10 @@ export function Footer() {
           </p>
           <nav className="order-3 mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm md:order-none md:col-start-2 md:row-start-1 md:mt-0 md:justify-end">
             <Link
-              href="/contraption"
+              href="/contact"
               className="hover:text-white transition-colors"
             >
-              Contraption
-            </Link>
-            <Link
-              href="/workshop"
-              className="hover:text-white transition-colors"
-            >
-              Workshop
-            </Link>
-            <Link
-              href="/postcard"
-              className="hover:text-white transition-colors"
-            >
-              Postcard
-            </Link>
-            <Link
-              href="/tsundoku"
-              className="hover:text-white transition-colors"
-            >
-              Tsundoku
+              Contact
             </Link>
             <Link href="/terms" className="hover:text-white transition-colors">
               Terms
