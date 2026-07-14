@@ -31,6 +31,9 @@ describe('/bell.vcf', () => {
     expect(response.headers.get('Content-Length')).toBe(
       String(new TextEncoder().encode(body).byteLength)
     )
+    expect(Number(response.headers.get('Content-Length'))).toBeLessThanOrEqual(
+      1536
+    )
     expect(body).toContain('BEGIN:VCARD\r\n')
     expect(body).toContain('FN:Bell\r\n')
   })

@@ -24,9 +24,10 @@ describe('renderVCard', () => {
     expect(unfolded).toContain('TEL;TYPE=CELL:+12123473190\r\n')
     expect(unfolded).toContain('URL:https://www.philipithomas.com\r\n')
     expect(unfolded).toContain(
-      `PHOTO;ENCODING=b;TYPE=JPEG:${BELL_CONTACT_PHOTO_BASE64}\r\n`
+      `PHOTO;ENCODING=b;TYPE=PNG:${BELL_CONTACT_PHOTO_BASE64}\r\n`
     )
     expect(unfolded.endsWith('END:VCARD\r\n')).toBe(true)
+    expect(new TextEncoder().encode(card).byteLength).toBeLessThanOrEqual(1536)
   })
 
   it('uses CRLF and keeps every physical line within 75 UTF-8 octets', () => {
@@ -47,10 +48,15 @@ describe('renderVCard', () => {
 
   it('keeps the embedded bytes in sync with the committed raster', () => {
     const image = fs.readFileSync(
-      path.join(process.cwd(), 'public/images/bell-contact.jpg')
+      path.join(process.cwd(), 'public/images/bell-contact.png')
     )
 
     expect(Buffer.from(BELL_CONTACT_PHOTO_BASE64, 'base64')).toEqual(image)
-    expect(image.subarray(0, 3)).toEqual(Buffer.from([255, 216, 255]))
+    expect(image.subarray(0, 8)).toEqual(
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+    )
+    expect(image.byteLength).toBeLessThanOrEqual(900)
+    expect(image.readUInt32BE(16)).toBe(128)
+    expect(image.readUInt32BE(20)).toBe(128)
   })
 })
