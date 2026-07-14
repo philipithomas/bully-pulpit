@@ -24,7 +24,7 @@ export type BellEvalExpectation =
     }
   | {
       kind: 'chronology'
-      newsletter: Newsletter
+      newsletter?: Newsletter
       recentCount: number
     }
   | {
@@ -74,18 +74,32 @@ export const bellEvalCases: readonly BellEvalCase[] = [
     ],
   },
   {
-    id: 'workshop-chronology',
+    id: 'latest-post',
     category: 'chronology',
     surface: 'web',
-    prompt: 'What are the three most recent Workshop posts, in order?',
+    prompt: 'What is my latest post?',
+    expectation: {
+      kind: 'chronology',
+      recentCount: 1,
+    },
+    review: [
+      'Uses listPosts with limit 1, offset 0, and all newsletters.',
+      'Returns and links the actual newest post from the tool.',
+    ],
+  },
+  {
+    id: 'latest-workshop-post',
+    category: 'chronology',
+    surface: 'web',
+    prompt: 'What is my latest Workshop post?',
     expectation: {
       kind: 'chronology',
       newsletter: 'workshop',
-      recentCount: 3,
+      recentCount: 1,
     },
     review: [
-      'Orders the posts newest to oldest.',
-      'Uses the dates and titles returned by the archive tools.',
+      'Uses listPosts with limit 1, offset 0, and only Workshop.',
+      'Returns and links the actual newest Workshop post from the tool.',
     ],
   },
   {

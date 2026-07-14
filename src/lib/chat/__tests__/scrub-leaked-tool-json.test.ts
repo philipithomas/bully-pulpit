@@ -30,6 +30,14 @@ describe('scrubLeakedToolJson', () => {
     ).toBe('Answer.')
   })
 
+  it('strips chronological listing inputs', () => {
+    expect(
+      scrubLeakedToolJson(
+        '{"limit":1,"offset":0,"filter":{"mode":"only","newsletter":"workshop"}}Answer.'
+      )
+    ).toBe('Answer.')
+  })
+
   it('returns an empty string when the part is only leaked JSON', () => {
     expect(scrubLeakedToolJson('{"slug":"colophon"}')).toBe('')
   })

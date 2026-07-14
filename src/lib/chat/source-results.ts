@@ -171,7 +171,13 @@ export function bellSourcesFromToolOutput(
   input?: unknown
 ): BellSource[] {
   const parsed = parseOutput(output)
-  const results = Array.isArray(parsed) ? parsed : [parsed]
+  const container = record(parsed)
+  const results =
+    toolName === 'listPosts' && Array.isArray(container?.posts)
+      ? container.posts
+      : Array.isArray(parsed)
+        ? parsed
+        : [parsed]
   const fallbackUrl = fallbackUrlForTool(toolName, record(input))
   return results
     .map(record)

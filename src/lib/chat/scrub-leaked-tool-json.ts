@@ -3,8 +3,23 @@
  * model has changed since this was first observed, but every current Bell
  * tool shape stays covered so a provider regression cannot reach visitors.
  */
-const TOOL_INPUT_KEYS = new Set(['query', 'scope', 'slug', 'path'])
-const TOOL_IDENTITY_KEYS = new Set(['query', 'slug', 'path'])
+const TOOL_INPUT_KEYS = new Set([
+  'query',
+  'scope',
+  'slug',
+  'path',
+  'limit',
+  'offset',
+  'filter',
+])
+const TOOL_IDENTITY_KEYS = new Set([
+  'query',
+  'slug',
+  'path',
+  'limit',
+  'offset',
+  'filter',
+])
 
 function jsonObjectEnd(value: string, start: number): number | null {
   let depth = 0

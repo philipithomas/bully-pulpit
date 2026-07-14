@@ -127,12 +127,48 @@ describe('getSystemPrompt page context', () => {
   })
 })
 
+describe('getSystemPrompt chronology routing', () => {
+  it('routes latest and chronological questions to listPosts', () => {
+    const prompt = getSystemPrompt()
+
+    expect(prompt).toContain(
+      'listPosts returns published posts in deterministic newest-first order'
+    )
+    expect(prompt).toContain(
+      'Use it whenever the question asks what is latest, recent, newest, older, or in chronological order'
+    )
+    expect(prompt).toContain(
+      'Do not use relevance-ranked searchPosts to determine publication order'
+    )
+  })
+
+  it('uses all newsletters by default and filters an explicitly named one', () => {
+    const prompt = getSystemPrompt()
+
+    expect(prompt).toContain(
+      'For "What is my latest post?", call listPosts with limit 1, offset 0, and filter.mode "all"'
+    )
+    expect(prompt).toContain(
+      'An unqualified latest or recent request includes all four newsletters, including Tsundoku'
+    )
+    expect(prompt).toContain(
+      'For "What is my latest Workshop post?", call listPosts with limit 1, offset 0, filter.mode "only", and filter.newsletter "workshop"'
+    )
+    expect(prompt).toContain(
+      'asks what was published "here" or in "this newsletter," treat the page as an explicit request for that newsletter'
+    )
+  })
+})
+
 describe('getSystemPrompt SMS surface', () => {
   it('uses recent messages as grounding and requires concise plain text', () => {
     const prompt = getSystemPrompt({ surface: 'sms' })
 
     expect(prompt).toContain(
       'Base your answers only on the recent SMS history or content you retrieve'
+    )
+    expect(prompt).toContain(
+      'through listPosts, searchPosts, fetchPost, and fetchPage'
     )
     expect(prompt).toContain('Reply in one compact plain-text paragraph')
     expect(prompt).toContain('Do not use Markdown')
