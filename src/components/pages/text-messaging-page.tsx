@@ -36,14 +36,13 @@ export function TextMessagingConsent({
           <p>
             The texts announce new Contraption, Workshop, and Postcard posts. A
             new or reactivated subscription also sends one Bell contact-card
-            MMS. Open the attachment and save Bell to your contacts so later
-            messages show Bell's name and photo. Message frequency varies.
-            Message and data rates may apply.
+            MMS. On iPhone, open the attachment, then tap Create New Contact to
+            save Bell so later messages show Bell's name and photo. Message
+            frequency varies. Message and data rates may apply.
           </p>
           <p>
             For a first-time subscription, text SUBSCRIBE, START, or JOIN. After
-            sending STOP, text START, UNSTOP, or YES to reactivate. SUBSCRIBE
-            and JOIN do not reactivate a stopped subscription.
+            sending STOP, text START, UNSTOP, or YES to reactivate.
           </p>
           <p>
             Reply STOP to unsubscribe or HELP for help. Consent is not a
@@ -58,9 +57,9 @@ export function TextMessagingConsent({
           Bell replies
         </h2>
         <p className="mt-5 font-serif text-gray-700 text-lg leading-relaxed">
-          Text the same number with a question about Philip's posts or photos to
-          receive one direct automated reply from Bell. Asking a question alone
-          does not subscribe you to recurring new-post notifications.
+          Text Bell questions about philipithomas.com to receive one direct
+          automated reply. Asking a question alone does not subscribe you to
+          recurring new-post notifications.
         </p>
       </section>
 

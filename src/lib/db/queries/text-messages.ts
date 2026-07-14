@@ -57,6 +57,17 @@ export async function createTextMessageWithStatus(
   return { message: existing[0], inserted: false }
 }
 
+export async function findTextMessageById(
+  id: number
+): Promise<TextMessage | null> {
+  const rows = await getDb()
+    .select()
+    .from(textMessages)
+    .where(eq(textMessages.id, id))
+    .limit(1)
+  return rows[0] ?? null
+}
+
 export type Conversation = {
   number: string
   lastMessage: TextMessage

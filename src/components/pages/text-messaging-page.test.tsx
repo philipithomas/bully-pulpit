@@ -21,13 +21,9 @@ describe('TextMessagingConsent', () => {
     expect(html).toContain(
       'After sending STOP, text START, UNSTOP, or YES to reactivate'
     )
-    expect(html).toContain(
-      'SUBSCRIBE and JOIN do not reactivate a stopped subscription'
-    )
     expect(html).toContain('Message frequency varies')
-    expect(html).toContain('save Bell to your contacts')
-    expect(html).toContain('question about Philip')
-    expect(html).toContain('posts or photos')
+    expect(html).toContain('tap Create New Contact')
+    expect(html).toContain('Text Bell questions about philipithomas.com')
     expect(html).toContain('Message and data rates may apply')
     expect(html).toContain('Reply STOP to unsubscribe or HELP for help')
     expect(html).toContain('Consent is not a condition of purchase')

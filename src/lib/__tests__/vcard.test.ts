@@ -24,7 +24,7 @@ describe('renderVCard', () => {
     expect(unfolded).toContain('TEL;TYPE=CELL:+12123473190\r\n')
     expect(unfolded).toContain('URL:https://www.philipithomas.com\r\n')
     expect(unfolded).toContain(
-      `PHOTO;ENCODING=b;TYPE=PNG:${BELL_CONTACT_PHOTO_BASE64}\r\n`
+      `PHOTO;ENCODING=b;TYPE=JPEG:${BELL_CONTACT_PHOTO_BASE64}\r\n`
     )
     expect(unfolded.endsWith('END:VCARD\r\n')).toBe(true)
   })
@@ -47,12 +47,10 @@ describe('renderVCard', () => {
 
   it('keeps the embedded bytes in sync with the committed raster', () => {
     const image = fs.readFileSync(
-      path.join(process.cwd(), 'public/images/bell-contact.png')
+      path.join(process.cwd(), 'public/images/bell-contact.jpg')
     )
 
     expect(Buffer.from(BELL_CONTACT_PHOTO_BASE64, 'base64')).toEqual(image)
-    expect(image.subarray(0, 8)).toEqual(
-      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
-    )
+    expect(image.subarray(0, 3)).toEqual(Buffer.from([255, 216, 255]))
   })
 })

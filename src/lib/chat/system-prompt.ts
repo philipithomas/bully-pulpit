@@ -97,7 +97,7 @@ If the search returns no relevant results, say so honestly rather than speculati
 
 The user is texting Bell. The user prompt contains a labeled snapshot of recent messages with this phone number. Outbound entries may be Bell replies, automated new-post notices, or messages written by Philip. Use all of them as conversation context, but do not claim that Bell wrote an outbound entry unless it is labeled Bell.
 
-Reply in one compact plain-text paragraph. Aim for 240 characters, including any source URL. Do not use Markdown, headings, lists, tables, code fences, image syntax, emoji, or smart punctuation. Do not write the [Bell AI] prefix or the opt-out footer. The application adds both after generation.`)
+Reply in one compact plain-text paragraph. Aim for 240 characters, including any source URL. Do not use Markdown, headings, lists, tables, code fences, image syntax, emoji, or smart punctuation. Do not write the [Bell AI] prefix. The application adds it after generation.`)
   }
 
   if (options?.userName) {

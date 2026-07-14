@@ -56,7 +56,7 @@ import {
   resetFailedSmsBySlug,
   SMS_SEND_SKIPPED_UNSUBSCRIBED,
 } from '@/lib/db/queries/sms-sends'
-import { unsubscribeSmsNumber } from '@/lib/db/queries/sms-subscribers'
+import { deleteSmsDataForPhoneNumber } from '@/lib/db/queries/sms-subscribers'
 import {
   type EmailSend,
   emailSends,
@@ -619,7 +619,7 @@ describe('sendNewsletterWorkflow', () => {
     expect(await db.select().from(textMessages)).toHaveLength(0)
   })
 
-  it('honors an SMS opt-out that arrives before the recipient turn in a paced batch', async () => {
+  it('honors a STOP deletion that arrives before the recipient turn in a paced batch', async () => {
     const bob = await seedSmsSubscriber({
       phoneNumber: '+15557654321',
     })
@@ -631,7 +631,7 @@ describe('sendNewsletterWorkflow', () => {
       'fetch',
       vi.fn(async () => {
         sendCount += 1
-        await unsubscribeSmsNumber(bob.phoneNumber)
+        await deleteSmsDataForPhoneNumber(bob.phoneNumber)
         return new Response(
           JSON.stringify({ sid: `SM_${sendCount}`, status: 'queued' }),
           { status: 201 }
@@ -659,10 +659,12 @@ describe('sendNewsletterWorkflow', () => {
     expect(aliceRow.sendError).toBeNull()
     expect(aliceRow.twilioSid).toBe('SM_1')
 
-    const bobRow = smsRowFor(rows, bob.id)
-    expect(bobRow.sentAt).toBeNull()
-    expect(bobRow.sendError).toBe(SMS_SEND_SKIPPED_UNSUBSCRIBED)
-    expect(bobRow.twilioSid).toBeNull()
+    expect(rows.some((row) => row.smsSubscriberId === bob.id)).toBe(false)
+    expect(
+      (await db.select().from(smsSubscribers)).some(
+        (subscriber) => subscriber.id === bob.id
+      )
+    ).toBe(false)
 
     const outboundTexts = await db.select().from(textMessages)
     expect(outboundTexts).toHaveLength(1)
@@ -676,7 +678,7 @@ describe('sendNewsletterWorkflow', () => {
     const subscriber = await seedSmsSubscriber({
       phoneNumber: '+15551234567',
     })
-    await unsubscribeSmsNumber(subscriber.phoneNumber)
+    await deleteSmsDataForPhoneNumber(subscriber.phoneNumber)
 
     const ids = await bulkCreateQueuedSms({
       smsSubscriberIds: [subscriber.id],
@@ -789,7 +791,7 @@ describe('sendNewsletterWorkflow', () => {
     expect(row.nextAttemptAt).toEqual(reservedUntil)
   })
 
-  it('preserves skipped opt-out markers when a permanent SMS failure races with STOP', async () => {
+  it('does not recreate a deleted SMS row when a permanent failure races with STOP', async () => {
     const subscriber = await seedSmsSubscriber({
       phoneNumber: '+15551234567',
     })
@@ -804,17 +806,15 @@ describe('sendNewsletterWorkflow', () => {
       })
       .returning()
 
-    await unsubscribeSmsNumber(subscriber.phoneNumber)
+    await deleteSmsDataForPhoneNumber(subscriber.phoneNumber)
     const markedFailed = await markSmsPermanentFailure(
       queued.id,
       'Twilio rejected this recipient'
     )
 
     expect(markedFailed).toBe(false)
-    const row = smsRowFor(await allSmsRows(), subscriber.id)
-    expect(row.sentAt).toBeNull()
-    expect(row.sendError).toBe(SMS_SEND_SKIPPED_UNSUBSCRIBED)
-    expect(row.attempts).toBe(0)
+    expect(await allSmsRows()).toHaveLength(0)
+    expect(await db.select().from(smsSubscribers)).toHaveLength(0)
     expect(await resetFailedSmsBySlug(SLUG)).toBe(0)
   })
 })

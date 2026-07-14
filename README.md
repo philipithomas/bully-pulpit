@@ -62,41 +62,41 @@ and STOP instructions. When Twilio has not already handled the keyword, `HELP`
 returns the support address and repeats the frequency, rate, and STOP details.
 Voice-menu signups send the same subscription confirmation SMS when Twilio
 accepts it; if that confirmation send fails, the spoken confirmation still
-tells the caller to text STOP at any time. A caller that previously sent STOP
-must reactivate from the handset by texting START or UNSTOP. Pressing 2 cannot
-clear Twilio's block and gives those instructions without changing local state.
-The app records STOP as an inactive tombstone even when the number has never
-subscribed locally, and app-handled STOP replies include the START/UNSTOP path.
+tells the caller to text STOP at any time. STOP hard-deletes the local SMS
+subscriber and its history instead of retaining an inactive tombstone. A later
+keyword or voice-menu signup creates fresh local state, although Twilio may
+continue blocking delivery until the handset sends START or UNSTOP.
 
 When a number first becomes active through either a `SUBSCRIBE` text or the
 voice menu, the app also sends one Bell onboarding MMS with the contact card at
 `https://www.philipithomas.com/bell.vcf`. Repeating `SUBSCRIBE` while the number
-is active does not resend the onboarding message. After an unsubscribe, only a
-Twilio-recognized handset opt-in such as START, UNSTOP, or YES reactivates the
-local subscription and sends the card again. The public `/bell.vcf` permalink
-returns a vCard 3.0 contact named Bell with the sending number, the configured
-site organization and website, and an embedded Bell contact image. On iPhone, Messages opens the
-attachment in the native contact preview, but the person must manually create
-or update the contact. The site cannot save the contact silently.
+is active does not resend the onboarding message. STOP deletes the local SMS
+subscriber and its history, so a later signup creates a fresh subscription and
+sends the card again. Twilio may still require START or UNSTOP to lift its own
+delivery block. The public `/bell.vcf` permalink returns a vCard 3.0 contact
+named Bell with the sending number, the configured site organization and
+website, and an embedded JPEG Bell contact image. On iPhone, Messages opens the
+attachment in the native contact preview, where the person taps Create New
+Contact. The site cannot save the contact silently.
 New SMS opt-ins, whether they come from a `SUBSCRIBE` text or the voice menu,
 also email admins with the source path, Twilio webhook metadata such as city,
 state, caller name, message SID, or call SID when Twilio provides it, and an
 area-code hint for common US/Canada numbers.
 Keyword handling is both Twilio-aware and application-layer: Twilio may apply
 its own START, STOP, or HELP behavior and include `OptOutType` in the webhook.
-The app still syncs local `sms_subscribers` state for START, UNSTOP, YES, and
-STOP and avoids duplicating Twilio's keyword response. A durable signup
+The app creates a fresh local subscriber for signup keywords and hard-deletes
+all local SMS data for STOP while avoiding duplicate Twilio keyword responses. A durable signup
 workflow sends app-owned confirmations, pauses for three seconds, and then
 sends the distinct one-time Bell onboarding card. Twilio-classified START keeps
 Twilio's own confirmation and enters the workflow at the pause. The onboarding
-copy tells the person to save the attached contact card and invites questions
-about Philip's posts or photos; an SMS link to `/bell.vcf` is the fallback when
+copy tells an iPhone user to tap Create New Contact and invites questions about
+philipithomas.com; an SMS link to `/bell.vcf` is the fallback when
 the MMS cannot be attached. The configured Twilio
 Advanced Opt-Out responses are the user-visible replies for classified START,
 STOP, and HELP messages, so their START and HELP copy must stay aligned with the
-disclosures and support address above. Unsubscribe marks any pending unsent
-`sms_sends` rows for that number as skipped so retry cannot send an old post
-after someone opts out.
+disclosures and support address above. STOP deletes pending and historical
+`sms_sends` rows for that number, and an in-flight workflow treats a missing row
+as unsendable.
 
 Newsletter SMS delivery runs inside the same Vercel Workflow as email delivery:
 the admin send page enqueues `sms_sends` rows after the email pass, sends them
@@ -121,7 +121,8 @@ preview, send `SUBSCRIBE`, `HELP`, and `STOP` to `PHONE_NUMBER`, call it and
 press both menu options, and confirm `/printing-press/phone` shows the inbound
 and outbound thread history. Use a fresh number to verify that both text and
 voice signup paths send the Bell card once. Then send STOP and confirm that a
-fresh voice call stays unsubscribed until the handset sends START or UNSTOP.
+fresh voice signup creates a new local subscription. Twilio may reject its
+outbound confirmation until the handset sends START or UNSTOP.
 Open the attachment on an actual iPhone, confirm the Bell image and fields
 appear, and save it manually.
 In the Twilio Console, also confirm the Advanced Opt-Out START and HELP replies

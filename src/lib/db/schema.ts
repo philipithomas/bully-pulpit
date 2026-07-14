@@ -270,7 +270,7 @@ export const smsSends = pgTable(
     id: bigserial('id', { mode: 'number' }).primaryKey(),
     smsSubscriberId: bigint('sms_subscriber_id', { mode: 'number' })
       .notNull()
-      .references(() => smsSubscribers.id),
+      .references(() => smsSubscribers.id, { onDelete: 'cascade' }),
     postSlug: text('post_slug').notNull(),
     newsletter: text('newsletter'),
     body: text('body').notNull(),

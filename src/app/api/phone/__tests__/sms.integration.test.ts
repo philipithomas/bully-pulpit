@@ -46,16 +46,13 @@ vi.mock('@/workflows/reply-to-sms', () => ({
 import { start } from 'workflow/api'
 import { POST as smsPost } from '@/app/api/phone/sms/route'
 import { POST as voiceMenuPost } from '@/app/api/phone/voice-menu/route'
-import {
-  resetFailedSmsBySlug,
-  SMS_SEND_SKIPPED_UNSUBSCRIBED,
-} from '@/lib/db/queries/sms-sends'
+import { resetFailedSmsBySlug } from '@/lib/db/queries/sms-sends'
 import {
   claimBellContactCard,
   countEligibleSms,
+  deleteSmsDataForPhoneNumber,
   refreshBellContactCardClaim,
   subscribeSmsNumber,
-  unsubscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
 import {
   bellConversations,
@@ -587,7 +584,7 @@ describe('POST /api/phone/sms', () => {
     const oldClaim = await claimBellContactCard(phoneNumber)
     expect(oldClaim).not.toBeNull()
 
-    await unsubscribeSmsNumber(phoneNumber)
+    await deleteSmsDataForPhoneNumber(phoneNumber)
     await subscribeSmsNumber({ phoneNumber })
     const newClaim = await claimBellContactCard(phoneNumber)
     expect(newClaim).not.toBeNull()
@@ -641,7 +638,7 @@ describe('POST /api/phone/sms', () => {
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
   })
 
-  it('unsubscribes an SMS sender from local SMS eligibility', async () => {
+  it('deletes all local SMS data when a sender texts STOP', async () => {
     await smsPost(
       smsRequest({
         From: '+15551234567',
@@ -651,6 +648,23 @@ describe('POST /api/phone/sms', () => {
       })
     )
     await flushAfterTasks()
+    const [subscriberBeforeStop] = await db.select().from(smsSubscribers)
+    await db.insert(smsSends).values({
+      smsSubscriberId: subscriberBeforeStop.id,
+      postSlug: 'pending-post',
+      newsletter: 'postcard',
+      body: 'new post',
+      nextAttemptAt: new Date(),
+    })
+    await smsPost(
+      smsRequest({
+        From: '+15551234567',
+        To: '+12123473190',
+        Body: 'What is on the website?',
+        MessageSid: 'SM_QUESTION',
+      })
+    )
+    expect(await db.select().from(bellConversations)).toHaveLength(1)
     vi.mocked(sendSimpleEmail).mockClear()
 
     const response = await smsPost(
@@ -666,11 +680,12 @@ describe('POST /api/phone/sms', () => {
     const xml = await response.text()
     expect(xml).toContain('You are unsubscribed')
     expect(xml).toContain('START or UNSTOP')
-    const [subscriber] = await db.select().from(smsSubscribers)
-    expect(subscriber.confirmedAt).toBeNull()
-    expect(subscriber.subscribedContraption).toBe(false)
-    expect(subscriber.bellContactCardProcessingAt).toBeNull()
-    expect(subscriber.bellContactCardSentAt).toBeNull()
+    expect(await db.select().from(smsSubscribers)).toHaveLength(0)
+    expect(await db.select().from(smsSends)).toHaveLength(0)
+    expect(await db.select().from(textMessages)).toHaveLength(0)
+    expect(await db.select().from(bellConversations)).toHaveLength(0)
+    expect(await db.select().from(bellMessages)).toHaveLength(0)
+    expect(await db.select().from(bellGenerations)).toHaveLength(0)
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
     expect(start).toHaveBeenCalledWith(smsSignupOnboardingWorkflow, [
       {
@@ -681,7 +696,7 @@ describe('POST /api/phone/sms', () => {
     ])
   })
 
-  it('does not reactivate a stopped number with an app-only subscribe word', async () => {
+  it('allows a fresh local subscription after STOP deletes the old state', async () => {
     const phoneNumber = '+15551234567'
     const stopResponse = await smsPost(
       smsRequest({
@@ -692,15 +707,7 @@ describe('POST /api/phone/sms', () => {
       })
     )
     expect(await stopResponse.text()).toContain('START or UNSTOP')
-    const [tombstone] = await db.select().from(smsSubscribers)
-    expect(tombstone).toMatchObject({
-      phoneNumber,
-      confirmedAt: null,
-      subscribedPostcard: false,
-      subscribedContraption: false,
-      subscribedWorkshop: false,
-      subscribedTsundoku: false,
-    })
+    expect(await db.select().from(smsSubscribers)).toHaveLength(0)
     vi.mocked(sendSms).mockClear()
     vi.mocked(sendSimpleEmail).mockClear()
 
@@ -713,17 +720,16 @@ describe('POST /api/phone/sms', () => {
     const response = await smsPost(smsRequest(form))
 
     expect(response.status).toBe(200)
-    expect(await response.text()).toContain('<Response></Response>')
     await flushAfterTasks()
     const [subscriber] = await db.select().from(smsSubscribers)
-    expect(subscriber.confirmedAt).toBeNull()
-    expect(subscriber.subscribedPostcard).toBe(false)
-    expect(subscriber.subscribedContraption).toBe(false)
-    expect(subscriber.subscribedWorkshop).toBe(false)
+    expect(subscriber.confirmedAt).toBeInstanceOf(Date)
+    expect(subscriber.subscribedPostcard).toBe(true)
+    expect(subscriber.subscribedContraption).toBe(true)
+    expect(subscriber.subscribedWorkshop).toBe(true)
     expect(subscriber.subscribedTsundoku).toBe(false)
-    expect(subscriber.bellContactCardSentAt).toBeNull()
-    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
-    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+    expect(subscriber.bellContactCardSentAt).toBeInstanceOf(Date)
+    expect(vi.mocked(sendSms)).toHaveBeenCalled()
+    expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalled()
 
     const duplicate = await smsPost(smsRequest(form))
     expect(await duplicate.text()).toContain('<Response></Response>')
@@ -804,10 +810,9 @@ describe('POST /api/phone/sms', () => {
 
     const duplicateSubscribe = await smsPost(smsRequest(subscribeForm))
     expect(await duplicateSubscribe.text()).toContain('<Response></Response>')
-    const [subscriber] = await db.select().from(smsSubscribers)
-    expect(subscriber.confirmedAt).toBeNull()
+    expect(await db.select().from(smsSubscribers)).toHaveLength(0)
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
-    expect(await db.select().from(textMessages)).toHaveLength(4)
+    expect(await db.select().from(textMessages)).toHaveLength(0)
 
     const resubscribe = await smsPost(
       smsRequest({
@@ -827,10 +832,10 @@ describe('POST /api/phone/sms', () => {
       .from(smsSubscribers)
     expect(subscriberAfterDuplicateStop.confirmedAt).toBeInstanceOf(Date)
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
-    expect(await db.select().from(textMessages)).toHaveLength(7)
+    expect(await db.select().from(textMessages)).toHaveLength(3)
   })
 
-  it('marks pending SMS send rows skipped when a number unsubscribes', async () => {
+  it('deletes pending SMS send rows when a number sends STOP', async () => {
     await smsPost(
       smsRequest({
         From: '+15551234567',
@@ -867,37 +872,9 @@ describe('POST /api/phone/sms', () => {
       })
     )
 
-    const sends = (await db.select().from(smsSends)).sort((a, b) =>
-      a.postSlug.localeCompare(b.postSlug)
-    )
-    expect(sends).toMatchObject([
-      {
-        postSlug: 'post-a',
-        sendError: SMS_SEND_SKIPPED_UNSUBSCRIBED,
-        sentAt: null,
-        nextAttemptAt: null,
-      },
-      {
-        postSlug: 'post-b',
-        sendError: SMS_SEND_SKIPPED_UNSUBSCRIBED,
-        sentAt: null,
-        nextAttemptAt: null,
-      },
-    ])
-
-    await smsPost(
-      smsRequest({
-        From: '+15551234567',
-        To: '+12123473190',
-        Body: 'SUBSCRIBE',
-        MessageSid: 'SM_RESUB',
-      })
-    )
-
+    expect(await db.select().from(smsSends)).toHaveLength(0)
     expect(await resetFailedSmsBySlug('post-a')).toBe(0)
     expect(await resetFailedSmsBySlug('post-b')).toBe(0)
-    expect(await countEligibleSms('postcard', 'post-a')).toBe(0)
-    expect(await countEligibleSms('postcard', 'post-b')).toBe(0)
   })
 
   it('syncs Twilio-managed STOP webhooks without a duplicate reply', async () => {
@@ -924,12 +901,8 @@ describe('POST /api/phone/sms', () => {
 
     expect(response.status).toBe(200)
     expect(await response.text()).toContain('<Response></Response>')
-    const [subscriber] = await db.select().from(smsSubscribers)
-    expect(subscriber.confirmedAt).toBeNull()
-    expect(subscriber.subscribedPostcard).toBe(false)
-    expect(subscriber.subscribedContraption).toBe(false)
-    expect(subscriber.subscribedWorkshop).toBe(false)
-    expect(subscriber.subscribedTsundoku).toBe(false)
+    expect(await db.select().from(smsSubscribers)).toHaveLength(0)
+    expect(await db.select().from(textMessages)).toHaveLength(0)
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
   })
 
@@ -997,7 +970,7 @@ describe('POST /api/phone/sms', () => {
       expect.objectContaining({
         body: SMS_BELL_CONTACT_ONBOARDING,
         direction: 'outbound',
-        twilioSid: 'MM_BELL',
+        twilioSid: expect.stringMatching(/^MM_BELL/),
       })
     )
     const [subscriber] = await db.select().from(smsSubscribers)
@@ -1158,7 +1131,7 @@ describe('POST /api/phone/voice-menu', () => {
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
   })
 
-  it('ignores duplicate voice-menu CallSid after the caller has opted out', async () => {
+  it('does not recreate deleted data for a duplicate voice-menu CallSid', async () => {
     vi.mocked(smsSignupUi).mockResolvedValue(true)
     const voiceForm = {
       From: '+14155551234',
@@ -1187,11 +1160,10 @@ describe('POST /api/phone/voice-menu', () => {
     expect(xml).toContain('already handled')
     await flushAfterTasks()
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
-    const [subscriber] = await db.select().from(smsSubscribers)
-    expect(subscriber.confirmedAt).toBeNull()
+    expect(await db.select().from(smsSubscribers)).toHaveLength(0)
   })
 
-  it('requires handset reactivation when a stopped caller presses 2 again', async () => {
+  it('allows a fresh voice signup after STOP deletes the old state', async () => {
     vi.mocked(smsSignupUi).mockResolvedValue(true)
     const phoneNumber = '+14155551234'
     await smsPost(
@@ -1215,15 +1187,14 @@ describe('POST /api/phone/voice-menu', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(xml).toContain('send START or UNSTOP from this phone')
-    expect(xml).not.toContain('You are subscribed')
+    expect(xml).toContain('You are subscribed')
     await flushAfterTasks()
     const [subscriber] = await db.select().from(smsSubscribers)
-    expect(subscriber.confirmedAt).toBeNull()
-    expect(subscriber.subscribedPostcard).toBe(false)
-    expect(subscriber.bellContactCardSentAt).toBeNull()
-    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
-    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
+    expect(subscriber.confirmedAt).toBeInstanceOf(Date)
+    expect(subscriber.subscribedPostcard).toBe(true)
+    expect(subscriber.bellContactCardSentAt).toBeInstanceOf(Date)
+    expect(vi.mocked(sendSms)).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalled()
 
     const duplicate = await voiceMenuPost(voiceMenuRequest(voiceForm))
     expect(await duplicate.text()).toContain('already handled')
