@@ -23,7 +23,6 @@ import {
   createTextMessageWithStatus,
 } from '@/lib/db/queries/text-messages'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
-import { sendBellContactOnboarding } from '@/lib/phone/bell-contact-onboarding'
 import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
 import { numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import {
@@ -43,6 +42,7 @@ import { emptyTwiml, messageTwiml, twimlResponse } from '@/lib/phone/twiml'
 import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { replyToSmsWorkflow } from '@/workflows/reply-to-sms'
+import { smsSignupOnboardingWorkflow } from '@/workflows/sms-signup-onboarding'
 
 const BELL_RATE_LIMIT_MESSAGE = fixedBellSmsBody(
   'Too many messages. Please try again later.'
@@ -106,25 +106,45 @@ export async function POST(request: Request) {
       return twimlResponse(emptyTwiml())
     }
 
+    const lease = webhookEvent
+      ? await claimPhoneWebhookEvent(webhookEvent.event.id)
+      : null
+    if (webhookEvent && !lease) return twimlResponse(emptyTwiml(), 503)
+
     const shouldNotifySignup = !existing?.confirmedAt
-    await subscribeSmsNumber({
-      phoneNumber: from,
-      source: `sms:${numberLabel(to).toLowerCase()}`,
-      processedPhoneWebhookEventId: webhookEvent?.event.id,
-    })
-    after(async () => {
-      const tasks: Promise<unknown>[] = []
+    let needsTwiMLConfirmation = false
+    try {
+      await subscribeSmsNumber({
+        phoneNumber: from,
+        source: `sms:${numberLabel(to).toLowerCase()}`,
+      })
       const confirmationFrom = sitePhoneNumber()
       if (confirmationFrom) {
-        tasks.push(
-          sendBellContactOnboarding({
+        await start(smsSignupOnboardingWorkflow, [
+          {
             from: confirmationFrom,
             to: from,
-          }).catch((err) => {
-            console.error('[phone/sms] Bell contact-card MMS failed:', err)
-          })
-        )
+            sendConfirmation: !twilioAlreadyReplied,
+          },
+        ])
+      } else {
+        needsTwiMLConfirmation = !twilioAlreadyReplied
       }
+      if (webhookEvent && lease) {
+        const marked = await markPhoneWebhookEventProcessed(
+          webhookEvent.event.id,
+          lease
+        )
+        if (!marked) throw new Error(`SMS signup ${messageSid} lost its lease`)
+      }
+    } catch (err) {
+      if (webhookEvent && lease) {
+        await releasePhoneWebhookEvent(webhookEvent.event.id, lease)
+      }
+      throw err
+    }
+    after(async () => {
+      const tasks: Promise<unknown>[] = []
       if (shouldNotifySignup) {
         tasks.push(
           sendSmsSignupNotification({
@@ -140,8 +160,11 @@ export async function POST(request: Request) {
       await Promise.all(tasks)
     })
 
-    if (twilioAlreadyReplied) return twimlResponse(emptyTwiml())
-    return twimlResponse(messageTwiml(SMS_SUBSCRIBE_CONFIRMATION))
+    return twimlResponse(
+      needsTwiMLConfirmation
+        ? messageTwiml(SMS_SUBSCRIBE_CONFIRMATION)
+        : emptyTwiml()
+    )
   }
 
   if (command === 'unsubscribe') {

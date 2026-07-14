@@ -85,8 +85,13 @@ area-code hint for common US/Canada numbers.
 Keyword handling is both Twilio-aware and application-layer: Twilio may apply
 its own START, STOP, or HELP behavior and include `OptOutType` in the webhook.
 The app still syncs local `sms_subscribers` state for START, UNSTOP, YES, and
-STOP and avoids duplicating Twilio's keyword response. A newly active START subscriber still
-receives the distinct one-time Bell onboarding card. The configured Twilio
+STOP and avoids duplicating Twilio's keyword response. A durable signup
+workflow sends app-owned confirmations, pauses for three seconds, and then
+sends the distinct one-time Bell onboarding card. Twilio-classified START keeps
+Twilio's own confirmation and enters the workflow at the pause. The onboarding
+copy tells the person to save the attached contact card and invites questions
+about Philip's posts or photos; an SMS link to `/bell.vcf` is the fallback when
+the MMS cannot be attached. The configured Twilio
 Advanced Opt-Out responses are the user-visible replies for classified START,
 STOP, and HELP messages, so their START and HELP copy must stay aligned with the
 disclosures and support address above. Unsubscribe marks any pending unsent

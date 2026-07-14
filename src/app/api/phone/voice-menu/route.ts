@@ -1,21 +1,19 @@
 import { after, NextResponse } from 'next/server'
+import { start } from 'workflow/api'
 import {
   claimPhoneWebhookEvent,
   findOrCreatePhoneWebhookEvent,
   markPhoneWebhookEventProcessed,
+  releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
 import {
   findSmsSubscriberByPhoneNumber,
   subscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
-import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { smsSignupUi } from '@/lib/flags'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
-import { sendBellContactOnboarding } from '@/lib/phone/bell-contact-onboarding'
 import { isE164, numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import { sendSmsSignupNotification } from '@/lib/phone/notifications'
-import { SMS_SUBSCRIBE_CONFIRMATION } from '@/lib/phone/sms-subscription-copy'
-import { sendSms } from '@/lib/phone/twilio'
 import {
   sayAndHangupTwiml,
   twimlResponse,
@@ -23,50 +21,7 @@ import {
 } from '@/lib/phone/twiml'
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
 import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
-
-async function sendVoiceSignupMessage(input: {
-  from: string
-  to: string
-  body: string
-  label: string
-}): Promise<boolean> {
-  if (!isE164(input.from)) return false
-
-  try {
-    const result = await sendSms({
-      from: input.from,
-      to: input.to,
-      body: input.body,
-    })
-    await createTextMessage({
-      fromNumber: input.from,
-      toNumber: input.to,
-      body: input.body,
-      direction: 'outbound',
-      twilioSid: result.sid,
-      status: result.status,
-    })
-    return true
-  } catch (err) {
-    console.error(`[phone/voice-menu] ${input.label} failed:`, err)
-    try {
-      await createTextMessage({
-        fromNumber: input.from,
-        toNumber: input.to,
-        body: input.body,
-        direction: 'outbound',
-        twilioSid: null,
-        status: 'failed',
-      })
-    } catch (recordErr) {
-      console.error(
-        `[phone/voice-menu] Failed to record ${input.label.toLowerCase()} attempt:`,
-        recordErr
-      )
-    }
-    return false
-  }
-}
+import { smsSignupOnboardingWorkflow } from '@/workflows/sms-signup-onboarding'
 
 /**
  * Handles the DTMF choice from /api/phone/voice. 1 or timeout goes to voicemail;
@@ -130,37 +85,49 @@ export async function POST(request: Request) {
       )
     }
 
+    const lease = webhookEvent
+      ? await claimPhoneWebhookEvent(webhookEvent.event.id)
+      : null
+    if (webhookEvent && !lease) {
+      return twimlResponse(
+        sayAndHangupTwiml(
+          'This phone menu request was already handled. Goodbye.'
+        )
+      )
+    }
+
     const confirmationFrom = sitePhoneNumber()
-    await subscribeSmsNumber({
-      phoneNumber: from,
-      source: `call:${numberLabel(to).toLowerCase()}`,
-      processedPhoneWebhookEventId: webhookEvent?.event.id,
-    })
+    try {
+      await subscribeSmsNumber({
+        phoneNumber: from,
+        source: `call:${numberLabel(to).toLowerCase()}`,
+      })
+      if (confirmationFrom) {
+        await start(smsSignupOnboardingWorkflow, [
+          {
+            from: confirmationFrom,
+            to: from,
+            sendConfirmation: true,
+          },
+        ])
+      }
+      if (webhookEvent && lease) {
+        const marked = await markPhoneWebhookEventProcessed(
+          webhookEvent.event.id,
+          lease
+        )
+        if (!marked) {
+          throw new Error(`Voice signup ${callSid} lost its processing lease`)
+        }
+      }
+    } catch (err) {
+      if (webhookEvent && lease) {
+        await releasePhoneWebhookEvent(webhookEvent.event.id, lease)
+      }
+      throw err
+    }
     after(async () => {
       const tasks: Promise<unknown>[] = []
-      if (confirmationFrom) {
-        tasks.push(
-          (async () => {
-            const confirmationSent = await sendVoiceSignupMessage({
-              from: confirmationFrom,
-              to: from,
-              body: SMS_SUBSCRIBE_CONFIRMATION,
-              label: 'Confirmation SMS',
-            })
-            if (confirmationSent) {
-              await sendBellContactOnboarding({
-                from: confirmationFrom,
-                to: from,
-              }).catch((err) => {
-                console.error(
-                  '[phone/voice-menu] Bell contact-card MMS failed:',
-                  err
-                )
-              })
-            }
-          })()
-        )
-      }
       if (!existing?.confirmedAt) {
         tasks.push(
           sendSmsSignupNotification({
