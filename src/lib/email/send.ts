@@ -17,7 +17,10 @@ import {
   ownerPhoneNumber,
   requireSitePhoneNumber,
 } from '@/lib/phone/config'
-import { renderNewsletterSms } from '@/lib/phone/newsletter-sms'
+import {
+  newsletterSmsMediaUrl,
+  renderNewsletterSms,
+} from '@/lib/phone/newsletter-sms'
 import { sendSms } from '@/lib/phone/twilio'
 
 export { renderFullNewsletter, sendQueuedEmail } from '@/lib/email/queued-send'
@@ -140,7 +143,12 @@ export async function sendNewsletterSmsToTestRecipient(input: {
   const body = renderNewsletterSms(post)
   const from = requireSitePhoneNumber()
   try {
-    const result = await sendSms({ from, to, body })
+    const result = await sendSms({
+      from,
+      to,
+      body,
+      mediaUrl: newsletterSmsMediaUrl(post),
+    })
     await createTextMessage({
       fromNumber: from,
       toNumber: to,

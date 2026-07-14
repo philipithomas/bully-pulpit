@@ -1,0 +1,1 @@
+ALTER TABLE "sms_sends" ADD COLUMN "media_url" text;

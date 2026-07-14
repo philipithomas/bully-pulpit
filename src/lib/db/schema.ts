@@ -274,6 +274,7 @@ export const smsSends = pgTable(
     postSlug: text('post_slug').notNull(),
     newsletter: text('newsletter'),
     body: text('body').notNull(),
+    mediaUrl: text('media_url'),
     twilioSid: text('twilio_sid').unique(),
     twilioStatus: text('twilio_status'),
     sendError: text('send_error'),

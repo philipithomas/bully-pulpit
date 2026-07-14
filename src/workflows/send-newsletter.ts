@@ -32,7 +32,10 @@ import {
   isNewsletterSendingEnabled,
 } from '@/lib/newsletters'
 import { requireSitePhoneNumber } from '@/lib/phone/config'
-import { renderNewsletterSms } from '@/lib/phone/newsletter-sms'
+import {
+  newsletterSmsMediaUrl,
+  renderNewsletterSms,
+} from '@/lib/phone/newsletter-sms'
 import {
   isRetryableTwilioError,
   type SentSms,
@@ -207,6 +210,7 @@ export async function enqueueSmsRecipients(slug: string): Promise<number[][]> {
       postSlug: slug,
       newsletter: post.newsletter,
       body: renderNewsletterSms(post),
+      mediaUrl: newsletterSmsMediaUrl(post),
     })
   }
 
@@ -279,6 +283,7 @@ export async function sendSmsBatch(rowIds: number[]): Promise<{
         from: fromNumber,
         to: phoneNumber,
         body: send.body,
+        mediaUrl: send.mediaUrl ?? undefined,
       })
     } catch (err) {
       if (isRetryableTwilioError(err)) {

@@ -164,6 +164,7 @@ function claimedSms(id: number, phoneNumber = `+1555123000${id}`) {
       postSlug: 'hello-world',
       newsletter: 'contraption',
       body: 'Contraption: Hello world\nhttps://www.philipithomas.com/hello-world?utm_source=sms\n\nReply STOP to unsubscribe.',
+      mediaUrl: null,
       twilioSid: null,
       twilioStatus: null,
       sendError: null,
@@ -454,11 +455,13 @@ describe('sendNewsletterWorkflow', () => {
       postSlug: 'hello-world',
       newsletter: 'contraption',
       body: expect.stringContaining('Contraption: Hello world'),
+      mediaUrl: undefined,
     })
     expect(mockedSendSms).toHaveBeenCalledWith({
       from: '+12123473190',
       to: '+15551234567',
       body: expect.stringContaining('Reply STOP to unsubscribe.'),
+      mediaUrl: undefined,
     })
     expect(mockedSmsSends.markSmsSent).toHaveBeenCalledWith({
       id: 701,
@@ -473,6 +476,26 @@ describe('sendNewsletterWorkflow', () => {
         twilioSid: 'SM_test',
       })
     )
+  })
+
+  it('sends the cover URL snapshotted on an MMS queue row', async () => {
+    const mediaUrl =
+      'https://www.philipithomas.com/api/phone/newsletter-cover/first-photo?v=cover'
+    mockedSmsSends.claimSendableSmsById.mockResolvedValue({
+      ...claimedSms(701, '+15551234567'),
+      send: { ...claimedSms(701).send, mediaUrl },
+    })
+
+    const promise = sendSmsBatch([701])
+    await vi.runAllTimersAsync()
+
+    await expect(promise).resolves.toEqual({ sent: 1, failed: 0 })
+    expect(mockedSendSms).toHaveBeenCalledWith({
+      from: '+12123473190',
+      to: '+15551234567',
+      body: expect.any(String),
+      mediaUrl,
+    })
   })
 
   it('throws RetryableError on a retryable Twilio SMS error', async () => {
