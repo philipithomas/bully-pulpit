@@ -26,7 +26,24 @@ function post(input?: Partial<Post>): Post {
 describe('newsletter SMS', () => {
   it('renders the attributed post link and compliance footer', () => {
     expect(renderNewsletterSms(post())).toBe(
-      'Tsundoku: First photo\nhttps://www.philipithomas.com/first-photo?utm_source=sms\n\nReply STOP to unsubscribe.'
+      'New Tsundoku post:\nFirst photo\nhttps://www.philipithomas.com/first-photo?utm_source=sms\n\n(Reply STOP to unsubscribe.)'
+    )
+  })
+
+  it('labels a Workshop post before its title', () => {
+    expect(
+      renderNewsletterSms(
+        post({
+          slug: 'adding-sms-support',
+          newsletter: 'workshop',
+          frontmatter: {
+            ...post().frontmatter,
+            title: 'Adding SMS support',
+          },
+        })
+      )
+    ).toBe(
+      'New Workshop post:\nAdding SMS support\nhttps://www.philipithomas.com/adding-sms-support?utm_source=sms\n\n(Reply STOP to unsubscribe.)'
     )
   })
 

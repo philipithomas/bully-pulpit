@@ -163,7 +163,7 @@ function claimedSms(id: number, phoneNumber = `+1555123000${id}`) {
       smsSubscriberId: id,
       postSlug: 'hello-world',
       newsletter: 'contraption',
-      body: 'Contraption: Hello world\nhttps://www.philipithomas.com/hello-world?utm_source=sms\n\nReply STOP to unsubscribe.',
+      body: 'New Contraption post:\nHello world\nhttps://www.philipithomas.com/hello-world?utm_source=sms\n\n(Reply STOP to unsubscribe.)',
       mediaUrl: null,
       twilioSid: null,
       twilioStatus: null,
@@ -454,13 +454,13 @@ describe('sendNewsletterWorkflow', () => {
       smsSubscriberIds: [7],
       postSlug: 'hello-world',
       newsletter: 'contraption',
-      body: expect.stringContaining('Contraption: Hello world'),
+      body: expect.stringContaining('New Contraption post:\nHello world'),
       mediaUrl: undefined,
     })
     expect(mockedSendSms).toHaveBeenCalledWith({
       from: '+12123473190',
       to: '+15551234567',
-      body: expect.stringContaining('Reply STOP to unsubscribe.'),
+      body: expect.stringContaining('(Reply STOP to unsubscribe.)'),
       mediaUrl: undefined,
     })
     expect(mockedSmsSends.markSmsSent).toHaveBeenCalledWith({

@@ -3,7 +3,7 @@ import type { Post } from '@/lib/content/types'
 import { newsletterUsesCoverMms } from '@/lib/newsletters'
 
 const MAX_SMS_BODY_LENGTH = 1500
-const STOP_FOOTER = 'Reply STOP to unsubscribe.'
+const STOP_FOOTER = '(Reply STOP to unsubscribe.)'
 const MMS_COVER_IMAGE_PATH = /^\/images\/[^?#\\]+\.(?:jpe?g|png)$/i
 const MAX_MMS_COVER_PATH_LENGTH = 512
 
@@ -23,7 +23,7 @@ export function renderNewsletterSms(post: Post): string {
   const newsletter = siteConfig.newsletters[post.newsletter].name
   const url = postUrl(post)
   const suffix = `\n${url}\n\n${STOP_FOOTER}`
-  const prefix = `${newsletter}: `
+  const prefix = `New ${newsletter} post:\n`
   const title = trimForSms(
     post.frontmatter.title,
     MAX_SMS_BODY_LENGTH - prefix.length - suffix.length

@@ -164,14 +164,14 @@ describe('POST /api/printing-press/send-test', () => {
     expect(vi.mocked(sendSms)).toHaveBeenCalledWith({
       from: NYC,
       to: TEST_PHONE,
-      body: expect.stringContaining('Contraption: Hello world'),
+      body: expect.stringContaining('New Contraption post:\nHello world'),
     })
     const smsBody = vi.mocked(sendSms).mock.calls[0][0].body
     expect(smsBody).toContain('utm_source=sms')
     expect(smsBody).not.toContain('utm_medium=')
     expect(smsBody).not.toContain('utm_campaign=')
     expect(smsBody).not.toContain('utm_content=')
-    expect(smsBody).toContain('Reply STOP to unsubscribe')
+    expect(smsBody).toContain('(Reply STOP to unsubscribe.)')
 
     const rows = await db.select().from(textMessages)
     expect(rows).toHaveLength(1)
