@@ -27,7 +27,9 @@ describe('renderVCard', () => {
       `PHOTO;ENCODING=b;TYPE=PNG:${BELL_CONTACT_PHOTO_BASE64}\r\n`
     )
     expect(unfolded.endsWith('END:VCARD\r\n')).toBe(true)
-    expect(new TextEncoder().encode(card).byteLength).toBeLessThanOrEqual(1536)
+    // Some MMS transports inject a bare CRLF around byte 989. Keep enough
+    // headroom that the embedded PHOTO value reaches the handset intact.
+    expect(new TextEncoder().encode(card).byteLength).toBeLessThan(900)
   })
 
   it('uses CRLF and keeps every physical line within 75 UTF-8 octets', () => {
@@ -55,8 +57,8 @@ describe('renderVCard', () => {
     expect(image.subarray(0, 8)).toEqual(
       Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
     )
-    expect(image.byteLength).toBeLessThanOrEqual(900)
-    expect(image.readUInt32BE(16)).toBe(128)
-    expect(image.readUInt32BE(20)).toBe(128)
+    expect(image.byteLength).toBeLessThanOrEqual(600)
+    expect(image.readUInt32BE(16)).toBe(64)
+    expect(image.readUInt32BE(20)).toBe(64)
   })
 })
