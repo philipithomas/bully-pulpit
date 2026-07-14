@@ -276,7 +276,9 @@ export async function generateBellSmsBody(
         surface: 'sms',
         pseudonymousUser: `sms:${smsIdentityHash(input.from)}`,
       }),
-      maxOutputTokens: 256,
+      // Reasoning tokens share this budget. Leave enough room for xhigh
+      // reasoning and tool use; the formatter still caps the delivered SMS.
+      maxOutputTokens: 2048,
       maxRetries: 0,
       abortSignal: AbortSignal.timeout(GENERATION_TIMEOUT_MS),
       runtimeContext: { surface: 'sms' },
