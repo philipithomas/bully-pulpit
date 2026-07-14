@@ -1,4 +1,5 @@
 import { getStepMetadata, RetryableError } from 'workflow'
+import { findTextMessageById } from '@/lib/db/queries/text-messages'
 import {
   type BellSmsGenerationResult,
   type BellSmsInput,
@@ -7,6 +8,7 @@ import {
   sendBellSmsBody,
 } from '@/lib/phone/bell-sms'
 import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
+import { sendIncomingSmsNotification } from '@/lib/phone/notifications'
 import type { SentSms } from '@/lib/phone/twilio'
 import { isRetryableTwilioError, TwilioApiError } from '@/lib/phone/twilio'
 
@@ -73,18 +75,53 @@ export async function recordBellSmsStep(
   body: string,
   result: SentSms | null,
   assistantMessageId?: string | null
-): Promise<void> {
+): Promise<{ body: string; status: string } | null> {
   'use step'
   console.log(
     `[replyToSms] record START inboundMessageId=${input.inboundMessageId}`
   )
-  await recordBellSms(input, body, result, assistantMessageId)
+  const recorded = await recordBellSms(input, body, result, assistantMessageId)
   console.log(
     `[replyToSms] record DONE inboundMessageId=${input.inboundMessageId}`
   )
+  return recorded ? { body: recorded.body, status: recorded.status } : null
 }
 
 recordBellSmsStep.maxRetries = 5
+
+/** Emails the canonical inbound message and recorded Bell reply to admins. */
+export async function sendIncomingSmsNotificationStep(
+  input: BellSmsInput,
+  bellReply: { body: string; status: string }
+): Promise<'sent' | 'skipped'> {
+  'use step'
+  console.log(
+    `[replyToSms] notify START inboundMessageId=${input.inboundMessageId}`
+  )
+  const inbound = await findTextMessageById(input.inboundMessageId)
+  if (!inbound) {
+    console.log(
+      `[replyToSms] notify SKIPPED inboundMessageId=${input.inboundMessageId}`
+    )
+    return 'skipped'
+  }
+  await sendIncomingSmsNotification({
+    from: inbound.fromNumber,
+    to: inbound.toNumber,
+    body: inbound.body,
+    bellResponse: bellReply.body,
+    bellReplyFailed: bellReply.status === 'failed',
+    receivedAt: inbound.createdAt,
+  })
+  console.log(
+    `[replyToSms] notify DONE inboundMessageId=${input.inboundMessageId}`
+  )
+  return 'sent'
+}
+
+// SES has no idempotency key, so a lost acknowledgement can duplicate this
+// email. Keeping it separate ensures an email retry can never resend the SMS.
+sendIncomingSmsNotificationStep.maxRetries = 5
 
 /** Generates and sends one durable Bell reply for an inbound Twilio SMS. */
 export async function replyToSmsWorkflow(input: BellSmsInput): Promise<void> {
@@ -117,12 +154,22 @@ export async function replyToSmsWorkflow(input: BellSmsInput): Promise<void> {
     )
     result = null
   }
-  await recordBellSmsStep(
+  const recorded = await recordBellSmsStep(
     input,
     generated.body,
     result,
     generated.assistantMessageId || null
   )
+  if (recorded) {
+    try {
+      await sendIncomingSmsNotificationStep(input, recorded)
+    } catch (err) {
+      console.error(
+        `[replyToSmsWorkflow] notification failed inboundMessageId=${input.inboundMessageId}`,
+        err
+      )
+    }
+  }
   console.log(
     `[replyToSmsWorkflow] DONE inboundMessageId=${input.inboundMessageId}`
   )

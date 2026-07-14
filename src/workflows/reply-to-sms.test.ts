@@ -9,19 +9,28 @@ vi.mock('@/lib/phone/bell-sms', () => ({
   recordBellSms: vi.fn(),
   sendBellSmsBody: vi.fn(),
 }))
+vi.mock('@/lib/db/queries/text-messages', () => ({
+  findTextMessageById: vi.fn(),
+}))
+vi.mock('@/lib/phone/notifications', () => ({
+  sendIncomingSmsNotification: vi.fn(),
+}))
 
 import { getStepMetadata, RetryableError } from 'workflow'
+import { findTextMessageById } from '@/lib/db/queries/text-messages'
 import {
   generateBellSmsBody,
   recordBellSms,
   sendBellSmsBody,
 } from '@/lib/phone/bell-sms'
 import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
+import { sendIncomingSmsNotification } from '@/lib/phone/notifications'
 import { TwilioApiError } from '@/lib/phone/twilio'
 import {
   recordBellSmsStep,
   replyToSmsWorkflow,
   sendBellSmsStep,
+  sendIncomingSmsNotificationStep,
 } from '@/workflows/reply-to-sms'
 
 const INPUT = {
@@ -38,6 +47,32 @@ const GENERATED = {
   assistantMessageId: '44444444-4444-4444-8444-444444444444',
 }
 
+const RECEIVED_AT = new Date('2026-07-13T20:30:00.000Z')
+
+const INBOUND = {
+  id: INPUT.inboundMessageId,
+  fromNumber: INPUT.from,
+  toNumber: INPUT.to,
+  body: 'What is new?',
+  direction: 'inbound' as const,
+  twilioSid: 'SM_INBOUND',
+  replyToMessageId: null,
+  status: 'received',
+  createdAt: RECEIVED_AT,
+}
+
+const RECORDED = {
+  id: 43,
+  fromNumber: INPUT.to,
+  toNumber: INPUT.from,
+  body: GENERATED.body,
+  direction: 'outbound' as const,
+  twilioSid: 'SM_REPLY',
+  replyToMessageId: INPUT.inboundMessageId,
+  status: 'queued',
+  createdAt: new Date('2026-07-13T20:30:05.000Z'),
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(getStepMetadata).mockReturnValue({
@@ -52,6 +87,9 @@ beforeEach(() => {
     sid: 'SM_REPLY',
     status: 'queued',
   })
+  vi.mocked(findTextMessageById).mockResolvedValue(INBOUND)
+  vi.mocked(recordBellSms).mockResolvedValue(RECORDED)
+  vi.mocked(sendIncomingSmsNotification).mockResolvedValue()
 })
 
 afterEach(() => {
@@ -75,22 +113,45 @@ describe('replyToSmsWorkflow', () => {
       },
       GENERATED.assistantMessageId
     )
+    expect(sendIncomingSmsNotification).toHaveBeenCalledWith({
+      from: INPUT.from,
+      to: INPUT.to,
+      body: INBOUND.body,
+      bellResponse: GENERATED.body,
+      bellReplyFailed: false,
+      receivedAt: RECEIVED_AT,
+    })
+    expect(vi.mocked(recordBellSms).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(sendIncomingSmsNotification).mock.invocationCallOrder[0]
+    )
   })
 
   it('sends a fixed fallback after generation exhausts its retries', async () => {
     vi.mocked(generateBellSmsBody).mockRejectedValue(new Error('gateway down'))
+    const fallback = fixedBellSmsBody(
+      'I could not answer that right now. Please try again.'
+    )
+    vi.mocked(recordBellSms).mockResolvedValue({
+      ...RECORDED,
+      body: fallback,
+    })
 
     await replyToSmsWorkflow(INPUT)
 
-    expect(sendBellSmsBody).toHaveBeenCalledWith(
-      INPUT,
-      fixedBellSmsBody('I could not answer that right now. Please try again.')
+    expect(sendBellSmsBody).toHaveBeenCalledWith(INPUT, fallback)
+    expect(sendIncomingSmsNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ bellResponse: fallback })
     )
   })
 
   it('records a failed row after delivery exhausts its retries', async () => {
     vi.mocked(generateBellSmsBody).mockResolvedValue(GENERATED)
     vi.mocked(sendBellSmsBody).mockRejectedValue(new TypeError('network down'))
+    vi.mocked(recordBellSms).mockResolvedValue({
+      ...RECORDED,
+      twilioSid: null,
+      status: 'failed',
+    })
 
     await replyToSmsWorkflow(INPUT)
 
@@ -100,6 +161,49 @@ describe('replyToSmsWorkflow', () => {
       null,
       GENERATED.assistantMessageId
     )
+    expect(sendIncomingSmsNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bellResponse: GENERATED.body,
+        bellReplyFailed: true,
+      })
+    )
+  })
+
+  it('emails the canonical recorded reply when another run won persistence', async () => {
+    vi.mocked(generateBellSmsBody).mockResolvedValue(GENERATED)
+    vi.mocked(recordBellSms).mockResolvedValue({
+      ...RECORDED,
+      body: '[Bell AI] Earlier answer',
+    })
+
+    await replyToSmsWorkflow(INPUT)
+
+    expect(sendIncomingSmsNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ bellResponse: '[Bell AI] Earlier answer' })
+    )
+  })
+
+  it('skips the email when STOP deleted the inbound message', async () => {
+    vi.mocked(generateBellSmsBody).mockResolvedValue(GENERATED)
+    vi.mocked(findTextMessageById).mockResolvedValue(null)
+
+    await replyToSmsWorkflow(INPUT)
+
+    expect(sendIncomingSmsNotification).not.toHaveBeenCalled()
+  })
+
+  it('does not replay Bell when the notification fails', async () => {
+    vi.mocked(generateBellSmsBody).mockResolvedValue(GENERATED)
+    vi.mocked(sendIncomingSmsNotification).mockRejectedValue(
+      new Error('SES offline')
+    )
+
+    await expect(replyToSmsWorkflow(INPUT)).resolves.toBeUndefined()
+
+    expect(generateBellSmsBody).toHaveBeenCalledTimes(1)
+    expect(sendBellSmsBody).toHaveBeenCalledTimes(1)
+    expect(recordBellSms).toHaveBeenCalledTimes(1)
+    expect(sendIncomingSmsNotification).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -127,7 +231,9 @@ describe('sendBellSmsStep', () => {
   it('records a durable result without calling Twilio again', async () => {
     const result = { sid: 'SM_REPLY', status: 'queued' }
 
-    await recordBellSmsStep(INPUT, '[Bell AI] Answer', result)
+    await expect(
+      recordBellSmsStep(INPUT, '[Bell AI] Answer', result)
+    ).resolves.toEqual({ body: '[Bell AI] Answer', status: 'queued' })
 
     expect(recordBellSms).toHaveBeenCalledWith(
       INPUT,
@@ -136,5 +242,20 @@ describe('sendBellSmsStep', () => {
       undefined
     )
     expect(sendBellSmsBody).not.toHaveBeenCalled()
+  })
+})
+
+describe('sendIncomingSmsNotificationStep', () => {
+  it('returns skipped when the inbound row no longer exists', async () => {
+    vi.mocked(findTextMessageById).mockResolvedValue(null)
+
+    await expect(
+      sendIncomingSmsNotificationStep(INPUT, {
+        body: '[Bell AI] Answer',
+        status: 'queued',
+      })
+    ).resolves.toBe('skipped')
+
+    expect(sendIncomingSmsNotification).not.toHaveBeenCalled()
   })
 })

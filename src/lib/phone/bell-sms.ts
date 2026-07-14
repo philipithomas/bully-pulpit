@@ -397,8 +397,8 @@ export async function recordBellSms(
   body: string,
   result: SentSms | null,
   assistantMessageId?: string | null
-): Promise<void> {
-  if (!(await findTextMessageById(input.inboundMessageId))) return
+): Promise<TextMessage | null> {
+  if (!(await findTextMessageById(input.inboundMessageId))) return null
   const transport = await createTextMessageWithStatus({
     fromNumber: input.to,
     toNumber: input.from,
@@ -430,4 +430,5 @@ export async function recordBellSms(
   if (assistant) {
     await setBellGenerationAssistantMessageId(input.generationId, assistant.id)
   }
+  return transport.message
 }

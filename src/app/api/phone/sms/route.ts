@@ -211,11 +211,12 @@ export async function POST(request: Request) {
     return twimlResponse(messageTwiml(BELL_RATE_LIMIT_MESSAGE))
   }
 
+  const shouldStartBellReply = Boolean(body.trim() && messageSid)
   try {
     // Twilio always supplies MessageSid for real messages. Without it there is
     // no durable dedupe key, so keep the admin notification but do not risk
     // sending duplicate AI replies to a malformed/replayed request.
-    if (body.trim() && messageSid) {
+    if (shouldStartBellReply) {
       const smsSubscriber = await findSmsSubscriberByPhoneNumber(from)
       const conversation = await getOrCreateSmsBellConversation({
         smsPhoneHash: smsIdentityHash(from),
@@ -255,13 +256,15 @@ export async function POST(request: Request) {
     throw err
   }
 
-  after(async () => {
-    try {
-      await sendIncomingSmsNotification({ from, to, body })
-    } catch (err) {
-      console.error('[phone/sms] incoming SMS notification failed:', err)
-    }
-  })
+  if (!shouldStartBellReply) {
+    after(async () => {
+      try {
+        await sendIncomingSmsNotification({ from, to, body })
+      } catch (err) {
+        console.error('[phone/sms] incoming SMS notification failed:', err)
+      }
+    })
+  }
 
   return twimlResponse(emptyTwiml())
 }

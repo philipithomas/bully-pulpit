@@ -39,6 +39,9 @@ export async function sendIncomingSmsNotification(input: {
   from: string
   to: string
   body: string
+  bellResponse?: string
+  bellReplyFailed?: boolean
+  receivedAt?: Date
 }): Promise<void> {
   const toLabel = numberLabel(input.to)
   const payload = {
@@ -46,7 +49,9 @@ export async function sendIncomingSmsNotification(input: {
     to: input.to,
     toLabel,
     body: input.body,
-    receivedAt: new Date(),
+    bellResponse: input.bellResponse,
+    bellReplyFailed: input.bellReplyFailed,
+    receivedAt: input.receivedAt ?? new Date(),
   }
   await sendSimpleEmail({
     to: phoneNotificationRecipients(),
