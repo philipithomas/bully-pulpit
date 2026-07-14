@@ -3,12 +3,11 @@ import path from 'node:path'
 import { gateway } from '@ai-sdk/gateway'
 import { generateText } from 'ai'
 import {
-  BELL_FALLBACK_MODEL_IDS,
   BELL_MODEL_ID,
-  bellReasoning,
   bellStopWhen,
   bellTools,
   getBellProviderOptions,
+  getBellReasoning,
   prepareBellStep,
 } from '@/lib/chat/bell-generation'
 import { bellEvalCases } from '@/lib/chat/evals/cases'
@@ -43,7 +42,7 @@ function requireValue(argv: string[], index: number, flag: string): string {
 
 function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
-    models: [BELL_MODEL_ID, ...BELL_FALLBACK_MODEL_IDS],
+    models: [BELL_MODEL_ID],
     output: null,
     caseIds: new Set(),
   }
@@ -82,15 +81,10 @@ function parseArgs(argv: string[]): CliOptions {
 }
 
 function exactModelProviderOptions(surface: 'web' | 'sms', caseId: string) {
-  const providerOptions = getBellProviderOptions({
+  return getBellProviderOptions({
     surface,
     pseudonymousUser: `bell-eval:${caseId}`,
   })
-  const { models: _fallbackModels, ...gatewayOptions } = providerOptions.gateway
-  return {
-    ...providerOptions,
-    gateway: gatewayOptions,
-  }
 }
 
 function quoted(text: string): string {
@@ -173,7 +167,7 @@ async function main() {
       try {
         const result = await generateText({
           model: gateway(modelId),
-          reasoning: bellReasoning,
+          reasoning: getBellReasoning(testCase.surface),
           providerOptions: exactModelProviderOptions(
             testCase.surface,
             testCase.id

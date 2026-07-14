@@ -1,10 +1,12 @@
 import { gateway } from '@ai-sdk/gateway'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  BELL_MODEL_ID,
   bellGatewayCost,
   bellTools,
   gatewayGenerationIdFromMetadata,
   getBellProviderOptions,
+  getBellReasoning,
 } from '@/lib/chat/bell-generation'
 
 afterEach(() => {
@@ -13,6 +15,12 @@ afterEach(() => {
 })
 
 describe('Bell Gateway metadata', () => {
+  it('uses GPT-5.6 Sol with surface-specific reasoning', () => {
+    expect(BELL_MODEL_ID).toBe('openai/gpt-5.6-sol')
+    expect(getBellReasoning('web')).toBe('none')
+    expect(getBellReasoning('sms')).toBe('xhigh')
+  })
+
   it('registers chronology, relevance search, and reading tools', () => {
     expect(Object.keys(bellTools)).toEqual([
       'listPosts',
@@ -29,6 +37,7 @@ describe('Bell Gateway metadata', () => {
     })
 
     expect(options.gateway).toMatchObject({
+      serviceTier: 'priority',
       zeroDataRetention: true,
       user: 'subscriber:reader-uuid',
       tags: [
@@ -38,6 +47,12 @@ describe('Bell Gateway metadata', () => {
       ],
     })
     expect(options.gateway.tags).not.toContain('subscriber:reader-uuid')
+    expect('models' in options.gateway).toBe(false)
+  })
+
+  it('does not request priority service outside web Bell', () => {
+    const gateway = getBellProviderOptions({ surface: 'sms' }).gateway
+    expect('serviceTier' in gateway).toBe(false)
   })
 
   it('does not manufacture a user when no attribution is available', () => {

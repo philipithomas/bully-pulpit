@@ -11,7 +11,7 @@ vi.mock('@/lib/weather/nyc', () => ({
 }))
 
 import { generateText } from 'ai'
-import { BELL_FALLBACK_MODEL_IDS, BELL_MODEL_ID } from '@/lib/chat/bell-model'
+import { PHONE_GREETING_MODEL_ID } from '@/lib/chat/bell-model'
 import {
   contextualGreetingOptions,
   FALLBACK_GREETING,
@@ -132,7 +132,7 @@ describe('generateGreeting', () => {
     )
   })
 
-  it('uses Bell model settings with NYC time and footer weather', async () => {
+  it('uses the speed-first phone model with NYC time and footer weather', async () => {
     mockedGenerateText.mockResolvedValueOnce({
       text: 'Happy Independence Day.',
       // biome-ignore lint/suspicious/noExplicitAny: partial generateText result
@@ -144,13 +144,12 @@ describe('generateGreeting', () => {
       signal: expect.any(AbortSignal),
     })
     const call = mockedGenerateText.mock.calls[0][0]
-    expect(call.model).toBe(BELL_MODEL_ID)
+    expect(call.model).toBe(PHONE_GREETING_MODEL_ID)
     expect(call.reasoning).toBe('none')
     expect(call.providerOptions).toMatchObject({
       openai: { reasoningSummary: null },
       gateway: {
         order: ['openai'],
-        models: [...BELL_FALLBACK_MODEL_IDS],
         zeroDataRetention: true,
         tags: [
           'feature:phone-greeting',

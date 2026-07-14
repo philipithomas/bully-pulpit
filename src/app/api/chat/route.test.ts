@@ -19,9 +19,9 @@ vi.mock('@/lib/auth/jwt', async (importOriginal) => {
 vi.mock('@/lib/chat/bell-generation', () => ({
   bellGatewayCost: vi.fn(),
   bellModel: {},
-  bellReasoning: 'none',
   bellStopWhen: [],
   bellTools: {},
+  getBellReasoning: vi.fn(() => 'none'),
   getBellProviderOptions: vi.fn(() => ({})),
   prepareBellStep: vi.fn(),
 }))

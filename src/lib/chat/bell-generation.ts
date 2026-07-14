@@ -6,11 +6,10 @@ import { listPosts } from '@/lib/chat/list-posts-tool'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 
 export {
-  BELL_FALLBACK_MODEL_IDS,
   BELL_MODEL_ID,
   bellModel,
-  bellReasoning,
   getBellProviderOptions,
+  getBellReasoning,
 } from '@/lib/chat/bell-model'
 
 export function gatewayGenerationIdFromMetadata(

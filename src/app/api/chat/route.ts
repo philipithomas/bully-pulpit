@@ -17,10 +17,10 @@ import {
 import {
   bellGatewayCost,
   bellModel,
-  bellReasoning,
   bellStopWhen,
   bellTools,
   getBellProviderOptions,
+  getBellReasoning,
   prepareBellStep,
 } from '@/lib/chat/bell-generation'
 import {
@@ -226,9 +226,9 @@ export async function POST(request: Request) {
   })
 
   const result = streamText({
-    // Shared with SMS so every Bell surface uses the same speed-first model.
+    // Shared with SMS so every Bell surface uses GPT-5.6 Sol.
     model: bellModel,
-    reasoning: bellReasoning,
+    reasoning: getBellReasoning('web'),
     providerOptions: getBellProviderOptions({
       surface: 'web',
       pseudonymousUser: subscriber

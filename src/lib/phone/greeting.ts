@@ -1,8 +1,7 @@
 import { generateText } from 'ai'
 import {
-  bellModel,
-  bellReasoning,
   getPhoneGreetingProviderOptions,
+  phoneGreetingModel,
 } from '@/lib/chat/bell-model'
 import { siteIdentity } from '@/lib/site-identity'
 import {
@@ -166,8 +165,8 @@ export async function generateGreeting(
       ? `${weather.current.description}, ${weather.current.temperatureC}°C`
       : 'unknown'
     const { text } = await generateText({
-      model: bellModel,
-      reasoning: bellReasoning,
+      model: phoneGreetingModel,
+      reasoning: 'none',
       providerOptions: getPhoneGreetingProviderOptions(),
       maxOutputTokens: 40,
       abortSignal: AbortSignal.timeout(GREETING_TIMEOUT_MS),

@@ -4,10 +4,10 @@ import { trackServerEvent } from '@/lib/analytics/server'
 import {
   bellGatewayCost,
   bellModel,
-  bellReasoning,
   bellStopWhen,
   bellTools,
   getBellProviderOptions,
+  getBellReasoning,
   prepareBellStep,
 } from '@/lib/chat/bell-generation'
 import { smsIdentityHash } from '@/lib/chat/bell-identity'
@@ -271,7 +271,7 @@ export async function generateBellSmsBody(
   try {
     const generated = await generateText({
       model: bellModel,
-      reasoning: bellReasoning,
+      reasoning: getBellReasoning('sms'),
       providerOptions: getBellProviderOptions({
         surface: 'sms',
         pseudonymousUser: `sms:${smsIdentityHash(input.from)}`,

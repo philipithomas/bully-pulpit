@@ -1,12 +1,20 @@
 import { type GatewayProviderOptions, gateway } from '@ai-sdk/gateway'
 
-/** Shared speed-first model settings for Bell and short phone generations. */
-export const BELL_MODEL_ID = 'openai/gpt-5.6-luna'
-export const BELL_FALLBACK_MODEL_IDS = ['openai/gpt-5.4-mini'] as const
+/** Shared GPT-5.6 Sol model for Bell's web and SMS surfaces. */
+export const BELL_MODEL_ID = 'openai/gpt-5.6-sol'
 export const bellModel = gateway(BELL_MODEL_ID)
 
-/** Disable reasoning latency for short, latency-sensitive responses. */
-export const bellReasoning = 'none' as const
+/** A short greeting choice does not need Bell's flagship model. */
+export const PHONE_GREETING_MODEL_ID = 'openai/gpt-5.6-luna'
+export const phoneGreetingModel = gateway(PHONE_GREETING_MODEL_ID)
+
+export type BellGenerationSurface = 'web' | 'sms'
+type GenerationSurface = BellGenerationSurface | 'phone'
+
+/** SMS gets more deliberate answers; interactive voice and web stay fast. */
+export function getBellReasoning(surface: BellGenerationSurface) {
+  return surface === 'sms' ? ('xhigh' as const) : ('none' as const)
+}
 
 function bellEnvironment(): 'production' | 'preview' | 'development' {
   const value = process.env.VERCEL_ENV ?? process.env.NODE_ENV
@@ -16,7 +24,7 @@ function bellEnvironment(): 'production' | 'preview' | 'development' {
 
 function getSharedProviderOptions(input: {
   feature: 'bell' | 'phone-greeting'
-  surface: 'web' | 'sms' | 'phone'
+  surface: GenerationSurface
   pseudonymousUser?: string | null
 }) {
   return {
@@ -25,11 +33,12 @@ function getSharedProviderOptions(input: {
       reasoningSummary: null,
     },
     gateway: {
-      // Pin OpenAI direct and keep the fastest existing fallback for temporary
-      // GPT-5.6 availability issues.
+      // Keep the model on OpenAI and prefer the fastest available endpoint.
       order: ['openai'],
       sort: 'ttft',
-      models: [...BELL_FALLBACK_MODEL_IDS],
+      // Priority is best-effort: Gateway falls back to the standard service
+      // tier when priority is unavailable, without changing the Sol model.
+      ...(input.surface === 'web' ? { serviceTier: 'priority' as const } : {}),
       zeroDataRetention: true,
       ...(input.pseudonymousUser ? { user: input.pseudonymousUser } : {}),
       tags: [
