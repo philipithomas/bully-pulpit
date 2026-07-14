@@ -1,7 +1,7 @@
 import { after, NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
-import { smsSignupUi } from '@/lib/flags'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
+import { sitePhoneNumber } from '@/lib/phone/config'
 import { generateGreeting } from '@/lib/phone/greeting'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 import {
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
   const callbackUrls = voicemailCallbackUrls({ from, to, metadata })
 
-  if (!(await smsSignupUi())) {
+  if (!sitePhoneNumber()) {
     return twimlResponse(voicemailTwiml({ greeting, ...callbackUrls }))
   }
 

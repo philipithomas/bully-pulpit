@@ -46,14 +46,12 @@ Every inbound webhook must include Twilio's `X-Twilio-Signature` header. The
 app validates the exact public URL and all form parameters with
 `TWILIO_SECRET`, the account auth token. Never put that token in a webhook URL.
 
-The public SMS signup affordances are gated by the Vercel
-`sms-signup-ui` feature flag: when it is off, web subscribe prompts do not show
-the SMS option and the voice webhook records voicemail without offering
-"press 2" SMS signup. When the flag is on, the voice webhook plays the
-generated greeting, then offers "press 1" for voicemail and "press 2" to
-subscribe the caller ID to SMS updates. Before the caller chooses, the prompt
-identifies recurring new-post texts and states the frequency, rate, HELP, and
-STOP disclosures. No input falls through to voicemail.
+When `PHONE_NUMBER` is configured, public subscribe prompts offer SMS and the
+voice webhook plays the generated greeting, then offers "press 1" for
+voicemail and "press 2" to subscribe the caller ID to SMS updates. Before the
+caller chooses, the prompt identifies recurring new-post texts and states the
+frequency, rate, HELP, and STOP disclosures. No input falls through to
+voicemail.
 The SMS webhook stores inbound replies, handles signup, HELP, and STOP words,
 and emails admins about normal replies. `SUBSCRIBE` replies with a branded
 confirmation that identifies the recurring new-post message type, says that

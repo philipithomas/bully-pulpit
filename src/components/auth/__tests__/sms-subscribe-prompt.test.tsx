@@ -11,7 +11,6 @@ describe('SmsSubscribePrompt', () => {
   it('renders an understated form trigger without the compliance copy inline', () => {
     const html = renderToStaticMarkup(
       <SmsSubscribePrompt
-        enabled
         phoneDisplayNumber="+1 212 347 3190"
         phoneNumber="+12123473190"
       />
@@ -27,7 +26,6 @@ describe('SmsSubscribePrompt', () => {
     const html = renderToStaticMarkup(
       <SmsSubscribePrompt
         analyticsPlacement="homepage"
-        enabled
         newsletter="all"
         phoneDisplayNumber="+1 212 347 3190"
         phoneNumber="+12123473190"
@@ -41,10 +39,8 @@ describe('SmsSubscribePrompt', () => {
     expect(html).not.toContain('Or, ')
   })
 
-  it('renders nothing when the feature is disabled', () => {
-    const html = renderToStaticMarkup(
-      <SmsSubscribePrompt enabled={false} phoneNumber="+12123473190" />
-    )
+  it('renders nothing without a configured phone number', () => {
+    const html = renderToStaticMarkup(<SmsSubscribePrompt />)
 
     expect(html).toBe('')
   })
@@ -58,7 +54,8 @@ describe('SmsSubscribePrompt', () => {
       />
     )
 
-    expect(html).toContain('recurring automated new-post texts')
+    expect(html).toContain('to receive recurring automated new-post texts')
+    expect(html).not.toContain('to consent to recurring automated')
     expect(html).toContain('The Contraption Company LLC')
     expect(html).toContain('new or reactivated signup')
     expect(html).toContain('save to your contacts')
@@ -68,6 +65,8 @@ describe('SmsSubscribePrompt', () => {
     expect(html).toContain('Reply STOP')
     expect(html).toContain('HELP for help')
     expect(html).toContain('Consent is not a condition of purchase')
+    expect(html).toContain('block text-gray-800')
+    expect(html).toContain('border-t border-gray-200 pt-4')
     expect(html).toContain('href="/terms#text-messaging"')
     expect(html).toContain('href="/privacy#text-messaging"')
   })

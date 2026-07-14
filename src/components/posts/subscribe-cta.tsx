@@ -32,7 +32,6 @@ interface SubscribeCtaProps {
   className?: string
   align?: 'start' | 'center'
   subscribeEndpoint?: string
-  smsSignupEnabled?: boolean
   smsSignupPhoneNumber?: string | null
   smsSignupDisplayNumber?: string | null
   analyticsPlacement?: AnalyticsPlacement
@@ -48,7 +47,6 @@ function ActiveSubscribeCta({
   className = 'mt-16',
   align = 'start',
   subscribeEndpoint,
-  smsSignupEnabled,
   smsSignupPhoneNumber = null,
   smsSignupDisplayNumber = null,
   analyticsPlacement = 'post_footer',
@@ -126,7 +124,6 @@ function ActiveSubscribeCta({
           </button>
           <SmsSubscribePrompt
             align={align}
-            enabled={smsSignupEnabled}
             phoneDisplayNumber={smsSignupDisplayNumber}
             phoneNumber={smsSignupPhoneNumber}
             analyticsPlacement={analyticsPlacement}
@@ -140,7 +137,6 @@ function ActiveSubscribeCta({
           confirmedMessage={`You are subscribed to new ${newsletterNoun[newsletter]} by email.`}
           newsletters={[newsletter]}
           smsSignupDisplayNumber={smsSignupDisplayNumber}
-          smsSignupEnabled={smsSignupEnabled}
           smsSignupPhoneNumber={smsSignupPhoneNumber}
           subscribeEndpoint={subscribeEndpoint}
           analyticsPlacement={analyticsPlacement}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,6 @@ import {
 import { cn } from '@/lib/utils'
 
 interface SmsSubscribePromptProps {
-  enabled?: boolean
   phoneNumber?: string | null
   phoneDisplayNumber?: string | null
   align?: 'start' | 'center'
@@ -38,7 +37,7 @@ export function SmsSubscribeDisclosure({
 }) {
   return (
     <>
-      <span className="block">
+      <span className="block text-gray-800">
         Text{' '}
         <span className="font-sans font-medium text-gray-800">SUBSCRIBE</span>{' '}
         to{' '}
@@ -49,10 +48,10 @@ export function SmsSubscribeDisclosure({
         >
           {displayNumber}
         </a>{' '}
-        to consent to recurring automated new-post texts from The Contraption
+        to receive recurring automated new-post texts from The Contraption
         Company LLC through philipithomas.com at this number.
       </span>
-      <span className="mt-4 block text-sm text-gray-500">
+      <span className="mt-5 block border-t border-gray-200 pt-4 text-sm text-gray-500">
         A new or reactivated signup includes one Bell contact-card MMS to save
         to your contacts. You can also text Bell questions about
         philipithomas.com. Message frequency varies. Message and data rates may
@@ -78,7 +77,6 @@ export function SmsSubscribeDisclosure({
 }
 
 export function SmsSubscribePrompt({
-  enabled,
   phoneNumber,
   phoneDisplayNumber,
   align = 'start',
@@ -87,27 +85,6 @@ export function SmsSubscribePrompt({
   newsletter = 'unspecified',
   variant = 'form',
 }: SmsSubscribePromptProps) {
-  const [remoteEnabled, setRemoteEnabled] = useState(false)
-  const resolvedEnabled = enabled ?? remoteEnabled
-
-  useEffect(() => {
-    if (enabled !== undefined) return
-
-    let cancelled = false
-    fetch('/api/flags/sms-signup-ui', { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled) setRemoteEnabled(Boolean(data?.enabled))
-      })
-      .catch(() => {
-        if (!cancelled) setRemoteEnabled(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [enabled])
-
   const handleSmsOpen = useCallback(() => {
     trackClientEvent('SMS signup opened', {
       placement: analyticsPlacement,
@@ -115,7 +92,7 @@ export function SmsSubscribePrompt({
     })
   }, [analyticsPlacement, newsletter])
 
-  if (!resolvedEnabled || !phoneNumber) return null
+  if (!phoneNumber) return null
 
   const displayNumber = phoneDisplayNumber ?? phoneNumber
   const isHomepage = variant === 'homepage'

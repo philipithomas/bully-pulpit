@@ -29,9 +29,6 @@ vi.mock('@/lib/phone/notifications', () => ({
   sendMissedCallNotification: vi.fn(async () => undefined),
   sendIncomingSmsNotification: vi.fn(async () => undefined),
 }))
-vi.mock('@/lib/flags', () => ({
-  smsSignupUi: vi.fn(async () => false),
-}))
 
 // The SMS webhook writes to Postgres, so it is covered by the colocated
 // sms.integration.test.ts instead of this unit file.
@@ -45,7 +42,6 @@ import {
   markPhoneWebhookEventProcessed,
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
-import { smsSignupUi } from '@/lib/flags'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 import { twilioPostRequest } from '@/test/twilio'
 
@@ -65,8 +61,8 @@ function twilioPost(
 }
 
 beforeEach(() => {
+  process.env.PHONE_NUMBER = '+12123473190'
   process.env.TWILIO_SECRET = AUTH_TOKEN
-  vi.mocked(smsSignupUi).mockResolvedValue(false)
   vi.mocked(findOrCreatePhoneWebhookEvent).mockResolvedValue({
     event: {
       id: 1,
@@ -85,6 +81,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  delete process.env.PHONE_NUMBER
   delete process.env.TWILIO_SECRET
   vi.clearAllMocks()
 })
@@ -103,7 +100,7 @@ describe('POST /api/phone/voice', () => {
     expect(response.status).toBe(401)
   })
 
-  it('defaults to voicemail-only TwiML and notifies', async () => {
+  it('offers the SMS signup menu and notifies', async () => {
     const response = await voicePost(
       twilioPost('/api/phone/voice', {
         From: '+15551234567',
@@ -121,8 +118,8 @@ describe('POST /api/phone/voice', () => {
     const xml = await response.text()
     expect(xml).toContain('You have reached the test suite.')
     expect(xml).toContain('Leave a message after the tone.')
-    expect(xml).not.toContain('<Gather')
-    expect(xml).not.toContain('/api/phone/voice-menu')
+    expect(xml).toContain('<Gather')
+    expect(xml).toContain('/api/phone/voice-menu')
     expect(xml).toContain('/api/phone/recording-status?caller=')
     expect(xml).toContain('caller=%2B15551234567')
     expect(xml).toContain('CallSid=CA123')
@@ -147,9 +144,7 @@ describe('POST /api/phone/voice', () => {
     })
   })
 
-  it('offers the SMS signup menu when the flag is enabled', async () => {
-    vi.mocked(smsSignupUi).mockResolvedValue(true)
-
+  it('includes the complete SMS disclosure in the voice menu', async () => {
     const response = await voicePost(
       twilioPost('/api/phone/voice', {
         From: '+15551234567',
@@ -176,6 +171,23 @@ describe('POST /api/phone/voice', () => {
     )
     expect(xml).toContain('Frequency varies. Message and data rates may apply.')
     expect(xml).toContain('Text STOP to unsubscribe or HELP for help.')
+  })
+
+  it('falls back to voicemail when the public phone number is unavailable', async () => {
+    delete process.env.PHONE_NUMBER
+
+    const response = await voicePost(
+      twilioPost('/api/phone/voice', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(xml).toContain('Leave a message after the tone.')
+    expect(xml).not.toContain('<Gather')
+    expect(xml).not.toContain('/api/phone/voice-menu')
   })
 })
 

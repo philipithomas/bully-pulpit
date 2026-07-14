@@ -10,7 +10,6 @@ import {
   findSmsSubscriberByPhoneNumber,
   subscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
-import { smsSignupUi } from '@/lib/flags'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { isE164, numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import { sendSmsSignupNotification } from '@/lib/phone/notifications'
@@ -38,8 +37,9 @@ export async function POST(request: Request) {
   const to = String(form.get('To') ?? 'Unknown')
   const callSid = form.get('CallSid') ? String(form.get('CallSid')) : ''
   const metadata = twilioWebhookMetadataFromForm(form, from)
+  const confirmationFrom = sitePhoneNumber()
 
-  if ((await smsSignupUi()) && digits === '2') {
+  if (digits === '2' && confirmationFrom) {
     if (!isE164(from)) {
       return twimlResponse(
         sayAndHangupTwiml(
@@ -74,21 +74,18 @@ export async function POST(request: Request) {
       )
     }
 
-    const confirmationFrom = sitePhoneNumber()
     try {
       await subscribeSmsNumber({
         phoneNumber: from,
         source: `call:${numberLabel(to).toLowerCase()}`,
       })
-      if (confirmationFrom) {
-        await start(smsSignupOnboardingWorkflow, [
-          {
-            from: confirmationFrom,
-            to: from,
-            sendConfirmation: true,
-          },
-        ])
-      }
+      await start(smsSignupOnboardingWorkflow, [
+        {
+          from: confirmationFrom,
+          to: from,
+          sendConfirmation: true,
+        },
+      ])
       if (webhookEvent && lease) {
         const marked = await markPhoneWebhookEventProcessed(
           webhookEvent.event.id,

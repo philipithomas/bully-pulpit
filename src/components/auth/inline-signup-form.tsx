@@ -30,7 +30,6 @@ interface Props {
   subscribeEndpoint?: string
   confirmedMessage?: string
   initialSubscriberCount?: number | null
-  smsSignupEnabled?: boolean
   smsSignupPhoneNumber?: string | null
   smsSignupDisplayNumber?: string | null
   analyticsPlacement?: AnalyticsPlacement
@@ -54,7 +53,6 @@ export function InlineSignupForm({
   subscribeEndpoint = '/api/subscribe',
   confirmedMessage = 'You are subscribed by email.',
   initialSubscriberCount = null,
-  smsSignupEnabled,
   smsSignupPhoneNumber = null,
   smsSignupDisplayNumber = null,
   analyticsPlacement = 'unknown',
@@ -282,7 +280,6 @@ export function InlineSignupForm({
       </form>
       <SmsSubscribePrompt
         align={align}
-        enabled={smsSignupEnabled}
         phoneDisplayNumber={smsSignupDisplayNumber}
         phoneNumber={smsSignupPhoneNumber}
         analyticsPlacement={analyticsPlacement}
