@@ -10,10 +10,22 @@ describe('ResumePage', () => {
     expect(html).toContain('Philip I. Thomas')
     expect(html).toContain('Experience')
     expect(html).toContain('Education')
+    expect(html).toContain('Security research')
     expect(html).not.toMatch(/>Summary</)
     expect(html).not.toMatch(/>Goals</)
     expect(html).not.toMatch(/>Skills</)
     expect(html).not.toContain('.pdf')
+  })
+
+  it('keeps the header to the name and contact links', () => {
+    const html = renderToStaticMarkup(<ResumePage />)
+    const header = html.match(/<header[^>]*>([\s\S]*?)<\/header>/)?.[1] ?? ''
+
+    expect(header).toContain('Philip I. Thomas')
+    expect(header).toContain('mail@philipithomas.com')
+    expect(header).toContain('github.com/philipithomas')
+    expect(header).not.toContain('Résumé')
+    expect(header).not.toContain('security disclosures')
   })
 
   it('keeps company and media destinations external and expandable', () => {
