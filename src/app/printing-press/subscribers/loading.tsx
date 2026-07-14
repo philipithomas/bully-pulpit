@@ -12,6 +12,11 @@ export default function SubscribersLoading() {
         description={<Skeleton className="h-4 w-32" />}
       />
 
+      <div className="mb-5 flex gap-2 border-gray-200 border-b pb-2">
+        <Skeleton className="h-6 w-14" />
+        <Skeleton className="h-6 w-14" />
+      </div>
+
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Skeleton className="h-10 w-full sm:max-w-xs" />
         <span className="flex items-center gap-2">

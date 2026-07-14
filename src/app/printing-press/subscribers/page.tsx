@@ -1,24 +1,28 @@
-import { SubscribersClient } from '@/app/printing-press/subscribers/subscribers-client'
+import { SubscriberTabsClient } from '@/app/printing-press/subscribers/subscriber-tabs-client'
 import { PageHeader } from '@/components/printing-press/page-header'
 import { requireAdmin } from '@/lib/auth/admin'
-import { listSubscribers, subscriberStats } from '@/lib/db/queries/subscribers'
+import { listSmsSubscribers } from '@/lib/db/queries/sms-subscribers'
+import { listSubscribers } from '@/lib/db/queries/subscribers'
 
 export default async function SubscribersPage() {
   await requireAdmin()
-  const [{ rows, total }, stats] = await Promise.all([
+  const [emailSubscribers, smsSubscribers] = await Promise.all([
     listSubscribers({ limit: 50 }),
-    subscriberStats(),
+    listSmsSubscribers({ limit: 50 }),
   ])
 
   return (
     <div>
       <PageHeader
         title="Subscribers"
-        description={`${stats.confirmed.toLocaleString('en-US')} ${
-          stats.confirmed === 1 ? 'person' : 'people'
-        }`}
+        description="Email and SMS newsletter subscriptions."
       />
-      <SubscribersClient initialRows={rows} initialTotal={total} />
+      <SubscriberTabsClient
+        initialEmailRows={emailSubscribers.rows}
+        initialEmailTotal={emailSubscribers.total}
+        initialSmsRows={smsSubscribers.rows}
+        initialSmsTotal={smsSubscribers.total}
+      />
     </div>
   )
 }
