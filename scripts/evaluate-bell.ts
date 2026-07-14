@@ -185,13 +185,13 @@ async function main() {
           stopWhen: bellStopWhen,
           prepareStep: prepareBellStep,
         })
+        const toolCalls = result.steps.flatMap((step) => step.toolCalls)
         const tools = Array.from(
-          new Set(
-            result.steps.flatMap((step) =>
-              step.toolCalls.map((call) => call.toolName)
-            )
-          )
+          new Set(toolCalls.map((call) => call.toolName))
         )
+        const toolTrace = toolCalls
+          .map((call) => `${call.toolName}(${JSON.stringify(call.input)})`)
+          .join(', ')
         const answer =
           testCase.surface === 'sms'
             ? formatBellSmsBody(result.text)
@@ -204,6 +204,7 @@ async function main() {
           `- Duration: ${Math.round(performance.now() - startedAt)} ms`,
           `- Finish reason: ${result.finishReason}`,
           `- Tools: ${tools.length > 0 ? tools.join(', ') : 'none'}`,
+          `- Tool calls: ${toolTrace || 'none'}`,
           '',
           quoted(answer)
         )

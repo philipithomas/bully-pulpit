@@ -3,11 +3,12 @@ import {
   type BellEvalCase,
   bellEvalCases,
 } from '@/lib/chat/evals/cases'
+import { type ListPostsResult, listPosts } from '@/lib/chat/list-posts-tool'
 import { getPageText } from '@/lib/chat/page-content'
 import { getPageContextContent } from '@/lib/chat/page-context'
 import { sanitizeChatMessages } from '@/lib/chat/sanitize-messages'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
-import { getPostBySlug, getPostsByNewsletter } from '@/lib/content/loader'
+import { getAllPosts, getPostBySlug } from '@/lib/content/loader'
 import {
   BELL_SMS_MAX_GSM_UNITS,
   BELL_SMS_MAX_UCS2_UNITS,
@@ -69,33 +70,43 @@ async function evaluateCase(testCase: BellEvalCase): Promise<string> {
   }
 
   if (expectation.kind === 'chronology') {
-    const posts = getPostsByNewsletter(expectation.newsletter).slice(
-      0,
-      expectation.recentCount
+    const raw = await listPosts.execute!(
+      {
+        limit: expectation.recentCount,
+        offset: 0,
+        filter: expectation.newsletter
+          ? { mode: 'only', newsletter: expectation.newsletter }
+          : { mode: 'all' },
+      },
+      { toolCallId: `eval-${testCase.id}`, messages: [], context: {} }
     )
+    const result = JSON.parse(raw as string) as ListPostsResult
+    const expectedPosts = getAllPosts()
+      .filter(
+        (post) =>
+          !expectation.newsletter || post.newsletter === expectation.newsletter
+      )
+      .slice(0, expectation.recentCount)
+    const posts = result.posts
     invariant(
       posts.length === expectation.recentCount,
-      `Expected ${expectation.recentCount} recent ${expectation.newsletter} posts`
+      `Expected ${expectation.recentCount} recent post(s)`
     )
-    for (let index = 1; index < posts.length; index++) {
-      invariant(
-        posts[index - 1].frontmatter.publishedAt >=
-          posts[index].frontmatter.publishedAt,
-        `${expectation.newsletter} posts are not newest first`
-      )
-    }
-    const pageText = getPageText(`/${expectation.newsletter}`)
-    let priorIndex = -1
-    for (const post of posts) {
-      const titleIndex = pageText.indexOf(post.frontmatter.title)
-      invariant(titleIndex > priorIndex, `${post.slug} is out of order`)
-      invariant(
-        pageText.includes(post.frontmatter.publishedAt),
-        `${post.slug} is missing its date`
-      )
-      priorIndex = titleIndex
-    }
-    return `${expectation.newsletter} exposes ${posts.length} dated posts newest first`
+    invariant(
+      JSON.stringify(posts.map((post) => post.slug)) ===
+        JSON.stringify(expectedPosts.map((post) => post.slug)),
+      'listPosts did not use the canonical post order'
+    )
+    invariant(
+      posts.every(
+        (post) =>
+          post.url === `/${post.slug}` &&
+          Boolean(post.publishedAt) &&
+          Boolean(post.description)
+      ),
+      'listPosts omitted chronology source metadata'
+    )
+    return `listPosts returned ${posts.length} dated post(s) newest first`
   }
 
   if (expectation.kind === 'search') {

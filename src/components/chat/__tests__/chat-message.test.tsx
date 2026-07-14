@@ -20,6 +20,52 @@ function renderMessage(message: UIMessage): string {
   )
 }
 
+function renderToolPart(part: unknown): string {
+  return renderMessage({
+    id: 'tool-answer',
+    role: 'assistant',
+    parts: [part, { type: 'text', text: 'The latest post.' }],
+  } as unknown as UIMessage)
+}
+
+describe('ChatMessage Bell tool rendering', () => {
+  it('renders chronological listing as a distinct nonvisual tool state', () => {
+    const html = renderToolPart({
+      type: 'tool-listPosts',
+      toolCallId: 'list-posts',
+      state: 'output-available',
+      input: {
+        limit: 1,
+        offset: 0,
+        filter: { mode: 'only', newsletter: 'workshop' },
+      },
+      output: JSON.stringify({
+        posts: [
+          {
+            type: 'post',
+            title: 'Spring cleaning',
+            url: '/spring-cleaning',
+            newsletter: 'workshop',
+            publishedAt: '2026-06-25',
+          },
+        ],
+        pagination: {
+          offset: 0,
+          limit: 1,
+          total: 1,
+          hasMore: false,
+          nextOffset: null,
+        },
+      }),
+    })
+
+    expect(html).toContain('Listed posts')
+    expect(html).not.toContain('Searched posts')
+    expect(html).not.toContain('<img')
+    expect(html).toContain('href="/spring-cleaning"')
+  })
+})
+
 describe('ChatMessage feedback', () => {
   it('does not ask for feedback on a scripted local welcome', () => {
     const html = renderMessage({

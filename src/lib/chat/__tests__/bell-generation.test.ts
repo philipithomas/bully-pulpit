@@ -2,6 +2,7 @@ import { gateway } from '@ai-sdk/gateway'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   bellGatewayCost,
+  bellTools,
   gatewayGenerationIdFromMetadata,
   getBellProviderOptions,
 } from '@/lib/chat/bell-generation'
@@ -12,6 +13,15 @@ afterEach(() => {
 })
 
 describe('Bell Gateway metadata', () => {
+  it('registers chronology, relevance search, and reading tools', () => {
+    expect(Object.keys(bellTools)).toEqual([
+      'listPosts',
+      'searchPosts',
+      'fetchPost',
+      'fetchPage',
+    ])
+  })
+
   it('enables zero-data retention and uses only low-cardinality tags', () => {
     const options = getBellProviderOptions({
       surface: 'web',

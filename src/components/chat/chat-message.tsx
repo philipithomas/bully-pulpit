@@ -590,6 +590,16 @@ export function ChatMessage({
                 ? (part.input as Record<string, string> | undefined)
                 : undefined
 
+            if (part.type === 'tool-listPosts') {
+              return (
+                <ToolStatus
+                  key={key}
+                  done={done}
+                  label={done ? 'Listed posts' : 'Listing posts…'}
+                />
+              )
+            }
+
             if (part.type === 'tool-fetchPost') {
               const output = 'output' in part ? part.output : undefined
               return (

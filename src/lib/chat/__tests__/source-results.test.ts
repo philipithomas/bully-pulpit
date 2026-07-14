@@ -6,6 +6,40 @@ import {
 } from '@/lib/chat/source-results'
 
 describe('Bell tool provenance', () => {
+  it('unwraps chronological list results into dated post sources', () => {
+    const sources = bellSourcesFromToolOutput(
+      'listPosts',
+      JSON.stringify({
+        posts: [
+          {
+            type: 'post',
+            title: 'Latest Workshop post',
+            url: '/latest-workshop-post',
+            publishedAt: '2026-06-25',
+            newsletter: 'workshop',
+          },
+        ],
+        pagination: {
+          offset: 0,
+          limit: 1,
+          total: 1,
+          hasMore: false,
+          nextOffset: null,
+        },
+      })
+    )
+
+    expect(sources).toEqual([
+      {
+        type: 'post',
+        title: 'Latest Workshop post',
+        url: '/latest-workshop-post',
+        publishedAt: '2026-06-25',
+        newsletter: 'workshop',
+      },
+    ])
+  })
+
   it('uses search metadata and the first matched section anchor', () => {
     const sources = bellSourcesFromToolOutput(
       'searchPosts',
