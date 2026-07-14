@@ -7,14 +7,12 @@ coverImageAlt: "Thick toast with red bean and cream beside a cup of coffee at Hi
 
 As an experiment, I have added SMS subscription support to this website.
 
-To subscribe, text `SUBSCRIBE` to [+1 212 347 3190](sms:+12123473190?body=SUBSCRIBE). Then, you will receive a text message about all new *Contraption*, *Workshop*, and *Postcard* posts on [philipithomas.com](/).
+To subscribe, text `SUBSCRIBE` to [+1 212 347 3190](sms:+12123473190?body=SUBSCRIBE). Then, you will receive a text message about all new posts. (It is optimized for US-based numbers, but I'm consdiering expanding it to WhatsApp in the future.)
 
-By subscribing, you consent to recurring automated new-post texts from The Contraption Company LLC through philipithomas.com. A new or reactivated subscription also sends one Bell contact-card MMS. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe or HELP for help. Consent is not a condition of purchase. Read the [text messaging terms](/terms#text-messaging) and [privacy policy](/privacy#text-messaging).
+I have been [off social media for years](/how-to-replace-social-media-with-a-personal-newsletter), and have slowly been building this website into my personal homepage on the internet. Today, most people subscribe by email, and a couple follow via RSS. But, a surprising number of people have told me that they do not use email. For some, their job doesn't require it - so they don't check it often. For others, email is an overwhelming to-do list of spam and robot messages that feels too muchlike work. So, I built SMS support for them.
 
-I have been [off social media for years](/how-to-replace-social-media-with-a-personal-newsletter), and have slowly been building this website into my personal homepage on the internet. Today, most people subscribe by email, and a couple follow via RSS. But many people have told me that they do not check their email anymore, so I built SMS support for them.
+The system uses a dedicated Twilio number, which I [originaly set up as a voicemail](/sync-phone-numbers-and-webhooks). To send text messages, I went through the rigmarole of [A2P 10DLC registration](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/quickstart), the new-ish industry standard that US telecom carriers created in response to spam and unsolicited messages.
 
-It uses a dedicated Twilio number, which I mentioned in a [past post about setting up a voicemail](/sync-phone-numbers-and-webhooks). To send text messages, I went through the rigmarole of [A2P 10DLC registration](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/quickstart), the industry standard that US telecom carriers created in response to spam and unsolicited messages. For photography newsletters such as *Tsundoku*, the system can also send the cover photo directly via MMS.
-
-As a fun aside, you can text the same number with a question for the site's [AI assistant, Bell](/three-ring-binder). Bell can research my past posts to answer questions such as, "What are Philip's favorite coffee shops?" Asking Bell a question does not subscribe you to new-post notifications.
+As a fun aside, you can text the same number with a question for the site's [AI assistant, Bell](/three-ring-binder). Bell can research my past posts to answer questions such as, "What is Philip's favorite restaurant?"
 
 Try it out. SMS is not for everybody, but this is a fun, [open-source experiment](https://github.com/philipithomas/bully-pulpit) aligned with [my recent decision to put more creative energy into this site](/spring-cleaning).
