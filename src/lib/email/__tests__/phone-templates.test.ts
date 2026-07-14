@@ -147,19 +147,43 @@ describe('incoming sms email', () => {
     to: '+12123473190',
     toLabel: 'NYC',
     body: 'Running late, be there in 10 <minutes>',
+    bellResponse: '[Bell AI] Take the A <train>.',
     receivedAt,
   }
 
-  it('renders the escaped message body', () => {
+  it('renders the escaped message and Bell response', () => {
     const html = renderIncomingSmsEmail(input)
     expect(html).toContain('New text message')
     expect(html).toContain('Running late, be there in 10 &lt;minutes&gt;')
+    expect(html).toContain('Bell reply')
+    expect(html).toContain('[Bell AI] Take the A &lt;train&gt;.')
+    expect(html).not.toContain('Twilio did not confirm')
   })
 
   it('mirrors the content in plaintext', () => {
     const text = renderIncomingSmsText(input)
     expect(text).toContain('Message:')
     expect(text).toContain('Running late, be there in 10 <minutes>')
+    expect(text).toContain('Bell reply:')
+    expect(text).toContain('[Bell AI] Take the A <train>.')
+  })
+
+  it('makes a failed Bell reply explicit', () => {
+    const text = renderIncomingSmsText({ ...input, bellReplyFailed: true })
+
+    expect(text).toContain('Bell reply:')
+    expect(text).toContain('Twilio did not confirm the Bell reply.')
+  })
+
+  it('keeps the immediate no-reply notification shape', () => {
+    const html = renderIncomingSmsEmail({
+      ...input,
+      bellResponse: undefined,
+      bellReplyFailed: undefined,
+    })
+
+    expect(html).toContain('Running late, be there in 10 &lt;minutes&gt;')
+    expect(html).not.toContain('Bell reply')
   })
 })
 

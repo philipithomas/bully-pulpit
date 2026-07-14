@@ -167,7 +167,7 @@ describe('POST /api/phone/sms', () => {
     expect(await db.select().from(textMessages)).toHaveLength(0)
   })
 
-  it('stores the inbound message and emails a notification', async () => {
+  it('stores the inbound message and delegates its notification to Bell', async () => {
     const response = await smsPost(
       smsRequest({
         From: '+15551234567',
@@ -191,11 +191,7 @@ describe('POST /api/phone/sms', () => {
       status: 'received',
     })
 
-    expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
-    const email = vi.mocked(sendSimpleEmail).mock.calls[0][0]
-    expect(email.to).toEqual(['one@example.com', 'two@example.com'])
-    expect(email.subject).toBe('SMS from +15551234567 to Phone')
-    expect(email.html).toContain('Running late')
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
     expect(start).toHaveBeenCalledWith(replyToSmsWorkflow, [
       expect.objectContaining({
         from: '+15551234567',
@@ -245,7 +241,7 @@ describe('POST /api/phone/sms', () => {
     expect(await db.select().from(bellConversations)).toHaveLength(1)
     expect(await db.select().from(bellMessages)).toHaveLength(1)
     expect(await db.select().from(bellGenerations)).toHaveLength(1)
-    expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
     expect(start).toHaveBeenCalledTimes(1)
   })
 
@@ -279,30 +275,27 @@ describe('POST /api/phone/sms', () => {
 
     expect(duplicate.status).toBe(503)
     expect(await duplicate.text()).toContain('<Response></Response>')
-    expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
+    expect(sendSimpleEmail).not.toHaveBeenCalled()
     expect(start).toHaveBeenCalledTimes(1)
   })
 
-  it('does not block Bell when the admin notification fails', async () => {
+  it('keeps the immediate notification fallback for messages without a SID', async () => {
     vi.mocked(sendSimpleEmail).mockRejectedValueOnce(new Error('SES offline'))
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const form = {
       From: '+15551234567',
       To: '+12123473190',
       Body: 'Running late',
-      MessageSid: 'SM123',
     }
 
     const response = await smsPost(smsRequest(form))
     await flushAfterTasks()
-    const duplicate = await smsPost(smsRequest(form))
 
     expect(response.status).toBe(200)
-    expect(duplicate.status).toBe(200)
     expect(await response.text()).toContain('<Response></Response>')
     expect(await db.select().from(textMessages)).toHaveLength(1)
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalledTimes(1)
-    expect(start).toHaveBeenCalledTimes(1)
+    expect(start).not.toHaveBeenCalled()
     expect(consoleError).toHaveBeenCalledWith(
       '[phone/sms] incoming SMS notification failed:',
       expect.any(Error)

@@ -28,19 +28,21 @@ function renderPhoneNotification(input: {
   title: string
   heading: string
   details: Array<[label: string, value: string]>
-  sectionTitle?: string
-  sectionBody?: string
+  sections?: Array<{ title: string; body: string }>
   footnote?: string
 }): string {
   const year = new Date().getFullYear()
   const details = input.details
     .map(([label, value]) => detailRow(label, value))
     .join('\n                  ')
-  const section =
-    input.sectionTitle && input.sectionBody
-      ? `<h2 style="margin: 24px 0 8px; font-family: 'Sohne', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 16px; font-weight: 600; color: #111110;">${escapeHtml(input.sectionTitle)}</h2>
-            <p style="margin: 0 0 16px; font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.6; color: #3B3834;">${escapeHtml(input.sectionBody)}</p>`
-      : ''
+  const sections = (input.sections ?? [])
+    .filter((section) => section.body)
+    .map(
+      (section) =>
+        `<h2 style="margin: 24px 0 8px; font-family: 'Sohne', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 16px; font-weight: 600; color: #111110;">${escapeHtml(section.title)}</h2>
+            <p style="margin: 0 0 16px; font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.6; color: #3B3834;">${escapeHtml(section.body)}</p>`
+    )
+    .join('\n            ')
   const footnote = input.footnote
     ? `<p class="email-muted" style="margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: #7E7A73;">${escapeHtml(input.footnote)}</p>`
     : ''
@@ -87,7 +89,7 @@ function renderPhoneNotification(input: {
                 </td>
               </tr>
             </table>
-            ${section}
+            ${sections}
             ${footnote}
           </td>
         </tr>
@@ -110,8 +112,7 @@ function renderPhoneNotification(input: {
 function renderPhoneNotificationText(input: {
   heading: string
   details: Array<[label: string, value: string]>
-  sectionTitle?: string
-  sectionBody?: string
+  sections?: Array<{ title: string; body: string }>
   footnote?: string
 }): string {
   const lines = [
@@ -119,8 +120,8 @@ function renderPhoneNotificationText(input: {
     '',
     ...input.details.map(([label, value]) => `${label}: ${value}`),
   ]
-  if (input.sectionTitle && input.sectionBody) {
-    lines.push('', `${input.sectionTitle}:`, input.sectionBody)
+  for (const section of input.sections ?? []) {
+    if (section.body) lines.push('', `${section.title}:`, section.body)
   }
   if (input.footnote) {
     lines.push('', input.footnote)
@@ -164,8 +165,7 @@ function voicemailContent(input: VoicemailEmailInput) {
       ['Duration', `${input.durationSeconds} seconds`],
       ['Received', formatTimestamp(input.receivedAt)],
     ] as Array<[string, string]>,
-    sectionTitle: 'Transcription',
-    sectionBody: input.transcription,
+    sections: [{ title: 'Transcription', body: input.transcription }],
     footnote: 'The audio recording is attached.',
   }
 }
@@ -201,8 +201,7 @@ function missedCallContent(input: MissedCallEmailInput) {
       ...callerMetadataDetails(input.from, input.metadata),
       ['Received', formatTimestamp(input.receivedAt)],
     ] as Array<[string, string]>,
-    sectionTitle: 'Greeting played',
-    sectionBody: input.greeting,
+    sections: [{ title: 'Greeting played', body: input.greeting }],
     footnote:
       'If the caller leaves a voicemail, a transcription follows in a separate email.',
   }
@@ -226,6 +225,8 @@ export type IncomingSmsEmailInput = {
   to: string
   toLabel: string
   body: string
+  bellResponse?: string
+  bellReplyFailed?: boolean
   receivedAt: Date
 }
 
@@ -237,8 +238,15 @@ function incomingSmsContent(input: IncomingSmsEmailInput) {
       ['To', `${input.to} (${input.toLabel})`],
       ['Received', formatTimestamp(input.receivedAt)],
     ] as Array<[string, string]>,
-    sectionTitle: 'Message',
-    sectionBody: input.body,
+    sections: [
+      { title: 'Message', body: input.body },
+      ...(input.bellResponse
+        ? [{ title: 'Bell reply', body: input.bellResponse }]
+        : []),
+    ],
+    footnote: input.bellReplyFailed
+      ? 'Twilio did not confirm the Bell reply.'
+      : undefined,
   }
 }
 

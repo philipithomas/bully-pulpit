@@ -99,7 +99,10 @@ beforeEach(() => {
     // biome-ignore lint/suspicious/noExplicitAny: focused persistence stub
   } as any)
   vi.mocked(createTextMessageWithStatus).mockResolvedValue({
-    message: message(10, 'outbound', '[Bell AI] Hello'),
+    message: {
+      ...message(10, 'outbound', '[Bell AI] Hello'),
+      replyToMessageId: INPUT.inboundMessageId,
+    },
     inserted: true,
   })
 })
@@ -294,7 +297,9 @@ describe('Bell SMS generation and delivery', () => {
     vi.mocked(findTextMessageById).mockResolvedValue(null)
 
     await expect(sendBellSmsBody(INPUT, '[Bell AI] Hello')).resolves.toBeNull()
-    await recordBellSms(INPUT, '[Bell AI] Hello', null)
+    await expect(
+      recordBellSms(INPUT, '[Bell AI] Hello', null)
+    ).resolves.toBeNull()
 
     expect(sendSms).not.toHaveBeenCalled()
     expect(createTextMessageWithStatus).not.toHaveBeenCalled()
@@ -302,7 +307,13 @@ describe('Bell SMS generation and delivery', () => {
 
   it('records the durable result against the inbound message', async () => {
     const body = '[Bell AI] Hello'
-    await recordBellSms(INPUT, body, { sid: 'SM_REPLY', status: 'queued' })
+    await expect(
+      recordBellSms(INPUT, body, { sid: 'SM_REPLY', status: 'queued' })
+    ).resolves.toMatchObject({
+      body,
+      status: 'queued',
+      replyToMessageId: INPUT.inboundMessageId,
+    })
 
     expect(createTextMessageWithStatus).toHaveBeenCalledWith({
       fromNumber: INPUT.to,
