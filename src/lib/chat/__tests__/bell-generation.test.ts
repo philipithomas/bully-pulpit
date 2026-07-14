@@ -18,6 +18,8 @@ describe('Bell Gateway metadata', () => {
   it('uses GPT-5.6 Sol with surface-specific reasoning', () => {
     expect(BELL_MODEL_ID).toBe('openai/gpt-5.6-sol')
     expect(getBellReasoning('web')).toBe('none')
+    expect(getBellReasoning('web', 2)).toBe('high')
+    expect(getBellReasoning('web', 8)).toBe('high')
     expect(getBellReasoning('sms')).toBe('xhigh')
   })
 
