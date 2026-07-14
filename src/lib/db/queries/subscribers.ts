@@ -34,7 +34,7 @@ const newsletterColumns = {
 export type NewsletterSlug = keyof typeof newsletterColumns
 
 export function isNewsletter(value: string): value is NewsletterSlug {
-  return value in newsletterColumns
+  return Object.hasOwn(newsletterColumns, value)
 }
 
 export async function findById(id: number): Promise<Subscriber | null> {

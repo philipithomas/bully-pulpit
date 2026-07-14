@@ -1,5 +1,15 @@
 import { randomUUID } from 'node:crypto'
-import { and, desc, eq, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
+import {
+  and,
+  desc,
+  eq,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { SMS_SEND_SKIPPED_UNSUBSCRIBED } from '@/lib/db/queries/sms-sends'
 import type { NewsletterSlug } from '@/lib/db/queries/subscribers'
@@ -137,6 +147,17 @@ export async function findSmsSubscriberByPhoneNumber(
     .select()
     .from(smsSubscribers)
     .where(eq(smsSubscribers.phoneNumber, phoneNumber))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+export async function findSmsSubscriberById(
+  id: number
+): Promise<SmsSubscriber | null> {
+  const rows = await getDb()
+    .select()
+    .from(smsSubscribers)
+    .where(eq(smsSubscribers.id, id))
     .limit(1)
   return rows[0] ?? null
 }
@@ -413,4 +434,100 @@ export async function countActiveSms(): Promise<number> {
       )
     )
   return rows[0]?.count ?? 0
+}
+
+export type SmsSubscriberListItem = {
+  id: number
+  phoneNumber: string
+  confirmedAt: string | null
+  subscribedPostcard: boolean
+  subscribedContraption: boolean
+  subscribedWorkshop: boolean
+  subscribedTsundoku: boolean
+  source: string | null
+  createdAt: string
+}
+
+/** Paginated SMS subscriber list for the Printing press admin. */
+export async function listSmsSubscribers(opts: {
+  search?: string
+  newsletter?: NewsletterSlug
+  limit?: number
+  offset?: number
+}): Promise<{ rows: SmsSubscriberListItem[]; total: number }> {
+  const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100)
+  const offset = Math.max(opts.offset ?? 0, 0)
+  const search = opts.search?.trim()
+  const filters: SQL[] = []
+  if (search) {
+    filters.push(sql`${smsSubscribers.phoneNumber} LIKE ${`%${search}%`}`)
+  }
+  if (opts.newsletter) {
+    filters.push(eq(newsletterColumns[opts.newsletter], true))
+  }
+  const where = filters.length > 0 ? and(...filters) : undefined
+
+  const countRows = await getDb()
+    .select({ n: sql<number>`count(*)::int` })
+    .from(smsSubscribers)
+    .where(where)
+  const total = countRows[0]?.n ?? 0
+
+  const rows = await getDb()
+    .select()
+    .from(smsSubscribers)
+    .where(where)
+    .orderBy(desc(smsSubscribers.createdAt), desc(smsSubscribers.id))
+    .limit(limit)
+    .offset(offset)
+
+  return {
+    rows: rows.map((subscriber) => ({
+      id: subscriber.id,
+      phoneNumber: subscriber.phoneNumber,
+      confirmedAt: subscriber.confirmedAt
+        ? subscriber.confirmedAt.toISOString()
+        : null,
+      subscribedPostcard: subscriber.subscribedPostcard,
+      subscribedContraption: subscriber.subscribedContraption,
+      subscribedWorkshop: subscriber.subscribedWorkshop,
+      subscribedTsundoku: subscriber.subscribedTsundoku,
+      source: subscriber.source,
+      createdAt: subscriber.createdAt.toISOString(),
+    })),
+    total,
+  }
+}
+
+/**
+ * Hard-deletes an active SMS subscriber and its newsletter-send rows
+ * atomically. Inactive rows are STOP tombstones and must survive until the
+ * handset reactivates them. Phone transcripts and Bell conversations have
+ * separate admin lifecycles.
+ */
+export async function deleteSmsSubscriberWithData(
+  id: number
+): Promise<boolean> {
+  const result = await getDb().execute<{ id: number }>(sql`
+    WITH target AS MATERIALIZED (
+      SELECT ${smsSubscribers.id}
+      FROM ${smsSubscribers}
+      WHERE ${smsSubscribers.id} = ${id}
+        AND ${smsSubscribers.confirmedAt} IS NOT NULL
+      FOR UPDATE
+    ),
+    deleted_sends AS (
+      DELETE FROM ${smsSends}
+      WHERE ${smsSends.smsSubscriberId} IN (SELECT id FROM target)
+      RETURNING ${smsSends.id}
+    )
+    DELETE FROM ${smsSubscribers}
+    WHERE ${smsSubscribers.id} IN (SELECT id FROM target)
+      -- Force child cleanup to finish before the parent delete. Locking the
+      -- target first serializes this path with STOP and newsletter enqueue.
+      AND (SELECT count(*) FROM deleted_sends) >= 0
+    RETURNING ${smsSubscribers.id} AS id
+  `)
+  const rows = Array.isArray(result) ? result : result.rows
+  return rows.length > 0
 }
