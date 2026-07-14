@@ -28,9 +28,6 @@ vi.mock('@/lib/phone/twilio', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/phone/twilio')>()
   return { ...actual, sendSms: vi.fn() }
 })
-vi.mock('@/lib/flags', () => ({
-  smsSignupUi: vi.fn(async () => false),
-}))
 vi.mock('@/lib/rate-limit', () => ({
   checkRateLimit: vi.fn(async () => true),
 }))
@@ -63,7 +60,6 @@ import {
   textMessages,
 } from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
-import { smsSignupUi } from '@/lib/flags'
 import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
 import {
   SMS_BELL_CONTACT_ONBOARDING,
@@ -109,7 +105,6 @@ beforeEach(async () => {
   process.env.PHONE_NUMBER = '+12123473190'
   process.env.TWILIO_SECRET = SECRET
   process.env.ADMIN_EMAILS = 'one@example.com, two@example.com'
-  vi.mocked(smsSignupUi).mockResolvedValue(false)
   vi.mocked(checkRateLimit).mockResolvedValue(true)
   vi.mocked(sendSms).mockImplementation(async (input) => {
     if (input.mediaUrl) {
@@ -541,8 +536,6 @@ describe('POST /api/phone/sms', () => {
   })
 
   it('sends one Bell card when text and voice signups race', async () => {
-    vi.mocked(smsSignupUi).mockResolvedValue(true)
-
     await Promise.all([
       smsPost(
         smsRequest({
@@ -1010,8 +1003,6 @@ describe('POST /api/phone/sms', () => {
 
 describe('POST /api/phone/voice-menu', () => {
   it('subscribes a caller that presses 2', async () => {
-    vi.mocked(smsSignupUi).mockResolvedValue(true)
-
     const response = await voiceMenuPost(
       voiceMenuRequest({
         From: '+14155551234',
@@ -1080,7 +1071,6 @@ describe('POST /api/phone/voice-menu', () => {
   })
 
   it('does not resend the Bell card to an already-active voice subscriber', async () => {
-    vi.mocked(smsSignupUi).mockResolvedValue(true)
     const form = {
       From: '+14155551234',
       To: '+12123473190',
@@ -1104,35 +1094,7 @@ describe('POST /api/phone/voice-menu', () => {
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
   })
 
-  it('falls back to voicemail when the SMS signup UI flag is off', async () => {
-    const response = await voiceMenuPost(
-      voiceMenuRequest({
-        From: '+14155551234',
-        To: '+12123473190',
-        Digits: '2',
-        CallSid: 'CA_VOICEMAIL',
-        CallerName: 'Jane Caller',
-        FromCity: 'San Francisco',
-        FromState: 'CA',
-        FromZip: '94105',
-      })
-    )
-
-    expect(response.status).toBe(200)
-    const xml = await response.text()
-    expect(xml).toContain('Leave a message after the tone.')
-    expect(xml).toContain('<Record maxLength="120"')
-    expect(xml).toContain('CallSid=CA_VOICEMAIL')
-    expect(xml).toContain('CallerName=Jane+Caller')
-    expect(xml).toContain('FromCity=San+Francisco')
-    expect(xml).toContain('FromState=CA')
-    expect(xml).toContain('FromZip=94105')
-    expect(await db.select().from(smsSubscribers)).toHaveLength(0)
-    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
-  })
-
   it('does not recreate deleted data for a duplicate voice-menu CallSid', async () => {
-    vi.mocked(smsSignupUi).mockResolvedValue(true)
     const voiceForm = {
       From: '+14155551234',
       To: '+12123473190',
@@ -1164,7 +1126,6 @@ describe('POST /api/phone/voice-menu', () => {
   })
 
   it('allows a fresh voice signup after STOP deletes the old state', async () => {
-    vi.mocked(smsSignupUi).mockResolvedValue(true)
     const phoneNumber = '+14155551234'
     await smsPost(
       smsRequest({
@@ -1201,7 +1162,6 @@ describe('POST /api/phone/voice-menu', () => {
   })
 
   it('still gives spoken STOP instructions when voice confirmation SMS fails', async () => {
-    vi.mocked(smsSignupUi).mockResolvedValue(true)
     vi.mocked(sendSms).mockRejectedValueOnce(new Error('Twilio rejected it'))
 
     const response = await voiceMenuPost(
@@ -1231,7 +1191,6 @@ describe('POST /api/phone/voice-menu', () => {
   })
 
   it('keeps the confirmation when the optional Bell onboarding MMS fails', async () => {
-    vi.mocked(smsSignupUi).mockResolvedValue(true)
     let localSmsCount = 0
     vi.mocked(sendSms).mockImplementation(async (input) => {
       if (input.mediaUrl) throw new Error('MMS rejected')

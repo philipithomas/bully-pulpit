@@ -22,11 +22,9 @@ updates:
           - 'next'
           - 'react'
           - 'react-dom'
-          - '@flags-sdk/vercel'
           - '@vercel/analytics'
           - '@vercel/speed-insights'
           - 'botid'
-          - 'flags'
         update-types: ['minor', 'patch']
       database:
         patterns:
