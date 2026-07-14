@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-07-14T01:17:36.727Z",
+  "generatedAt": "2026-07-14T15:36:21.771Z",
   "posts": {
+    "adding-sms-support": {
+      "related": [
+        {
+          "slug": "sync-phone-numbers-and-webhooks",
+          "score": 0.1272102
+        },
+        {
+          "slug": "toast",
+          "score": 0.1770809
+        },
+        {
+          "slug": "2023-10",
+          "score": 0.1771971
+        }
+      ]
+    },
     "farewell": {
       "related": [
         {
@@ -292,16 +308,16 @@
     "toast": {
       "related": [
         {
+          "slug": "adding-sms-support",
+          "score": 0.1770809
+        },
+        {
           "slug": "morning-coffee",
           "score": 0.2033042
         },
         {
           "slug": "avant-garde-coffee",
           "score": 0.2077236
-        },
-        {
-          "slug": "software-is-bread-not-burgers",
-          "score": 0.214074
         }
       ]
     },

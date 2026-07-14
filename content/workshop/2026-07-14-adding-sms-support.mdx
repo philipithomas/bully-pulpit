@@ -1,0 +1,18 @@
+---
+title: "Adding SMS support"
+publishedAt: "2026-07-14"
+coverImage: "/images/covers/tsundoku/toast.jpg"
+coverImageAlt: "Thick toast with red bean and cream beside a cup of coffee at Higashide Coffee"
+---
+
+As an experiment, I have added SMS subscription support to this website.
+
+To subscribe, text `SUBSCRIBE` to [+1 212 347 3190](sms:+12123473190?body=SUBSCRIBE). Then, you will receive a text message about all new posts. (I may add WhatsApp in the future for better international support.)
+
+I have been [off social media for years](/how-to-replace-social-media-with-a-personal-newsletter), and have slowly been [building this website into my personal homepage](/software-in-the-ai-era) on the internet. Today, most people subscribe by email, and a couple follow via RSS. But a surprising number of people have told me that they do not use email. For some, their job does not require it, so they do not check it often. For others, email is an overwhelming to-do list of spam and robot messages that feels too much like work. So, I built SMS support for them.
+
+The system uses a dedicated Twilio number, which I [originally set up as a voicemail](/sync-phone-numbers-and-webhooks). To send text messages, I went through the rigmarole of [A2P 10DLC registration](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/quickstart), the new-ish industry standard that US telecom carriers created in response to spam and unsolicited messages.
+
+As a fun aside, you can text the same number with a question for the site's [AI assistant, Bell](/three-ring-binder). Bell can research my past posts to answer questions such as, "What is Philip's favorite restaurant?"
+
+Try it out. SMS is not for everybody, but this is a fun, [open-source experiment](https://github.com/philipithomas/bully-pulpit) aligned with [my recent decision to put more creative energy into this site](/spring-cleaning).
