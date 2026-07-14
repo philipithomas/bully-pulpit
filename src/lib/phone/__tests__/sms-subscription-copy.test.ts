@@ -17,7 +17,7 @@ describe('SMS subscription copy', () => {
 
   it('explains how to save the Bell contact card and ask a question', () => {
     expect(SMS_BELL_CONTACT_ONBOARDING).toBe(
-      'philipithomas.com: Meet Bell. Open the attached card, then tap Create New Contact to save Bell so future texts have a name and face. Text Bell questions about philipithomas.com.'
+      "philipithomas.com: Let's give this number a name and photo. Open the attached card, then tap Create New Contact to save Bell. Text Bell questions about philipithomas.com."
     )
   })
 
