@@ -4,7 +4,7 @@ import { newsletterUsesCoverMms } from '@/lib/newsletters'
 
 const MAX_SMS_BODY_LENGTH = 1500
 const STOP_FOOTER = 'Reply STOP to unsubscribe.'
-const MMS_COVER_IMAGE_PATH = /^\/images\/[^?#\\]+\.(?:avif|jpe?g|png|webp)$/i
+const MMS_COVER_IMAGE_PATH = /^\/images\/[^?#\\]+\.(?:jpe?g|png)$/i
 const MAX_MMS_COVER_PATH_LENGTH = 512
 
 function trimForSms(value: string, maxLength: number): string {
@@ -32,9 +32,10 @@ export function renderNewsletterSms(post: Post): string {
 }
 
 /**
- * Public, normalized JPEG rendition used by Twilio for photography-newsletter
- * MMS. Versioning the URL with the source path prevents a renamed cover from
- * reusing a stale CDN object while keeping every recipient on one cache key.
+ * Public, optimized JPEG or PNG rendition used by Twilio for photography-
+ * newsletter MMS. Versioning the URL with the source path prevents a renamed
+ * cover from reusing a stale CDN object while keeping every recipient on one
+ * cache key.
  */
 export function newsletterSmsMediaUrl(post: Post): string | undefined {
   const coverImage = post.frontmatter.coverImage

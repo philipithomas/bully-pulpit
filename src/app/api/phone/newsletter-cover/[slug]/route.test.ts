@@ -36,6 +36,7 @@ const mockedGetPost = vi.mocked(getPostBySlugWithoutImages)
 const mockedFetch = vi.fn()
 const context = { params: Promise.resolve({ slug: PHOTO_POST.slug }) }
 let optimizedSource: Buffer
+let optimizedPngSource: Buffer
 
 function coverRequest(
   coverImage: string = PHOTO_POST.frontmatter.coverImage as string
@@ -63,6 +64,16 @@ beforeAll(async () => {
       withoutEnlargement: true,
     })
     .jpeg({ quality: 100 })
+    .toBuffer()
+  optimizedPngSource = await sharp({
+    create: {
+      background: '#f4f1e8',
+      channels: 4,
+      height: 800,
+      width: 1200,
+    },
+  })
+    .png()
     .toBuffer()
 })
 
@@ -108,6 +119,32 @@ describe('photography newsletter MMS cover', () => {
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Length')).toMatch(/^\d+$/)
     expect((await response.arrayBuffer()).byteLength).toBe(0)
+  })
+
+  it('serves PNG covers with matching Twilio-safe headers', async () => {
+    mockedFetch.mockResolvedValueOnce(
+      new Response(Uint8Array.from(optimizedPngSource), {
+        headers: {
+          'Content-Length': String(optimizedPngSource.byteLength),
+          'Content-Type': 'image/png',
+        },
+      })
+    )
+
+    const response = await GET(
+      coverRequest('/images/covers/tsundoku/first-photo.png'),
+      context
+    )
+    const body = Buffer.from(await response.arrayBuffer())
+    const metadata = await sharp(body).metadata()
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('image/png')
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'inline; filename="cover.png"'
+    )
+    expect(response.headers.get('Content-Length')).toBe(String(body.byteLength))
+    expect(metadata.format).toBe('png')
   })
 
   it('does not expose covers for ordinary newsletters', async () => {

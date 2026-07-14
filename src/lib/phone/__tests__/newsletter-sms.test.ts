@@ -70,6 +70,22 @@ describe('newsletter SMS', () => {
     ).toBeUndefined()
   })
 
+  it.each([
+    'cover.avif',
+    'cover.webp',
+  ])('falls back to SMS for a Twilio-incompatible %s cover', (filename) => {
+    expect(
+      newsletterSmsMediaUrl(
+        post({
+          frontmatter: {
+            ...post().frontmatter,
+            coverImage: `/images/covers/tsundoku/${filename}`,
+          },
+        })
+      )
+    ).toBeUndefined()
+  })
+
   it('rejects a cover path that escapes the public images directory', () => {
     expect(
       newsletterSmsMediaUrl(

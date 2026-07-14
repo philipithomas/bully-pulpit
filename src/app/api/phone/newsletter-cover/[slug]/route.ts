@@ -11,10 +11,22 @@ const MAX_MMS_IMAGE_BYTES = 4_500_000
 const RESPONSE_HEADERS = {
   'Cache-Control':
     'public, max-age=86400, s-maxage=31536000, stale-while-revalidate=2592000',
-  'Content-Disposition': 'inline; filename="cover.jpg"',
-  'Content-Type': 'image/jpeg',
   'X-Content-Type-Options': 'nosniff',
   'X-Robots-Tag': 'noindex, nofollow, noarchive',
+}
+
+type MmsImageContentType = 'image/jpeg' | 'image/png'
+
+function mmsImageContentType(value: string | null): MmsImageContentType | null {
+  const contentType = value?.split(';', 1)[0]
+  return contentType === 'image/jpeg' || contentType === 'image/png'
+    ? contentType
+    : null
+}
+
+function contentDisposition(contentType: MmsImageContentType): string {
+  const extension = contentType === 'image/png' ? 'png' : 'jpg'
+  return `inline; filename="cover.${extension}"`
 }
 
 type RouteContext = { params: Promise<{ slug: string }> }
@@ -42,13 +54,15 @@ function optimizerRequests(
   coverImage: string
 ): Array<{ headers: Record<string, string>; url: string }> {
   const publicRequest = {
-    headers: { Accept: 'image/jpeg' },
+    headers: { Accept: 'image/jpeg,image/png' },
     url: optimizerUrl(siteConfig.url, coverImage),
   }
   const requestUrl = new URL(request.url)
   if (!requestUrl.hostname.endsWith('.vercel.app')) return [publicRequest]
 
-  const headers: Record<string, string> = { Accept: 'image/jpeg' }
+  const headers: Record<string, string> = {
+    Accept: 'image/jpeg,image/png',
+  }
   for (const name of ['cookie', 'x-vercel-protection-bypass']) {
     const value = request.headers.get(name)
     if (value) headers[name] = value
@@ -63,7 +77,7 @@ function optimizerRequests(
 async function optimizedCover(
   request: Request,
   coverImage: string
-): Promise<Buffer | null> {
+): Promise<{ contentType: MmsImageContentType; image: Buffer } | null> {
   for (const candidate of optimizerRequests(request, coverImage)) {
     let response: Response
     try {
@@ -76,18 +90,16 @@ async function optimizedCover(
       continue
     }
 
-    if (
-      !response.ok ||
-      response.headers.get('content-type')?.split(';', 1)[0] !== 'image/jpeg'
-    ) {
-      continue
-    }
+    const contentType = mmsImageContentType(
+      response.headers.get('content-type')
+    )
+    if (!response.ok || !contentType) continue
 
     const declaredLength = Number(response.headers.get('content-length'))
     if (declaredLength > MAX_MMS_IMAGE_BYTES) continue
 
     const image = Buffer.from(await response.arrayBuffer())
-    if (image.byteLength <= MAX_MMS_IMAGE_BYTES) return image
+    if (image.byteLength <= MAX_MMS_IMAGE_BYTES) return { contentType, image }
   }
   return null
 }
@@ -103,15 +115,20 @@ async function coverResponse(
     return new Response('Not found', { status: 404 })
   }
 
-  const image = await optimizedCover(request, coverImage)
-  if (!image) return new Response('Not found', { status: 404 })
+  const optimized = await optimizedCover(request, coverImage)
+  if (!optimized) return new Response('Not found', { status: 404 })
 
-  return new Response(includeBody ? Uint8Array.from(image).buffer : null, {
-    headers: {
-      ...RESPONSE_HEADERS,
-      'Content-Length': String(image.byteLength),
-    },
-  })
+  return new Response(
+    includeBody ? Uint8Array.from(optimized.image).buffer : null,
+    {
+      headers: {
+        ...RESPONSE_HEADERS,
+        'Content-Disposition': contentDisposition(optimized.contentType),
+        'Content-Length': String(optimized.image.byteLength),
+        'Content-Type': optimized.contentType,
+      },
+    }
+  )
 }
 
 export function GET(request: Request, context: RouteContext) {
