@@ -331,6 +331,9 @@ export async function POST(request: Request) {
   return result.toUIMessageStreamResponse({
     originalMessages: sanitizedMessages,
     consumeSseStream: consumeStream,
+    // Follow-up turns use high reasoning, but chain-of-thought and provider
+    // reasoning metadata must never reach the browser or saved UI transcript.
+    sendReasoning: false,
     messageMetadata: ({ part }) => {
       if (
         !pageContent ||

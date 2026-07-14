@@ -267,11 +267,13 @@ describe('POST /api/chat request bounds', () => {
     expect(reasoning).toHaveBeenCalledWith('web', 1)
     const options = toUIMessageStreamResponse.mock.calls[0]?.[0] as
       | {
+          sendReasoning?: boolean
           messageMetadata?: (input: {
             part: { type: string; finishReason?: string }
           }) => unknown
         }
       | undefined
+    expect(options?.sendReasoning).toBe(false)
     expect(options?.messageMetadata?.({ part: { type: 'start' } })).toBe(
       undefined
     )
