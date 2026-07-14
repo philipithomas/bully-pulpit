@@ -18,6 +18,7 @@ vi.mock('@/lib/chat/bell-identity', () => ({
 }))
 vi.mock('@/lib/db/queries/text-messages', () => ({
   createTextMessageWithStatus: vi.fn(),
+  findTextMessageById: vi.fn(),
   recentConversationWith: vi.fn(),
 }))
 vi.mock('@/lib/db/queries/bell-generations', () => ({
@@ -37,11 +38,11 @@ import { getBellProviderOptions } from '@/lib/chat/bell-generation'
 import { createBellMessage } from '@/lib/db/queries/bell-messages'
 import {
   createTextMessageWithStatus,
+  findTextMessageById,
   recentConversationWith,
 } from '@/lib/db/queries/text-messages'
 import type { TextMessage } from '@/lib/db/schema'
 import {
-  BELL_SMS_COMPLIANCE_FOOTER,
   BELL_SMS_MAX_GSM_UNITS,
   BELL_SMS_MAX_UCS2_UNITS,
   BELL_SMS_PREFIX,
@@ -84,6 +85,9 @@ function message(
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(findTextMessageById).mockResolvedValue(
+    message(9, 'inbound', 'Hello')
+  )
   vi.mocked(recentConversationWith).mockResolvedValue([])
   vi.mocked(sendSms).mockResolvedValue({ sid: 'SM_REPLY', status: 'queued' })
   vi.mocked(createBellMessage).mockResolvedValue({
@@ -112,7 +116,7 @@ describe('SMS encoding budget', () => {
     const body = formatBellSmsBody('word '.repeat(200))
     expect(body).toMatch(/^\[Bell AI\] /)
     expect(body).toContain('...')
-    expect(body).toMatch(new RegExp(`${BELL_SMS_COMPLIANCE_FOOTER}$`))
+    expect(body).not.toContain('Reply STOP')
     expect(smsUnits(body)).toMatchObject({
       encoding: 'GSM-7',
       units: expect.any(Number),
@@ -126,7 +130,7 @@ describe('SMS encoding budget', () => {
     expect(measurement.encoding).toBe('UCS-2')
     expect(measurement.units).toBeLessThanOrEqual(BELL_SMS_MAX_UCS2_UNITS)
     expect(body).not.toMatch(/[\uD800-\uDBFF]$/)
-    expect(body).toMatch(new RegExp(`${BELL_SMS_COMPLIANCE_FOOTER}$`))
+    expect(body).not.toContain('Reply STOP')
   })
 
   it('does not let Unicode beyond the retained prefix shrink a GSM reply', () => {
@@ -149,25 +153,23 @@ describe('formatBellSmsBody', () => {
       '{"query":"hello"}\n## **Read** [the post](/hello). “Useful”—brief…'
     )
     expect(body).toBe(
-      '[Bell AI] Read the post (https://www.philipithomas.com/hello). "Useful"-brief... philipithomas.com: Reply STOP to end.'
+      '[Bell AI] Read the post (https://www.philipithomas.com/hello). "Useful"-brief...'
     )
     expect(body).not.toContain('**')
     expect(body).not.toContain('](')
   })
 
   it('adds the prefix exactly once and falls back on empty output', () => {
-    expect(formatBellSmsBody('[Bell AI] Hello')).toBe(
-      '[Bell AI] Hello philipithomas.com: Reply STOP to end.'
-    )
+    expect(formatBellSmsBody('[Bell AI] Hello')).toBe('[Bell AI] Hello')
     expect(formatBellSmsBody('   ')).toBe(FALLBACK_BELL_SMS_BODY)
   })
 
-  it('keeps the application footer exactly once', () => {
+  it('removes the legacy opt-out footer from reply-only messages', () => {
     const body = formatBellSmsBody(
-      `Hello ${BELL_SMS_COMPLIANCE_FOOTER} ${BELL_SMS_COMPLIANCE_FOOTER}`
+      'Hello philipithomas.com: Reply STOP to end. philipithomas.com: Reply STOP to end.'
     )
 
-    expect(body).toBe(`[Bell AI] Hello ${BELL_SMS_COMPLIANCE_FOOTER}`)
+    expect(body).toBe('[Bell AI] Hello')
   })
 
   it('preserves autolinks while removing strikethrough and table pipes', () => {
@@ -176,7 +178,7 @@ describe('formatBellSmsBody', () => {
         'See <https://www.philipithomas.com/contact> and ~~ignore~~ | pipes.'
       )
     ).toBe(
-      '[Bell AI] See https://www.philipithomas.com/contact and ignore pipes. philipithomas.com: Reply STOP to end.'
+      '[Bell AI] See https://www.philipithomas.com/contact and ignore pipes.'
     )
   })
 
@@ -185,7 +187,7 @@ describe('formatBellSmsBody', () => {
       `${'Context '.repeat(22)}https://www.philipithomas.com/${'long-slug-'.repeat(30)}`
     )
     expect(body).toContain('...')
-    expect(body).toMatch(new RegExp(`${BELL_SMS_COMPLIANCE_FOOTER}$`))
+    expect(body).not.toContain('Reply STOP')
     expect(body).not.toContain('https://')
   })
 
@@ -194,7 +196,7 @@ describe('formatBellSmsBody', () => {
       formatBellSmsBody(
         '{"path":"/contact"}{"query":"coffee","scope":"images"}Answer.'
       )
-    ).toBe('[Bell AI] Answer. philipithomas.com: Reply STOP to end.')
+    ).toBe('[Bell AI] Answer.')
   })
 })
 
@@ -245,7 +247,7 @@ describe('Bell SMS generation and delivery', () => {
     } as any)
 
     await expect(generateBellSmsBody(INPUT)).resolves.toEqual({
-      body: '[Bell AI] It is about the new Workshop post. philipithomas.com: Reply STOP to end.',
+      body: '[Bell AI] It is about the new Workshop post.',
       assistantMessageId: '44444444-4444-4444-8444-444444444444',
     })
     expect(recentConversationWith).toHaveBeenCalledWith(INPUT.from, 9)
@@ -285,6 +287,16 @@ describe('Bell SMS generation and delivery', () => {
       to: INPUT.from,
       body,
     })
+    expect(createTextMessageWithStatus).not.toHaveBeenCalled()
+  })
+
+  it('does not send or recreate a reply after STOP deletes the source message', async () => {
+    vi.mocked(findTextMessageById).mockResolvedValue(null)
+
+    await expect(sendBellSmsBody(INPUT, '[Bell AI] Hello')).resolves.toBeNull()
+    await recordBellSms(INPUT, '[Bell AI] Hello', null)
+
+    expect(sendSms).not.toHaveBeenCalled()
     expect(createTextMessageWithStatus).not.toHaveBeenCalled()
   })
 

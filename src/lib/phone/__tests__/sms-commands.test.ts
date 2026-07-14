@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  isTwilioReactivationCommand,
-  smsCommandForBody,
-} from '@/lib/phone/sms-commands'
+import { smsCommandForBody } from '@/lib/phone/sms-commands'
 
 describe('smsCommandForBody', () => {
   it.each([
@@ -31,26 +28,5 @@ describe('smsCommandForBody', () => {
 
   it('leaves ordinary messages alone', () => {
     expect(smsCommandForBody('Can you call me?')).toBeNull()
-  })
-
-  it.each([
-    'START',
-    ' unstop ',
-    'yes',
-  ])('treats exact Twilio keyword %s as reactivation proof', (body) => {
-    expect(isTwilioReactivationCommand(body)).toBe(true)
-  })
-
-  it('uses Twilio metadata as authoritative reactivation proof', () => {
-    expect(isTwilioReactivationCommand('custom keyword', 'START')).toBe(true)
-  })
-
-  it.each([
-    'SUBSCRIBE',
-    'JOIN',
-    'START!',
-    'YES.',
-  ])('does not treat %s as carrier reactivation proof', (body) => {
-    expect(isTwilioReactivationCommand(body)).toBe(false)
   })
 })

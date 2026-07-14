@@ -14,9 +14,9 @@ import {
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
 import {
+  deleteSmsDataForPhoneNumber,
   findSmsSubscriberByPhoneNumber,
   subscribeSmsNumber,
-  unsubscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
 import {
   createTextMessage,
@@ -29,10 +29,7 @@ import {
   sendIncomingSmsNotification,
   sendSmsSignupNotification,
 } from '@/lib/phone/notifications'
-import {
-  isTwilioReactivationCommand,
-  smsCommandForBody,
-} from '@/lib/phone/sms-commands'
+import { smsCommandForBody } from '@/lib/phone/sms-commands'
 import {
   SMS_HELP_RESPONSE,
   SMS_SUBSCRIBE_CONFIRMATION,
@@ -87,25 +84,6 @@ export async function POST(request: Request) {
 
   if (command === 'subscribe') {
     const existing = await findSmsSubscriberByPhoneNumber(from)
-    if (
-      existing &&
-      !existing.confirmedAt &&
-      !isTwilioReactivationCommand(body, optOutType)
-    ) {
-      const lease = webhookEvent
-        ? await claimPhoneWebhookEvent(webhookEvent.event.id)
-        : null
-      if (webhookEvent) {
-        const marked = lease
-          ? await markPhoneWebhookEventProcessed(webhookEvent.event.id, lease)
-          : false
-        if (!marked) return twimlResponse(emptyTwiml(), 503)
-      }
-      // Twilio still blocks outbound replies after STOP. The original STOP
-      // confirmation already tells the person to use a carrier opt-in word.
-      return twimlResponse(emptyTwiml())
-    }
-
     const lease = webhookEvent
       ? await claimPhoneWebhookEvent(webhookEvent.event.id)
       : null
@@ -168,7 +146,7 @@ export async function POST(request: Request) {
   }
 
   if (command === 'unsubscribe') {
-    await unsubscribeSmsNumber(from, {
+    await deleteSmsDataForPhoneNumber(from, {
       processedPhoneWebhookEventId: webhookEvent?.event.id,
     })
     return twimlResponse(

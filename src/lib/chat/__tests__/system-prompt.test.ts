@@ -137,7 +137,7 @@ describe('getSystemPrompt SMS surface', () => {
     expect(prompt).toContain('Reply in one compact plain-text paragraph')
     expect(prompt).toContain('Do not use Markdown')
     expect(prompt).toContain('Do not write the [Bell AI] prefix')
-    expect(prompt).toContain('or the opt-out footer')
+    expect(prompt).not.toContain('opt-out footer')
     expect(prompt).toContain('https://www.philipithomas.com URL')
     expect(prompt).not.toContain(
       'Use markdown links with the exact URL returned by the search tool'

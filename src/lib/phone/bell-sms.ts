@@ -27,13 +27,11 @@ import {
 } from '@/lib/db/queries/bell-messages'
 import {
   createTextMessageWithStatus,
+  findTextMessageById,
   recentConversationWith,
 } from '@/lib/db/queries/text-messages'
 import type { TextMessage } from '@/lib/db/schema'
-import {
-  BELL_SMS_COMPLIANCE_FOOTER,
-  BELL_SMS_PREFIX,
-} from '@/lib/phone/bell-sms-copy'
+import { BELL_SMS_PREFIX } from '@/lib/phone/bell-sms-copy'
 import { type SentSms, sendSms } from '@/lib/phone/twilio'
 
 export type BellSmsInput = {
@@ -50,7 +48,7 @@ export type BellSmsGenerationResult = {
   assistantMessageId: string
 }
 
-export { BELL_SMS_COMPLIANCE_FOOTER, BELL_SMS_PREFIX }
+export { BELL_SMS_PREFIX }
 
 // Twilio recommends keeping messages below 320 characters. These budgets fit
 // within two concatenated toll-free segments after accounting for encoding:
@@ -63,6 +61,8 @@ const MAX_HISTORY_MESSAGE_CHARACTERS = 1_200
 const MAX_CURRENT_MESSAGE_CHARACTERS = 1_600
 const GENERATION_TIMEOUT_MS = 45_000
 const FALLBACK_TEXT = 'I could not answer that right now. Please try again.'
+const LEGACY_BELL_SMS_COMPLIANCE_FOOTER =
+  'philipithomas.com: Reply STOP to end.'
 
 // GSM 03.38 default and extension alphabets. Extension characters consume
 // two septets; one character outside both sets changes the whole SMS to UCS-2.
@@ -201,10 +201,12 @@ function normalizeSmsTypography(value: string): string {
     .trim()
 }
 
-function stripBellSmsComplianceFooter(value: string): string {
+function stripLegacyBellSmsComplianceFooter(value: string): string {
   let stripped = value.trimEnd()
-  while (stripped.endsWith(BELL_SMS_COMPLIANCE_FOOTER)) {
-    stripped = stripped.slice(0, -BELL_SMS_COMPLIANCE_FOOTER.length).trimEnd()
+  while (stripped.endsWith(LEGACY_BELL_SMS_COMPLIANCE_FOOTER)) {
+    stripped = stripped
+      .slice(0, -LEGACY_BELL_SMS_COMPLIANCE_FOOTER.length)
+      .trimEnd()
   }
   return stripped
 }
@@ -214,16 +216,13 @@ export function formatBellSmsBody(markdown: string): string {
   const scrubbed = scrubLeakedToolJson(markdown)
     .replace(/<((?:https?:\/\/|mailto:)[^>\s]+)>/g, '$1')
     .replace(/~~([^~]+)~~/g, '$1')
-  const plain = stripBellSmsComplianceFooter(
+  const plain = stripLegacyBellSmsComplianceFooter(
     normalizeSmsTypography(
       markdownToPlaintext(scrubbed, 10_000, { preserveParagraphs: true })
     ).replace(/^\[Bell AI\]\s*/i, '')
   )
   const content = plain || FALLBACK_TEXT
-  return truncateToSmsBudget(
-    `${BELL_SMS_PREFIX} ${content}`,
-    ` ${BELL_SMS_COMPLIANCE_FOOTER}`
-  )
+  return truncateToSmsBudget(`${BELL_SMS_PREFIX} ${content}`)
 }
 
 export const FALLBACK_BELL_SMS_BODY = formatBellSmsBody(FALLBACK_TEXT)
@@ -387,7 +386,8 @@ function smsAnalyticsFinishReason(
 export async function sendBellSmsBody(
   input: BellSmsInput,
   body: string
-): Promise<SentSms> {
+): Promise<SentSms | null> {
+  if (!(await findTextMessageById(input.inboundMessageId))) return null
   return sendSms({ from: input.to, to: input.from, body })
 }
 
@@ -398,6 +398,7 @@ export async function recordBellSms(
   result: SentSms | null,
   assistantMessageId?: string | null
 ): Promise<void> {
+  if (!(await findTextMessageById(input.inboundMessageId))) return
   const transport = await createTextMessageWithStatus({
     fromNumber: input.to,
     toNumber: input.from,

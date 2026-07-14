@@ -54,10 +54,10 @@ export function SmsSubscribeDisclosure({
       </span>
       <span className="mt-4 block text-sm text-gray-500">
         A new or reactivated signup includes one Bell contact-card MMS to save
-        to your contacts. You can also text Bell a question about Philip's posts
-        or photos. Message frequency varies. Message and data rates may apply.
-        Reply STOP to unsubscribe or HELP for help. Consent is not a condition
-        of purchase. See the{' '}
+        to your contacts. You can also text Bell questions about
+        philipithomas.com. Message frequency varies. Message and data rates may
+        apply. Reply STOP to unsubscribe or HELP for help. Consent is not a
+        condition of purchase. See the{' '}
         <a
           href="/terms#text-messaging"
           className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950"

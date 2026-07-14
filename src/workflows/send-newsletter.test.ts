@@ -494,7 +494,7 @@ describe('sendNewsletterWorkflow', () => {
     expect(mockedSmsSends.markSmsSent).not.toHaveBeenCalled()
   })
 
-  it('does not count SMS failure when an opt-out marker wins the permanent-failure race', async () => {
+  it('does not count SMS failure when STOP deletion wins the permanent-failure race', async () => {
     mockedEligible.mockResolvedValue([])
     mockedSends.pendingRowIdsBySlug.mockResolvedValue([])
     mockedSmsSends.pendingSmsRowIdsBySlug.mockResolvedValue([701])
