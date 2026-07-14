@@ -19,9 +19,9 @@ vi.mock('@/lib/auth/jwt', async (importOriginal) => {
 vi.mock('@/lib/chat/bell-generation', () => ({
   bellGatewayCost: vi.fn(),
   bellModel: {},
-  bellReasoning: 'none',
   bellStopWhen: [],
   bellTools: {},
+  getBellReasoning: vi.fn(() => 'none'),
   getBellProviderOptions: vi.fn(() => ({})),
   prepareBellStep: vi.fn(),
 }))
@@ -46,6 +46,7 @@ import {
   getVerifiedSession,
   SessionLookupUnavailableError,
 } from '@/lib/auth/jwt'
+import { getBellReasoning } from '@/lib/chat/bell-generation'
 import {
   createWebBellTurn,
   getOrCreateWebBellConversation,
@@ -56,6 +57,7 @@ const rateLimit = vi.mocked(checkRateLimitStatus)
 const botId = vi.mocked(checkBotId)
 const verifiedSession = vi.mocked(getVerifiedSession)
 const model = vi.mocked(streamText)
+const reasoning = vi.mocked(getBellReasoning)
 const createTurn = vi.mocked(createWebBellTurn)
 const getConversation = vi.mocked(getOrCreateWebBellConversation)
 
@@ -262,13 +264,16 @@ describe('POST /api/chat request bounds', () => {
     )
 
     expect(response.status).toBe(200)
+    expect(reasoning).toHaveBeenCalledWith('web', 1)
     const options = toUIMessageStreamResponse.mock.calls[0]?.[0] as
       | {
+          sendReasoning?: boolean
           messageMetadata?: (input: {
             part: { type: string; finishReason?: string }
           }) => unknown
         }
       | undefined
+    expect(options?.sendReasoning).toBe(false)
     expect(options?.messageMetadata?.({ part: { type: 'start' } })).toBe(
       undefined
     )
@@ -297,5 +302,36 @@ describe('POST /api/chat request bounds', () => {
         part: { type: 'finish', finishReason: 'stop' },
       })
     ).toBeUndefined()
+  })
+
+  it('raises reasoning after the first web user turn', async () => {
+    model.mockReturnValue({
+      toUIMessageStreamResponse: vi.fn(() => new Response('stream')),
+    } as never)
+
+    const response = await POST(
+      chatRequest(
+        JSON.stringify({
+          ...validBody,
+          messageId: 'u2',
+          messages: [
+            validBody.messages[0],
+            {
+              id: 'a1',
+              role: 'assistant',
+              parts: [{ type: 'text', text: 'Hello.' }],
+            },
+            {
+              id: 'u2',
+              role: 'user',
+              parts: [{ type: 'text', text: 'Tell me more.' }],
+            },
+          ],
+        })
+      )
+    )
+
+    expect(response.status).toBe(200)
+    expect(reasoning).toHaveBeenCalledWith('web', 2)
   })
 })

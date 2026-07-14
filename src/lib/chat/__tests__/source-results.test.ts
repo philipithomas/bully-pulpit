@@ -110,6 +110,24 @@ describe('Bell tool provenance', () => {
         })
       )
     ).toMatchObject([{ type: 'page', title: 'Contact', url: '/contact' }])
+
+    expect(
+      bellSourcesFromToolOutput(
+        'fetchPublicUrl',
+        JSON.stringify({
+          type: 'external',
+          title: 'External source',
+          url: 'https://example.com/source',
+          content: 'External text',
+        })
+      )
+    ).toEqual([
+      {
+        type: 'external',
+        title: 'External source',
+        url: 'https://example.com/source',
+      },
+    ])
   })
 
   it('uses only completed successful tools and keeps richer deduplicated sources', () => {
@@ -175,6 +193,16 @@ describe('Bell tool provenance', () => {
         'fetchPage',
         JSON.stringify({
           type: 'page',
+          title: 'Unsafe',
+          url: 'javascript:alert(1)',
+        })
+      )
+    ).toEqual([])
+    expect(
+      bellSourcesFromToolOutput(
+        'fetchPublicUrl',
+        JSON.stringify({
+          type: 'external',
           title: 'Unsafe',
           url: 'javascript:alert(1)',
         })

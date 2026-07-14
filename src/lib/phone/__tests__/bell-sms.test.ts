@@ -7,9 +7,9 @@ vi.mock('@/lib/chat/bell-generation', () => ({
     costUsd: null,
   })),
   bellModel: 'test-model',
-  bellReasoning: 'none',
   bellStopWhen: 'stop-condition',
   bellTools: { searchPosts: {} },
+  getBellReasoning: vi.fn(() => 'xhigh'),
   getBellProviderOptions: vi.fn(() => ({ gateway: {} })),
   prepareBellStep: vi.fn(),
 }))
@@ -257,8 +257,8 @@ describe('Bell SMS generation and delivery', () => {
     const call = vi.mocked(generateText).mock.calls[0][0]
     expect(call.prompt).toContain('Workshop: A new message')
     expect(call.system).toContain('Reply in one compact plain-text paragraph')
-    expect(call.maxOutputTokens).toBe(256)
-    expect(call.reasoning).toBe('none')
+    expect(call.maxOutputTokens).toBe(2048)
+    expect(call.reasoning).toBe('xhigh')
     expect(call.tools).toEqual({ searchPosts: {} })
     expect(call.telemetry).toMatchObject({
       recordInputs: false,

@@ -64,6 +64,27 @@ describe('ChatMessage Bell tool rendering', () => {
     expect(html).not.toContain('<img')
     expect(html).toContain('href="/spring-cleaning"')
   })
+
+  it('renders a public URL read and its external source safely', () => {
+    const html = renderToolPart({
+      type: 'tool-fetchPublicUrl',
+      toolCallId: 'fetch-public-url',
+      state: 'output-available',
+      input: { url: 'https://example.com/public-page' },
+      output: JSON.stringify({
+        type: 'external',
+        title: 'Public page',
+        url: 'https://example.com/public-page',
+        content: 'Source text',
+      }),
+    })
+
+    expect(html).toContain('Read example.com')
+    expect(html).toContain('href="https://example.com/public-page"')
+    expect(html).toContain('target="_blank"')
+    expect(html).toContain('rel="noopener noreferrer"')
+    expect(html).toContain('Public page')
+  })
 })
 
 describe('ChatMessage feedback', () => {

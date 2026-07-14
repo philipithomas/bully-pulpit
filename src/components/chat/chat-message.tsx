@@ -170,7 +170,7 @@ function ToolImageResults({
 }
 
 type SourceCitationClick = (
-  destinationType: 'post' | 'page' | 'image',
+  destinationType: 'post' | 'page' | 'image' | 'external',
   newsletter: AnalyticsNewsletter
 ) => void
 
@@ -209,7 +209,11 @@ function SourceChips({
     (event: MouseEvent<HTMLAnchorElement>) => {
       const sourceType = event.currentTarget.dataset.sourceType
       const destinationType =
-        sourceType === 'page' || sourceType === 'image' ? sourceType : 'post'
+        sourceType === 'page' ||
+        sourceType === 'image' ||
+        sourceType === 'external'
+          ? sourceType
+          : 'post'
       onCitationClick(
         destinationType,
         parseAnalyticsNewsletter(event.currentTarget.dataset.sourceNewsletter)
@@ -226,16 +230,8 @@ function SourceChips({
       <div className="flex flex-wrap gap-1.5">
         {sources.map((source) => {
           const newsletter = sourceNewsletterLabel(source.newsletter)
-          return (
-            <Link
-              key={`${source.url}-${source.title}`}
-              href={source.url}
-              title={sourceTitle(source)}
-              data-source-type={source.type}
-              data-source-newsletter={source.newsletter}
-              onClick={handleClick}
-              className="group inline-flex max-w-full items-center gap-1.5 rounded-full border border-gray-100 px-2.5 py-1 text-[11px] text-gray-500 transition-colors hover:border-gray-200 hover:text-gray-950"
-            >
+          const content = (
+            <>
               <span className="truncate font-medium">{source.title}</span>
               {source.publishedAt ? (
                 <time className="shrink-0 text-gray-400">
@@ -250,6 +246,33 @@ function SourceChips({
                   § {source.section}
                 </span>
               ) : null}
+            </>
+          )
+          const props = {
+            title: sourceTitle(source),
+            'data-source-type': source.type,
+            'data-source-newsletter': source.newsletter,
+            onClick: handleClick,
+            className:
+              'group inline-flex max-w-full items-center gap-1.5 rounded-full border border-gray-100 px-2.5 py-1 text-[11px] text-gray-500 transition-colors hover:border-gray-200 hover:text-gray-950',
+          }
+          return source.type === 'external' ? (
+            <a
+              key={`${source.url}-${source.title}`}
+              href={source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              {...props}
+            >
+              {content}
+            </a>
+          ) : (
+            <Link
+              key={`${source.url}-${source.title}`}
+              href={source.url}
+              {...props}
+            >
+              {content}
             </Link>
           )
         })}
@@ -638,6 +661,28 @@ export function ChatMessage({
                     }
                   />
                 </div>
+              )
+            }
+
+            if (part.type === 'tool-fetchPublicUrl') {
+              let hostname: string | null = null
+              try {
+                hostname = input?.url ? new URL(input.url).hostname : null
+              } catch {
+                hostname = input?.url?.slice(0, 40) ?? null
+              }
+              return (
+                <ToolStatus
+                  key={key}
+                  done={done}
+                  label={
+                    hostname
+                      ? `${done ? 'Read' : 'Reading'} ${hostname}`
+                      : done
+                        ? 'Read public page'
+                        : 'Reading public page…'
+                  }
+                />
               )
             }
 
