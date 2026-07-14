@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-07-14T14:03:47.557Z",
+  "generatedAt": "2026-07-14T15:29:30.087Z",
   "posts": {
     "adding-sms-support": {
       "related": [
         {
           "slug": "sync-phone-numbers-and-webhooks",
-          "score": 0.1370367
+          "score": 0.1258594
         },
         {
           "slug": "toast",
-          "score": 0.1709603
+          "score": 0.17453
         },
         {
           "slug": "2023-10",
-          "score": 0.179237
+          "score": 0.175276
         }
       ]
     },
@@ -309,7 +309,7 @@
       "related": [
         {
           "slug": "adding-sms-support",
-          "score": 0.1709603
+          "score": 0.17453
         },
         {
           "slug": "morning-coffee",
