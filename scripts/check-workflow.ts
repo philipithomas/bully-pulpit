@@ -146,6 +146,30 @@ assertExport(
   'recordBellSmsStep',
   'steps'
 )
+assertExport(
+  manifest.workflows,
+  'src/workflows/sms-signup-onboarding.ts',
+  'smsSignupOnboardingWorkflow',
+  'workflows'
+)
+assertExport(
+  manifest.steps,
+  'src/workflows/sms-signup-onboarding.ts',
+  'sendSignupConfirmationStep',
+  'steps'
+)
+assertExport(
+  manifest.steps,
+  'src/workflows/sms-signup-onboarding.ts',
+  'sendBellContactOnboardingStep',
+  'steps'
+)
+assertExport(
+  manifest.steps,
+  'src/workflows/sms-signup-onboarding.ts',
+  'sendBellContactFallbackStep',
+  'steps'
+)
 
 if (process.env.CHECK_VERCEL_WORKFLOW_OUTPUT === '1') {
   const outputDir = join(
