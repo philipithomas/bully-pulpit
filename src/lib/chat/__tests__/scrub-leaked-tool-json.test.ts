@@ -30,6 +30,12 @@ describe('scrubLeakedToolJson', () => {
     ).toBe('Answer.')
   })
 
+  it('strips public URL tool inputs', () => {
+    expect(
+      scrubLeakedToolJson('{"url":"https://example.com/public-page"}Answer.')
+    ).toBe('Answer.')
+  })
+
   it('strips chronological listing inputs', () => {
     expect(
       scrubLeakedToolJson(

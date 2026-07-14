@@ -2,6 +2,7 @@ import { gateway } from '@ai-sdk/gateway'
 import { stepCountIs } from 'ai'
 import { fetchPage } from '@/lib/chat/fetch-page-tool'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
+import { fetchPublicUrl } from '@/lib/chat/fetch-public-url-tool'
 import { listPosts } from '@/lib/chat/list-posts-tool'
 import { searchPosts } from '@/lib/chat/search-posts-tool'
 
@@ -104,7 +105,13 @@ export async function bellGatewayCost(
   }
 }
 
-export const bellTools = { listPosts, searchPosts, fetchPost, fetchPage }
+export const bellTools = {
+  listPosts,
+  searchPosts,
+  fetchPost,
+  fetchPage,
+  fetchPublicUrl,
+}
 
 export const bellStopWhen = stepCountIs(7)
 

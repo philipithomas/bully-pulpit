@@ -1,4 +1,4 @@
-export type BellSourceType = 'post' | 'page' | 'image'
+export type BellSourceType = 'post' | 'page' | 'image' | 'external'
 
 export interface BellSource {
   type: BellSourceType
@@ -58,6 +58,24 @@ function internalUrl(value: unknown): string | undefined {
     return undefined
   }
   return candidate
+}
+
+function externalUrl(value: unknown): string | undefined {
+  const candidate = shortText(value, 2_048)
+  if (!candidate) return undefined
+  try {
+    const url = new URL(candidate)
+    if (
+      (url.protocol !== 'http:' && url.protocol !== 'https:') ||
+      url.username ||
+      url.password
+    ) {
+      return undefined
+    }
+    return url.toString()
+  } catch {
+    return undefined
+  }
 }
 
 function publishedAt(value: unknown): string | undefined {
@@ -120,6 +138,15 @@ function sourceFromRecord(
   }
 }
 
+function externalSourceFromRecord(result: UnknownRecord): BellSource | null {
+  if (typeof result.error === 'string' || result.type !== 'external')
+    return null
+  const title = shortText(result.title)
+  const url = externalUrl(result.url)
+  if (!title || !url) return null
+  return { type: 'external', title, url }
+}
+
 function currentPageSourceFromMetadata(metadata: unknown): BellSource | null {
   const source = record(record(metadata)?.currentPageSource)
   if (!source || (source.type !== 'post' && source.type !== 'page')) return null
@@ -171,6 +198,10 @@ export function bellSourcesFromToolOutput(
   input?: unknown
 ): BellSource[] {
   const parsed = parseOutput(output)
+  if (toolName === 'fetchPublicUrl') {
+    const source = externalSourceFromRecord(record(parsed) ?? {})
+    return source ? [source] : []
+  }
   const container = record(parsed)
   const results =
     toolName === 'listPosts' && Array.isArray(container?.posts)

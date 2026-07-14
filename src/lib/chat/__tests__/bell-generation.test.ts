@@ -29,6 +29,7 @@ describe('Bell Gateway metadata', () => {
       'searchPosts',
       'fetchPost',
       'fetchPage',
+      'fetchPublicUrl',
     ])
   })
 
