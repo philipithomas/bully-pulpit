@@ -6,6 +6,8 @@ import {
   defaultSignupNewsletters,
   isNewsletterAcceptingSubscriptions,
   isNewsletterSendingEnabled,
+  isPhotoNewsletter,
+  newsletterContent,
   newsletterDelivery,
   newsletterList,
   newsletterPreferenceKeys,
@@ -46,5 +48,11 @@ describe('newsletter metadata', () => {
     expect(newsletterDelivery.tsundoku).toEqual({ smsMedia: 'cover' })
     expect(newsletterUsesCoverMms('tsundoku')).toBe(true)
     expect(newsletterUsesCoverMms('contraption')).toBe(false)
+  })
+
+  it('classifies photo newsletters independently from delivery settings', () => {
+    expect(newsletterContent.tsundoku).toEqual({ photo: true })
+    expect(isPhotoNewsletter('tsundoku')).toBe(true)
+    expect(isPhotoNewsletter('contraption')).toBe(false)
   })
 })
