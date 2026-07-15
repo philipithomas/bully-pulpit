@@ -122,13 +122,21 @@ function containedLoadingDimensions(
 
   const viewportWidth = window.innerWidth
   const viewportHeight = window.innerHeight
+  const captionUsesSideRail =
+    hasCaption && (viewportWidth >= 768 || viewportWidth > viewportHeight)
+  // Keep this in sync with the captioned grid's clamp(14rem,32vw,26rem)
+  // side-rail track below.
+  const captionSideRailWidth = Math.min(
+    Math.max(viewportWidth * 0.32, 14 * 16),
+    26 * 16
+  )
   const maxWidth = hasCaption
-    ? viewportWidth >= 768
-      ? Math.max(viewportWidth - 26 * 16, 1)
+    ? captionUsesSideRail
+      ? Math.max(viewportWidth - captionSideRailWidth, 1)
       : Math.max(viewportWidth - 16, 1)
     : viewportWidth * 0.9
   const maxHeight = hasCaption
-    ? viewportWidth >= 768
+    ? captionUsesSideRail
       ? viewportHeight
       : viewportHeight * (viewportWidth >= 640 ? 0.62 : 0.58)
     : viewportHeight * 0.9
@@ -365,7 +373,7 @@ export function ImageZoomOverlay({
   const holdOutgoing =
     upgrade !== null && upgrade.outgoingWidth > 0 && upgrade.outgoingHeight > 0
   const imageBounds = hasCaption
-    ? 'max-h-[58vh] max-w-[calc(100vw-1rem)] object-contain sm:max-h-[62vh] md:max-h-screen md:max-w-full'
+    ? 'max-h-[58vh] max-w-[calc(100vw-1rem)] object-contain sm:max-h-[62vh] landscape:max-h-screen landscape:max-w-full md:max-h-screen md:max-w-full'
     : 'max-h-[90vh] max-w-[90vw] object-contain'
   const hasCaptionMetadata = Boolean(caption?.date || caption?.locationName)
   const handleCaptionClick = useCallback((e: MouseEvent<HTMLElement>) => {
@@ -444,14 +452,14 @@ export function ImageZoomOverlay({
       <div
         className={
           hasCaption
-            ? 'grid h-full w-full grid-rows-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_26rem] md:grid-rows-1'
+            ? 'grid h-full w-full grid-rows-[minmax(0,1fr)_auto] landscape:grid-cols-[minmax(0,1fr)_clamp(14rem,32vw,26rem)] landscape:grid-rows-1 md:grid-cols-[minmax(0,1fr)_clamp(14rem,32vw,26rem)] md:grid-rows-1'
             : 'flex h-full w-full items-center justify-center'
         }
       >
         <div
           className={
             hasCaption
-              ? 'group relative flex min-h-0 items-center justify-center overflow-hidden bg-[#0A0A0A] p-2 sm:p-3 md:h-screen md:p-0'
+              ? 'group relative flex min-h-0 items-center justify-center overflow-hidden bg-[#0A0A0A] p-2 sm:p-3 landscape:h-screen landscape:p-0 md:h-screen md:p-0'
               : 'group relative flex h-full w-full items-center justify-center'
           }
         >
@@ -564,10 +572,10 @@ export function ImageZoomOverlay({
         {caption ? (
           <aside
             data-zoom-caption-panel=""
-            className="min-w-0 max-h-[42vh] w-full cursor-auto overflow-hidden overscroll-contain border-gray-200 border-t bg-[#f4f4f2] text-gray-900 md:h-screen md:max-h-none md:border-t-0 md:border-l"
+            className="min-w-0 max-h-[42vh] w-full cursor-auto overflow-hidden overscroll-contain border-gray-200 border-t bg-[#f4f4f2] text-gray-900 landscape:h-screen landscape:max-h-none landscape:border-t-0 landscape:border-l md:h-screen md:max-h-none md:border-t-0 md:border-l"
             onClick={handleCaptionPanelClick}
           >
-            <div className="flex h-full max-h-[42vh] flex-col md:max-h-none">
+            <div className="flex h-full max-h-[42vh] flex-col landscape:max-h-none md:max-h-none">
               <div className="flex shrink-0 items-start justify-between gap-4 px-5 pt-5 pb-2 md:px-7 md:pt-7">
                 <div className="min-w-0">
                   {hasCaptionMetadata ? (
@@ -618,7 +626,7 @@ export function ImageZoomOverlay({
                   <h3 className="font-sans text-xs font-semibold text-gray-500">
                     {caption.footer.heading}
                   </h3>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2 md:grid-cols-1">
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 landscape:grid-cols-1 md:grid-cols-1">
                     {caption.footer.links.map((link) => (
                       <Link
                         key={`${link.href}-${link.title}`}
