@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { forceDarkColorScheme } from '@/lib/email/preview'
+import {
+  forceDarkColorScheme,
+  forceLightColorScheme,
+} from '@/lib/email/preview'
 import { renderNewsletterShell } from '@/lib/email/templates/newsletter-shell'
 
 describe('forceDarkColorScheme', () => {
@@ -51,5 +54,22 @@ describe('forceDarkColorScheme', () => {
   it('returns html without a dark block unchanged', () => {
     const html = '<html><body><p>No dark styles</p></body></html>'
     expect(forceDarkColorScheme(html)).toBe(html)
+  })
+})
+
+describe('forceLightColorScheme', () => {
+  it('disables the email dark-mode block without changing its contents', () => {
+    const html = `<style>
+      body { background: white; color: black; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #121110; color: white; }
+      }
+    </style>`
+
+    const light = forceLightColorScheme(html)
+
+    expect(light).toContain('@media not all')
+    expect(light).not.toContain('prefers-color-scheme')
+    expect(light).toContain('background: #121110')
   })
 })

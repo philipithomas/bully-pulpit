@@ -1,10 +1,12 @@
 'use client'
 
+import { Search, SlidersHorizontal } from 'lucide-react'
 import Link from 'next/link'
 import {
   type ChangeEvent,
   type FormEvent,
   useCallback,
+  useId,
   useRef,
   useState,
 } from 'react'
@@ -15,9 +17,21 @@ import type {
   BellListFilters,
 } from '@/app/printing-press/bell/types'
 import { EMPTY_BELL_FILTERS } from '@/app/printing-press/bell/types'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 
 function timestampLabel(iso: string): string {
   return `${iso.slice(0, 16)}Z`
@@ -57,30 +71,36 @@ function queryFor(filters: BellListFilters, cursor?: string): string {
   return params.toString()
 }
 
-function filterIsEmpty(filters: BellListFilters): boolean {
-  return Object.values(filters).every((value) => value === '')
+function refinementCount(filters: BellListFilters): number {
+  return [
+    filters.surface,
+    filters.identity,
+    filters.status,
+    filters.dateFrom,
+    filters.dateTo,
+  ].filter(Boolean).length
 }
 
-function Filters({
+function clearRefinements(filters: BellListFilters): BellListFilters {
+  return {
+    ...EMPTY_BELL_FILTERS,
+    search: filters.search,
+  }
+}
+
+function RefinementFields({
   value,
-  loading,
   onChange,
-  onApply,
-  onClear,
 }: {
   value: BellListFilters
-  loading: boolean
   onChange: (next: BellListFilters) => void
-  onApply: () => void
-  onClear: () => void
 }) {
-  const handleSubmit = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      onApply()
-    },
-    [onApply]
-  )
+  const idPrefix = useId()
+  const surfaceId = `${idPrefix}-surface`
+  const identityId = `${idPrefix}-identity`
+  const statusId = `${idPrefix}-status`
+  const dateFromId = `${idPrefix}-date-from`
+  const dateToId = `${idPrefix}-date-to`
   const handleSurfaceChange = useCallback(
     (event: ChangeEvent<HTMLSelectElement>) => {
       onChange({
@@ -120,113 +140,72 @@ function Filters({
     },
     [onChange, value]
   )
-  const handleSearchChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      onChange({ ...value, search: event.target.value })
-    },
-    [onChange, value]
-  )
 
   return (
-    <form
-      className="mb-5 border border-gray-200 bg-white p-4"
-      onSubmit={handleSubmit}
-    >
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="space-y-1 text-gray-700 text-sm">
-          <span className="block font-medium">Surface</span>
-          <select
-            value={value.surface}
-            onChange={handleSurfaceChange}
-            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900"
-          >
-            <option value="">All surfaces</option>
-            <option value="web">Web</option>
-            <option value="sms">SMS</option>
-          </select>
-        </label>
+    <div className="grid gap-5">
+      <div className="grid gap-2">
+        <Label htmlFor={surfaceId}>Surface</Label>
+        <NativeSelect
+          id={surfaceId}
+          value={value.surface}
+          onChange={handleSurfaceChange}
+        >
+          <NativeSelectOption value="">All surfaces</NativeSelectOption>
+          <NativeSelectOption value="web">Web</NativeSelectOption>
+          <NativeSelectOption value="sms">SMS</NativeSelectOption>
+        </NativeSelect>
+      </div>
 
-        <label className="space-y-1 text-gray-700 text-sm">
-          <span className="block font-medium">Identity</span>
-          <select
-            value={value.identity}
-            onChange={handleIdentityChange}
-            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900"
-          >
-            <option value="">All identities</option>
-            <option value="signed_in">Signed in</option>
-            <option value="phone">Phone</option>
-            <option value="anonymous">Anonymous</option>
-          </select>
-        </label>
+      <div className="grid gap-2">
+        <Label htmlFor={identityId}>Identity</Label>
+        <NativeSelect
+          id={identityId}
+          value={value.identity}
+          onChange={handleIdentityChange}
+        >
+          <NativeSelectOption value="">All identities</NativeSelectOption>
+          <NativeSelectOption value="signed_in">Signed in</NativeSelectOption>
+          <NativeSelectOption value="phone">Phone</NativeSelectOption>
+          <NativeSelectOption value="anonymous">Anonymous</NativeSelectOption>
+        </NativeSelect>
+      </div>
 
-        <label className="space-y-1 text-gray-700 text-sm">
-          <span className="block font-medium">Status</span>
-          <select
-            value={value.status}
-            onChange={handleStatusChange}
-            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900"
-          >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="completed">Completed</option>
-            <option value="error">Error</option>
-          </select>
-        </label>
+      <div className="grid gap-2">
+        <Label htmlFor={statusId}>Status</Label>
+        <NativeSelect
+          id={statusId}
+          value={value.status}
+          onChange={handleStatusChange}
+        >
+          <NativeSelectOption value="">All statuses</NativeSelectOption>
+          <NativeSelectOption value="active">Active</NativeSelectOption>
+          <NativeSelectOption value="completed">Completed</NativeSelectOption>
+          <NativeSelectOption value="error">Error</NativeSelectOption>
+        </NativeSelect>
+      </div>
 
-        <label className="space-y-1 text-gray-700 text-sm">
-          <span className="block font-medium">From</span>
-          <input
+      <div className="grid gap-5 sm:grid-cols-2 sm:gap-3">
+        <div className="grid gap-2">
+          <Label htmlFor={dateFromId}>From</Label>
+          <Input
+            id={dateFromId}
             type="date"
             value={value.dateFrom}
             onChange={handleDateFromChange}
-            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900"
           />
-        </label>
-
-        <label className="space-y-1 text-gray-700 text-sm">
-          <span className="block font-medium">Through</span>
-          <input
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor={dateToId}>Through</Label>
+          <Input
+            id={dateToId}
             type="date"
             value={value.dateTo}
             min={value.dateFrom || undefined}
             onChange={handleDateToChange}
-            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900"
           />
-        </label>
-
-        <label className="space-y-1 text-gray-700 text-sm">
-          <span className="block font-medium">Participant</span>
-          <input
-            type="search"
-            value={value.search}
-            maxLength={100}
-            placeholder="Name, email, phone, or network"
-            onChange={handleSearchChange}
-            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900 placeholder:text-gray-400"
-          />
-        </label>
+        </div>
       </div>
-
-      <p className="mt-3 text-gray-500 text-xs">
-        Participant search does not inspect message text.
-      </p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button type="submit" size="sm" disabled={loading}>
-          {loading ? <Spinner className="h-4 w-4" /> : null}
-          Apply filters
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={loading || filterIsEmpty(value)}
-          onClick={onClear}
-        >
-          Clear
-        </Button>
-      </div>
-    </form>
+    </div>
   )
 }
 
@@ -244,11 +223,11 @@ function ConversationRow({
     <li>
       <Link
         href={`/printing-press/bell/${conversation.id}`}
-        className="block px-4 py-4 transition-colors hover:bg-gray-050"
+        className="group -mx-3 block px-3 py-5 transition-colors hover:bg-white/70 focus-visible:bg-white/70 sm:-mx-4 sm:px-4"
       >
-        <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="truncate font-medium text-gray-950 text-sm">
+            <p className="truncate font-semibold text-gray-950 text-sm">
               {conversation.participantLabel}
             </p>
             {conversation.participantDetail ? (
@@ -257,49 +236,31 @@ function ConversationRow({
               </p>
             ) : null}
           </div>
-          <span className="flex flex-wrap items-center gap-1.5">
-            <Badge variant="outline">
-              {surfaceLabel(conversation.surface)}
-            </Badge>
-            <Badge variant="secondary">
-              {identityLabel(conversation.identity)}
-            </Badge>
-            <Badge variant={statusVariant(conversation.status)}>
-              {statusLabel(conversation.status)}
-            </Badge>
-          </span>
+          <Badge
+            variant={statusVariant(conversation.status)}
+            className="shrink-0"
+          >
+            {statusLabel(conversation.status)}
+          </Badge>
         </div>
 
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
-          <div>
-            <dt className="text-gray-400">Messages</dt>
-            <dd className="mt-0.5 text-gray-700">
-              {conversation.messageCount.toLocaleString('en-US')}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-gray-400">First activity</dt>
-            <dd className="mt-0.5 text-gray-700">
-              <time dateTime={conversation.firstActivityAt}>
-                {timestampLabel(conversation.firstActivityAt)}
-              </time>
-            </dd>
-          </div>
-          <div>
-            <dt className="text-gray-400">Last activity</dt>
-            <dd className="mt-0.5 text-gray-700">
-              <time dateTime={conversation.lastActivityAt}>
-                {timestampLabel(conversation.lastActivityAt)}
-              </time>
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-gray-400">Initial page</dt>
-            <dd className="mt-0.5 truncate text-gray-700" title={pageLabel}>
-              {pageLabel}
-            </dd>
-          </div>
-        </dl>
+        <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-500 text-xs">
+          <span>{surfaceLabel(conversation.surface)}</span>
+          <span aria-hidden="true">·</span>
+          <span>{identityLabel(conversation.identity)}</span>
+          <span aria-hidden="true">·</span>
+          <span>
+            {conversation.messageCount.toLocaleString('en-US')}{' '}
+            {conversation.messageCount === 1 ? 'message' : 'messages'}
+          </span>
+          <span aria-hidden="true">·</span>
+          <time dateTime={conversation.lastActivityAt} className="font-mono">
+            {timestampLabel(conversation.lastActivityAt)}
+          </time>
+        </p>
+        <p className="mt-1 truncate text-gray-500 text-xs" title={pageLabel}>
+          Began on <span className="text-gray-700">{pageLabel}</span>
+        </p>
       </Link>
     </li>
   )
@@ -315,14 +276,18 @@ export function BellListClient({
     useState<BellListFilters>(EMPTY_BELL_FILTERS)
   const [conversations, setConversations] = useState(initialData.conversations)
   const [nextCursor, setNextCursor] = useState(initialData.nextCursor)
-  const [loading, setLoading] = useState(false)
+  const [loadingAction, setLoadingAction] = useState<
+    'replace' | 'append' | null
+  >(null)
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const requestNumber = useRef(0)
+  const participantSearchId = useId()
 
   const load = useCallback(
     async (nextFilters: BellListFilters, cursor?: string, append = false) => {
       const thisRequest = ++requestNumber.current
-      setLoading(true)
+      setLoadingAction(append ? 'append' : 'replace')
       setError(null)
       try {
         const query = queryFor(nextFilters, cursor)
@@ -349,23 +314,62 @@ export function BellListClient({
             : 'Could not load Bell conversations'
         )
       } finally {
-        if (thisRequest === requestNumber.current) setLoading(false)
+        if (thisRequest === requestNumber.current) setLoadingAction(null)
       }
     },
     []
   )
 
-  const applyFilters = useCallback(() => {
-    setAppliedFilters(filters)
-    void load(filters)
-  }, [filters, load])
+  const submitSearch = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      const nextFilters = {
+        ...appliedFilters,
+        search: filters.search,
+      }
+      setAppliedFilters(nextFilters)
+      setFilters(nextFilters)
+      void load(nextFilters)
+    },
+    [appliedFilters, filters.search, load]
+  )
 
-  const clearFilters = useCallback(() => {
-    const empty = { ...EMPTY_BELL_FILTERS }
-    setFilters(empty)
-    setAppliedFilters(empty)
-    void load(empty)
-  }, [load])
+  const applyRefinements = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      setAppliedFilters(filters)
+      setFilterSheetOpen(false)
+      void load(filters)
+    },
+    [filters, load]
+  )
+
+  const resetRefinements = useCallback(() => {
+    setFilters((current) => clearRefinements(current))
+  }, [])
+
+  const handleFilterSheetOpenChange = useCallback(
+    (open: boolean) => {
+      setFilterSheetOpen(open)
+      if (!open) {
+        setFilters((current) => ({
+          ...appliedFilters,
+          search: current.search,
+        }))
+      }
+    },
+    [appliedFilters]
+  )
+
+  const handleSearchChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setFilters((current) => ({
+        ...current,
+        search: event.target.value,
+      }))
+    },
+    []
+  )
 
   const retry = useCallback(() => {
     void load(appliedFilters)
@@ -375,63 +379,159 @@ export function BellListClient({
     if (nextCursor) void load(appliedFilters, nextCursor, true)
   }, [appliedFilters, load, nextCursor])
 
+  const appliedRefinementCount = refinementCount(appliedFilters)
+
   return (
     <div>
-      <Filters
-        value={filters}
-        loading={loading}
-        onChange={setFilters}
-        onApply={applyFilters}
-        onClear={clearFilters}
-      />
+      <div className="mb-7 flex flex-col gap-3 sm:flex-row">
+        <form className="min-w-0 flex-1" onSubmit={submitSearch}>
+          <Label htmlFor={participantSearchId} className="sr-only">
+            Search participants
+          </Label>
+          <div className="relative">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+            />
+            <Input
+              id={participantSearchId}
+              type="search"
+              value={filters.search}
+              maxLength={100}
+              placeholder="Name, email, phone, or network"
+              className="pl-9 pr-24"
+              onChange={handleSearchChange}
+            />
+            <Button
+              type="submit"
+              size="sm"
+              loading={loadingAction === 'replace'}
+              loadingLabel={<span className="sr-only">Searching</span>}
+              className="absolute right-0.5 top-0.5 h-9"
+            >
+              Search
+            </Button>
+          </div>
+          <p className="mt-1.5 text-gray-500 text-xs">
+            Participant details only. Message text stays private from search.
+          </p>
+        </form>
+
+        <Sheet
+          open={filterSheetOpen}
+          onOpenChange={handleFilterSheetOpenChange}
+        >
+          <SheetTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0 self-start"
+            >
+              <SlidersHorizontal className="size-4" />
+              Filters
+              {appliedRefinementCount > 0 ? (
+                <span className="font-mono text-xs">
+                  {appliedRefinementCount}
+                </span>
+              ) : null}
+            </Button>
+          </SheetTrigger>
+          <SheetContent
+            side="right"
+            title={null}
+            className="w-full max-w-md p-6 sm:w-[26rem]"
+          >
+            <form
+              className="flex min-h-0 flex-1 flex-col"
+              onSubmit={applyRefinements}
+            >
+              <SheetHeader className="pr-8">
+                <SheetTitle>Filter conversations</SheetTitle>
+                <SheetDescription>
+                  Narrow the archive without searching message text.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-8 flex-1 overflow-y-auto">
+                <RefinementFields value={filters} onChange={setFilters} />
+              </div>
+              <SheetFooter className="mt-8 flex-row-reverse sm:justify-start">
+                <Button
+                  type="submit"
+                  loading={loadingAction === 'replace'}
+                  loadingLabel={<span className="sr-only">Applying</span>}
+                >
+                  Apply filters
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={refinementCount(filters) === 0}
+                  onClick={resetRefinements}
+                >
+                  Clear filters
+                </Button>
+              </SheetFooter>
+            </form>
+          </SheetContent>
+        </Sheet>
+      </div>
 
       {error ? (
-        <div
-          role="alert"
-          className="mb-4 border border-red/30 bg-red/5 px-4 py-3 text-red-deep text-sm"
-        >
-          <p>{error}</p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="mt-3"
-            onClick={retry}
-          >
-            Try again
-          </Button>
-        </div>
+        <Alert variant="destructive" className="mb-5">
+          <AlertTitle>Bell lost the thread</AlertTitle>
+          <AlertDescription>
+            <p>{error}</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              loading={loadingAction === 'replace'}
+              loadingLabel={<span className="sr-only">Retrying</span>}
+              onClick={retry}
+            >
+              Try again
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      {conversations.length === 0 && !loading ? (
-        <div className="border border-gray-200 bg-white px-4 py-12 text-center">
-          <p className="font-medium text-gray-800 text-sm">
-            Bell is quiet here.
-          </p>
-          <p className="mt-1 text-gray-500 text-sm">
-            No conversations match this view.
-          </p>
-        </div>
-      ) : (
-        <ul className="divide-y divide-gray-100 border border-gray-200 bg-white">
-          {conversations.map((conversation) => (
-            <ConversationRow
-              key={conversation.id}
-              conversation={conversation}
-            />
-          ))}
-        </ul>
-      )}
+      <p className="sr-only" aria-live="polite">
+        {loadingAction === 'replace'
+          ? 'Loading conversations'
+          : `${conversations.length} conversations shown`}
+      </p>
+      <div aria-busy={loadingAction === 'replace'}>
+        {conversations.length === 0 && loadingAction === null ? (
+          <div className="px-4 py-14 text-center">
+            <p className="font-medium text-gray-800 text-sm">
+              Bell is quiet here.
+            </p>
+            <p className="mt-1 text-gray-500 text-sm">
+              No conversations match this view.
+            </p>
+          </div>
+        ) : (
+          <ul>
+            {conversations.map((conversation) => (
+              <ConversationRow
+                key={conversation.id}
+                conversation={conversation}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
 
       {nextCursor ? (
-        <div className="mt-5 flex justify-center">
+        <div className="mt-6 flex justify-center">
           <Button
             type="button"
             variant="outline"
-            disabled={loading}
+            loading={loadingAction === 'append'}
+            loadingLabel="Loading"
             onClick={loadMore}
           >
-            {loading ? <Spinner className="h-4 w-4" /> : null}
             Load more
           </Button>
         </div>

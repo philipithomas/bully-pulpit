@@ -1,6 +1,13 @@
 'use client'
 
-import { Check, Copy, MessageSquare, Phone, Search, Trash2 } from 'lucide-react'
+import {
+  Check,
+  Copy,
+  MoreHorizontal,
+  Phone,
+  Search,
+  Trash2,
+} from 'lucide-react'
 import Link from 'next/link'
 import {
   type ChangeEvent,
@@ -11,16 +18,26 @@ import {
   useState,
 } from 'react'
 import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { NativeSelect } from '@/components/ui/native-select'
 import { Spinner } from '@/components/ui/spinner'
 import { siteConfig } from '@/lib/config'
 import type { Newsletter } from '@/lib/content/types'
@@ -115,6 +132,7 @@ export function SmsSubscribersClient({
   const requestId = useRef(0)
   const firstRender = useRef(true)
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const actionTriggerRef = useRef<HTMLButtonElement>(null)
 
   const runSearch = useCallback(
     async (nextQuery: string, newsletter: NewsletterFilter) => {
@@ -206,9 +224,10 @@ export function SmsSubscribersClient({
   }, [])
 
   const onCopyPhoneNumber = useCallback(
-    async (event: MouseEvent<HTMLButtonElement>) => {
-      const phoneNumber = event.currentTarget.value
+    async (event: MouseEvent<HTMLElement>) => {
+      const phoneNumber = event.currentTarget.dataset.phoneNumber
       const id = Number(event.currentTarget.dataset.subscriberId)
+      if (!phoneNumber || !Number.isSafeInteger(id)) return
       try {
         await navigator.clipboard.writeText(phoneNumber)
         setCopied(id)
@@ -225,6 +244,21 @@ export function SmsSubscribersClient({
     []
   )
 
+  const onChooseDeleteTarget = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      const id = Number(event.currentTarget.dataset.subscriberId)
+      setDeleteTarget(rows.find((row) => row.id === id) ?? null)
+    },
+    [rows]
+  )
+
+  const rememberActionTrigger = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      actionTriggerRef.current = event.currentTarget
+    },
+    []
+  )
+
   useEffect(
     () => () => {
       if (copyTimeout.current) clearTimeout(copyTimeout.current)
@@ -232,17 +266,12 @@ export function SmsSubscribersClient({
     []
   )
 
-  const onDeleteSubscriber = useCallback(
-    (event: MouseEvent<HTMLButtonElement>) => {
-      const id = Number(event.currentTarget.value)
-      setDeleteTarget(rows.find((row) => row.id === id) ?? null)
+  const onDeleteDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && !deleting) setDeleteTarget(null)
     },
-    [rows]
+    [deleting]
   )
-
-  const onDeleteDialogOpenChange = useCallback((open: boolean) => {
-    if (!open) setDeleteTarget(null)
-  }, [])
 
   const confirmDelete = useCallback(async () => {
     if (!deleteTarget) return
@@ -275,35 +304,40 @@ export function SmsSubscribersClient({
     <div>
       <div className="mb-5 flex w-full flex-col gap-2 sm:max-w-xl sm:flex-row">
         <div className="relative min-w-0 flex-1">
-          <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
-          <input
+          <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-muted-foreground" />
+          <Input
             type="search"
             value={query}
             onChange={onQueryChange}
             placeholder="Search by phone number…"
             aria-label="Search SMS subscribers by phone number"
-            className="h-10 w-full border border-gray-200 bg-white pr-9 pl-9 text-sm text-gray-900 placeholder:text-gray-400"
+            className="pr-9 pl-9"
           />
           {loading ? (
-            <Spinner className="-translate-y-1/2 absolute top-1/2 right-3 h-4 w-4 text-gray-400" />
+            <Spinner className="-translate-y-1/2 absolute top-1/2 right-3 size-4 text-muted-foreground" />
           ) : null}
         </div>
-        <select
-          value={newsletterFilter}
-          onChange={onNewsletterFilterChange}
-          aria-label="Filter SMS subscribers by newsletter"
-          className="h-10 w-full border border-gray-200 bg-white px-3 text-sm text-gray-900 sm:w-44"
-        >
-          <option value="">All subscribers</option>
-          {NEWSLETTERS.map((newsletter) => (
-            <option key={newsletter.slug} value={newsletter.slug}>
-              {newsletter.name}
-            </option>
-          ))}
-        </select>
+        <div className="w-full sm:w-44 sm:shrink-0">
+          <NativeSelect
+            value={newsletterFilter}
+            onChange={onNewsletterFilterChange}
+            aria-label="Filter SMS subscribers by newsletter"
+          >
+            <option value="">All subscribers</option>
+            {NEWSLETTERS.map((newsletter) => (
+              <option
+                key={newsletter.slug}
+                value={newsletter.slug}
+                className="italic"
+              >
+                {newsletter.name}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
       </div>
 
-      <p className="mb-3 text-xs text-gray-500">
+      <p className="mb-3 font-mono text-muted-foreground text-xs">
         {subscriberCountLabel({
           total,
           query: appliedQuery,
@@ -312,24 +346,24 @@ export function SmsSubscribersClient({
       </p>
 
       {rows.length === 0 ? (
-        <div className="border border-gray-200 bg-white px-4 py-12 text-center text-sm text-gray-500">
+        <div className="bg-card px-4 py-12 text-center text-muted-foreground text-sm">
           {emptyLabel(appliedQuery, appliedNewsletterFilter)}
         </div>
       ) : (
-        <ul className="divide-y divide-gray-100 border border-gray-200 bg-white">
+        <ul className="space-y-1 bg-card p-1">
           {rows.map((subscriber) => (
             <li
               key={subscriber.id}
-              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-050"
+              className="flex min-h-16 items-center gap-3 bg-background px-3 py-3 transition-colors hover:bg-accent/40 sm:px-4"
             >
-              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
-                <Phone className="h-4 w-4" aria-hidden="true" />
+              <span className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <Phone className="size-4" aria-hidden="true" />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <Link
                     href={`/printing-press/phone?number=${encodeURIComponent(subscriber.phoneNumber)}`}
-                    className="truncate text-sm font-medium text-gray-900 hover:underline"
+                    className="truncate font-medium text-foreground text-sm hover:underline"
                   >
                     {formatPhoneNumberForDisplay(subscriber.phoneNumber)}
                   </Link>
@@ -337,19 +371,19 @@ export function SmsSubscribersClient({
                     <Badge variant="warning">unsubscribed</Badge>
                   )}
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-muted-foreground text-xs">
                   {NEWSLETTERS.filter(
                     (newsletter) => subscriber[newsletter.key]
                   ).map((newsletter) => (
-                    <span
+                    <cite
                       key={newsletter.key}
-                      className="inline-flex items-center gap-1"
+                      className="inline-flex items-center gap-1 font-serif"
                     >
                       <span
                         className={`h-1.5 w-1.5 rounded-full ${newsletter.dot}`}
                       />
                       {newsletter.name}
-                    </span>
+                    </cite>
                   ))}
                   <span>
                     {subscriber.confirmedAt ? 'joined' : 'recorded'}{' '}
@@ -370,43 +404,43 @@ export function SmsSubscribersClient({
                   )}
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-0.5">
-                <Link
-                  href={`/printing-press/phone?number=${encodeURIComponent(subscriber.phoneNumber)}`}
-                  aria-label={`Open conversation with ${formatPhoneNumberForDisplay(subscriber.phoneNumber)}`}
-                  title="Open conversation"
-                  className="p-2.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                </Link>
-                <button
-                  type="button"
-                  value={subscriber.phoneNumber}
-                  data-subscriber-id={subscriber.id}
-                  onClick={onCopyPhoneNumber}
-                  aria-label={`Copy ${formatPhoneNumberForDisplay(subscriber.phoneNumber)}`}
-                  title="Copy phone number"
-                  className="p-2.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
-                >
-                  {copied === subscriber.id ? (
-                    <Check className="h-4 w-4 text-forest" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </button>
-                {subscriber.confirmedAt ? (
-                  <button
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
                     type="button"
-                    value={subscriber.id}
-                    onClick={onDeleteSubscriber}
-                    aria-label={`Delete SMS subscriber ${formatPhoneNumberForDisplay(subscriber.phoneNumber)}`}
-                    title="Delete SMS subscriber"
-                    className="p-2.5 text-gray-400 transition-colors hover:bg-red/10 hover:text-red"
+                    variant="ghost"
+                    size="icon"
+                    className="size-11 shrink-0"
+                    aria-label={`Manage ${formatPhoneNumberForDisplay(subscriber.phoneNumber)}`}
+                    onClick={rememberActionTrigger}
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </div>
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    data-phone-number={subscriber.phoneNumber}
+                    data-subscriber-id={subscriber.id}
+                    onClick={onCopyPhoneNumber}
+                  >
+                    {copied === subscriber.id ? <Check /> : <Copy />}
+                    {copied === subscriber.id ? 'Copied' : 'Copy number'}
+                  </DropdownMenuItem>
+                  {subscriber.confirmedAt ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        data-subscriber-id={subscriber.id}
+                        onClick={onChooseDeleteTarget}
+                      >
+                        <Trash2 />
+                        Delete subscriber
+                      </DropdownMenuItem>
+                    </>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </li>
           ))}
         </ul>
@@ -417,45 +451,48 @@ export function SmsSubscribersClient({
           <Button
             variant="outline"
             onClick={loadMore}
-            disabled={loadingMore || loading}
+            disabled={loading}
+            loading={loadingMore}
+            loadingLabel="Loading"
           >
-            {loadingMore ? <Spinner className="h-4 w-4" /> : 'Load more'}
+            Load more
           </Button>
         </div>
       )}
 
-      <Dialog
+      <AlertDialog
         open={deleteTarget !== null}
         onOpenChange={onDeleteDialogOpenChange}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete SMS subscriber?</DialogTitle>
-            <DialogDescription>
+        <AlertDialogContent finalFocus={actionTriggerRef}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this SMS subscriber</AlertDialogTitle>
+            <AlertDialogDescription>
               This permanently deletes{' '}
-              <span className="font-medium text-gray-700">
+              <span className="font-medium text-foreground">
                 {deleteTarget
                   ? formatPhoneNumberForDisplay(deleteTarget.phoneNumber)
                   : null}
               </span>{' '}
               and its subscription and newsletter send history. Message history
               in Phone and Bell remains. This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 flex justify-end gap-3">
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              Keep subscriber
+            </AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={confirmDelete}
-              disabled={deleting}
+              loading={deleting}
+              loadingLabel="Deleting"
             >
-              {deleting ? <Spinner className="h-4 w-4" /> : 'Delete'}
+              Delete subscriber
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

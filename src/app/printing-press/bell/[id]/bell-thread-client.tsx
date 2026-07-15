@@ -4,12 +4,20 @@ import {
   ArrowLeft,
   ExternalLink,
   MessageSquareText,
+  MoreHorizontal,
   ShieldX,
   Trash2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useId, useMemo, useState } from 'react'
+import {
+  type MouseEvent,
+  useCallback,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { toast } from 'sonner'
 import {
   bellCostLabel,
@@ -23,18 +31,25 @@ import type {
   BellGenerationWire,
   BellMessageWire,
 } from '@/app/printing-press/bell/types'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Spinner } from '@/components/ui/spinner'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
 type Confirmation = 'redact' | 'delete' | null
@@ -73,7 +88,7 @@ function GenerationMetadata({
   ].filter((item): item is [string, string] => Boolean(item[1]))
 
   return (
-    <div className="mt-3 border-gray-200 border-t pt-3 text-xs">
+    <div className="mt-3 border-gray-200 border-l pl-3 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={statusVariant(generation.status)}>
           {statusLabel(generation.status)}
@@ -203,14 +218,14 @@ function Message({
   return (
     <li
       className={cn(
-        'border px-4 py-3',
+        'px-4 py-4 sm:px-5',
         message.authorKind === 'bell'
-          ? 'border-forest/20 bg-forest/5'
+          ? 'bg-forest/5'
           : message.authorKind === 'admin'
-            ? 'border-indigo/20 bg-indigo/5'
+            ? 'bg-indigo/5'
             : message.authorKind === 'system'
-              ? 'border-brass/30 bg-brass/5'
-              : 'border-gray-200 bg-white'
+              ? 'bg-brass/5'
+              : 'bg-white/70'
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -222,7 +237,10 @@ function Message({
             {statusLabel(message.status)}
           </Badge>
         </span>
-        <time dateTime={message.createdAt} className="text-gray-500 text-xs">
+        <time
+          dateTime={message.createdAt}
+          className="font-mono text-gray-500 text-xs"
+        >
           {bellTimestampLabel(message.createdAt)}
         </time>
       </div>
@@ -236,7 +254,14 @@ function Message({
           ? 'Message redacted.'
           : message.content || '(No text)'}
       </p>
-      {generation ? <GenerationMetadata generation={generation} /> : null}
+      {generation ? (
+        <details className="mt-4 text-gray-600 text-xs">
+          <summary className="cursor-pointer font-medium">
+            Generation details
+          </summary>
+          <GenerationMetadata generation={generation} />
+        </details>
+      ) : null}
     </li>
   )
 }
@@ -247,7 +272,7 @@ function UnlinkedGeneration({
   generation: BellGenerationWire
 }) {
   return (
-    <li className="border border-gray-200 bg-gray-050 px-4 py-3">
+    <li className="bg-gray-050 px-4 py-4 sm:px-5">
       <p className="font-medium text-gray-800 text-sm">Generation attempt</p>
       <GenerationMetadata generation={generation} />
     </li>
@@ -265,6 +290,7 @@ export function BellThreadClient({
   const [mutating, setMutating] = useState(false)
   const threadHeadingId = useId()
   const generationsHeadingId = useId()
+  const manageTriggerRef = useRef<HTMLButtonElement>(null)
   const conversation = detail.conversation
 
   const generationByMessage = useMemo(() => {
@@ -298,6 +324,13 @@ export function BellThreadClient({
   const openDeleteConfirmation = useCallback(() => {
     setConfirmation('delete')
   }, [])
+
+  const rememberManageTrigger = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      manageTriggerRef.current = event.currentTarget
+    },
+    []
+  )
 
   const handleConfirmationOpenChange = useCallback(
     (open: boolean) => {
@@ -395,13 +428,13 @@ export function BellThreadClient({
         Bell conversations
       </Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="break-words font-serif text-3xl tracking-tight text-gray-950">
+          <h1 className="break-words font-sans font-semibold text-3xl tracking-tight text-gray-950">
             {conversation.participantLabel}
           </h1>
           {conversation.participantDetail ? (
-            <p className="mt-1 text-gray-500 text-sm">
+            <p className="mt-1 break-words text-gray-500 text-sm">
               {conversation.participantDetail}
             </p>
           ) : null}
@@ -418,30 +451,42 @@ export function BellThreadClient({
             </Badge>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={!canRedact}
-            onClick={openRedactConfirmation}
-          >
-            <ShieldX className="h-4 w-4" />
-            Redact
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="destructive"
-            onClick={openDeleteConfirmation}
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              onClick={rememberManageTrigger}
+            >
+              <MoreHorizontal className="size-4" />
+              <span className="hidden sm:inline">Manage conversation</span>
+              <span className="sm:hidden">Manage</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuLabel>Manage conversation</DropdownMenuLabel>
+            <DropdownMenuItem
+              disabled={!canRedact}
+              onClick={openRedactConfirmation}
+            >
+              <ShieldX />
+              Redact messages
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={openDeleteConfirmation}
+            >
+              <Trash2 />
+              Delete forever
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      <dl className="mt-6 grid gap-3 border border-gray-200 bg-white p-4 text-sm sm:grid-cols-2">
+      <dl className="mt-8 grid gap-x-8 gap-y-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <dt className="text-gray-500 text-xs">First activity</dt>
           <dd className="mt-0.5 text-gray-800">
@@ -498,12 +543,15 @@ export function BellThreadClient({
         </Link>
       ) : null}
 
-      <section className="mt-8" aria-labelledby={threadHeadingId}>
-        <h2 id={threadHeadingId} className="font-serif text-xl text-gray-950">
+      <section className="mt-10" aria-labelledby={threadHeadingId}>
+        <h2
+          id={threadHeadingId}
+          className="font-sans font-semibold text-xl text-gray-950"
+        >
           Conversation
         </h2>
         {detail.messages.length === 0 ? (
-          <div className="mt-3 border border-gray-200 bg-white px-4 py-10 text-center text-gray-500 text-sm">
+          <div className="mt-3 bg-white/70 px-4 py-10 text-center text-gray-500 text-sm">
             This conversation has no stored messages.
           </div>
         ) : (
@@ -523,7 +571,7 @@ export function BellThreadClient({
         <section className="mt-8" aria-labelledby={generationsHeadingId}>
           <h2
             id={generationsHeadingId}
-            className="font-serif text-xl text-gray-950"
+            className="font-sans font-semibold text-xl text-gray-950"
           >
             Unattached generation attempts
           </h2>
@@ -538,74 +586,66 @@ export function BellThreadClient({
         </section>
       ) : null}
 
-      <Dialog
+      <AlertDialog
         open={confirmation === 'redact'}
         onOpenChange={handleConfirmationOpenChange}
       >
-        <DialogContent className="shadow-none">
-          <DialogHeader>
-            <DialogTitle>Redact this conversation?</DialogTitle>
-            <DialogDescription>
+        <AlertDialogContent finalFocus={manageTriggerRef}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Redact this conversation</AlertDialogTitle>
+            <AlertDialogDescription>
               This replaces every message body and tool payload stored by Bell
               with a redacted placeholder.{' '}
               {conversation.surface === 'sms'
                 ? 'Linked SMS messages remain in Phone. '
                 : ''}
               Attribution and aggregate generation metadata remain.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-5">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={mutating}>
-                Cancel
-              </Button>
-            </DialogClose>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={mutating}>Cancel</AlertDialogCancel>
             <Button
               type="button"
               variant="destructive"
-              disabled={mutating}
+              loading={mutating}
+              loadingLabel="Redacting"
               onClick={redact}
             >
-              {mutating ? <Spinner className="h-4 w-4" /> : null}
               Redact messages
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <Dialog
+      <AlertDialog
         open={confirmation === 'delete'}
         onOpenChange={handleConfirmationOpenChange}
       >
-        <DialogContent className="shadow-none">
-          <DialogHeader>
-            <DialogTitle>Delete this conversation?</DialogTitle>
-            <DialogDescription>
+        <AlertDialogContent finalFocus={manageTriggerRef}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this conversation</AlertDialogTitle>
+            <AlertDialogDescription>
               This permanently deletes the Bell conversation, messages, and
               generation records.{' '}
               {conversation.surface === 'sms'
                 ? 'Linked SMS messages remain in Phone.'
                 : 'This cannot be undone.'}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-5">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={mutating}>
-                Cancel
-              </Button>
-            </DialogClose>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={mutating}>Cancel</AlertDialogCancel>
             <Button
               type="button"
               variant="destructive"
-              disabled={mutating}
+              loading={mutating}
+              loadingLabel="Deleting"
               onClick={remove}
             >
-              {mutating ? <Spinner className="h-4 w-4" /> : null}
               Delete forever
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -118,6 +118,7 @@ describe('POST /api/subscribe', () => {
     expect(codeLogin).toBeDefined()
     expect(magicLogin).toBeDefined()
     expect(codeLogin?.token).toMatch(/^\d{6}$/)
+    expect(codeLogin?.token).not.toBe('000000')
     expect(magicLogin?.token).toMatch(/^[0-9a-f-]{36}$/)
     expect(codeLogin?.emailSentAt).not.toBeNull()
     expect(magicLogin?.emailSentAt).not.toBeNull()
@@ -142,6 +143,36 @@ describe('POST /api/subscribe', () => {
     expect(message.html).toContain(
       `https://www.philipithomas.com/auth/verify?token=${magicLogin?.token}`
     )
+  })
+
+  it('reserves 000000 even when the random source returns zero', async () => {
+    const random = vi
+      .spyOn(globalThis.crypto, 'getRandomValues')
+      .mockImplementation((array) => {
+        if (array instanceof Uint32Array) array.fill(0)
+        return array
+      })
+
+    try {
+      const response = await POST(
+        subscribeRequest({ email: 'zero-random@example.com' })
+      )
+      expect(response.status).toBe(200)
+
+      const [subscriber] = await db
+        .select()
+        .from(subscribers)
+        .where(eq(subscribers.email, 'zero-random@example.com'))
+      const loginRows = await db
+        .select()
+        .from(logins)
+        .where(eq(logins.subscriberId, subscriber.id))
+      const codeLogin = loginRows.find((login) => login.tokenType === 'code')
+
+      expect(codeLogin?.token).toBe('000001')
+    } finally {
+      random.mockRestore()
+    }
   })
 
   it('ignores an inactive focused newsletter and applies active defaults to a new subscriber', async () => {

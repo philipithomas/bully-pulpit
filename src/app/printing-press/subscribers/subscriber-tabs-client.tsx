@@ -1,11 +1,11 @@
 'use client'
 
-import { type MouseEvent, useCallback, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { SmsSubscribersClient } from '@/app/printing-press/subscribers/sms-subscribers-client'
 import { SubscribersClient } from '@/app/printing-press/subscribers/subscribers-client'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { SmsSubscriberListItem } from '@/lib/db/queries/sms-subscribers'
 import type { SubscriberListItem } from '@/lib/db/queries/subscribers'
-import { cn } from '@/lib/utils'
 
 type SubscriberTab = 'email' | 'sms'
 
@@ -21,56 +21,39 @@ export function SubscriberTabsClient({
   initialSmsTotal: number
 }) {
   const [tab, setTab] = useState<SubscriberTab>('email')
-  const onTabClick = useCallback((event: MouseEvent<HTMLButtonElement>) => {
-    const nextTab = event.currentTarget.value
+  const onTabChange = useCallback((nextTab: string) => {
     if (nextTab === 'email' || nextTab === 'sms') setTab(nextTab)
   }, [])
 
   return (
-    <div>
-      <div className="mb-5 flex gap-1 border-gray-200 border-b">
-        <button
-          type="button"
+    <Tabs value={tab} onValueChange={onTabChange}>
+      <TabsList className="w-full sm:w-fit">
+        <TabsTrigger
           value="email"
-          aria-pressed={tab === 'email'}
-          onClick={onTabClick}
-          className={cn(
-            'border-b-2 px-3 py-2 font-medium text-sm transition-colors',
-            tab === 'email'
-              ? 'border-gray-900 text-gray-900'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          )}
+          className="min-h-11 flex-1 sm:min-h-9 sm:min-w-28"
         >
           Email
-        </button>
-        <button
-          type="button"
+        </TabsTrigger>
+        <TabsTrigger
           value="sms"
-          aria-pressed={tab === 'sms'}
-          onClick={onTabClick}
-          className={cn(
-            'border-b-2 px-3 py-2 font-medium text-sm transition-colors',
-            tab === 'sms'
-              ? 'border-gray-900 text-gray-900'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          )}
+          className="min-h-11 flex-1 sm:min-h-9 sm:min-w-28"
         >
           SMS
-        </button>
-      </div>
+        </TabsTrigger>
+      </TabsList>
 
-      <div hidden={tab !== 'email'}>
+      <TabsContent value="email" keepMounted>
         <SubscribersClient
           initialRows={initialEmailRows}
           initialTotal={initialEmailTotal}
         />
-      </div>
-      <div hidden={tab !== 'sms'}>
+      </TabsContent>
+      <TabsContent value="sms" keepMounted>
         <SmsSubscribersClient
           initialRows={initialSmsRows}
           initialTotal={initialSmsTotal}
         />
-      </div>
-    </div>
+      </TabsContent>
+    </Tabs>
   )
 }

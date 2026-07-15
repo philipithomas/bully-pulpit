@@ -11,11 +11,11 @@ export default function PostsLoading() {
         title="Posts"
         description={<Skeleton className="h-4 w-72" />}
       />
-      <div className="divide-y divide-gray-100 border border-gray-200 bg-white">
+      <div className="space-y-1 bg-card p-1">
         {ROWS.map((row) => (
           <div
             key={row}
-            className="flex items-center justify-between gap-3 px-4 py-3"
+            className="flex min-h-16 items-center justify-between gap-3 bg-background px-4 py-3"
           >
             <span className="min-w-0 flex-1 space-y-2">
               <Skeleton className="h-4 w-2/3 max-w-72" />

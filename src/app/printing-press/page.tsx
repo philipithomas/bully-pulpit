@@ -46,11 +46,11 @@ export default async function OverviewPage() {
             <>
               You write to {n(stats.confirmed)}{' '}
               {stats.confirmed === 1 ? 'person' : 'people'}.{' '}
-              <span className="text-indigo">Postcard</span> reaches{' '}
+              <cite className="text-indigo">Postcard</cite> reaches{' '}
               {n(stats.postcard)} of them,{' '}
-              <span className="text-forest">Contraption</span>{' '}
+              <cite className="text-forest">Contraption</cite>{' '}
               {n(stats.contraption)}, and{' '}
-              <span className="text-walnut">Workshop</span> {n(stats.workshop)}.
+              <cite className="text-walnut">Workshop</cite> {n(stats.workshop)}.
             </>
           )}
         </p>

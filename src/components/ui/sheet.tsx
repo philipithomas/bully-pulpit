@@ -96,7 +96,7 @@ function SheetContent({
 }: Omit<SheetPrimitive.Popup.Props, 'title'> & {
   side?: keyof typeof sheetSideClasses
   showCloseButton?: boolean
-  title?: string
+  title?: string | null
 }) {
   return (
     <SheetPortal>
@@ -104,13 +104,17 @@ function SheetContent({
       <SheetPrimitive.Popup
         data-slot="sheet-content"
         className={cn(
-          'fixed z-50 flex flex-col bg-background shadow-xl outline-none transition-[opacity,transform] duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
+          'fixed z-50 flex flex-col bg-background outline-none transition-[opacity,transform] duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
           sheetSideClasses[side],
           className
         )}
         {...props}
       >
-        <SheetPrimitive.Title className="sr-only">{title}</SheetPrimitive.Title>
+        {title ? (
+          <SheetPrimitive.Title className="sr-only">
+            {title}
+          </SheetPrimitive.Title>
+        ) : null}
         {children}
         {showCloseButton ? (
           <SheetPrimitive.Close className="absolute right-4 top-4 -m-2 p-2 text-gray-600 transition-colors hover:text-gray-950">
