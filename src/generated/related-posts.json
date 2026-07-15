@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-14T15:36:21.771Z",
+  "generatedAt": "2026-07-15T16:44:25.815Z",
   "posts": {
     "adding-sms-support": {
       "related": [
@@ -8,12 +8,12 @@
           "score": 0.1272102
         },
         {
-          "slug": "toast",
-          "score": 0.1770809
-        },
-        {
           "slug": "2023-10",
           "score": 0.1771971
+        },
+        {
+          "slug": "tacit-knowledge-in-software",
+          "score": 0.1780686
         }
       ]
     },
@@ -2228,16 +2228,16 @@
     "slow-travel": {
       "related": [
         {
-          "slug": "espresso",
-          "score": 0.1493961
-        },
-        {
-          "slug": "avant-garde-coffee",
-          "score": 0.1806852
-        },
-        {
           "slug": "introducing-workshop",
           "score": 0.1819827
+        },
+        {
+          "slug": "2026-07",
+          "score": 0.1831114
+        },
+        {
+          "slug": "2023-03",
+          "score": 0.1859018
         }
       ]
     },

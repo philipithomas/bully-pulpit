@@ -32,6 +32,22 @@ export function newsletterUsesCoverMms(newsletter: Newsletter): boolean {
   return newsletterDelivery[newsletter].smsMedia === 'cover'
 }
 
+/**
+ * Content classification stays separate from delivery presentation. Related
+ * posts use this to keep photo newsletters out of writing recommendations,
+ * while photo posts can still recommend the full archive.
+ */
+export const newsletterContent = {
+  contraption: { photo: false },
+  workshop: { photo: false },
+  postcard: { photo: false },
+  tsundoku: { photo: true },
+} as const satisfies Record<Newsletter, { photo: boolean }>
+
+export function isPhotoNewsletter(newsletter: Newsletter): boolean {
+  return newsletterContent[newsletter].photo
+}
+
 export const INACTIVE_NEWSLETTER_SEND_ERROR =
   'Skipped: newsletter distribution is inactive'
 

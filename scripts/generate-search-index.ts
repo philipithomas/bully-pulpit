@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { newsletterSchema } from '@/lib/content/types'
 import { buildCorpus, type CorpusImageAsset } from '@/lib/search/corpus'
 import {
   decodeVector,
@@ -20,6 +21,7 @@ import {
   SEARCH_INDEX_VERSION,
 } from '@/lib/search/index-file'
 import { buildMerkleTree } from '@/lib/search/merkle'
+import { eligibleRelatedPostCandidates } from '@/lib/search/related-post-candidates'
 import { topKBySimilarity } from '@/lib/search/vector'
 
 /**
@@ -208,17 +210,22 @@ async function main() {
     posts: {},
   }
   const postCorpus = corpus.filter((entry) => entry.contentType === 'post')
-  const postSlugs = new Set(postCorpus.map((post) => post.slug))
-  const postCentroids = centroids.filter((centroid) =>
-    postSlugs.has(centroid.slug)
-  )
+  const postBySlug = new Map(postCorpus.map((post) => [post.slug, post]))
+  const postCentroids = centroids
+    .filter((centroid) => postBySlug.has(centroid.slug))
+    .map((centroid) => ({
+      ...centroid,
+      newsletter: newsletterSchema.parse(
+        postBySlug.get(centroid.slug)!.newsletter
+      ),
+    }))
 
   // Keep the previous key order (date-descending, the post corpus order)
   for (const post of postCorpus) {
-    const self = centroids.find((c) => c.slug === post.slug)!
+    const self = postCentroids.find((centroid) => centroid.slug === post.slug)!
     const top = topKBySimilarity(
       self.vector,
-      postCentroids.filter((c) => c.slug !== post.slug),
+      eligibleRelatedPostCandidates(self, postCentroids),
       (c) => c.vector,
       3
     )
