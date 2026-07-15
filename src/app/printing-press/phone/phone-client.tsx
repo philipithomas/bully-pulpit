@@ -1,18 +1,32 @@
 'use client'
 
 import { ArrowLeft, MessageSquarePlus, Phone, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  type ChangeEvent,
+  type FormEvent,
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react'
+import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { isE164 } from '@/lib/phone/config'
 import type { SerializedMessage } from '@/lib/phone/serialize'
 import { cn } from '@/lib/utils'
@@ -23,7 +37,7 @@ type Conversation = {
 }
 
 function timestampLabel(iso: string): string {
-  return `${iso.slice(0, 16).replace('T', ' ')} UTC`
+  return `${iso.slice(0, 16)}Z`
 }
 
 type Tab = 'messages' | 'call'
@@ -40,50 +54,35 @@ export function PhoneClient({
   phoneDisplayNumber: string | null
 }) {
   const [tab, setTab] = useState<Tab>('messages')
+  const handleTabChange = useCallback((nextTab: string | number | null) => {
+    if (nextTab === 'messages' || nextTab === 'call') setTab(nextTab)
+  }, [])
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-1 border-gray-200 border-b">
-        <button
-          type="button"
-          onClick={() => setTab('messages')}
-          className={cn(
-            'border-b-2 px-3 py-2 font-medium text-sm transition-colors',
-            tab === 'messages'
-              ? 'border-gray-900 text-gray-900'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          )}
-        >
+    <Tabs value={tab} onValueChange={handleTabChange} className="min-w-0 gap-5">
+      <TabsList className="w-full sm:w-fit">
+        <TabsTrigger value="messages" className="min-h-11 sm:min-h-9">
           Messages
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('call')}
-          className={cn(
-            'border-b-2 px-3 py-2 font-medium text-sm transition-colors',
-            tab === 'call'
-              ? 'border-gray-900 text-gray-900'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          )}
-        >
+        </TabsTrigger>
+        <TabsTrigger value="call" className="min-h-11 sm:min-h-9">
           Connect a call
-        </button>
-      </div>
-
-      {tab === 'messages' ? (
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="messages">
         <Messages
           initialConversations={initialConversations}
           initialSelectedNumber={initialSelectedNumber}
           phoneDisplayNumber={phoneDisplayNumber}
           phoneNumber={phoneNumber}
         />
-      ) : (
+      </TabsContent>
+      <TabsContent value="call">
         <ConnectCall
           phoneDisplayNumber={phoneDisplayNumber}
           phoneNumber={phoneNumber}
         />
-      )}
-    </div>
+      </TabsContent>
+    </Tabs>
   )
 }
 
@@ -107,24 +106,37 @@ function Messages({
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const threadEnd = useRef<HTMLDivElement>(null)
+  const threadAbort = useRef<AbortController | null>(null)
+  const threadRequest = useRef(0)
   const displayNumber = phoneDisplayNumber ?? phoneNumber
 
   const loadThread = useCallback(async (number: string) => {
+    threadAbort.current?.abort()
+    const controller = new AbortController()
+    threadAbort.current = controller
+    const requestId = ++threadRequest.current
     setLoadingThread(true)
     try {
       const res = await fetch(
-        `/api/printing-press/phone/conversations?number=${encodeURIComponent(number)}`
+        `/api/printing-press/phone/conversations?number=${encodeURIComponent(number)}`,
+        { signal: controller.signal }
       )
       const data = await res.json().catch(() => null)
+      if (threadRequest.current !== requestId) return
       if (res.ok && data) {
         setMessages(data.messages)
       } else {
         toast.error(data?.error ?? 'Could not load the conversation')
       }
     } catch {
-      toast.error('Could not load the conversation')
+      if (threadRequest.current === requestId) {
+        toast.error('Could not load the conversation')
+      }
     } finally {
-      setLoadingThread(false)
+      if (threadRequest.current === requestId) {
+        threadAbort.current = null
+        setLoadingThread(false)
+      }
     }
   }, [])
 
@@ -138,9 +150,25 @@ function Messages({
     [loadThread]
   )
 
+  const handleConversationClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const number = event.currentTarget.dataset.number
+      if (number) openConversation(number)
+    },
+    [openConversation]
+  )
+
   useEffect(() => {
     if (initialSelectedNumber) void loadThread(initialSelectedNumber)
   }, [initialSelectedNumber, loadThread])
+
+  useEffect(
+    () => () => {
+      threadRequest.current += 1
+      threadAbort.current?.abort()
+    },
+    []
+  )
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on new messages
   useEffect(() => {
@@ -187,48 +215,91 @@ function Messages({
     }
   }, [body, composingNew, newTo, selected])
 
+  const startNewMessage = useCallback(() => {
+    threadRequest.current += 1
+    threadAbort.current?.abort()
+    threadAbort.current = null
+    setLoadingThread(false)
+    setComposingNew(true)
+    setSelected(null)
+    setMessages([])
+    setNewTo('')
+  }, [])
+
+  const closeThread = useCallback(() => {
+    threadRequest.current += 1
+    threadAbort.current?.abort()
+    threadAbort.current = null
+    setLoadingThread(false)
+    setSelected(null)
+    setComposingNew(false)
+  }, [])
+
+  const refreshThread = useCallback(() => {
+    if (selected) void loadThread(selected)
+  }, [loadThread, selected])
+
+  const handleRecipientChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setNewTo(event.target.value),
+    []
+  )
+
+  const handleBodyChange = useCallback(
+    (event: ChangeEvent<HTMLTextAreaElement>) => setBody(event.target.value),
+    []
+  )
+
+  const handleSendSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      void send()
+    },
+    [send]
+  )
+
   const threadOpen = selected !== null || composingNew
 
   return (
-    <div className="flex min-h-[420px] border border-gray-200 bg-white">
+    <div className="flex h-[70dvh] min-h-[400px] max-h-[700px] overflow-hidden border border-border bg-card">
       {/* Conversation list */}
       <div
         className={cn(
-          'w-full flex-col border-gray-200 sm:flex sm:w-64 sm:shrink-0 sm:border-r',
+          'w-full flex-col sm:flex sm:w-64 sm:shrink-0',
           threadOpen ? 'hidden' : 'flex'
         )}
       >
-        <div className="flex items-center justify-between border-gray-100 border-b px-3 py-2">
-          <span className="text-gray-500 text-xs">Conversations</span>
-          <button
+        <div className="flex min-h-12 items-center justify-between bg-background px-3 py-2">
+          <span className="font-medium text-gray-600 text-sm">
+            Conversations
+          </span>
+          <Button
             type="button"
-            onClick={() => {
-              setComposingNew(true)
-              setSelected(null)
-              setMessages([])
-              setNewTo('')
-            }}
+            size="icon"
+            variant="ghost"
+            onClick={startNewMessage}
             aria-label="New message"
             title="New message"
-            className="p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            className="size-11 text-gray-500 sm:size-10"
           >
             <MessageSquarePlus className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
         {conversations.length === 0 ? (
           <p className="px-3 py-8 text-center text-gray-500 text-sm">
             No conversations yet.
           </p>
         ) : (
-          <ul className="divide-y divide-gray-100 overflow-y-auto">
+          <ul className="space-y-1 overflow-y-auto p-2">
             {conversations.map((c) => (
               <li key={c.number}>
                 <button
                   type="button"
-                  onClick={() => openConversation(c.number)}
+                  data-number={c.number}
+                  onClick={handleConversationClick}
+                  aria-current={selected === c.number ? 'true' : undefined}
                   className={cn(
-                    'w-full px-3 py-2.5 text-left transition-colors hover:bg-gray-050',
-                    selected === c.number && 'bg-gray-075'
+                    'min-h-16 w-full px-3 py-3 text-left transition-colors hover:bg-background',
+                    selected === c.number && 'bg-background'
                   )}
                 >
                   <span className="block font-medium text-gray-900 text-sm">
@@ -254,47 +325,52 @@ function Messages({
       >
         {threadOpen ? (
           <>
-            <div className="flex items-center gap-2 border-gray-100 border-b px-3 py-2">
-              <button
+            <div className="flex min-h-12 items-center gap-2 bg-background px-2 py-1">
+              <Button
                 type="button"
-                onClick={() => {
-                  setSelected(null)
-                  setComposingNew(false)
-                }}
+                size="icon"
+                variant="ghost"
+                onClick={closeThread}
                 aria-label="Back to conversations"
-                className="p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 sm:hidden"
+                className="size-11 text-gray-500 sm:hidden"
               >
                 <ArrowLeft className="h-4 w-4" />
-              </button>
+              </Button>
               {composingNew ? (
-                <input
+                <Input
                   type="tel"
                   value={newTo}
-                  onChange={(e) => setNewTo(e.target.value)}
+                  onChange={handleRecipientChange}
                   placeholder="+15551234567"
                   aria-label="Recipient phone number"
-                  className="h-8 w-44 border border-gray-200 bg-white px-2 text-gray-900 text-sm placeholder:text-gray-400"
+                  className="h-10 min-w-0 flex-1 bg-background sm:max-w-56"
                 />
               ) : (
                 <span className="font-medium text-gray-900 text-sm">
                   {selected}
                 </span>
               )}
-              {selected && (
-                <button
+              {selected ? (
+                <Button
                   type="button"
-                  onClick={() => void loadThread(selected)}
+                  size="icon"
+                  variant="ghost"
+                  onClick={refreshThread}
                   aria-label="Refresh conversation"
                   title="Refresh"
-                  className="ml-auto p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                  className="ml-auto size-11 text-gray-500 sm:size-10"
+                  loading={loadingThread}
                 >
                   <RefreshCw className="h-4 w-4" />
-                </button>
-              )}
+                </Button>
+              ) : null}
             </div>
 
-            <div className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
-              {loadingThread ? (
+            <div
+              className="relative flex-1 space-y-2 overflow-y-auto bg-card px-3 py-4 sm:px-5"
+              aria-busy={loadingThread}
+            >
+              {loadingThread && messages.length === 0 ? (
                 <div className="flex justify-center py-8">
                   <Spinner className="h-5 w-5 text-gray-400" />
                 </div>
@@ -341,32 +417,38 @@ function Messages({
                   </div>
                 ))
               )}
+              {loadingThread && messages.length > 0 ? (
+                <div className="pointer-events-none sticky bottom-2 ml-auto flex w-fit items-center gap-2 border border-border bg-background px-3 py-2 text-gray-500 text-xs">
+                  <Spinner className="h-3 w-3" />
+                  Refreshing
+                </div>
+              ) : null}
               <div ref={threadEnd} />
             </div>
 
             <form
-              className="flex items-end gap-2 border-gray-100 border-t px-3 py-2"
-              onSubmit={(e) => {
-                e.preventDefault()
-                void send()
-              }}
+              className="sticky bottom-0 z-10 flex items-end gap-2 bg-background px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-3"
+              onSubmit={handleSendSubmit}
             >
               {displayNumber ? (
                 <span className="hidden h-9 shrink-0 items-center border border-gray-200 bg-gray-050 px-2 text-gray-600 text-xs sm:flex">
                   {displayNumber}
                 </span>
               ) : null}
-              <textarea
+              <Textarea
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
+                onChange={handleBodyChange}
                 rows={1}
                 placeholder="Write a message…"
                 aria-label="Message body"
-                className="max-h-32 min-h-9 flex-1 resize-y border border-gray-200 bg-white px-2 py-2 text-gray-900 text-sm placeholder:text-gray-400"
+                className="max-h-32 min-h-11 flex-1 resize-y bg-background"
               />
               <Button
                 type="submit"
                 size="sm"
+                className="h-11 shrink-0 px-3 sm:h-9"
+                loading={sending}
+                loadingLabel={<span className="sr-only">Sending</span>}
                 disabled={
                   sending ||
                   !phoneNumber ||
@@ -374,7 +456,7 @@ function Messages({
                   (composingNew && !newTo.trim())
                 }
               >
-                {sending ? <Spinner className="h-4 w-4" /> : 'Send'}
+                Send
               </Button>
             </form>
           </>
@@ -402,6 +484,7 @@ function ConnectCall({
   const [confirming, setConfirming] = useState(false)
   const [placing, setPlacing] = useState(false)
   const displayNumber = phoneDisplayNumber ?? phoneNumber
+  const targetErrorId = `${targetId}-error`
 
   const trimmed = target.trim()
   const validTarget = isE164(trimmed)
@@ -429,73 +512,99 @@ function ConnectCall({
     }
   }, [trimmed])
 
+  const handleTargetChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setTarget(event.target.value),
+    []
+  )
+
+  const handleCallSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      if (validTarget && phoneNumber) setConfirming(true)
+    },
+    [phoneNumber, validTarget]
+  )
+
+  const handleConfirmingChange = useCallback(
+    (open: boolean) => {
+      if (!open && !placing) setConfirming(false)
+    },
+    [placing]
+  )
+
   return (
-    <div className="max-w-md border border-gray-200 bg-white p-4">
-      <p className="text-gray-600 text-sm">
-        Your phone rings first. When you pick up, Twilio dials the destination
-        and bridges the two of you, presenting the configured Twilio number as
-        caller id.
-      </p>
-      <form
-        className="mt-4 space-y-4"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (validTarget && phoneNumber) setConfirming(true)
-        }}
-      >
+    <section className="max-w-xl border border-border bg-card p-5 sm:p-7">
+      <div className="max-w-md space-y-2">
+        <h2 className="font-sans font-semibold text-2xl text-gray-950 tracking-tight">
+          Call from the desk
+        </h2>
+        <p className="text-gray-600 text-sm leading-relaxed">
+          Your phone rings first. Pick up and Twilio dials the destination, then
+          bridges the two calls.
+        </p>
+      </div>
+      <form className="mt-6 max-w-md space-y-5" onSubmit={handleCallSubmit}>
         {displayNumber ? (
-          <p className="text-gray-500 text-sm">Caller id: {displayNumber}</p>
+          <p className="bg-background px-3 py-2.5 text-gray-600 text-sm">
+            Caller ID{' '}
+            <span className="font-mono text-gray-950">{displayNumber}</span>
+          </p>
         ) : null}
-        <div className="space-y-1">
-          <label
-            htmlFor={targetId}
-            className="block font-medium text-gray-700 text-sm"
-          >
-            Destination
-          </label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor={targetId}>Destination number</Label>
+          <Input
             id={targetId}
             type="tel"
             value={target}
-            onChange={(e) => setTarget(e.target.value)}
+            onChange={handleTargetChange}
             placeholder="+15551234567"
-            className="h-9 w-full border border-gray-200 bg-white px-2 text-gray-900 text-sm placeholder:text-gray-400"
+            inputMode="tel"
+            autoComplete="tel"
+            aria-invalid={trimmed && !validTarget ? true : undefined}
+            aria-describedby={
+              trimmed && !validTarget ? targetErrorId : undefined
+            }
+            className="h-11 bg-background sm:h-10"
           />
           {trimmed && !validTarget && (
-            <p className="text-red text-xs">
+            <p id={targetErrorId} className="text-red text-xs">
               Enter an E.164 number, for example +15551234567.
             </p>
           )}
         </div>
-        <Button type="submit" disabled={!validTarget || !phoneNumber}>
+        <Button
+          type="submit"
+          disabled={!validTarget || !phoneNumber}
+          className="h-11 w-full sm:w-auto"
+        >
           <Phone className="h-4 w-4" />
           Connect a call
         </Button>
       </form>
 
-      <Dialog
-        open={confirming}
-        onOpenChange={(o) => !o && setConfirming(false)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ring your phone?</DialogTitle>
-            <DialogDescription>
-              This calls your phone immediately. When you answer, it dials{' '}
-              <span className="font-medium text-gray-700">{trimmed}</span> and
-              connects you, showing {displayNumber} as the caller id.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 flex justify-end gap-3">
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button onClick={place} disabled={placing}>
-              {placing ? <Spinner className="h-4 w-4" /> : 'Call me'}
+      <AlertDialog open={confirming} onOpenChange={handleConfirmingChange}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Place this call</AlertDialogTitle>
+            <AlertDialogDescription>
+              This starts a real phone call immediately. Twilio calls your phone
+              first; when you answer, it dials {trimmed} and connects the two of
+              you. The destination sees {displayNumber} as the caller ID.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={placing}>Stay here</AlertDialogCancel>
+            <Button
+              type="button"
+              onClick={place}
+              loading={placing}
+              loadingLabel="Calling"
+            >
+              Call my phone
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
   )
 }

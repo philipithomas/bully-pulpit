@@ -2,7 +2,7 @@ import { checkBotId } from 'botid/server'
 import { and, desc, eq } from 'drizzle-orm'
 import { jwtVerify } from 'jose'
 import { NextRequest } from 'next/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('botid/server', () =>
@@ -120,7 +120,118 @@ beforeEach(async () => {
   await resetDb()
 })
 
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
 describe('POST /api/auth/verify', () => {
+  it('accepts the fixed development PIN for different normal email flows', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+
+    for (const [email, generatedCode] of [
+      ['first-local@example.com', '123456'],
+      ['second-local@example.com', '654321'],
+    ] as const) {
+      await subscribe(email)
+      const subscriber = await subscriberByEmail(email)
+      const login = await latestCodeLogin(subscriber.id)
+      await db
+        .update(logins)
+        .set({ token: generatedCode })
+        .where(eq(logins.id, login.id))
+
+      const response = await verify(email, '000000')
+
+      expect(response.status).toBe(200)
+      expect(response.cookies.get('__Host-bp_token')?.value).toBeTruthy()
+      expect(
+        response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value
+      ).toBeTruthy()
+      expect((await latestCodeLogin(subscriber.id)).verifiedAt).not.toBeNull()
+      expect((await subscriberByEmail(email)).confirmedAt).not.toBeNull()
+    }
+
+    expect(adminNotificationCalls()).toHaveLength(2)
+  })
+
+  it('preserves returning-subscriber semantics with the development PIN', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    const [subscriber] = await db
+      .insert(subscribers)
+      .values({
+        email: 'returning-local@example.com',
+        confirmedAt: new Date(),
+      })
+      .returning()
+    await subscribe(subscriber.email)
+    const login = await latestCodeLogin(subscriber.id)
+    await db
+      .update(logins)
+      .set({ token: '345678' })
+      .where(eq(logins.id, login.id))
+
+    const response = await verify(subscriber.email, '000000')
+
+    expect(response.status).toBe(200)
+    expect(response.cookies.get('__Host-bp_token')?.value).toBeTruthy()
+    expect(response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)).toBe(
+      undefined
+    )
+    expect(adminNotificationCalls()).toHaveLength(0)
+  })
+
+  it('requires a live code request before the development PIN can sign in', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    await db.insert(subscribers).values({
+      email: 'no-login-request@example.com',
+      confirmedAt: new Date(),
+    })
+
+    const response = await verify('no-login-request@example.com', '000000')
+
+    expect(response.status).toBe(400)
+    expect(response.headers.getSetCookie()).toHaveLength(0)
+  })
+
+  it.each([
+    ['expired', { expiredAt: new Date(Date.now() - 1_000) }],
+    ['locked', { lockedAt: new Date() }],
+    ['already verified', { verifiedAt: new Date() }],
+  ])('rejects the development PIN for an %s code request', async (_, update) => {
+    vi.stubEnv('NODE_ENV', 'development')
+    const email = 'stale-local-code@example.com'
+    await subscribe(email)
+    const subscriber = await subscriberByEmail(email)
+    const login = await latestCodeLogin(subscriber.id)
+    await db.update(logins).set(update).where(eq(logins.id, login.id))
+
+    const response = await verify(email, '000000')
+
+    expect(response.status).toBe(400)
+    expect(response.headers.getSetCookie()).toHaveLength(0)
+  })
+
+  it('rejects the fixed development PIN in production without a session', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    await subscribe('production-pin@example.com')
+    const subscriber = await subscriberByEmail('production-pin@example.com')
+    const login = await latestCodeLogin(subscriber.id)
+    await db
+      .update(logins)
+      .set({ token: '456789' })
+      .where(eq(logins.id, login.id))
+
+    const response = await verify(subscriber.email, '000000')
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Invalid or expired code',
+    })
+    expect(response.headers.getSetCookie()).toHaveLength(0)
+    expect((await latestCodeLogin(subscriber.id)).verifiedAt).toBeNull()
+    expect((await subscriberByEmail(subscriber.email)).confirmedAt).toBeNull()
+  })
+
   it('completes the OTP loop: confirms, sets session cookies, notifies admin only on first confirmation', async () => {
     await subscribe('reader@example.com')
 
@@ -223,10 +334,14 @@ describe('POST /api/auth/verify', () => {
     await subscribe('typo@example.com')
     const sub = await subscriberByEmail('typo@example.com')
     const { token: code } = await latestCodeLogin(sub.id)
+    expect(code).not.toBe('000000')
 
-    const res = await verify('typo@example.com', wrongCodeFor(code))
+    const wrong = wrongCodeFor(code)
+    expect(wrong).toBe('000000')
+    const res = await verify('typo@example.com', wrong)
     expect(res.status).toBe(400)
     expect(await res.json()).toEqual({ error: 'Invalid or expired code' })
+    expect(res.headers.getSetCookie()).toHaveLength(0)
 
     const login = await latestCodeLogin(sub.id)
     expect(login.attempts).toBe(1)

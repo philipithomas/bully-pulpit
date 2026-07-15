@@ -99,6 +99,11 @@ export function EmailCodeConfirmationDialog({
             <span>Verifying</span>
           </div>
         ) : null}
+        {process.env.NODE_ENV === 'development' ? (
+          <p className="text-sm text-gray-500">
+            Local development code: <span className="font-mono">000000</span>
+          </p>
+        ) : null}
         {googleAvailable && onGoogleSuccess ? (
           <>
             <p className="font-sans text-xs text-gray-400">or</p>

@@ -22,6 +22,26 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Local Printing press
+
+The admin uses the normal subscriber session in development. Bring the
+development database schema up to date, then start the site normally:
+
+```bash
+pnpm db:migrate
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000), sign in through the normal
+email form, and enter `000000` when asked for the six-digit code. That fixed
+code works for any email only under `next dev`; production still requires the
+generated one-time code. Printing press access remains limited to addresses in
+`ADMIN_EMAILS`.
+
+`pnpm db:migrate` changes whichever database is named by the loaded
+`DATABASE_URL_UNPOOLED` or `DATABASE_URL`. Confirm that the local environment
+points to the development Neon branch before running it.
+
 ## Phone and SMS deployment
 
 Inbound Twilio traffic is webhook-based. The app does not poll Twilio for new

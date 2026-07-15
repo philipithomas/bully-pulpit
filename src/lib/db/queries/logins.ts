@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { type Login, logins } from '@/lib/db/schema'
 
@@ -49,6 +49,32 @@ export async function findValidByToken(
         sql`${logins.expiredAt} > NOW()`
       )
     )
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/**
+ * Finds the newest live code issued through the normal email sign-in flow.
+ * Development's fixed local PIN uses this row so it preserves expiration,
+ * lockout, verification, and first-confirmation behavior without depending on
+ * the randomly generated code value.
+ */
+export async function findValidCodeForSubscriber(
+  subscriberId: number
+): Promise<Login | null> {
+  const rows = await getDb()
+    .select()
+    .from(logins)
+    .where(
+      and(
+        eq(logins.subscriberId, subscriberId),
+        eq(logins.tokenType, 'code'),
+        isNull(logins.verifiedAt),
+        isNull(logins.lockedAt),
+        sql`${logins.expiredAt} > NOW()`
+      )
+    )
+    .orderBy(desc(logins.id))
     .limit(1)
   return rows[0] ?? null
 }

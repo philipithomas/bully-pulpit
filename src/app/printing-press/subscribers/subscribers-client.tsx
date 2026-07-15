@@ -2,39 +2,51 @@
 
 import {
   Check,
+  ChevronDown,
   Copy,
   Download,
   MailCheck,
+  MoreHorizontal,
   Search,
   Trash2,
   Upload,
 } from 'lucide-react'
 import {
   type ChangeEvent,
+  type MouseEvent,
   useCallback,
   useEffect,
   useRef,
   useState,
 } from 'react'
 import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { NativeSelect } from '@/components/ui/native-select'
 import { Spinner } from '@/components/ui/spinner'
 import { siteConfig } from '@/lib/config'
 import type { Newsletter } from '@/lib/content/types'
 import type { SubscriberListItem } from '@/lib/db/queries/subscribers'
 import { newsletterAccentDots, newsletterList } from '@/lib/newsletters'
 import { suppressionSentence } from '@/lib/printing-press'
-import { cn } from '@/lib/utils'
 
 type NewsletterFilter = Newsletter | ''
 
@@ -126,6 +138,7 @@ export function SubscribersClient({
   const reqId = useRef(0)
   const firstRender = useRef(true)
   const fileRef = useRef<HTMLInputElement>(null)
+  const actionTriggerRef = useRef<HTMLButtonElement>(null)
 
   const runSearch = useCallback(
     async (q: string, newsletter: NewsletterFilter) => {
@@ -206,6 +219,21 @@ export function SubscribersClient({
     []
   )
 
+  const onQueryChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setQuery(event.target.value)
+  }, [])
+
+  const openFilePicker = useCallback(() => {
+    fileRef.current?.click()
+  }, [])
+
+  const rememberActionTrigger = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      actionTriggerRef.current = event.currentTarget
+    },
+    []
+  )
+
   const copyEmail = useCallback(async (email: string, uuid: string) => {
     try {
       await navigator.clipboard.writeText(email)
@@ -216,6 +244,44 @@ export function SubscribersClient({
       toast.error('Could not copy')
     }
   }, [])
+
+  const onCopyEmail = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      const { email, uuid } = event.currentTarget.dataset
+      if (email && uuid) void copyEmail(email, uuid)
+    },
+    [copyEmail]
+  )
+
+  const onChooseClearTarget = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      const uuid = event.currentTarget.dataset.uuid
+      setClearTarget(rows.find((row) => row.uuid === uuid) ?? null)
+    },
+    [rows]
+  )
+
+  const onChooseDeleteTarget = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      const uuid = event.currentTarget.dataset.uuid
+      setDeleteTarget(rows.find((row) => row.uuid === uuid) ?? null)
+    },
+    [rows]
+  )
+
+  const onDeleteDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && !deleting) setDeleteTarget(null)
+    },
+    [deleting]
+  )
+
+  const onClearDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && !clearing) setClearTarget(null)
+    },
+    [clearing]
+  )
 
   const confirmDelete = useCallback(async () => {
     if (!deleteTarget) return
@@ -315,161 +381,170 @@ export function SubscribersClient({
 
   return (
     <div>
-      {/* Toolbar: search + CSV export/import */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex w-full flex-col gap-2 sm:max-w-xl sm:flex-row">
           <div className="relative min-w-0 flex-1">
-            <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 h-4 w-4 text-gray-400" />
-            <input
+            <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-muted-foreground" />
+            <Input
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={onQueryChange}
               placeholder="Search by email…"
               aria-label="Search subscribers by email"
-              className="h-10 w-full border border-gray-200 bg-white pr-9 pl-9 text-sm text-gray-900 placeholder:text-gray-400"
+              className="pr-9 pl-9"
             />
-            {loading && (
-              <Spinner className="-translate-y-1/2 absolute top-1/2 right-3 h-4 w-4 text-gray-400" />
-            )}
+            {loading ? (
+              <Spinner className="-translate-y-1/2 absolute top-1/2 right-3 size-4 text-muted-foreground" />
+            ) : null}
           </div>
-          <select
-            value={newsletterFilter}
-            onChange={onNewsletterFilterChange}
-            aria-label="Filter subscribers by newsletter"
-            className="h-10 w-full border border-gray-200 bg-white px-3 text-sm text-gray-900 sm:w-44"
-          >
-            <option value="">All subscribers</option>
-            {NEWSLETTERS.map((newsletter) => (
-              <option key={newsletter.slug} value={newsletter.slug}>
-                {newsletter.name}
-              </option>
-            ))}
-          </select>
+          <div className="w-full sm:w-44 sm:shrink-0">
+            <NativeSelect
+              value={newsletterFilter}
+              onChange={onNewsletterFilterChange}
+              aria-label="Filter subscribers by newsletter"
+            >
+              <option value="">All subscribers</option>
+              {NEWSLETTERS.map((newsletter) => (
+                <option
+                  key={newsletter.slug}
+                  value={newsletter.slug}
+                  className="italic"
+                >
+                  {newsletter.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <a
-            href="/api/printing-press/subscribers/export"
-            className={cn(
-              buttonVariants({ variant: 'outline', size: 'sm' }),
-              'cursor-pointer'
-            )}
-          >
-            <Download className="h-4 w-4 text-gray-400" />
-            Export
-          </a>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => fileRef.current?.click()}
-            disabled={importing}
-            title="CSV columns: email, name, postcard, contraption, workshop, tsundoku, confirmed, source"
-          >
-            {importing ? (
-              <Spinner className="h-4 w-4" />
-            ) : (
-              <Upload className="h-4 w-4 text-gray-400" />
-            )}
-            Import
-          </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={onImportFile}
-          />
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              loading={importing}
+              loadingLabel="Importing"
+              className="w-full sm:w-auto"
+            >
+              Subscriber files
+              <ChevronDown className="size-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem asChild>
+              <a href="/api/printing-press/subscribers/export">
+                <Download />
+                Export CSV
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={openFilePicker}>
+              <Upload />
+              Import CSV
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={onImportFile}
+        />
       </div>
 
-      <p className="mb-3 text-xs text-gray-500">
+      <p className="mb-3 font-mono text-muted-foreground text-xs">
         {subscriberCountLabel({ total, query, newsletter: newsletterFilter })}
       </p>
 
-      {/* List */}
       {rows.length === 0 ? (
-        <div className="border border-gray-200 bg-white px-4 py-12 text-center text-sm text-gray-500">
+        <div className="bg-card px-4 py-12 text-center text-muted-foreground text-sm">
           {emptyLabel(query, newsletterFilter)}
         </div>
       ) : (
-        <ul className="divide-y divide-gray-100 border border-gray-200 bg-white">
+        <ul className="space-y-1 bg-card p-1">
           {rows.map((s) => (
             <li
               key={s.uuid}
-              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-050"
+              className="flex min-h-16 items-center gap-3 bg-background px-3 py-3 transition-colors hover:bg-accent/40 sm:px-4"
             >
               <Avatar email={s.email} name={s.name} size={38} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="truncate text-sm font-medium text-gray-900">
+                  <span className="truncate font-medium text-foreground text-sm">
                     {s.email}
                   </span>
                   {!s.confirmedAt && (
                     <Badge variant="warning">unconfirmed</Badge>
                   )}
-                  {s.suppressedAt && (
+                  {s.suppressedAt ? (
                     <Badge variant="destructive">suppressed</Badge>
-                  )}
+                  ) : null}
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
-                  {s.name && <span className="text-gray-500">{s.name}</span>}
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-muted-foreground text-xs">
+                  {s.name ? <span>{s.name}</span> : null}
                   {NEWSLETTERS.filter((nl) => s[nl.key]).map((nl) => (
-                    <span
+                    <cite
                       key={nl.key}
-                      className="inline-flex items-center gap-1"
+                      className="inline-flex items-center gap-1 font-serif"
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${nl.dot}`} />
                       {nl.name}
-                    </span>
+                    </cite>
                   ))}
                   <span>joined {joinedLabel(s.createdAt)}</span>
-                  {s.source && (
+                  {s.source ? (
                     <span className="max-w-56 truncate" title={s.source}>
                       via {s.source}
                     </span>
-                  )}
+                  ) : null}
                 </div>
-                {s.suppressedAt && s.suppressionReason && (
+                {s.suppressedAt && s.suppressionReason ? (
                   <p className="mt-1 text-red-deep text-xs">
                     {suppressionSentence(s.suppressionReason, s.suppressedAt)}
                   </p>
-                )}
+                ) : null}
               </div>
-              <div className="flex shrink-0 items-center gap-0.5">
-                {s.suppressedAt && (
-                  <button
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
                     type="button"
-                    onClick={() => setClearTarget(s)}
-                    aria-label="Clear suppression"
-                    title="Clear suppression"
-                    className="p-2.5 text-gray-400 transition-colors hover:bg-red/10 hover:text-red"
+                    variant="ghost"
+                    size="icon"
+                    className="size-11 shrink-0"
+                    aria-label={`Manage ${s.email}`}
+                    onClick={rememberActionTrigger}
                   >
-                    <MailCheck className="h-4 w-4" />
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => copyEmail(s.email, s.uuid)}
-                  aria-label="Copy email"
-                  title="Copy email"
-                  className="p-2.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
-                >
-                  {copied === s.uuid ? (
-                    <Check className="h-4 w-4 text-forest" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeleteTarget(s)}
-                  aria-label="Delete subscriber"
-                  title="Delete subscriber"
-                  className="p-2.5 text-gray-400 transition-colors hover:bg-red/10 hover:text-red"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    data-email={s.email}
+                    data-uuid={s.uuid}
+                    onClick={onCopyEmail}
+                  >
+                    {copied === s.uuid ? <Check /> : <Copy />}
+                    {copied === s.uuid ? 'Copied' : 'Copy email'}
+                  </DropdownMenuItem>
+                  {s.suppressedAt ? (
+                    <DropdownMenuItem
+                      data-uuid={s.uuid}
+                      onClick={onChooseClearTarget}
+                    >
+                      <MailCheck />
+                      Clear suppression
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    data-uuid={s.uuid}
+                    onClick={onChooseDeleteTarget}
+                  >
+                    <Trash2 />
+                    Delete subscriber
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </li>
           ))}
         </ul>
@@ -477,75 +552,85 @@ export function SubscribersClient({
 
       {rows.length < total && (
         <div className="mt-5 flex justify-center">
-          <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? <Spinner className="h-4 w-4" /> : 'Load more'}
+          <Button
+            variant="outline"
+            onClick={loadMore}
+            loading={loadingMore}
+            loadingLabel="Loading"
+          >
+            Load more
           </Button>
         </div>
       )}
 
-      <Dialog
+      <AlertDialog
         open={deleteTarget !== null}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        onOpenChange={onDeleteDialogOpenChange}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete subscriber?</DialogTitle>
-            <DialogDescription>
+        <AlertDialogContent finalFocus={actionTriggerRef}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this subscriber</AlertDialogTitle>
+            <AlertDialogDescription>
               This permanently deletes{' '}
-              <span className="font-medium text-gray-700">
+              <span className="font-medium text-foreground">
                 {deleteTarget?.email}
               </span>{' '}
-              and all of their data (subscription, email + sign-in history).
-              This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 flex justify-end gap-3">
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
+              along with subscription, email-send, and sign-in records. You
+              cannot undo this. Bell conversations and email suppression records
+              remain.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              Keep subscriber
+            </AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={confirmDelete}
-              disabled={deleting}
+              loading={deleting}
+              loadingLabel="Deleting"
             >
-              {deleting ? <Spinner className="h-4 w-4" /> : 'Delete'}
+              Delete subscriber
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <Dialog
+      <AlertDialog
         open={clearTarget !== null}
-        onOpenChange={(o) => !o && setClearTarget(null)}
+        onOpenChange={onClearDialogOpenChange}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Clear suppression?</DialogTitle>
-            <DialogDescription>
+        <AlertDialogContent finalFocus={actionTriggerRef}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Let this address receive mail again
+            </AlertDialogTitle>
+            <AlertDialogDescription>
               This removes the suppression for{' '}
-              <span className="font-medium text-gray-700">
+              <span className="font-medium text-foreground">
                 {clearTarget?.email}
               </span>{' '}
               from the SES account-level list and from this site, so future
               sends deliver to the address again. Clear it only when you know
               the address works: another bounce or complaint damages sender
               reputation.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 flex justify-end gap-3">
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearing}>
+              Keep suppressed
+            </AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={confirmClear}
-              disabled={clearing}
+              loading={clearing}
+              loadingLabel="Clearing"
             >
-              {clearing ? <Spinner className="h-4 w-4" /> : 'Clear suppression'}
+              Clear suppression
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

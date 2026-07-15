@@ -1,21 +1,33 @@
 'use client'
 
+import { ChevronDown, Mail, MessageSquareText } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/printing-press/page-header'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
-import { forceDarkColorScheme } from '@/lib/email/preview'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import {
+  forceDarkColorScheme,
+  forceLightColorScheme,
+} from '@/lib/email/preview'
 import { cn } from '@/lib/utils'
 
 type SendStats = {
@@ -69,6 +81,10 @@ export function SendClient({
   // prefers-color-scheme: dark). Preview only; sends use previewHtml as-is.
   const darkPreviewHtml = useMemo(
     () => forceDarkColorScheme(previewHtml),
+    [previewHtml]
+  )
+  const lightPreviewHtml = useMemo(
+    () => forceLightColorScheme(previewHtml),
     [previewHtml]
   )
 
@@ -169,20 +185,12 @@ export function SendClient({
     setConfirmOpen(true)
   }, [])
 
-  const setDesktopView = useCallback(() => {
-    setView('desktop')
+  const handleViewChange = useCallback((next: string) => {
+    if (next === 'desktop' || next === 'mobile') setView(next)
   }, [])
 
-  const setMobileView = useCallback(() => {
-    setView('mobile')
-  }, [])
-
-  const setLightScheme = useCallback(() => {
-    setScheme('light')
-  }, [])
-
-  const setDarkScheme = useCallback(() => {
-    setScheme('dark')
+  const handleSchemeChange = useCallback((next: string) => {
+    if (next === 'light' || next === 'dark') setScheme(next)
   }, [])
 
   const handleConfirmOpenChange = useCallback(
@@ -256,90 +264,120 @@ export function SendClient({
       : null,
   ].filter(Boolean)
   const sendAudience =
-    sendAudienceParts.length > 0 ? sendAudienceParts.join(' + ') : '0 people'
+    sendAudienceParts.length > 0 ? sendAudienceParts.join(' and ') : '0 people'
   const canSend =
     sendingEnabled && (eligible > 0 || smsEligible > 0) && !active && !starting
   const canRetry =
-    sendingEnabled &&
-    (stats.failed > 0 || stats.pending > 0) &&
-    !active &&
-    !starting
+    sendingEnabled && (stats.failed > 0 || stats.pending > 0) && !active
 
   return (
     <div>
       <PageHeader title={subject} description={previewText}>
-        <Badge variant="secondary" className="capitalize">
+        <Badge variant="secondary" className="capitalize italic">
           {newsletter}
         </Badge>
         {!sendingEnabled ? <Badge variant="outline">Archived</Badge> : null}
       </PageHeader>
 
-      {/* Status */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <Badge variant="outline">{eligible} email eligible</Badge>
-        {smsEligible > 0 ? (
-          <Badge variant="outline">{smsEligible} SMS</Badge>
-        ) : null}
-        {stats.sent > 0 && <Badge variant="success">{stats.sent} sent</Badge>}
-        {stats.pending > 0 && (
-          <Badge variant="warning">{stats.pending} pending</Badge>
-        )}
-        {stats.failed > 0 && (
-          <Badge variant="destructive">{stats.failed} failed</Badge>
-        )}
-        {stats.skipped > 0 && (
-          <Badge variant="secondary">{stats.skipped} skipped</Badge>
-        )}
-        {active ? <Badge variant="warning">Sending</Badge> : null}
-      </div>
-
-      {(active || stats.total > 0) && (
-        <div className="mb-6">
-          <Progress value={progress} />
-          <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
-            {active ? <Spinner className="h-3 w-3" /> : null}
-            {progressText}
-          </p>
+      <section className="mb-6 bg-card px-4 py-3" aria-label="Delivery status">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-gray-800">Ready for {sendAudience}.</p>
+          {active ? <Badge variant="warning">Sending</Badge> : null}
         </div>
-      )}
+        {stats.total > 0 ? (
+          <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+            <div className="flex gap-1">
+              <dt>Sent</dt>
+              <dd className="font-mono text-gray-800">{stats.sent}</dd>
+            </div>
+            <div className="flex gap-1">
+              <dt>Pending</dt>
+              <dd className="font-mono text-gray-800">{stats.pending}</dd>
+            </div>
+            <div className="flex gap-1">
+              <dt>Failed</dt>
+              <dd
+                className={
+                  stats.failed > 0
+                    ? 'font-mono text-red-deep'
+                    : 'font-mono text-gray-800'
+                }
+              >
+                {stats.failed}
+              </dd>
+            </div>
+            {stats.skipped > 0 ? (
+              <div className="flex gap-1">
+                <dt>Skipped</dt>
+                <dd className="font-mono text-gray-800">{stats.skipped}</dd>
+              </div>
+            ) : null}
+          </dl>
+        ) : null}
+        <div className="mt-3 min-h-8">
+          {active || stats.total > 0 ? (
+            <>
+              <Progress value={progress} />
+              <p className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                {active ? <Spinner className="h-3 w-3" /> : null}
+                {progressText}
+              </p>
+            </>
+          ) : null}
+        </div>
+      </section>
 
       {/* Actions */}
       {sendingEnabled ? (
-        <div className="flex flex-wrap items-center gap-3 mb-8">
-          <Button
-            variant="outline"
-            onClick={sendTestEmail}
-            disabled={testButtonDisabled}
-          >
-            {testingEmail ? (
-              <Spinner className="h-4 w-4" />
-            ) : (
-              `Send test email to me`
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={sendTestSms}
-            disabled={testButtonDisabled}
-          >
-            {testingSms ? (
-              <Spinner className="h-4 w-4" />
-            ) : (
-              `Send test text to me`
-            )}
-          </Button>
-          <Button onClick={openConfirm} disabled={!canSend}>
-            {starting ? (
-              <Spinner className="h-4 w-4" />
-            ) : (
-              `Send to ${sendAudience}`
-            )}
-          </Button>
+        <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={testButtonDisabled}
+                loading={testButtonDisabled}
+                loadingLabel="Sending proof"
+                className="w-full sm:w-auto"
+              >
+                Send proof
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onClick={sendTestEmail}
+                disabled={testButtonDisabled}
+              >
+                <Mail className="h-4 w-4" />
+                {testingEmail ? 'Sending email proof' : 'Email proof to me'}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={sendTestSms}
+                disabled={testButtonDisabled}
+              >
+                <MessageSquareText className="h-4 w-4" />
+                {testingSms ? 'Sending text proof' : 'Text proof to me'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {canRetry ? (
-            <Button variant="ghost" onClick={retry}>
-              Retry / resume
+            <Button
+              className="w-full sm:ml-auto sm:w-auto"
+              onClick={retry}
+              loading={starting}
+              loadingLabel="Continuing send"
+            >
+              Continue send
             </Button>
-          ) : null}
+          ) : (
+            <Button
+              className="w-full sm:ml-auto sm:w-auto"
+              onClick={openConfirm}
+              disabled={!canSend}
+            >
+              Send issue
+            </Button>
+          )}
         </div>
       ) : (
         <p className="mb-8 text-sm text-gray-500">
@@ -349,40 +387,26 @@ export function SendClient({
       )}
 
       {/* Preview */}
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         <span className="text-xs text-gray-500">Preview</span>
-        <div className="flex gap-1">
-          <Button
-            variant={view === 'desktop' ? 'default' : 'outline'}
-            size="sm"
-            onClick={setDesktopView}
-          >
-            Desktop
-          </Button>
-          <Button
-            variant={view === 'mobile' ? 'default' : 'outline'}
-            size="sm"
-            onClick={setMobileView}
-          >
-            Mobile
-          </Button>
-        </div>
-        <div className="flex gap-1">
-          <Button
-            variant={scheme === 'light' ? 'default' : 'outline'}
-            size="sm"
-            onClick={setLightScheme}
-          >
-            Light
-          </Button>
-          <Button
-            variant={scheme === 'dark' ? 'default' : 'outline'}
-            size="sm"
-            onClick={setDarkScheme}
-          >
-            Dark
-          </Button>
-        </div>
+        <ToggleGroup
+          type="single"
+          value={view}
+          onValueChange={handleViewChange}
+          aria-label="Preview width"
+        >
+          <ToggleGroupItem value="desktop">Desktop</ToggleGroupItem>
+          <ToggleGroupItem value="mobile">Mobile</ToggleGroupItem>
+        </ToggleGroup>
+        <ToggleGroup
+          type="single"
+          value={scheme}
+          onValueChange={handleSchemeChange}
+          aria-label="Preview color scheme"
+        >
+          <ToggleGroupItem value="light">Light</ToggleGroupItem>
+          <ToggleGroupItem value="dark">Dark</ToggleGroupItem>
+        </ToggleGroup>
       </div>
       <div
         className={cn(
@@ -392,7 +416,7 @@ export function SendClient({
       >
         <iframe
           sandbox=""
-          srcDoc={scheme === 'dark' ? darkPreviewHtml : previewHtml}
+          srcDoc={scheme === 'dark' ? darkPreviewHtml : lightPreviewHtml}
           title="Email preview"
           className={cn(
             'border border-gray-200 h-[70vh]',
@@ -408,28 +432,31 @@ export function SendClient({
         />
       </div>
 
-      <Dialog open={confirmOpen} onOpenChange={handleConfirmOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send to {sendAudience}?</DialogTitle>
-            <DialogDescription>
-              This emails “{subject}” to every confirmed {newsletter} subscriber
-              and texts every SMS subscriber who has not received it yet. This
-              cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-3 mt-4">
-            <DialogClose asChild>
-              <Button variant="outline" disabled={starting}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button onClick={confirmSend} disabled={starting}>
-              {starting ? <Spinner className="h-4 w-4" /> : 'Send now'}
+      <AlertDialog open={confirmOpen} onOpenChange={handleConfirmOpenChange}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send this issue</AlertDialogTitle>
+            <AlertDialogDescription>
+              Send “{subject}” to {sendAudience}. This delivers email to
+              confirmed <cite className="capitalize">{newsletter}</cite>{' '}
+              subscribers and text to eligible SMS subscribers who have not
+              received the issue. Once delivery begins, you cannot take it back.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={starting}>
+              Keep reviewing
+            </AlertDialogCancel>
+            <Button
+              onClick={confirmSend}
+              loading={starting}
+              loadingLabel="Starting send"
+            >
+              Send issue
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

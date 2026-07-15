@@ -3,6 +3,7 @@ import type { Newsletter } from '@/lib/content/types'
 import {
   createLogin,
   findValidByToken,
+  findValidCodeForSubscriber,
   incrementAttemptsForSubscriber,
   markEmailSent,
   markVerified,
@@ -33,7 +34,9 @@ export class InvalidTokenError extends Error {
 function generateCode(): string {
   const arr = new Uint32Array(1)
   crypto.getRandomValues(arr)
-  return (arr[0] % 1_000_000).toString().padStart(6, '0')
+  // 000000 is reserved for the fixed local-development PIN. Real codes stay
+  // within the remaining six-digit space so production can reject it always.
+  return ((arr[0] % 999_999) + 1).toString().padStart(6, '0')
 }
 
 /**
@@ -161,7 +164,16 @@ export async function verifyTokenWithMetadata(
     codeSubscriberId = subscriber.id
   }
 
-  const login = await findValidByToken(token, tokenType, codeSubscriberId)
+  const isReservedDevelopmentPin = token === '000000'
+  let login: Login | null
+  if (isReservedDevelopmentPin) {
+    login =
+      process.env.NODE_ENV === 'development' && codeSubscriberId !== undefined
+        ? await findValidCodeForSubscriber(codeSubscriberId)
+        : null
+  } else {
+    login = await findValidByToken(token, tokenType, codeSubscriberId)
+  }
 
   if (!login) {
     if (codeSubscriberId !== undefined) {
