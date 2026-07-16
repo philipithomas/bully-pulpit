@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-16T01:19:25.656Z",
+  "generatedAt": "2026-07-16T01:37:48.923Z",
   "posts": {
     "adding-sms-support": {
       "related": [
@@ -741,7 +741,7 @@
       "related": [
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.1025632
+          "score": 0.101103
         },
         {
           "slug": "sync-phone-numbers-and-webhooks",
@@ -1013,7 +1013,7 @@
       "related": [
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.1109757
+          "score": 0.1105391
         },
         {
           "slug": "sync-phone-numbers-and-webhooks",
@@ -1029,7 +1029,7 @@
       "related": [
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.1156987
+          "score": 0.1137792
         },
         {
           "slug": "openclaw-is-my-new-coworker",
@@ -1125,15 +1125,15 @@
       "related": [
         {
           "slug": "openclaw-is-my-new-coworker",
-          "score": 0.1025632
+          "score": 0.101103
         },
         {
           "slug": "git",
-          "score": 0.1109757
+          "score": 0.1105391
         },
         {
           "slug": "mcp-and-the-future-of-ai",
-          "score": 0.1156987
+          "score": 0.1137792
         }
       ]
     },
@@ -1141,7 +1141,7 @@
       "related": [
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.1215288
+          "score": 0.1208662
         },
         {
           "slug": "tacit-knowledge-in-software",
@@ -1289,7 +1289,7 @@
         },
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.1242559
+          "score": 0.125448
         },
         {
           "slug": "code-as-content-and-digital-proprioception",
@@ -1301,7 +1301,7 @@
       "related": [
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.1179901
+          "score": 0.1176242
         },
         {
           "slug": "git",
@@ -1453,7 +1453,7 @@
         },
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.1371555
+          "score": 0.1385893
         }
       ]
     },
@@ -1513,7 +1513,7 @@
         },
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.1268692
+          "score": 0.1264834
         },
         {
           "slug": "moonlight-s-pitch-deck",
@@ -1593,7 +1593,7 @@
         },
         {
           "slug": "claude-launching-and-tools",
-          "score": 0.1505551
+          "score": 0.1499371
         },
         {
           "slug": "lost-and-found",
@@ -1644,8 +1644,8 @@
           "score": 0.1712137
         },
         {
-          "slug": "claude-launching-and-tools",
-          "score": 0.1814533
+          "slug": "code-as-content-and-digital-proprioception",
+          "score": 0.1816635
         }
       ]
     },
