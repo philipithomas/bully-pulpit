@@ -252,11 +252,7 @@ export default async function SlugPage({ params }: Props) {
     : {}
   const coverImage = item.frontmatter.coverImage ? (
     <div
-      className={
-        isFindAiPage
-          ? 'image-loading-surface mx-auto aspect-[2/1] w-full max-w-5xl overflow-hidden sm:aspect-[3/1]'
-          : `image-loading-surface w-full overflow-hidden ${isTsundokuPost ? 'mb-8' : 'mb-10'}`
-      }
+      className={`image-loading-surface w-full overflow-hidden ${isTsundokuPost ? 'mb-8' : 'mb-10'}`}
     >
       <Image
         src={item.frontmatter.coverImage}
@@ -270,7 +266,7 @@ export default async function SlugPage({ params }: Props) {
           sizes: isTsundokuPost ? CAPTIONED_ZOOM_IMAGE_SIZES : undefined,
         })}
         {...coverZoomCaption}
-        className={`relative z-10 block w-full cursor-zoom-in ${isFindAiPage ? 'h-full object-cover' : ''}`}
+        className="relative z-10 block w-full cursor-zoom-in"
         priority
         sizes={POST_COVER_SIZES}
       />
@@ -292,13 +288,11 @@ export default async function SlugPage({ params }: Props) {
             : 'container py-12 md:py-16'
         }
       >
-        {isFindAiPage ? coverImage : null}
-
         {/* Header */}
         <header
           className={
             isFindAiPage
-              ? 'relative z-20 mx-auto -mt-8 mb-10 flex max-w-2xl flex-col items-start text-left sm:-mt-10'
+              ? 'mx-auto mb-10 flex max-w-2xl flex-col items-start text-left'
               : `mx-auto flex max-w-3xl flex-col items-center text-center ${isTsundokuPost ? 'mb-6' : 'mb-10'}`
           }
         >
@@ -340,7 +334,7 @@ export default async function SlugPage({ params }: Props) {
           >
             {item.frontmatter.title}
           </h1>
-          {item.frontmatter.description ? (
+          {item.frontmatter.description && !isFindAiPage ? (
             <p className="font-serif text-gray-600 text-lg sm:text-xl max-w-prose leading-relaxed mt-4">
               {item.frontmatter.description}
             </p>

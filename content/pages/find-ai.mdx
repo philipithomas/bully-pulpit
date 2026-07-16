@@ -11,29 +11,19 @@ Instead of translating an idea into rigid filters or opening LinkedIn profiles o
 
 I built the search system in Ruby on Pinecone and Elasticsearch. At production scale, it processed 19 million OpenAI requests per week over more than 100 million vectors. I also designed the API, built its TypeScript SDKs, and implemented usage-based billing. [Clay was an early enterprise customer](https://university.clay.com/docs/find-ai-integration-overview) and offered Find AI directly inside its product. The company raised $8 million from Felicis Ventures, Daniel Gross, and Nat Friedman.
 
-## Lessons that held up
-
-**Vector similarity was not accuracy.** A vector search could understand that a Chihuahua and a golden retriever were related, but it could also confuse one dog breed with another or a former job title with a current one. Find AI got better results by breaking complex questions into smaller criteria, combining retrieval methods, and asking an LLM to judge the evidence.
-
-**The pipeline was agentic, even though the team did not describe it that way.** Rather than asking one model for a complete answer, the system decomposed a goal, gathered candidates and evidence in parallel, and made a judgment about each criterion. The simple search box hid a multi-step analysis system.
-
-**Evals were production infrastructure.** I designed an LLM search-evaluation harness that covered query decomposition, parallel candidate generation, LLM-as-judge scoring, regression benchmarks, and evals. Another internal tool ran the same production prompt across several models, measured cost, and asked a judge model to score and critique every response. That let the team test whether a model that cost 100 times less was good enough before changing millions of calls.
+- **Vector similarity was not accuracy.** A vector search could understand that a Chihuahua and a golden retriever were related, but it could also confuse one dog breed with another or a former job title with a current one. Find AI got better results by breaking complex questions into smaller criteria, combining retrieval methods, and asking an LLM to judge the evidence.
+- **The pipeline was agentic, even though the team did not describe it that way.** Rather than asking one model for a complete answer, the system decomposed a goal, gathered candidates and evidence in parallel, and made a judgment about each criterion. The simple search box hid a multi-step analysis system.
+- **Evals were production infrastructure.** I designed an LLM search-evaluation harness that covered query decomposition, parallel candidate generation, LLM-as-judge scoring, regression benchmarks, and evals. Another internal tool ran the same production prompt across several models, measured cost, and asked a judge model to score and critique every response. That let the team test whether a model that cost 100 times less was good enough before changing millions of calls.
 
 The lesson I carried forward is that [LLMs can be analysis engines](/archetypes-of-llm-apps) alongside writing and chat tools. They can turn unstructured data into useful decisions when retrieval, evaluation, and observability are treated as first-class systems.
 
-## What happened
-
 In late 2024, the company chose a different direction. I left, and the original Find AI search product and API are no longer active. I wrote about the transition, and what the experience changed for me, in [“Lost and found”](/lost-and-found).
 
-## Find AI API demo
-
-This short demo shows the customer experience for searching people and companies through the Find AI API. I also wrote [a technical tour of the API](/bts-find-api), including its OpenAPI foundation, generated client libraries, documentation, and usage-based billing.
+**Find AI API demo.** This short video shows the customer experience for searching people and companies through the Find AI API. I also wrote [a technical tour of the API](/bts-find-api), including its OpenAPI foundation, generated client libraries, documentation, and usage-based billing.
 
 <YouTubeEmbed video="Z6sEHoD8QQk" title="Behind the scenes of the Find AI API" />
 
-## Behind the scenes of Find AI
-
-In this 2024 talk at Mindstone in New York City, I walk through the semantic-search and model-comparison tools the team used to understand retrieval quality, model behavior, and cost. The accompanying post is [“Internal tools of Find AI”](/internal-tools-of-find-ai).
+**Behind the scenes of Find AI.** In this 2024 talk at Mindstone in New York City, I walk through the semantic-search and model-comparison tools the team used to understand retrieval quality, model behavior, and cost. The accompanying post is [“Internal tools of Find AI”](/internal-tools-of-find-ai).
 
 <YouTubeEmbed video="lnO-lWcUUxI" title="Internal tools of Find AI" />
 
