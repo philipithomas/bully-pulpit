@@ -29,6 +29,13 @@ describe('Bell starter questions', () => {
     })
   })
 
+  it('preserves the lowercase umami name', () => {
+    expect(bellStarterQuestions('/umami')[0]).toEqual({
+      kind: 'newsletter_overview',
+      text: 'What is umami about?',
+    })
+  })
+
   it('uses current-page questions for posts and public pages', () => {
     for (const path of ['/finding-a-software-job', '/contact', '/print']) {
       expect(bellStarterQuestions(path).map((item) => item.kind)).toEqual([

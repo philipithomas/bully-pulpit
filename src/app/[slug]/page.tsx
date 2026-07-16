@@ -35,9 +35,11 @@ import { markdownToPlaintext } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
 import {
   CAPTIONED_ZOOM_IMAGE_SIZES,
+  IMMERSIVE_ZOOM_IMAGE_SIZES,
   zoomImageDataAttrs,
 } from '@/lib/content/zoom-image'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { isPhotoNewsletter } from '@/lib/newsletters'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 
 interface Props {
@@ -49,11 +51,13 @@ const SOCIAL_IMAGE_QUALITY = 100
 const FALLBACK_SOCIAL_IMAGE_SIZE = { width: 1200, height: 630 } as const
 const PHOTO_VIEWER_DESCRIPTION_MAX = 900
 
-function photoViewerDescription(post: Post): string {
-  const text =
+function photoViewerDescription(post: Post): string | undefined {
+  const text = (
     post.frontmatter.description ??
     markdownToPlaintext(post.content, PHOTO_VIEWER_DESCRIPTION_MAX + 1)
+  ).trim()
 
+  if (!text) return undefined
   return text.length > PHOTO_VIEWER_DESCRIPTION_MAX
     ? `${text.slice(0, PHOTO_VIEWER_DESCRIPTION_MAX).trimEnd()}...`
     : text
@@ -139,8 +143,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!item) return {}
 
+  const excerpt = extractExcerpt(item.content, 160).trim()
   const description =
-    item.frontmatter.description ?? extractExcerpt(item.content, 160)
+    item.frontmatter.description ??
+    (excerpt || item.frontmatter.coverImageAlt || item.frontmatter.title)
   const socialImage = getSocialImage({
     title: item.frontmatter.title,
     coverImage: item.frontmatter.coverImage,
@@ -231,6 +237,7 @@ export default async function SlugPage({ params }: Props) {
     workshop: { className: 'bg-offwhite-warm', dataBg: 'offwhite-warm' },
     contraption: { className: 'bg-gray-050', dataBg: 'gray-050' },
     postcard: { className: 'bg-offwhite-cool', dataBg: 'offwhite-cool' },
+    umami: { className: 'bg-[#f5f3f1]', dataBg: 'umami' },
     tsundoku: { className: 'bg-[#f4f4f2]', dataBg: 'tsundoku' },
   }
   const bg = post?.newsletter ? bgMap[post.newsletter] : undefined
@@ -239,20 +246,24 @@ export default async function SlugPage({ params }: Props) {
   const postDate =
     post && post.newsletter !== 'postcard' ? post.frontmatter.publishedAt : null
   const showPostMetadata = Boolean(postDate || location)
-  const isTsundokuPost = post?.newsletter === 'tsundoku'
-  const coverZoomCaption = isTsundokuPost
-    ? {
-        'data-zoom-caption-href': `/${post.slug}`,
-        'data-zoom-caption-title': post.frontmatter.title,
-        'data-zoom-caption-description': photoViewerDescription(post),
-        'data-zoom-caption-date': post.frontmatter.publishedAt,
-        'data-zoom-caption-location-name': location?.name,
-        'data-zoom-caption-location-url': location?.url,
-      }
-    : {}
+  const isPhotoPost = Boolean(post && isPhotoNewsletter(post.newsletter))
+  const isUmamiPost = post?.newsletter === 'umami'
+  const coverZoomCaption =
+    isPhotoPost && post
+      ? {
+          'data-zoom-caption-href': `/${post.slug}`,
+          'data-zoom-caption-title': post.frontmatter.title,
+          'data-zoom-caption-description': photoViewerDescription(post),
+          'data-zoom-caption-date': post.frontmatter.publishedAt,
+          'data-zoom-caption-location-name': location?.name,
+          'data-zoom-caption-location-url': location?.url,
+          'data-zoom-caption-presentation': isUmamiPost ? 'immersive' : 'rail',
+          'data-zoom-caption-collection': post.newsletter,
+        }
+      : {}
   const coverImage = item.frontmatter.coverImage ? (
     <div
-      className={`image-loading-surface w-full overflow-hidden ${isTsundokuPost ? 'mb-8' : 'mb-10'}`}
+      className={`image-loading-surface w-full overflow-hidden ${isPhotoPost ? 'mb-8' : 'mb-10'}`}
     >
       <Image
         src={item.frontmatter.coverImage}
@@ -263,7 +274,11 @@ export default async function SlugPage({ params }: Props) {
         {...zoomImageDataAttrs({
           src: item.frontmatter.coverImage,
           dimensions: post?.coverDimensions,
-          sizes: isTsundokuPost ? CAPTIONED_ZOOM_IMAGE_SIZES : undefined,
+          sizes: isUmamiPost
+            ? IMMERSIVE_ZOOM_IMAGE_SIZES
+            : isPhotoPost
+              ? CAPTIONED_ZOOM_IMAGE_SIZES
+              : undefined,
         })}
         {...coverZoomCaption}
         className="relative z-10 block w-full cursor-zoom-in"
@@ -283,7 +298,7 @@ export default async function SlugPage({ params }: Props) {
       />
       <div
         className={
-          isTsundokuPost
+          isPhotoPost
             ? 'container pt-8 pb-12 md:pt-10 md:pb-16'
             : 'container py-12 md:py-16'
         }
@@ -293,7 +308,7 @@ export default async function SlugPage({ params }: Props) {
           className={
             isFindAiPage
               ? 'mx-auto mb-10 flex max-w-2xl flex-col items-start text-left'
-              : `mx-auto flex max-w-3xl flex-col items-center text-center ${isTsundokuPost ? 'mb-6' : 'mb-10'}`
+              : `mx-auto flex max-w-3xl flex-col items-center text-center ${isPhotoPost ? 'mb-6' : 'mb-10'}`
           }
         >
           {isFindAiPage ? (
@@ -327,7 +342,7 @@ export default async function SlugPage({ params }: Props) {
             className={`mt-3 font-sans font-semibold leading-tight tracking-tight text-pretty text-gray-950 ${
               isFindAiPage
                 ? 'text-4xl sm:text-5xl'
-                : isTsundokuPost
+                : isPhotoPost
                   ? 'text-3xl sm:text-4xl md:text-5xl'
                   : 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl'
             }`}
@@ -339,7 +354,7 @@ export default async function SlugPage({ params }: Props) {
               {item.frontmatter.description}
             </p>
           ) : null}
-          {post && !isTsundokuPost && (
+          {post && !isPhotoPost && (
             <a href="/" className="flex items-center gap-3 mt-6 group">
               <Image
                 src="/images/author.jpg"

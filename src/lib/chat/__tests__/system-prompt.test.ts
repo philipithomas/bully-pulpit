@@ -160,7 +160,7 @@ describe('getSystemPrompt chronology routing', () => {
       'For "What is my latest post?", call listPosts with limit 1, offset 0, and filter.mode "all"'
     )
     expect(prompt).toContain(
-      'An unqualified latest or recent request includes all four newsletters, including Tsundoku'
+      'An unqualified latest or recent request includes all five newsletters, including the archived Tsundoku'
     )
     expect(prompt).toContain(
       'For "What is my latest Workshop post?", call listPosts with limit 1, offset 0, filter.mode "only", and filter.newsletter "workshop"'

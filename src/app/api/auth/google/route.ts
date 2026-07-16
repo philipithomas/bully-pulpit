@@ -21,6 +21,7 @@ import {
   normalizedNewsletters,
 } from '@/lib/auth/subscriber-service'
 import { siteConfig } from '@/lib/config'
+import { NEWSLETTERS } from '@/lib/content/types'
 import { serializeSubscriber } from '@/lib/db/queries/subscribers'
 import { PUBLIC_JSON_BODY_MAX_BYTES, readJsonBody } from '@/lib/http/json-body'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -32,7 +33,7 @@ const googleAuthBodySchema = z.strictObject({
   // It remains an accepted legacy field so identity always comes from the
   // verified ID token without breaking an in-flight client.
   email: z.string().max(320).optional(),
-  newsletters: z.array(z.string().max(32)).max(4).optional(),
+  newsletters: z.array(z.string().max(32)).max(NEWSLETTERS.length).optional(),
   analytics_placement: z.string().max(100).optional(),
 })
 

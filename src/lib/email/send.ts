@@ -1,5 +1,6 @@
 import { siteConfig } from '@/lib/config'
 import { getPostBySlug } from '@/lib/content/loader'
+import type { Newsletter } from '@/lib/content/types'
 import { isNewsletter } from '@/lib/db/queries/subscribers'
 import { createTextMessage } from '@/lib/db/queries/text-messages'
 import { renderFullNewsletter } from '@/lib/email/queued-send'
@@ -11,6 +12,7 @@ import {
   renderConfirmationText,
 } from '@/lib/email/templates/confirmation'
 import { renderNewSubscriberEmail } from '@/lib/email/templates/new-subscriber'
+import { renderExistingSubscriberOptInEmail } from '@/lib/email/templates/newsletter-opt-in'
 import { isNewsletterSendingEnabled } from '@/lib/newsletters'
 import {
   isE164,
@@ -56,6 +58,25 @@ export async function sendNewSubscriberNotification(
     to: siteConfig.sesFromEmail,
     subject: `New subscriber: ${email}`,
     html,
+  })
+}
+
+export async function sendExistingSubscriberOptInNotification(
+  email: string,
+  name: string | null | undefined,
+  newsletter: Newsletter
+): Promise<void> {
+  const newsletterName = siteConfig.newsletters[newsletter].name
+  const message = renderExistingSubscriberOptInEmail({
+    email,
+    name,
+    newsletter: newsletterName,
+  })
+  await sendSimpleEmail({
+    to: siteConfig.adminEmails,
+    subject: `Existing subscriber opted into ${newsletterName}: ${email}`,
+    html: message.html,
+    text: message.text,
   })
 }
 

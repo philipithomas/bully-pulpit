@@ -3,6 +3,7 @@ import { z } from 'zod/v4'
 import { parseAnalyticsPlacement } from '@/lib/analytics/events'
 import { trackServerEvent } from '@/lib/analytics/server'
 import { clearSessionCookies, getVerifiedSession } from '@/lib/auth/jwt'
+import { notifyExistingSubscriberOptIns } from '@/lib/auth/subscriber-service'
 import {
   deleteWithData,
   prefsFromBody,
@@ -18,6 +19,7 @@ const preferencesSchema = z.strictObject({
   subscribed_postcard: z.boolean().optional(),
   subscribed_contraption: z.boolean().optional(),
   subscribed_workshop: z.boolean().optional(),
+  subscribed_umami: z.boolean().optional(),
   analytics_placement: z.string().optional(),
 })
 
@@ -36,6 +38,11 @@ const NEWSLETTER_PREFERENCES = [
     requestKey: 'subscribed_postcard',
     databaseKey: 'subscribedPostcard',
     newsletter: 'postcard',
+  },
+  {
+    requestKey: 'subscribed_umami',
+    databaseKey: 'subscribedUmami',
+    newsletter: 'umami',
   },
 ] as const
 
@@ -73,6 +80,7 @@ export async function PATCH(request: Request) {
   if (!subscriber) {
     return NextResponse.json({ error: 'Update failed' }, { status: 404 })
   }
+  await notifyExistingSubscriberOptIns(before, subscriber)
 
   const placement = parseAnalyticsPlacement(parsed.data.analytics_placement)
   await Promise.all(

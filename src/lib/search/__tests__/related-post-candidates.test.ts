@@ -10,8 +10,9 @@ interface Candidate {
 const candidates: Candidate[] = [
   { slug: 'writing-source', newsletter: 'contraption' },
   { slug: 'writing-peer', newsletter: 'workshop' },
-  { slug: 'photo-source', newsletter: 'tsundoku' },
-  { slug: 'photo-peer', newsletter: 'tsundoku' },
+  { slug: 'umami-source', newsletter: 'umami' },
+  { slug: 'umami-peer', newsletter: 'umami' },
+  { slug: 'tsundoku-peer', newsletter: 'tsundoku' },
 ]
 
 describe('eligibleRelatedPostCandidates', () => {
@@ -23,11 +24,22 @@ describe('eligibleRelatedPostCandidates', () => {
     ).toEqual(['writing-peer'])
   })
 
+  it('specifically keeps Umami out of non-photo recommendations', () => {
+    const recommendations = eligibleRelatedPostCandidates(
+      candidates[0],
+      candidates
+    )
+
+    expect(
+      recommendations.some((candidate) => candidate.newsletter === 'umami')
+    ).toBe(false)
+  })
+
   it('keeps the full archive eligible for photo-post recommendations', () => {
     expect(
       eligibleRelatedPostCandidates(candidates[2], candidates).map(
         (candidate) => candidate.slug
       )
-    ).toEqual(['writing-source', 'writing-peer', 'photo-peer'])
+    ).toEqual(['writing-source', 'writing-peer', 'umami-peer', 'tsundoku-peer'])
   })
 })

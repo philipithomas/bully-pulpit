@@ -110,6 +110,7 @@
   --color-offwhite-cool: #f5f6fa;
   --color-offwhite-dark: #edebe7;
   --color-offwhite-light: #faf9f7;
+  --color-umami: #f2712c;
 
   /* Grays */
   --color-gray-50: #f2f2f1; /* alias: keeps the un-padded spelling warm */
@@ -281,6 +282,10 @@ body:has(> * [data-bg="offwhite-cool"]) {
 
 body:has(> * [data-bg="gray-050"]) {
   background-color: var(--color-gray-050);
+}
+
+body:has(> * [data-bg="umami"]) {
+  background-color: #f5f3f1;
 }
 
 /* ============================
@@ -662,6 +667,11 @@ body:has(> * [data-bg="gray-050"]) {
 [data-bg="offwhite-cool"] {
   --prose-accent: var(--color-indigo);
 }
+[data-bg="umami"] {
+  /* The brand orange remains exact in marks and decoration; this darker
+     companion keeps linked text readable on Umami's pale background. */
+  --prose-accent: #a6400f;
+}
 
 .prose a {
   text-decoration-color: var(--prose-accent, var(--color-gray-400));
@@ -808,6 +818,22 @@ body.dark-viewport header .btn-primary .btn-arrow {
 
 .image-zoom-hd-out {
   animation: image-zoom-fade-out 300ms ease forwards;
+}
+
+/* Umami's viewer keeps its controls visible on touch screens, including
+   landscape phones. Fine pointers reveal the same chrome on hover or when a
+   keyboard user focuses a control. */
+.immersive-zoom-chrome {
+  transition:
+    opacity 180ms ease,
+    background-color 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .immersive-zoom-stage:not(:hover):not(:focus-within) .immersive-zoom-chrome,
+  [role="dialog"]:not(:hover):not(:focus-within) > .immersive-zoom-chrome {
+    opacity: 0;
+  }
 }
 
 @keyframes image-zoom-fade-in {

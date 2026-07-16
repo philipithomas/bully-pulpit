@@ -9,6 +9,7 @@ import { verifyTokenWithMetadata } from '@/lib/auth/login-service'
 import {
   applyNewsletterOptIns,
   normalizedNewsletters,
+  notifyExistingSubscriberOptIns,
 } from '@/lib/auth/subscriber-service'
 
 export async function GET(request: NextRequest) {
@@ -23,15 +24,22 @@ export async function GET(request: NextRequest) {
     let subscriber = verification.subscriber
     const requestedNewsletters =
       request.nextUrl.searchParams.getAll('newsletter')
-    subscriber = await applyNewsletterOptIns(
+    const newsletters = normalizedNewsletters(requestedNewsletters)
+    const beforeOptIns = subscriber
+    subscriber = await applyNewsletterOptIns(subscriber, newsletters)
+    await notifyExistingSubscriberOptIns(
+      beforeOptIns,
       subscriber,
-      normalizedNewsletters(requestedNewsletters)
+      !verification.newlyConfirmed
     )
     const jwt = await signSession(subscriber)
     // Track on the token-free landing page instead of from this request. The
     // server Analytics SDK derives its event URL from request context, which
     // would otherwise include the one-time magic token.
-    const destination = new URL('/', request.url)
+    const destination = new URL(
+      newsletters.includes('umami') ? '/account' : '/',
+      request.url
+    )
     destination.searchParams.set('signed-in', '1')
     destination.searchParams.set('analytics-signup', 'email-link')
     destination.searchParams.set(

@@ -31,6 +31,7 @@ const defaultSmsSubscriptions = {
   postcard: isNewsletterAcceptingSubscriptions('postcard'),
   contraption: isNewsletterAcceptingSubscriptions('contraption'),
   workshop: isNewsletterAcceptingSubscriptions('workshop'),
+  umami: isNewsletterAcceptingSubscriptions('umami'),
   tsundoku: isNewsletterAcceptingSubscriptions('tsundoku'),
 }
 
@@ -38,6 +39,7 @@ const newsletterColumns = {
   postcard: smsSubscribers.subscribedPostcard,
   contraption: smsSubscribers.subscribedContraption,
   workshop: smsSubscribers.subscribedWorkshop,
+  umami: smsSubscribers.subscribedUmami,
   tsundoku: smsSubscribers.subscribedTsundoku,
 } as const
 
@@ -64,6 +66,7 @@ export async function subscribeSmsNumber(input: {
             subscribed_postcard,
             subscribed_contraption,
             subscribed_workshop,
+            subscribed_umami,
             subscribed_tsundoku,
             source
           )
@@ -73,6 +76,7 @@ export async function subscribeSmsNumber(input: {
           ${defaultSmsSubscriptions.postcard},
           ${defaultSmsSubscriptions.contraption},
           ${defaultSmsSubscriptions.workshop},
+          ${defaultSmsSubscriptions.umami},
           ${defaultSmsSubscriptions.tsundoku},
           ${input.source ?? null}
         )
@@ -89,6 +93,10 @@ export async function subscribeSmsNumber(input: {
           subscribed_workshop = CASE
             WHEN ${defaultSmsSubscriptions.workshop} THEN true
             ELSE sms_subscribers.subscribed_workshop
+          END,
+          subscribed_umami = CASE
+            WHEN ${defaultSmsSubscriptions.umami} THEN true
+            ELSE sms_subscribers.subscribed_umami
           END,
           subscribed_tsundoku = CASE
             WHEN ${defaultSmsSubscriptions.tsundoku} THEN true
@@ -117,6 +125,7 @@ export async function subscribeSmsNumber(input: {
       subscribedPostcard: defaultSmsSubscriptions.postcard,
       subscribedContraption: defaultSmsSubscriptions.contraption,
       subscribedWorkshop: defaultSmsSubscriptions.workshop,
+      subscribedUmami: defaultSmsSubscriptions.umami,
       subscribedTsundoku: defaultSmsSubscriptions.tsundoku,
       source: input.source ?? null,
     })
@@ -135,6 +144,10 @@ export async function subscribeSmsNumber(input: {
         subscribedWorkshop: sql`CASE
           WHEN ${defaultSmsSubscriptions.workshop} THEN true
           ELSE ${smsSubscribers.subscribedWorkshop}
+        END`,
+        subscribedUmami: sql`CASE
+          WHEN ${defaultSmsSubscriptions.umami} THEN true
+          ELSE ${smsSubscribers.subscribedUmami}
         END`,
         subscribedTsundoku: sql`CASE
           WHEN ${defaultSmsSubscriptions.tsundoku} THEN true
@@ -393,7 +406,8 @@ export async function countActiveSms(): Promise<number> {
         or(
           eq(smsSubscribers.subscribedPostcard, true),
           eq(smsSubscribers.subscribedContraption, true),
-          eq(smsSubscribers.subscribedWorkshop, true)
+          eq(smsSubscribers.subscribedWorkshop, true),
+          eq(smsSubscribers.subscribedUmami, true)
         )
       )
     )
@@ -407,6 +421,7 @@ export type SmsSubscriberListItem = {
   subscribedPostcard: boolean
   subscribedContraption: boolean
   subscribedWorkshop: boolean
+  subscribedUmami: boolean
   subscribedTsundoku: boolean
   source: string | null
   createdAt: string
@@ -455,6 +470,7 @@ export async function listSmsSubscribers(opts: {
       subscribedPostcard: subscriber.subscribedPostcard,
       subscribedContraption: subscriber.subscribedContraption,
       subscribedWorkshop: subscriber.subscribedWorkshop,
+      subscribedUmami: subscriber.subscribedUmami,
       subscribedTsundoku: subscriber.subscribedTsundoku,
       source: subscriber.source,
       createdAt: subscriber.createdAt.toISOString(),

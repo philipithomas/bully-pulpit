@@ -143,9 +143,27 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
   const date = element.dataset.zoomCaptionDate ?? img.dataset.zoomCaptionDate
   const locationName =
     element.dataset.zoomCaptionLocationName ??
-    img.dataset.zoomCaptionLocationName
+    img.dataset.zoomCaptionLocationName ??
+    element.dataset.zoomCaptionLocation ??
+    img.dataset.zoomCaptionLocation
   const locationUrl =
-    element.dataset.zoomCaptionLocationUrl ?? img.dataset.zoomCaptionLocationUrl
+    element.dataset.zoomCaptionLocationUrl ??
+    img.dataset.zoomCaptionLocationUrl ??
+    element.dataset.zoomCaptionLocationHref ??
+    img.dataset.zoomCaptionLocationHref
+  const presentationValue =
+    element.dataset.zoomCaptionPresentation ??
+    img.dataset.zoomCaptionPresentation
+  const presentation =
+    presentationValue === 'immersive' || presentationValue === 'rail'
+      ? presentationValue
+      : undefined
+  const collectionValue =
+    element.dataset.zoomCaptionCollection ?? img.dataset.zoomCaptionCollection
+  const collection =
+    collectionValue === 'umami' || collectionValue === 'tsundoku'
+      ? collectionValue
+      : undefined
   const footerHeading =
     element.dataset.zoomCaptionFooterHeading ??
     img.dataset.zoomCaptionFooterHeading
@@ -185,6 +203,8 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
             date,
             locationName,
             locationUrl,
+            presentation,
+            collection,
             footer:
               footerLinks.length > 0
                 ? {

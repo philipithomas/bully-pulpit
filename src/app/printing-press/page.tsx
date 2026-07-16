@@ -49,8 +49,9 @@ export default async function OverviewPage() {
               <cite className="text-indigo">Postcard</cite> reaches{' '}
               {n(stats.postcard)} of them,{' '}
               <cite className="text-forest">Contraption</cite>{' '}
-              {n(stats.contraption)}, and{' '}
-              <cite className="text-walnut">Workshop</cite> {n(stats.workshop)}.
+              {n(stats.contraption)},{' '}
+              <cite className="text-walnut">Workshop</cite> {n(stats.workshop)},
+              and <cite className="text-umami">umami</cite> {n(stats.umami)}.
             </>
           )}
         </p>

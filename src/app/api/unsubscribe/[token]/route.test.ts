@@ -36,6 +36,8 @@ function makeSubscriber(overrides: Partial<Subscriber> = {}): Subscriber {
     subscribedContraption: true,
     subscribedWorkshop: true,
     subscribedTsundoku: false,
+    subscribedUmami: true,
+    umamiOptInNotificationSentAt: null,
     source: null,
     sessionVersion: 1,
     createdAt: new Date(),
@@ -92,6 +94,7 @@ describe('GET /api/unsubscribe/[token]', () => {
       subscribed_postcard: true,
       subscribed_contraption: true,
       subscribed_workshop: false,
+      subscribed_umami: true,
     })
   })
 
@@ -121,6 +124,24 @@ describe('PATCH /api/unsubscribe/[token]', () => {
     })
     await expect(res.json()).resolves.toEqual({ success: true })
   })
+
+  it('does not let a historical token enable Umami', async () => {
+    mockedSends.findByUnsubscribeToken.mockResolvedValue(makeEmailSend())
+    mockedSubs.findById.mockResolvedValue(
+      makeSubscriber({ subscribedUmami: false })
+    )
+
+    const req = {
+      json: async () => ({ subscribed_umami: true }),
+    } as unknown as NextRequest
+    const res = await PATCH(req, params(TOKEN))
+
+    expect(res.status).toBe(403)
+    expect(mockedSubs.updateSubscriber).not.toHaveBeenCalled()
+    await expect(res.json()).resolves.toEqual({
+      error: 'Sign in to subscribe to umami.',
+    })
+  })
 })
 
 describe('DELETE /api/unsubscribe/[token]', () => {
@@ -136,6 +157,7 @@ describe('DELETE /api/unsubscribe/[token]', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
+      subscribedUmami: false,
     })
     expect(mockedSends.markUnsubscribed).toHaveBeenCalledWith(10)
     expect(mockedSubs.deleteWithData).not.toHaveBeenCalled()
@@ -166,6 +188,22 @@ describe('POST /api/unsubscribe/[token] (one-click)', () => {
     await expect(res.json()).resolves.toEqual({ success: true })
   })
 
+  it('unsubscribes only from Umami for an Umami email', async () => {
+    mockedSends.findByUnsubscribeToken.mockResolvedValue(
+      makeEmailSend({ newsletter: 'umami' })
+    )
+    mockedSubs.findById.mockResolvedValue(makeSubscriber())
+    mockedSubs.updateSubscriber.mockResolvedValue(makeSubscriber())
+
+    const res = await POST({} as NextRequest, params(TOKEN))
+
+    expect(mockedSubs.updateSubscriber).toHaveBeenCalledWith('uuid-1', {
+      subscribedUmami: false,
+    })
+    expect(mockedSends.markUnsubscribed).toHaveBeenCalledWith(10)
+    await expect(res.json()).resolves.toEqual({ success: true })
+  })
+
   it('unsubscribes from all newsletters when the email has none set', async () => {
     mockedSends.findByUnsubscribeToken.mockResolvedValue(
       makeEmailSend({ newsletter: null })
@@ -179,6 +217,7 @@ describe('POST /api/unsubscribe/[token] (one-click)', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
+      subscribedUmami: false,
     })
   })
 

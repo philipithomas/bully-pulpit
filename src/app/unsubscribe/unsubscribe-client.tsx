@@ -22,6 +22,7 @@ interface Preferences {
   subscribed_postcard: boolean
   subscribed_contraption: boolean
   subscribed_workshop: boolean
+  subscribed_umami: boolean
 }
 
 function UnsubscribeContent() {
@@ -70,7 +71,8 @@ function UnsubscribeContent() {
           setSaved(true)
           setSaveError(null)
         } else {
-          setSaveError('Could not save. Try again.')
+          const data = await res.json().catch(() => null)
+          setSaveError(data?.error ?? 'Could not save. Try again.')
         }
       } catch {
         setSaveError('Could not save. Try again.')

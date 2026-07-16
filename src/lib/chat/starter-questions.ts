@@ -63,6 +63,7 @@ const NEWSLETTERS = new Map([
   ['/contraption', 'Contraption'],
   ['/workshop', 'Workshop'],
   ['/postcard', 'Postcard'],
+  ['/umami', 'umami'],
   ['/tsundoku', 'Tsundoku'],
 ])
 

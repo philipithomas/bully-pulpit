@@ -16,6 +16,8 @@ import {
   nextBellDiscoveryPageView,
   shouldNudgeBellDiscovery,
 } from '@/lib/chat/discovery'
+import { siteConfig } from '@/lib/config'
+import type { Newsletter } from '@/lib/content/types'
 import { useChatSidebar } from '@/stores/chat-store'
 
 // dynamic() splits chat (ai SDK + react-markdown) and search out of the
@@ -32,21 +34,38 @@ const SearchDialog = dynamic(
 const prefetchChat = () => void import('@/components/chat/chat-sidebar')
 const prefetchSearch = () => void import('@/components/search/search-dialog')
 
-const newsletterLogos: Record<string, { src: string; className: string }> = {
+const newsletterLogos: Record<
+  Newsletter,
+  { src: string; width: number; height: number; className: string }
+> = {
   contraption: {
     src: '/images/contraption.svg',
+    width: 1948,
+    height: 350,
     className: 'h-[17px] w-auto',
   },
   workshop: {
     src: '/images/workshop-brand.svg',
+    width: 494,
+    height: 137,
     className: 'h-[24px] w-auto',
   },
   postcard: {
     src: '/images/postcard.svg',
+    width: 2794,
+    height: 636.8,
     className: 'h-[18px] w-auto',
+  },
+  umami: {
+    src: '/images/umami.svg',
+    width: 1562,
+    height: 369,
+    className: 'h-[20px] w-auto',
   },
   tsundoku: {
     src: '/images/tsundoku.svg',
+    width: 884,
+    height: 135,
     className: 'h-[18px] w-auto',
   },
 }
@@ -132,32 +151,32 @@ export function Header() {
     setSearchHasOpened(true)
     setSearchOpen(true)
   }, [])
+  const newsletterLogo = newsletter ? newsletterLogos[newsletter] : null
 
   return (
     <header className="py-4 md:py-6">
       <div className="container flex items-center justify-between">
         <div className="relative h-6 flex items-center">
           <div
-            className={`transition-opacity duration-200 ${newsletter && newsletterLogos[newsletter] ? 'opacity-0' : 'opacity-100'}`}
+            className={`transition-opacity duration-200 ${newsletterLogo ? 'opacity-0' : 'opacity-100'}`}
           >
             <Logo />
           </div>
-          {Object.entries(newsletterLogos).map(([slug, logo]) => (
+          {newsletter && newsletterLogo ? (
             <Link
-              key={slug}
-              href={`/${slug}`}
-              className={`absolute left-0 top-1/2 -translate-y-1/2 flex items-center transition-opacity duration-200 ${newsletter === slug ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+              href={`/${newsletter}`}
+              className="-translate-y-1/2 absolute top-1/2 left-0 flex items-center"
             >
               <Image
-                src={logo.src}
-                alt={slug.charAt(0).toUpperCase() + slug.slice(1)}
-                width={160}
-                height={20}
-                className={`dark-viewport-invert ${logo.className}`}
+                src={newsletterLogo.src}
+                alt={siteConfig.newsletters[newsletter].name}
+                width={newsletterLogo.width}
+                height={newsletterLogo.height}
+                className={`dark-viewport-invert ${newsletterLogo.className}`}
                 style={{ width: 'auto' }}
               />
             </Link>
-          ))}
+          ) : null}
         </div>
         <nav className="flex items-center gap-3 md:gap-5">
           <button

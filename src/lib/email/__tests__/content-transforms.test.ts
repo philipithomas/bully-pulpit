@@ -160,6 +160,14 @@ describe('styleContentLinks', () => {
     )
   })
 
+  it('styles links with the Umami orange', () => {
+    expect(
+      styleContentLinks('<a href="https://example.com">link</a>', 'umami')
+    ).toBe(
+      '<a style="color: #3B3834; text-decoration: underline; text-decoration-color: #f2712c; text-underline-offset: 2px;" href="https://example.com">link</a>'
+    )
+  })
+
   it('styles links with default accent', () => {
     expect(styleContentLinks('<a href="https://example.com">link</a>')).toBe(
       '<a style="color: #3B3834; text-decoration: underline; text-decoration-color: #3B3834; text-underline-offset: 2px;" href="https://example.com">link</a>'

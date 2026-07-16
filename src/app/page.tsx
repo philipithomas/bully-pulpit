@@ -6,9 +6,11 @@ import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
 import { siteConfig } from '@/lib/config'
+import type { Newsletter } from '@/lib/content/types'
 import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
 import { countActive } from '@/lib/db/queries/subscribers'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { isNewsletterAcceptingSubscriptions } from '@/lib/newsletters'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 
 // Auth redirects land on /?signed-in=1 and /?error=invalid-token; the
@@ -16,6 +18,13 @@ import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 export const metadata: Metadata = {
   alternates: { canonical: '/', types: feedDiscovery() },
 }
+
+const HOMEPAGE_NEWSLETTER_ORDER = [
+  'postcard',
+  'contraption',
+  'workshop',
+  'umami',
+] as const satisfies readonly Newsletter[]
 
 async function buildTimeSubscriberCount(): Promise<number | null> {
   try {
@@ -28,12 +37,9 @@ async function buildTimeSubscriberCount(): Promise<number | null> {
 }
 
 export default async function HomePage() {
-  const newsletters = [
-    siteConfig.newsletters.postcard,
-    siteConfig.newsletters.contraption,
-    siteConfig.newsletters.workshop,
-    siteConfig.newsletters.tsundoku,
-  ]
+  const newsletters = HOMEPAGE_NEWSLETTER_ORDER.filter(
+    isNewsletterAcceptingSubscriptions
+  ).map((newsletter) => siteConfig.newsletters[newsletter])
 
   // Art-directed portraits: each layout slot renders a <picture> carrying
   // both srcSets, so the hidden slot resolves to the same URL as the visible
@@ -175,8 +181,8 @@ export default async function HomePage() {
                     <Image
                       src={nl.logo.src}
                       alt={nl.name}
-                      width={100}
-                      height={nl.logo.height}
+                      width={nl.logo.intrinsicWidth}
+                      height={nl.logo.intrinsicHeight}
                       style={{ height: nl.logo.height, width: 'auto' }}
                       className="w-auto shrink-0"
                     />

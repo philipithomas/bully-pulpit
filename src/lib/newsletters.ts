@@ -13,6 +13,7 @@ export const newsletterStatus = {
   contraption: { active: true },
   workshop: { active: true },
   postcard: { active: true },
+  umami: { active: true },
   tsundoku: { active: false },
 } as const satisfies Record<Newsletter, { active: boolean }>
 
@@ -25,6 +26,7 @@ export const newsletterDelivery = {
   contraption: { smsMedia: null },
   workshop: { smsMedia: null },
   postcard: { smsMedia: null },
+  umami: { smsMedia: 'cover' },
   tsundoku: { smsMedia: 'cover' },
 } as const satisfies Record<Newsletter, { smsMedia: 'cover' | null }>
 
@@ -41,6 +43,7 @@ export const newsletterContent = {
   contraption: { photo: false },
   workshop: { photo: false },
   postcard: { photo: false },
+  umami: { photo: true },
   tsundoku: { photo: true },
 } as const satisfies Record<Newsletter, { photo: boolean }>
 
@@ -95,12 +98,14 @@ export const newsletterPreferenceKeys = {
   contraption: 'subscribed_contraption',
   workshop: 'subscribed_workshop',
   postcard: 'subscribed_postcard',
+  umami: 'subscribed_umami',
 } as const satisfies Record<ActiveNewsletter, SubscriberPreferenceKey>
 
 export const newsletterAccentDots: Record<Newsletter, string> = {
   contraption: 'bg-forest',
   workshop: 'bg-walnut',
   postcard: 'bg-indigo',
+  umami: 'bg-umami',
   tsundoku: 'bg-sun',
 }
 

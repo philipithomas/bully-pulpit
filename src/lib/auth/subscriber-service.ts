@@ -1,6 +1,7 @@
 import { createAndSendLogin } from '@/lib/auth/login-service'
 import { type Newsletter, newsletterSchema } from '@/lib/content/types'
 import {
+  claimUmamiOptInNotification,
   confirmSubscriber,
   createSubscriber,
   findByEmail,
@@ -10,7 +11,10 @@ import {
 import { isSuppressed } from '@/lib/db/queries/suppressions'
 import type { Subscriber } from '@/lib/db/schema'
 import { canReceiveMail } from '@/lib/email/deliverability'
-import { sendNewSubscriberNotification } from '@/lib/email/send'
+import {
+  sendExistingSubscriberOptInNotification,
+  sendNewSubscriberNotification,
+} from '@/lib/email/send'
 import type { ConfirmationPurpose } from '@/lib/email/templates/confirmation'
 import {
   defaultSignupNewsletters,
@@ -72,6 +76,7 @@ function changedNewsletterOptIns(
     ['contraption', 'subscribedContraption'],
     ['workshop', 'subscribedWorkshop'],
     ['postcard', 'subscribedPostcard'],
+    ['umami', 'subscribedUmami'],
   ] as const
   return preferences
     .filter(([, key]) => !before[key] && after[key])
@@ -102,6 +107,7 @@ export function prefsForNewsletters(
     ...(accepts('contraption') ? { subscribedContraption: true } : {}),
     ...(accepts('workshop') ? { subscribedWorkshop: true } : {}),
     ...(accepts('postcard') ? { subscribedPostcard: true } : {}),
+    ...(accepts('umami') ? { subscribedUmami: true } : {}),
   }
 }
 
@@ -124,8 +130,40 @@ function creationPrefsForNewSubscriber() {
     subscribedContraption: defaults.has('contraption'),
     subscribedWorkshop: defaults.has('workshop'),
     subscribedPostcard: defaults.has('postcard'),
+    subscribedUmami: defaults.has('umami'),
     // Archived newsletter columns remain for historical data only.
     subscribedTsundoku: false,
+  }
+}
+
+/**
+ * Best-effort admin notification for the deliberate existing-reader Umami
+ * transition. New confirmations have their own notification and must not emit
+ * this one as well.
+ */
+export async function notifyExistingSubscriberOptIns(
+  before: Subscriber,
+  after: Subscriber,
+  wasExistingConfirmed = before.confirmedAt != null
+): Promise<void> {
+  if (
+    !wasExistingConfirmed ||
+    before.subscribedUmami ||
+    !after.subscribedUmami
+  ) {
+    return
+  }
+
+  if (!(await claimUmamiOptInNotification(after.id))) return
+
+  try {
+    await sendExistingSubscriberOptInNotification(
+      after.email,
+      after.name,
+      'umami'
+    )
+  } catch (err) {
+    console.error('[subscriber] Umami opt-in notification failed:', err)
   }
 }
 
@@ -225,6 +263,7 @@ export async function createOrRetrieve(input: {
       subscriber = await applyNewsletterOptIns(existing, newsletters)
     }
     const changedNewsletters = changedNewsletterOptIns(existing, subscriber)
+    await notifyExistingSubscriberOptIns(existing, subscriber)
 
     if (googleVerified && existing.confirmedAt == null) {
       const confirmed = await confirmSubscriber(existing.id)

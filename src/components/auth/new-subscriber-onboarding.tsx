@@ -160,8 +160,8 @@ export function NewSubscriberOnboarding({
                   <Image
                     src={newsletter.logo.src}
                     alt={newsletter.name}
-                    width={100}
-                    height={newsletter.logo.height}
+                    width={newsletter.logo.intrinsicWidth}
+                    height={newsletter.logo.intrinsicHeight}
                     style={{ height: newsletter.logo.height }}
                     className="w-auto shrink-0"
                   />

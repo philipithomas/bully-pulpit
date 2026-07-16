@@ -89,12 +89,28 @@ describe('buildEmailBodyHtml with YouTube embeds', () => {
 })
 
 describe('buildEmailBodyHtml newsletter-specific blocks', () => {
-  it('omits related posts from Tsundoku photo emails', async () => {
-    const post = getPostsByNewsletter('tsundoku')[0]
+  it.each([
+    'umami',
+    'tsundoku',
+  ] as const)('omits related posts from %s photo emails', async (newsletter) => {
+    const post = getPostsByNewsletter(newsletter)[0]
     expect(post).toBeDefined()
 
     const body = await buildEmailBodyHtml(post)
 
     expect(body.html).not.toContain('Keep reading')
+  })
+
+  it('keeps a description-free Umami issue useful in previews and plaintext', async () => {
+    const post = getPostsByNewsletter('umami')[0]
+    expect(post).toBeDefined()
+
+    const body = await buildEmailBodyHtml(post)
+
+    expect(body.previewText).toBe(post.frontmatter.coverImageAlt)
+    expect(body.bodyText).toContain('SFMOMA')
+    expect(body.bodyText).toContain('2026-07-11')
+    expect(body.bodyText).toContain('San Francisco Museum of Modern Art')
+    expect(body.bodyText).toContain('https://www.philipithomas.com/sfmoma')
   })
 })

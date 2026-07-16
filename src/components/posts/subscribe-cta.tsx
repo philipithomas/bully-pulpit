@@ -24,6 +24,7 @@ const newsletterNoun: Record<Newsletter, string> = {
   contraption: 'essays',
   workshop: 'notes',
   postcard: 'updates',
+  umami: 'photos',
   tsundoku: 'photos',
 }
 
@@ -32,6 +33,7 @@ interface SubscribeCtaProps {
   className?: string
   align?: 'start' | 'center'
   subscribeEndpoint?: string
+  successRedirect?: '/account'
   smsSignupPhoneNumber?: string | null
   smsSignupDisplayNumber?: string | null
   analyticsPlacement?: AnalyticsPlacement
@@ -47,6 +49,7 @@ function ActiveSubscribeCta({
   className = 'mt-16',
   align = 'start',
   subscribeEndpoint,
+  successRedirect = newsletter === 'umami' ? '/account' : undefined,
   smsSignupPhoneNumber = null,
   smsSignupDisplayNumber = null,
   analyticsPlacement = 'post_footer',
@@ -88,13 +91,24 @@ function ActiveSubscribeCta({
       setPreferences(
         (prev) => data?.preferences ?? (prev ? { ...prev, [key]: true } : prev)
       )
+      if (successRedirect) {
+        window.location.assign(successRedirect)
+        return
+      }
       toast.success(`Subscribed to ${config.name}`)
     } catch {
       toast.error('Could not subscribe. Try again.')
     } finally {
       setSaving(false)
     }
-  }, [analyticsPlacement, config.name, key, newsletter, setPreferences])
+  }, [
+    analyticsPlacement,
+    config.name,
+    key,
+    newsletter,
+    setPreferences,
+    successRedirect,
+  ])
 
   if (hasSession && loading) return null
   if (user && (!preferences || subscribed)) return null
@@ -139,6 +153,7 @@ function ActiveSubscribeCta({
           smsSignupDisplayNumber={smsSignupDisplayNumber}
           smsSignupPhoneNumber={smsSignupPhoneNumber}
           subscribeEndpoint={subscribeEndpoint}
+          successRedirect={successRedirect}
           analyticsPlacement={analyticsPlacement}
         />
       )}

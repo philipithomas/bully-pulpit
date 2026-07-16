@@ -24,6 +24,8 @@ import {
   type BellSource,
   bellSourcesFromMessage,
 } from '@/lib/chat/source-results'
+import { siteConfig } from '@/lib/config'
+import type { Newsletter } from '@/lib/content/types'
 import { cn } from '@/lib/utils'
 import { isScriptedChatMessage, useChatSidebar } from '@/stores/chat-store'
 
@@ -176,15 +178,8 @@ type SourceCitationClick = (
 
 function sourceNewsletterLabel(newsletter: string | undefined): string | null {
   if (!newsletter || newsletter === 'page') return null
-  if (
-    newsletter !== 'contraption' &&
-    newsletter !== 'workshop' &&
-    newsletter !== 'postcard' &&
-    newsletter !== 'tsundoku'
-  ) {
-    return null
-  }
-  return `${newsletter.charAt(0).toUpperCase()}${newsletter.slice(1)}`
+  if (!(newsletter in siteConfig.newsletters)) return null
+  return siteConfig.newsletters[newsletter as Newsletter].name
 }
 
 function sourceTitle(source: BellSource): string {

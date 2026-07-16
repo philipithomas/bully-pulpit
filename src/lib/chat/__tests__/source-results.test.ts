@@ -234,6 +234,31 @@ describe('Bell tool provenance', () => {
     ])
   })
 
+  it('accepts an Umami post as validated current-page provenance', () => {
+    expect(
+      bellSourcesFromMessage({
+        parts: [{ type: 'text', text: 'This photo was taken at SFMOMA.' }],
+        metadata: {
+          currentPageSource: {
+            type: 'post',
+            title: 'SFMOMA',
+            url: '/sfmoma',
+            publishedAt: '2026-07-11',
+            newsletter: 'umami',
+          },
+        },
+      })
+    ).toEqual([
+      {
+        type: 'post',
+        title: 'SFMOMA',
+        url: '/sfmoma',
+        publishedAt: '2026-07-11',
+        newsletter: 'umami',
+      },
+    ])
+  })
+
   it('prefers completed tool sources without adding the page fallback', () => {
     expect(
       bellSourcesFromMessage({
