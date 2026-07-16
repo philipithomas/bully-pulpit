@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-16T01:03:35.523Z",
+  "generatedAt": "2026-07-16T01:19:25.656Z",
   "posts": {
     "adding-sms-support": {
       "related": [
@@ -173,7 +173,7 @@
         },
         {
           "slug": "slow-travel",
-          "score": 0.1806852
+          "score": 0.1799615
         }
       ]
     },
@@ -245,7 +245,7 @@
       "related": [
         {
           "slug": "slow-travel",
-          "score": 0.1493961
+          "score": 0.151093
         },
         {
           "slug": "2026-07",
@@ -525,7 +525,7 @@
         },
         {
           "slug": "slow-travel",
-          "score": 0.2261133
+          "score": 0.2257676
         }
       ]
     },
@@ -936,12 +936,12 @@
           "score": 0.0976544
         },
         {
-          "slug": "introducing-workshop",
-          "score": 0.160986
+          "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
+          "score": 0.1443115
         },
         {
-          "slug": "launching-postcard",
-          "score": 0.1631303
+          "slug": "how-to-replace-social-media-with-a-personal-newsletter",
+          "score": 0.1463272
         }
       ]
     },
@@ -1241,11 +1241,11 @@
         },
         {
           "slug": "sharing-a-project-i-built-postcard",
-          "score": 0.1417257
+          "score": 0.1257031
         },
         {
-          "slug": "a-mini-data-center",
-          "score": 0.1485992
+          "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
+          "score": 0.1367092
         }
       ]
     },
@@ -1572,16 +1572,16 @@
     "distribution-vs-innovation": {
       "related": [
         {
+          "slug": "when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks",
+          "score": 0.1626858
+        },
+        {
           "slug": "indie-to-micro",
           "score": 0.171665
         },
         {
           "slug": "how-i-build-multiple-products",
           "score": 0.1749793
-        },
-        {
-          "slug": "one-year-of-dependable-software",
-          "score": 0.1774382
         }
       ]
     },
@@ -1736,12 +1736,12 @@
           "score": 0.1132448
         },
         {
-          "slug": "lost-and-found",
-          "score": 0.1386196
+          "slug": "advice-for-marketplace-startups",
+          "score": 0.1326207
         },
         {
-          "slug": "introducing-frctnl",
-          "score": 0.1398633
+          "slug": "lost-and-found",
+          "score": 0.1386196
         }
       ]
     },
@@ -1996,8 +1996,8 @@
           "score": 0.1360839
         },
         {
-          "slug": "digital-quiet",
-          "score": 0.1469584
+          "slug": "how-to-replace-social-media-with-a-personal-newsletter",
+          "score": 0.1417652
         }
       ]
     },
@@ -2229,15 +2229,15 @@
       "related": [
         {
           "slug": "introducing-workshop",
-          "score": 0.1819827
+          "score": 0.1879897
         },
         {
           "slug": "2026-07",
-          "score": 0.1831114
+          "score": 0.1913063
         },
         {
           "slug": "2023-03",
-          "score": 0.1859018
+          "score": 0.1950001
         }
       ]
     },
@@ -2293,31 +2293,31 @@
       "related": [
         {
           "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
-          "score": 0.0835632
+          "score": 0.0958219
+        },
+        {
+          "slug": "2023-10",
+          "score": 0.1332184
         },
         {
           "slug": "sharing-a-project-i-built-postcard",
-          "score": 0.1175078
-        },
-        {
-          "slug": "2025-12",
-          "score": 0.1437525
+          "score": 0.1360835
         }
       ]
     },
     "why-i-built-postcard-a-calmer-alternative-to-social-networks": {
       "related": [
         {
-          "slug": "sharing-a-project-i-built-postcard",
-          "score": 0.0787739
-        },
-        {
           "slug": "how-to-replace-social-media-with-a-personal-newsletter",
-          "score": 0.0835632
+          "score": 0.0958219
         },
         {
-          "slug": "launching-booklet",
-          "score": 0.1586602
+          "slug": "sharing-a-project-i-built-postcard",
+          "score": 0.1076521
+        },
+        {
+          "slug": "launching-postcard",
+          "score": 0.1267203
         }
       ]
     },
@@ -2340,16 +2340,16 @@
     "launching-postcard": {
       "related": [
         {
+          "slug": "sharing-a-project-i-built-postcard",
+          "score": 0.0988391
+        },
+        {
           "slug": "postcard-open-source",
           "score": 0.1114214
         },
         {
-          "slug": "2023-10",
-          "score": 0.13273
-        },
-        {
-          "slug": "sharing-a-project-i-built-postcard",
-          "score": 0.1346384
+          "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
+          "score": 0.1267203
         }
       ]
     },
@@ -2404,16 +2404,16 @@
     "when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks": {
       "related": [
         {
-          "slug": "indie-to-micro",
-          "score": 0.1641488
-        },
-        {
           "slug": "advice-for-marketplace-startups",
-          "score": 0.1732004
+          "score": 0.1614407
         },
         {
-          "slug": "one-year-of-dependable-software",
-          "score": 0.177473
+          "slug": "distribution-vs-innovation",
+          "score": 0.1626858
+        },
+        {
+          "slug": "indie-to-micro",
+          "score": 0.1629302
         }
       ]
     },
@@ -2484,16 +2484,16 @@
     "sharing-a-project-i-built-postcard": {
       "related": [
         {
-          "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
-          "score": 0.0787739
-        },
-        {
-          "slug": "how-to-replace-social-media-with-a-personal-newsletter",
-          "score": 0.1175078
-        },
-        {
           "slug": "launching-postcard",
-          "score": 0.1346384
+          "score": 0.0988391
+        },
+        {
+          "slug": "why-i-built-postcard-a-calmer-alternative-to-social-networks",
+          "score": 0.1076521
+        },
+        {
+          "slug": "postcard-open-source",
+          "score": 0.1257031
         }
       ]
     },
@@ -2501,15 +2501,15 @@
       "related": [
         {
           "slug": "buyers-define-marketplaces",
-          "score": 0.1090944
+          "score": 0.0881655
         },
         {
           "slug": "tech-talent-agents",
-          "score": 0.1477156
+          "score": 0.1326207
         },
         {
           "slug": "finding-a-software-job",
-          "score": 0.1729671
+          "score": 0.1527832
         }
       ]
     },
@@ -2533,15 +2533,15 @@
       "related": [
         {
           "slug": "advice-for-marketplace-startups",
-          "score": 0.1090944
+          "score": 0.0881655
+        },
+        {
+          "slug": "when-are-low-code-prototypes-useful-evaluating-startup-market-and-implementation-risks",
+          "score": 0.1771943
         },
         {
           "slug": "tech-talent-agents",
           "score": 0.1860612
-        },
-        {
-          "slug": "having-a-tj",
-          "score": 0.186962
         }
       ]
     }
