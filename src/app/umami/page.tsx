@@ -33,6 +33,10 @@ const PHOTO_VIEWER_DESCRIPTION_MAX = 900
 const LEAD_IMAGE_SIZES =
   '(max-width: 640px) 100vw, (max-width: 1280px) calc(100vw - 4rem), 1216px'
 
+function postPath(slug: string): string {
+  return `/${encodeURIComponent(slug)}`
+}
+
 function photoViewerDescription(post: Post): string | undefined {
   const text = (
     post.frontmatter.description ??
@@ -64,7 +68,7 @@ function viewerData(post: Post) {
     'data-zoom-group': 'umami',
     'data-zoom-caption-presentation': 'immersive',
     'data-zoom-caption-collection': 'umami',
-    'data-zoom-caption-href': `/${post.slug}`,
+    'data-zoom-caption-href': postPath(post.slug),
     'data-zoom-caption-title': post.frontmatter.title,
     'data-zoom-caption-description': photoViewerDescription(post),
     'data-zoom-caption-date': post.frontmatter.publishedAt,
@@ -101,7 +105,7 @@ function PhotoMetadata({ post }: { post: Post }) {
       ) : null}
       <span aria-hidden="true">/</span>
       <Link
-        href={`/${post.slug}`}
+        href={postPath(post.slug)}
         className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
       >
         {title}

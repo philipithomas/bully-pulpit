@@ -19,6 +19,7 @@ describe('UmamiPage viewer contract', () => {
     expect(html).toContain('data-zoom-caption-collection="umami"')
     expect(html).toContain('data-zoom-group="umami"')
     expect(html).toContain('data-zoom-caption-href="/sfmoma"')
+    expect(html).toContain('href="/sfmoma"')
     expect(html).toContain('data-zoom-caption-title="SFMOMA"')
     expect(html).toContain('data-zoom-caption-date="2026-07-11"')
     expect(html).toContain(
