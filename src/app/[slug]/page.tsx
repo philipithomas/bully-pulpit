@@ -222,6 +222,7 @@ export default async function SlugPage({ params }: Props) {
   const smsSignupDisplayNumber = sitePhoneDisplayNumber()
 
   const item = post ?? page!
+  const isFindAiPage = page?.slug === 'find-ai'
   const relatedPosts = post ? getRelatedPosts(post.slug) : []
   const { previous, next } = post
     ? getAdjacentPosts(post.slug)
@@ -249,6 +250,28 @@ export default async function SlugPage({ params }: Props) {
         'data-zoom-caption-location-url': location?.url,
       }
     : {}
+  const coverImage = item.frontmatter.coverImage ? (
+    <div
+      className={`image-loading-surface w-full overflow-hidden ${isTsundokuPost ? 'mb-8' : 'mb-10'}`}
+    >
+      <Image
+        src={item.frontmatter.coverImage}
+        alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}
+        width={post?.coverDimensions?.width ?? 1280}
+        height={post?.coverDimensions?.height ?? 640}
+        data-zoomable=""
+        {...zoomImageDataAttrs({
+          src: item.frontmatter.coverImage,
+          dimensions: post?.coverDimensions,
+          sizes: isTsundokuPost ? CAPTIONED_ZOOM_IMAGE_SIZES : undefined,
+        })}
+        {...coverZoomCaption}
+        className="relative z-10 block w-full cursor-zoom-in"
+        priority
+        sizes={POST_COVER_SIZES}
+      />
+    </div>
+  ) : null
 
   return (
     <article className={bg?.className} data-bg={bg?.dataBg}>
@@ -267,8 +290,23 @@ export default async function SlugPage({ params }: Props) {
       >
         {/* Header */}
         <header
-          className={`mx-auto flex max-w-3xl flex-col items-center text-center ${isTsundokuPost ? 'mb-6' : 'mb-10'}`}
+          className={
+            isFindAiPage
+              ? 'mx-auto mb-10 flex max-w-2xl flex-col items-start text-left'
+              : `mx-auto flex max-w-3xl flex-col items-center text-center ${isTsundokuPost ? 'mb-6' : 'mb-10'}`
+          }
         >
+          {isFindAiPage ? (
+            <div className="flex size-20 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm sm:size-24">
+              <Image
+                src="/images/find-ai/icon.svg"
+                alt=""
+                width={79}
+                height={79}
+                className="size-14 sm:size-16"
+              />
+            </div>
+          ) : null}
           {showPostMetadata ? (
             <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-xs text-gray-500">
               {postDate ? <time>{postDate}</time> : null}
@@ -287,14 +325,16 @@ export default async function SlugPage({ params }: Props) {
           ) : null}
           <h1
             className={`mt-3 font-sans font-semibold leading-tight tracking-tight text-pretty text-gray-950 ${
-              isTsundokuPost
-                ? 'text-3xl sm:text-4xl md:text-5xl'
-                : 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl'
+              isFindAiPage
+                ? 'text-4xl sm:text-5xl'
+                : isTsundokuPost
+                  ? 'text-3xl sm:text-4xl md:text-5xl'
+                  : 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl'
             }`}
           >
             {item.frontmatter.title}
           </h1>
-          {item.frontmatter.description ? (
+          {item.frontmatter.description && !isFindAiPage ? (
             <p className="font-serif text-gray-600 text-lg sm:text-xl max-w-prose leading-relaxed mt-4">
               {item.frontmatter.description}
             </p>
@@ -318,28 +358,7 @@ export default async function SlugPage({ params }: Props) {
         </header>
 
         {/* Cover image */}
-        {item.frontmatter.coverImage ? (
-          <div
-            className={`image-loading-surface w-full overflow-hidden ${isTsundokuPost ? 'mb-8' : 'mb-10'}`}
-          >
-            <Image
-              src={item.frontmatter.coverImage}
-              alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}
-              width={post?.coverDimensions?.width ?? 1280}
-              height={post?.coverDimensions?.height ?? 640}
-              data-zoomable=""
-              {...zoomImageDataAttrs({
-                src: item.frontmatter.coverImage,
-                dimensions: post?.coverDimensions,
-                sizes: isTsundokuPost ? CAPTIONED_ZOOM_IMAGE_SIZES : undefined,
-              })}
-              {...coverZoomCaption}
-              className="relative z-10 block w-full cursor-zoom-in"
-              priority
-              sizes={POST_COVER_SIZES}
-            />
-          </div>
-        ) : null}
+        {!isFindAiPage && coverImage}
 
         {/* Content */}
         <div className="prose prose-xl font-serif mx-auto max-w-2xl">

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-15T16:44:25.815Z",
+  "generatedAt": "2026-07-16T01:03:35.523Z",
   "posts": {
     "adding-sms-support": {
       "related": [
@@ -1525,15 +1525,15 @@
       "related": [
         {
           "slug": "chat-with-my-dog",
-          "score": 0.1310045
+          "score": 0.1317039
         },
         {
           "slug": "the-next-iteration-of-contraption-company",
-          "score": 0.1426505
+          "score": 0.1407473
         },
         {
           "slug": "lost-and-found",
-          "score": 0.1460509
+          "score": 0.1439354
         }
       ]
     },
@@ -1589,7 +1589,7 @@
       "related": [
         {
           "slug": "bts-find-api",
-          "score": 0.1493505
+          "score": 0.1492232
         },
         {
           "slug": "claude-launching-and-tools",
@@ -1605,7 +1605,7 @@
       "related": [
         {
           "slug": "2024-09",
-          "score": 0.0345047
+          "score": 0.0348282
         },
         {
           "slug": "2023-11",
@@ -1636,12 +1636,12 @@
     "using-data-to-optimize-ai-apps": {
       "related": [
         {
-          "slug": "bts-find-api",
-          "score": 0.1692583
-        },
-        {
           "slug": "internal-tools-of-find-ai",
           "score": 0.1695315
+        },
+        {
+          "slug": "bts-find-api",
+          "score": 0.1712137
         },
         {
           "slug": "claude-launching-and-tools",
@@ -1701,15 +1701,15 @@
       "related": [
         {
           "slug": "2024-10",
-          "score": 0.0345047
+          "score": 0.0348282
         },
         {
           "slug": "2025-08",
-          "score": 0.0436274
+          "score": 0.0435498
         },
         {
           "slug": "2025-09",
-          "score": 0.0447184
+          "score": 0.0445904
         }
       ]
     },
@@ -1717,15 +1717,15 @@
       "related": [
         {
           "slug": "2024-09",
-          "score": 0.0469742
+          "score": 0.0467964
         },
         {
           "slug": "2022-07",
-          "score": 0.0599214
+          "score": 0.0614033
         },
         {
           "slug": "2025-08",
-          "score": 0.0632724
+          "score": 0.0640273
         }
       ]
     },
@@ -2137,7 +2137,7 @@
         },
         {
           "slug": "2024-09",
-          "score": 0.0507128
+          "score": 0.0508067
         },
         {
           "slug": "2023-06",
@@ -2441,7 +2441,7 @@
         },
         {
           "slug": "2024-08",
-          "score": 0.0647956
+          "score": 0.064899
         },
         {
           "slug": "2022-06",
@@ -2461,7 +2461,7 @@
         },
         {
           "slug": "2024-08",
-          "score": 0.0599214
+          "score": 0.0614033
         }
       ]
     },

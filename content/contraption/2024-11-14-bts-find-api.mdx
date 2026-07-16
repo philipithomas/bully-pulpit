@@ -5,7 +5,7 @@ coverImage: "/images/covers/bts-find-api-cover.jpg"
 coverImageAlt: "Americano at Sightglass Coffee in San Francisco"
 ---
 
-We recently released a [Search API](https://usefind.ai/api/search) for Find AI, and announced [its integration with Clay.com](https://www.clay.com/university/lesson/find-ai-integration-overview).
+We recently released a Search API for [Find AI](/find-ai), and announced [its integration with Clay.com](https://university.clay.com/docs/find-ai-integration-overview).
 
 APIs allow developers to interact with a product using code. There are many different ways to build an API, and many tools to make it easier for customers to adopt. In this post, I’ll take you behind the scenes of how we built the Find AI API, from its technical foundations to the tools we used to simplify developer adoption.
 
@@ -37,13 +37,13 @@ For the Find AI API, every single user I’ve spoken to relies on one of our Sta
 
 Clear documentation is the foundation of a great developer experience. It helps users understand how to interact with your API and what data they can send or retrieve.
 
-Initially, we used [Swagger](https://swagger.io/) to generate our API documentation. Swagger reads an OpenAPI spec and creates interactive docs, allowing users to input their API key and test endpoints directly. This interactivity is a fantastic way for developers to use an API before writing any code. It’s also what I use in the explainer video. Our Swagger docs are still available at [usefind.ai/api/docs](https://usefind.ai/api/docs).
+Initially, we used [Swagger](https://swagger.io/) to generate our API documentation. Swagger reads an OpenAPI spec and creates interactive docs, allowing users to input their API key and test endpoints directly. This interactivity is a fantastic way for developers to use an API before writing any code. It’s also what I use in the explainer video. Our Swagger docs were available at `usefind.ai/api/docs`.
 
 However, Swagger had limitations. Its design felt dated, and it wasn’t easy to add additional text or media to guide users through setup or multi-step calls.
 
 To address this, we switched to [Mintlify](https://mintlify.com/) for our primary documentation. Mintlify offers the same interactive features as Swagger but provides more flexibility for customization. For example, we embedded the explainer video and added step-by-step guides to explain each function in detail.
 
-Mintlify’s docs are now our main resource, available at [usefind.ai/docs](https://usefind.ai/docs). They’re clean, easy to navigate, and SEO-friendly, thanks to an [installation via Cloudflare Workers](https://www.mintlify.com/docs/advanced/subpath/cloudflare).
+Mintlify’s docs became our main resource. They were clean, easy to navigate, and SEO-friendly, thanks to an [installation via Cloudflare Workers](https://www.mintlify.com/docs/advanced/subpath/cloudflare).
 
 ## OpenAPI at the core
 
@@ -69,6 +69,6 @@ To achieve this, we allow developers to issue a demo-mode API key. This key retu
 
 Looking at our analytics, however, demo mode hasn’t been widely used. Most developers were comfortable testing with the production API and seemed hesitant to rely on test-mode data. If I were to rebuild the API, I’d likely skip the demo mode entirely.
 
-## Try it out
+## What remains
 
-If you want to incorporate search of people and companies into your application, check out the [Find AI API](https://usefind.ai/api).
+The original Find AI search product and API are no longer active. The video and this post remain a record of how we built and introduced the API.
