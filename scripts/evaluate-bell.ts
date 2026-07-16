@@ -186,6 +186,17 @@ async function main() {
         const toolTrace = toolCalls
           .map((call) => `${call.toolName}(${JSON.stringify(call.input)})`)
           .join(', ')
+        const toolSteps = result.steps
+          .map((step, index) => {
+            const calls = step.toolCalls.map(
+              (call) => `${call.toolName}(${JSON.stringify(call.input)})`
+            )
+            return calls.length > 0
+              ? `step ${index + 1}: ${calls.join(' + ')}`
+              : null
+          })
+          .filter((step): step is string => step !== null)
+          .join(' -> ')
         const answer =
           testCase.surface === 'sms'
             ? formatBellSmsBody(result.text)
@@ -199,6 +210,7 @@ async function main() {
           `- Finish reason: ${result.finishReason}`,
           `- Tools: ${tools.length > 0 ? tools.join(', ') : 'none'}`,
           `- Tool calls: ${toolTrace || 'none'}`,
+          `- Tool steps: ${toolSteps || 'none'}`,
           '',
           quoted(answer)
         )

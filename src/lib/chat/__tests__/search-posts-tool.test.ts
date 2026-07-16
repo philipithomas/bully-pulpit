@@ -26,6 +26,13 @@ async function run(
 }
 
 describe('searchPosts tool output', () => {
+  it('describes the ten-result, broad-query research contract', () => {
+    expect(searchPosts.description).toContain('up to 10 ranked results')
+    expect(searchPosts.description).toContain(
+      'keep the query broad and inspect the complete result set'
+    )
+  })
+
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
