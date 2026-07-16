@@ -29,7 +29,7 @@ export interface PostResult {
 
 export const searchPosts = tool({
   description:
-    'Search Philip\'s posts, site pages, and images by query. Use scope "posts" for writing, projects, informational pages, and site-level answers. Use scope "images" when the visitor asks what a photo shows or asks for photos/images. Returns titles, URLs, content excerpts, and image metadata. Excerpts and images may carry section URLs for citation.',
+    'Search Philip\'s posts, site pages, and images by query and return up to 10 ranked results. Use scope "posts" for writing, projects, informational pages, and site-level answers. Use scope "images" when the visitor asks what a photo shows or asks for photos/images. For cross-post synthesis, keep the query broad and inspect the complete result set before choosing sources to read. Returns titles, URLs, content excerpts, and image metadata. Excerpts and images may carry section URLs for citation.',
   inputSchema: z.object({
     query: z.string().describe('The search query'),
     scope: z

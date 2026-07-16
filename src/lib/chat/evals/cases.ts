@@ -120,6 +120,48 @@ export const bellEvalCases: readonly BellEvalCase[] = [
     ],
   },
   {
+    id: 'noma-archive-synthesis',
+    category: 'cross-post-synthesis',
+    surface: 'web',
+    prompt: 'What does Philip think of noma?',
+    page: {
+      path: '/software-in-the-ai-era',
+      title: 'Software in the AI era',
+    },
+    expectation: {
+      kind: 'search',
+      query: 'noma',
+      scope: 'posts',
+      expectedUrls: ['/stargazing', '/2024-05'],
+    },
+    review: [
+      'Searches the archive even though the current page contains one answer.',
+      'Reads multiple sources that add distinct perspectives on noma.',
+      "Synthesizes Philip's craft ideas, personal experiences, and preferences.",
+    ],
+  },
+  {
+    id: 'stripe-archive-synthesis',
+    category: 'cross-post-synthesis',
+    surface: 'web',
+    prompt: 'Tell me about everything Philip has done with Stripe.',
+    page: {
+      path: '/software-in-the-ai-era',
+      title: 'Software in the AI era',
+    },
+    expectation: {
+      kind: 'search',
+      query: 'Stripe',
+      scope: 'posts',
+      expectedUrls: ['/stripe-projects-launch', '/agent-experience'],
+    },
+    review: [
+      'Uses one broad archive search rather than redundant rephrasings.',
+      'Reads multiple sources covering both Stripe Projects and earlier uses.',
+      'Produces a coherent synthesis instead of an unfiltered mention dump.',
+    ],
+  },
+  {
     id: 'coffee-images',
     category: 'images',
     surface: 'web',

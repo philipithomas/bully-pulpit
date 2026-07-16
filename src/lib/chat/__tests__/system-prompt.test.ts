@@ -44,6 +44,12 @@ describe('getSystemPrompt page context', () => {
     expect(prompt).toContain('you must call fetchPost with slug "some-post"')
     expect(prompt).toContain('This trusted provenance call is required')
     expect(prompt).toContain("Use the tool result's source metadata")
+    expect(prompt).toContain(
+      'The current page is context, not an automatic limit on research scope'
+    )
+    expect(prompt).toContain(
+      'search the archive and synthesize distinct sources even when this page contains one answer'
+    )
     expect(prompt).not.toContain(
       'answer directly from it without calling tools'
     )
@@ -162,6 +168,47 @@ describe('getSystemPrompt chronology routing', () => {
     expect(prompt).toContain(
       'asks what was published "here" or in "this newsletter," treat the page as an explicit request for that newsletter'
     )
+  })
+})
+
+describe('getSystemPrompt research scope', () => {
+  it('treats general subject questions as cross-post synthesis on web', () => {
+    const prompt = getSystemPrompt()
+
+    expect(prompt).toContain(
+      'Treat a general question about what Philip thinks, believes, has experienced, has written, or has done with a subject as cross-post synthesis'
+    )
+    expect(prompt).toContain(
+      'Unless the visitor explicitly limits the question to this page or names one specific post, search the archive'
+    )
+    expect(prompt).toContain('returns up to 10 ranked results')
+    expect(prompt).toContain(
+      'Inspect the full result set before deciding which sources to read'
+    )
+    expect(prompt).toContain(
+      'For cross-post synthesis, fetch every result whose excerpts indicate materially relevant, distinct coverage'
+    )
+    expect(prompt).toContain(
+      "reflects the visitor's subject and intent rather than details from one already-known source"
+    )
+    expect(prompt).toContain(
+      'Call independent fetches together in one step so the AI SDK can execute them concurrently'
+    )
+    expect(prompt).toContain(
+      'Stop when the remaining results are unlikely to change the answer'
+    )
+    expect(prompt).toContain(
+      'Ignore a result when only its cover or image metadata mentions the subject'
+    )
+  })
+
+  it('keeps cross-post SMS research compact', () => {
+    const prompt = getSystemPrompt({ surface: 'sms' })
+
+    expect(prompt).toContain(
+      'For cross-post synthesis, read the 1-2 most useful sources that add distinct evidence'
+    )
+    expect(prompt).not.toContain('For cross-post synthesis, fetch every result')
   })
 })
 
