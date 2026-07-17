@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
+import { ArrowIcon } from '@/components/ui/arrow-icon'
 import {
   Dialog,
   DialogContent,
@@ -39,9 +40,32 @@ export function SmsSubscribeDisclosure({
   phoneNumber: string
 }) {
   return (
-    <>
-      <span className="block text-gray-800">
-        Text{' '}
+    <div className="mt-6">
+      <div>
+        <a
+          href={`sms:${phoneNumber}?body=SUBSCRIBE`}
+          onClick={onSmsOpen}
+          className="btn btn-primary w-full sm:w-auto"
+        >
+          <span className="btn-text">Open Messages</span>
+          <span className="btn-arrow" aria-hidden>
+            <ArrowIcon className="h-4 w-4" />
+          </span>
+        </a>
+        <p className="mt-2 font-serif text-sm text-gray-500">
+          <span className="font-sans font-medium text-gray-700">SUBSCRIBE</span>{' '}
+          is filled in for you.
+        </p>
+      </div>
+
+      <ul className="mt-6 list-disc space-y-2 pl-5 font-serif text-sm leading-relaxed text-gray-700 marker:text-gray-300">
+        <li>New posts from every active newsletter</li>
+        <li>One Bell contact card to save after signup</li>
+        <li>A direct reply when you text Bell a question</li>
+      </ul>
+
+      <p className="mt-6 font-serif text-sm leading-relaxed text-gray-600">
+        Prefer to type it yourself? Text{' '}
         <span className="font-sans font-medium text-gray-800">SUBSCRIBE</span>{' '}
         to{' '}
         <a
@@ -50,10 +74,8 @@ export function SmsSubscribeDisclosure({
           className="font-sans text-gray-700 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950"
         >
           {displayNumber}
-        </a>{' '}
-        to receive recurring automated new-post texts for every active
-        newsletter from The Contraption Company LLC through philipithomas.com at
-        this number. If you previously replied STOP, text{' '}
+        </a>
+        . Previously opted out? Text{' '}
         <a
           href={`sms:${phoneNumber}?body=START`}
           onClick={onSmsOpen}
@@ -62,13 +84,13 @@ export function SmsSubscribeDisclosure({
           START
         </a>{' '}
         or UNSTOP instead.
-      </span>
-      <span className="mt-6 block text-sm text-gray-500">
-        A new or reactivated signup includes one Bell contact-card MMS to save
-        to your contacts. You can also text Bell questions about
-        philipithomas.com. Message frequency varies. Message and data rates may
-        apply. Reply STOP to unsubscribe or HELP for help. Consent is not a
-        condition of purchase. See the{' '}
+      </p>
+
+      <p className="mt-6 font-serif text-xs leading-relaxed text-gray-500">
+        Recurring automated new-post texts from The Contraption Company LLC
+        through philipithomas.com. Message frequency varies. Message and data
+        rates may apply. Reply STOP to unsubscribe or HELP for help. Consent is
+        not a condition of purchase. See the{' '}
         <a
           href="/terms#text-messaging"
           className="underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950"
@@ -83,8 +105,8 @@ export function SmsSubscribeDisclosure({
           privacy policy
         </a>
         .
-      </span>
-    </>
+      </p>
+    </div>
   )
 }
 
@@ -155,17 +177,19 @@ export function SmsSubscribePrompt({
         {isHomepage || isLink || isStandalone ? null : '.'}
       </span>
 
-      <DialogContent>
-        <DialogHeader className="text-left">
-          <DialogTitle>Subscribe by SMS</DialogTitle>
+      <DialogContent className="max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-lg overflow-y-auto p-6 sm:w-[calc(100%-2rem)] sm:p-8">
+        <DialogHeader className="gap-3 text-left">
+          <DialogTitle>Get posts by text</DialogTitle>
           <DialogDescription className="font-serif text-base leading-relaxed text-gray-600">
-            <SmsSubscribeDisclosure
-              displayNumber={displayNumber}
-              onSmsOpen={handleSmsOpen}
-              phoneNumber={phoneNumber}
-            />
+            Open Messages and send the pre-filled word SUBSCRIBE to receive
+            every new post by text.
           </DialogDescription>
         </DialogHeader>
+        <SmsSubscribeDisclosure
+          displayNumber={displayNumber}
+          onSmsOpen={handleSmsOpen}
+          phoneNumber={phoneNumber}
+        />
       </DialogContent>
     </Dialog>
   )

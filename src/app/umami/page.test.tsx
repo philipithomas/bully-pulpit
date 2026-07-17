@@ -29,26 +29,22 @@ vi.mock('@/components/posts/subscribe-cta', () => ({
       </div>
     ) : null,
 }))
-vi.mock('@/components/auth/sms-subscribe-prompt', () => ({
-  SmsSubscribePrompt: ({
-    analyticsPlacement,
-    newsletter,
-    triggerLabel,
-    variant,
+vi.mock('@/components/umami/umami-sms-signup', () => ({
+  UmamiSmsSignup: ({
+    phoneDisplayNumber,
+    phoneNumber,
   }: {
-    analyticsPlacement?: string
-    newsletter?: string
-    triggerLabel?: string
-    variant?: string
-  }) => (
-    <span
-      data-analytics-placement={analyticsPlacement}
-      data-newsletter={newsletter}
-      data-variant={variant}
-    >
-      {triggerLabel}
-    </span>
-  ),
+    phoneDisplayNumber?: string | null
+    phoneNumber?: string | null
+  }) =>
+    phoneNumber ? (
+      <span
+        data-phone-display-number={phoneDisplayNumber}
+        data-phone-number={phoneNumber}
+      >
+        Also available via SMS.
+      </span>
+    ) : null,
 }))
 vi.mock('@/lib/phone/config', () => ({
   sitePhoneDisplayNumber: phoneMocks.displayNumber,
@@ -99,10 +95,8 @@ describe('UmamiPage viewer contract', () => {
     expect(html).not.toContain('Only the good stuff.')
     expect(html).not.toContain('An ongoing photography newsletter.')
     expect(html).toContain('Also available via')
-    expect(html).toContain('data-analytics-placement="newsletter_page"')
-    expect(html).toContain('data-newsletter="umami"')
-    expect(html).toContain('data-variant="link"')
-    expect(html).toContain('>SMS</span>')
+    expect(html).toContain('data-phone-display-number="+1 212 347 3190"')
+    expect(html).toContain('data-phone-number="+12123473190"')
     expect(html).toContain(
       'data-button-class-name="btn btn-primary btn-newsletter"'
     )
@@ -123,18 +117,7 @@ describe('UmamiPage viewer contract', () => {
     const html = renderToStaticMarkup(<UmamiPage />)
 
     expect(html).not.toContain('Also available via')
-    expect(html).not.toContain('>SMS</span>')
+    expect(html).not.toContain('data-phone-number')
     expect(html).not.toContain('/feed/umami/rss.xml')
-  })
-
-  it('lets SMS lead without an empty gap when the email CTA is absent', () => {
-    subscribeMocks.visible.mockReturnValue(false)
-
-    const html = renderToStaticMarkup(<UmamiPage />)
-
-    expect(html).not.toContain('data-testid="subscribe-cta"')
-    expect(html).not.toContain('umami-page-email')
-    expect(html).toContain('class="umami-page-sms')
-    expect(html).toContain('Also available via')
   })
 })

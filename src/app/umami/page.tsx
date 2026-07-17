@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
+import { UmamiSmsSignup } from '@/components/umami/umami-sms-signup'
 import { UmamiTagline } from '@/components/umami/umami-tagline'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
@@ -205,21 +205,10 @@ export default function UmamiPage() {
               className="umami-page-email mt-0 md:mx-0"
               subscribeEndpoint="/api/subscribe/umami"
             />
-            {smsSignupPhoneNumber ? (
-              <p className="umami-page-sms text-left font-serif text-sm text-gray-500">
-                Also available via{' '}
-                <SmsSubscribePrompt
-                  analyticsPlacement="newsletter_page"
-                  newsletter="umami"
-                  phoneDisplayNumber={smsSignupDisplayNumber}
-                  phoneNumber={smsSignupPhoneNumber}
-                  triggerClassName="decoration-umami/60 hover:text-umami-ink"
-                  triggerLabel="SMS"
-                  variant="link"
-                />
-                .
-              </p>
-            ) : null}
+            <UmamiSmsSignup
+              phoneDisplayNumber={smsSignupDisplayNumber}
+              phoneNumber={smsSignupPhoneNumber}
+            />
           </div>
         </div>
 

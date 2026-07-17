@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+
 import {
   SmsSubscribeDisclosure,
   SmsSubscribePrompt,
@@ -86,7 +87,7 @@ describe('SmsSubscribePrompt', () => {
     expect(html).toBe('')
   })
 
-  it('renders the complete consent disclosure and policy links', () => {
+  it('renders a prominent deep link, concise benefits, and policy links', () => {
     const html = renderToStaticMarkup(
       <SmsSubscribeDisclosure
         displayNumber="+1 212 347 3190"
@@ -95,24 +96,21 @@ describe('SmsSubscribePrompt', () => {
       />
     )
 
-    expect(html).toContain(
-      'to receive recurring automated new-post texts for every active newsletter'
-    )
-    expect(html).not.toContain('to consent to recurring automated')
+    expect(html).toContain('>Open Messages</span>')
+    expect(html).toContain('href="sms:+12123473190?body=SUBSCRIBE"')
+    expect(html).toContain('SUBSCRIBE</span> is filled in for you')
+    expect(html).toContain('New posts from every active newsletter')
+    expect(html).toContain('One Bell contact card to save after signup')
+    expect(html).toContain('text Bell a question')
     expect(html).toContain('The Contraption Company LLC')
-    expect(html).toContain('new or reactivated signup')
-    expect(html).toContain('save to your contacts')
-    expect(html).toContain('text Bell questions about')
     expect(html).toContain('philipithomas.com')
     expect(html).toContain('Message and data rates may apply')
     expect(html).toContain('Reply STOP')
     expect(html).toContain('HELP for help')
-    expect(html).toContain('If you previously replied STOP')
+    expect(html).toContain('Previously opted out?')
     expect(html).toContain('href="sms:+12123473190?body=START"')
     expect(html).toContain('or UNSTOP instead')
     expect(html).toContain('Consent is not a condition of purchase')
-    expect(html).toContain('block text-gray-800')
-    expect(html).toContain('mt-6 block text-sm text-gray-500')
     expect(html).not.toContain('border-t')
     expect(html).toContain('href="/terms#text-messaging"')
     expect(html).toContain('href="/privacy#text-messaging"')
