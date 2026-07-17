@@ -237,7 +237,7 @@ export default async function SlugPage({ params }: Props) {
     workshop: { className: 'bg-offwhite-warm', dataBg: 'offwhite-warm' },
     contraption: { className: 'bg-gray-050', dataBg: 'gray-050' },
     postcard: { className: 'bg-offwhite-cool', dataBg: 'offwhite-cool' },
-    umami: { className: 'bg-[#f5f3f1]', dataBg: 'umami' },
+    umami: { className: 'bg-umami-paper', dataBg: 'umami' },
     tsundoku: { className: 'bg-[#f4f4f2]', dataBg: 'tsundoku' },
   }
   const bg = post?.newsletter ? bgMap[post.newsletter] : undefined
@@ -261,15 +261,37 @@ export default async function SlugPage({ params }: Props) {
           'data-zoom-caption-collection': post.newsletter,
         }
       : {}
+  const postMetadata = showPostMetadata ? (
+    <div
+      className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 ${
+        isUmamiPost
+          ? 'justify-start font-sans sm:justify-end'
+          : 'justify-center font-mono'
+      }`}
+    >
+      {postDate ? <time>{postDate}</time> : null}
+      {postDate && location ? <span aria-hidden="true">@</span> : null}
+      {location ? (
+        <a
+          href={location.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`underline decoration-gray-300 underline-offset-2 ${locationHoverText} transition-colors duration-300`}
+        >
+          {location.name}
+        </a>
+      ) : null}
+    </div>
+  ) : null
   const coverImage = item.frontmatter.coverImage ? (
     <div
-      className={`image-loading-surface w-full overflow-hidden ${isPhotoPost ? 'mb-8' : 'mb-10'}`}
+      className={`image-loading-surface w-full ${
+        isUmamiPost ? 'mb-0' : isPhotoPost ? 'mb-8' : 'mb-10'
+      }`}
     >
-      <Image
-        src={item.frontmatter.coverImage}
-        alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}
-        width={post?.coverDimensions?.width ?? 1280}
-        height={post?.coverDimensions?.height ?? 640}
+      <button
+        type="button"
+        aria-label={item.frontmatter.coverImageAlt ?? item.frontmatter.title}
         data-zoomable=""
         {...zoomImageDataAttrs({
           src: item.frontmatter.coverImage,
@@ -281,10 +303,18 @@ export default async function SlugPage({ params }: Props) {
               : undefined,
         })}
         {...coverZoomCaption}
-        className="relative z-10 block w-full cursor-zoom-in"
-        priority
-        sizes={POST_COVER_SIZES}
-      />
+        className="group relative z-10 block w-full cursor-zoom-in overflow-hidden text-left"
+      >
+        <Image
+          src={item.frontmatter.coverImage}
+          alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}
+          width={post?.coverDimensions?.width ?? 1280}
+          height={post?.coverDimensions?.height ?? 640}
+          className="block w-full transition-transform duration-700 group-hover:scale-[1.002]"
+          priority
+          sizes={POST_COVER_SIZES}
+        />
+      </button>
     </div>
   ) : null
 
@@ -303,77 +333,83 @@ export default async function SlugPage({ params }: Props) {
             : 'container py-12 md:py-16'
         }
       >
-        {/* Header */}
-        <header
-          className={
-            isFindAiPage
-              ? 'mx-auto mb-10 flex max-w-2xl flex-col items-start text-left'
-              : `mx-auto flex max-w-3xl flex-col items-center text-center ${isPhotoPost ? 'mb-6' : 'mb-10'}`
-          }
-        >
-          {isFindAiPage ? (
-            <div className="flex size-20 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm sm:size-24">
-              <Image
-                src="/images/find-ai/icon.svg"
-                alt=""
-                width={79}
-                height={79}
-                className="size-14 sm:size-16"
-              />
-            </div>
-          ) : null}
-          {showPostMetadata ? (
-            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-xs text-gray-500">
-              {postDate ? <time>{postDate}</time> : null}
-              {postDate && location ? <span aria-hidden="true">@</span> : null}
-              {location ? (
-                <a
-                  href={location.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`underline decoration-gray-300 underline-offset-2 ${locationHoverText} transition-colors duration-300`}
-                >
-                  {location.name}
-                </a>
-              ) : null}
-            </div>
-          ) : null}
-          <h1
-            className={`mt-3 font-sans font-semibold leading-tight tracking-tight text-pretty text-gray-950 ${
-              isFindAiPage
-                ? 'text-4xl sm:text-5xl'
-                : isPhotoPost
-                  ? 'text-3xl sm:text-4xl md:text-5xl'
-                  : 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl'
-            }`}
-          >
-            {item.frontmatter.title}
-          </h1>
-          {item.frontmatter.description && !isFindAiPage ? (
-            <p className="font-serif text-gray-600 text-lg sm:text-xl max-w-prose leading-relaxed mt-4">
-              {item.frontmatter.description}
-            </p>
-          ) : null}
-          {post && !isPhotoPost && (
-            <a href="/" className="flex items-center gap-3 mt-6 group">
-              <Image
-                src="/images/author.jpg"
-                alt={siteConfig.author}
-                width={36}
-                height={36}
-                className="w-9 h-9 rounded-full"
-              />
-              <span
-                className={`font-sans text-sm font-medium uppercase tracking-[0.04em] text-gray-600 ${accentHoverText[post.newsletter]} transition-colors duration-300`}
-              >
-                {siteConfig.author}
-              </span>
-            </a>
-          )}
-        </header>
+        <div>
+          {/* Umami leads with the photo in both visual and keyboard order. */}
+          {isUmamiPost && !isFindAiPage ? coverImage : null}
 
-        {/* Cover image */}
-        {!isFindAiPage && coverImage}
+          {/* Header */}
+          {isUmamiPost ? (
+            <header className="mt-5 mb-12 grid gap-3 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+              <div className="min-w-0">
+                <h1 className="font-sans font-semibold text-2xl text-gray-950 leading-tight tracking-tight text-pretty sm:text-3xl">
+                  {item.frontmatter.title}
+                </h1>
+                {item.frontmatter.description ? (
+                  <p className="mt-2 max-w-prose font-serif text-base text-gray-600 leading-relaxed sm:text-lg">
+                    {item.frontmatter.description}
+                  </p>
+                ) : null}
+              </div>
+              {postMetadata}
+            </header>
+          ) : (
+            <header
+              className={
+                isFindAiPage
+                  ? 'mx-auto mb-10 flex max-w-2xl flex-col items-start text-left'
+                  : `mx-auto flex max-w-3xl flex-col items-center text-center ${isPhotoPost ? 'mb-6' : 'mb-10'}`
+              }
+            >
+              {isFindAiPage ? (
+                <div className="flex size-20 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm sm:size-24">
+                  <Image
+                    src="/images/find-ai/icon.svg"
+                    alt=""
+                    width={79}
+                    height={79}
+                    className="size-14 sm:size-16"
+                  />
+                </div>
+              ) : null}
+              {postMetadata}
+              <h1
+                className={`mt-3 font-sans font-semibold leading-tight tracking-tight text-pretty text-gray-950 ${
+                  isFindAiPage
+                    ? 'text-4xl sm:text-5xl'
+                    : isPhotoPost
+                      ? 'text-3xl sm:text-4xl md:text-5xl'
+                      : 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl'
+                }`}
+              >
+                {item.frontmatter.title}
+              </h1>
+              {item.frontmatter.description && !isFindAiPage ? (
+                <p className="font-serif text-gray-600 text-lg sm:text-xl max-w-prose leading-relaxed mt-4">
+                  {item.frontmatter.description}
+                </p>
+              ) : null}
+              {post && !isPhotoPost && (
+                <a href="/" className="flex items-center gap-3 mt-6 group">
+                  <Image
+                    src="/images/author.jpg"
+                    alt={siteConfig.author}
+                    width={36}
+                    height={36}
+                    className="w-9 h-9 rounded-full"
+                  />
+                  <span
+                    className={`font-sans text-sm font-medium uppercase tracking-[0.04em] text-gray-600 ${accentHoverText[post.newsletter]} transition-colors duration-300`}
+                  >
+                    {siteConfig.author}
+                  </span>
+                </a>
+              )}
+            </header>
+          )}
+
+          {/* Cover image */}
+          {!isFindAiPage && !isUmamiPost ? coverImage : null}
+        </div>
 
         {/* Content */}
         <div className="prose prose-xl font-serif mx-auto max-w-2xl">

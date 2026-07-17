@@ -395,9 +395,11 @@ export function ImageZoom() {
 
       e.preventDefault()
       triggerRef.current =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null
+        matched.tabIndex >= 0
+          ? matched
+          : document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null
       const item = zoomItemFromElement(matched)
       if (!item) return
 

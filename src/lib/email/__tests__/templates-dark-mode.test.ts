@@ -110,10 +110,10 @@ describe('newsletter shell dark mode', () => {
       newsletter: 'umami',
     })
     expect(html).toContain(
-      '<body class="email-body" style="margin: 0; padding: 0; background-color: #f5f3f1;">'
+      '<body class="email-body" style="margin: 0; padding: 0; background-color: #f1ebe5;">'
     )
     expect(html).toContain(
-      'class="email-card email-card-umami" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #f5f3f1;"'
+      'class="email-card email-card-umami" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #f1ebe5;"'
     )
     expect(html).toContain(
       '<td class="content-cell content-cell-umami" style="padding: 0 32px 32px;'

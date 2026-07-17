@@ -111,6 +111,8 @@
   --color-offwhite-dark: #edebe7;
   --color-offwhite-light: #faf9f7;
   --color-umami: #f2712c;
+  --color-umami-ink: #a6400f;
+  --color-umami-paper: #f1ebe5;
 
   /* Grays */
   --color-gray-50: #f2f2f1; /* alias: keeps the un-padded spelling warm */
@@ -231,6 +233,24 @@
   outline-offset: 2px;
 }
 
+/* The global ink focus ring disappears on the image viewer's near-black
+   stage. Viewer controls and links need the inverse ring in every state. */
+[data-image-zoom-overlay]
+  :focus-visible:not([data-input-otp]):not([data-no-focus-ring]):not(
+    input:not([type="checkbox"]):not([type="radio"])
+  ):not(textarea):not(select) {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+/* In short landscape viewports the persistent caption otherwise sits over the
+   previous-image target. Add one control-width gutter after any device inset. */
+@media (orientation: landscape) and (max-height: 500px) {
+  [data-image-zoom-overlay] [data-zoom-caption-panel] {
+    left: calc(env(safe-area-inset-left, 0px) + 4.5rem);
+  }
+}
+
 /* Tier two indicator: a focused text field darkens its border to
    gray-900. Global so a field that forgets a focus:border utility still
    signals focus; unlayered so it also wins over a utility that set a
@@ -285,7 +305,7 @@ body:has(> * [data-bg="gray-050"]) {
 }
 
 body:has(> * [data-bg="umami"]) {
-  background-color: #f5f3f1;
+  background-color: var(--color-umami-paper);
 }
 
 /* ============================
@@ -530,6 +550,25 @@ body:has(> * [data-bg="umami"]) {
   transform: none;
 }
 
+/* Post-page subscription buttons inherit the newsletter identity from the
+   surrounding page. Umami's brighter orange takes dark ink; the writing
+   newsletters retain the light ink supplied by btn-primary. */
+[data-bg] .btn-newsletter {
+  background-color: var(--prose-accent, var(--color-gray-950));
+  border-color: var(--prose-accent, var(--color-gray-950));
+}
+
+[data-bg="umami"] .btn-newsletter {
+  background-color: var(--color-umami);
+  border-color: var(--color-umami);
+  color: var(--color-gray-950);
+}
+
+[data-bg="umami"] .btn-newsletter .btn-text,
+[data-bg="umami"] .btn-newsletter .btn-arrow {
+  color: var(--color-gray-950);
+}
+
 /* ============================
    Workshop logo filter
    ============================ */
@@ -579,8 +618,24 @@ body:has(> * [data-bg="umami"]) {
   transform-origin: 50% 10%;
 }
 
+@keyframes umami-tagline-nudge {
+  0%,
+  100% {
+    color: var(--color-gray-600);
+  }
+  38%,
+  62% {
+    color: var(--color-umami-ink);
+  }
+}
+
+.umami-tagline-nudge {
+  animation: umami-tagline-nudge 1800ms ease-in-out 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .bell-discovery-nudge {
+  .bell-discovery-nudge,
+  .umami-tagline-nudge {
     animation: none;
   }
 }
@@ -670,7 +725,7 @@ body:has(> * [data-bg="umami"]) {
 [data-bg="umami"] {
   /* The brand orange remains exact in marks and decoration; this darker
      companion keeps linked text readable on Umami's pale background. */
-  --prose-accent: #a6400f;
+  --prose-accent: var(--color-umami-ink);
 }
 
 .prose a {

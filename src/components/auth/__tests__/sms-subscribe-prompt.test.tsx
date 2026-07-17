@@ -29,13 +29,14 @@ describe('SmsSubscribePrompt', () => {
         newsletter="all"
         phoneDisplayNumber="+1 212 347 3190"
         phoneNumber="+12123473190"
+        homepageLabel="SMS (all newsletters)"
         variant="homepage"
       />
     )
 
     expect(html).toContain(' or ')
-    expect(html).toContain('>SMS</button>')
-    expect(html).not.toContain('>SMS</button>.')
+    expect(html).toContain('>SMS (all newsletters)</button>')
+    expect(html).not.toContain('>SMS (all newsletters)</button>.')
     expect(html).not.toContain('Or, ')
   })
 
@@ -54,7 +55,9 @@ describe('SmsSubscribePrompt', () => {
       />
     )
 
-    expect(html).toContain('to receive recurring automated new-post texts')
+    expect(html).toContain(
+      'to receive recurring automated new-post texts for every active newsletter'
+    )
     expect(html).not.toContain('to consent to recurring automated')
     expect(html).toContain('The Contraption Company LLC')
     expect(html).toContain('new or reactivated signup')
@@ -66,7 +69,8 @@ describe('SmsSubscribePrompt', () => {
     expect(html).toContain('HELP for help')
     expect(html).toContain('Consent is not a condition of purchase')
     expect(html).toContain('block text-gray-800')
-    expect(html).toContain('border-t border-gray-200 pt-4')
+    expect(html).toContain('mt-6 block text-sm text-gray-500')
+    expect(html).not.toContain('border-t')
     expect(html).toContain('href="/terms#text-messaging"')
     expect(html).toContain('href="/privacy#text-messaging"')
   })

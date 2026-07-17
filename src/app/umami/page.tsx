@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
+import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
+import { UmamiTagline } from '@/components/umami/umami-tagline'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import { markdownToPlaintext } from '@/lib/content/render-html'
@@ -86,30 +88,33 @@ function PhotoMetadata({ post }: { post: Post }) {
   const { location, title } = post.frontmatter
 
   return (
-    <figcaption className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-gray-500">
-      <time dateTime={post.frontmatter.publishedAt}>
-        {post.frontmatter.publishedAt}
-      </time>
-      {location ? (
-        <>
-          <span aria-hidden="true">/</span>
-          <a
-            href={location.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
-          >
-            {location.name}
-          </a>
-        </>
-      ) : null}
-      <span aria-hidden="true">/</span>
-      <Link
-        href={postPath(post.slug)}
-        className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
-      >
-        {title}
-      </Link>
+    <figcaption className="mt-2 space-y-1 font-sans text-[11px] text-gray-500">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <time dateTime={post.frontmatter.publishedAt}>
+          {post.frontmatter.publishedAt}
+        </time>
+        {location ? (
+          <>
+            <span aria-hidden="true">/</span>
+            <a
+              href={location.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
+            >
+              {location.name}
+            </a>
+          </>
+        ) : null}
+      </div>
+      <div>
+        <Link
+          href={postPath(post.slug)}
+          className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
+        >
+          {title}
+        </Link>
+      </div>
     </figcaption>
   )
 }
@@ -117,9 +122,10 @@ function PhotoMetadata({ post }: { post: Post }) {
 function LeadPhoto({ post }: { post: Post }) {
   const { coverImage, coverImageAlt, title } = post.frontmatter
   if (!coverImage || !post.coverDimensions) return null
+  const ratio = post.coverDimensions.width / post.coverDimensions.height
 
   return (
-    <figure>
+    <figure className="mx-auto w-full" style={{ maxWidth: `${ratio * 80}svh` }}>
       <button
         type="button"
         aria-label={coverImageAlt ?? title}
@@ -186,47 +192,56 @@ export default function UmamiPage() {
   const smsSignupDisplayNumber = sitePhoneDisplayNumber()
 
   return (
-    <div className="bg-[#f5f3f1]" data-bg="umami">
+    <div className="bg-umami-paper" data-bg="umami">
       <div className="container pt-4 pb-10 sm:pt-6 sm:pb-12 md:pb-14">
-        <div className="mb-10 flex flex-col items-center text-center md:mb-14">
-          <Link
-            href="/umami"
-            aria-label="umami"
-            className="block transition-opacity hover:opacity-80"
-          >
-            <Image
-              src="/images/umami.svg"
-              alt="umami"
-              width={1562}
-              height={369}
-              sizes="(max-width: 640px) 58vw, 300px"
-              className="h-auto w-full max-w-[58vw] sm:max-w-[280px] md:max-w-[300px]"
-              priority
-            />
-          </Link>
-          <h1 className="sr-only">umami</h1>
-          <p className="mt-4 max-w-xl text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
-            An ongoing photography newsletter. Only the good stuff.
-          </p>
-          <SubscribeCta
-            newsletter="umami"
-            analyticsPlacement="newsletter_page"
-            align="center"
-            className="mt-5"
-            smsSignupDisplayNumber={smsSignupDisplayNumber}
-            smsSignupPhoneNumber={smsSignupPhoneNumber}
-            subscribeEndpoint="/api/subscribe/umami"
-          />
-          <p className="mt-4 font-serif text-xs text-gray-500">
-            Also available via{' '}
+        <div className="mb-12 grid gap-7 text-center sm:mb-14 md:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] md:items-end md:gap-12 md:text-left">
+          <div className="flex flex-col items-center md:items-start">
             <Link
-              href="/feed/umami/rss.xml"
-              className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
+              href="/umami"
+              aria-label="umami"
+              className="block transition-opacity hover:opacity-80"
             >
-              RSS
+              <Image
+                src="/images/umami.svg"
+                alt="umami"
+                width={1562}
+                height={369}
+                sizes="(max-width: 640px) 52vw, (max-width: 768px) 220px, 240px"
+                className="h-auto w-full max-w-[52vw] sm:max-w-[220px] md:max-w-[240px]"
+                priority
+              />
             </Link>
-            .
-          </p>
+            <h1 className="sr-only">umami</h1>
+            <UmamiTagline />
+          </div>
+          <div className="w-full md:max-w-md md:justify-self-end">
+            <SubscribeCta
+              newsletter="umami"
+              analyticsPlacement="newsletter_page"
+              align="start"
+              className="mt-0 md:mx-0"
+              subscribeEndpoint="/api/subscribe/umami"
+            />
+            <p className="mt-4 font-serif text-xs text-gray-500">
+              Also available via{' '}
+              <Link
+                href="/feed/umami/rss.xml"
+                className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
+              >
+                RSS
+              </Link>
+              <SmsSubscribePrompt
+                analyticsPlacement="newsletter_page"
+                newsletter="umami"
+                phoneDisplayNumber={smsSignupDisplayNumber}
+                phoneNumber={smsSignupPhoneNumber}
+                homepageLabel="SMS (all newsletters)"
+                variant="homepage"
+                className="[&_button]:decoration-umami/50 [&_button:hover]:text-gray-950"
+              />
+              .
+            </p>
+          </div>
         </div>
 
         {leadPost ? <LeadPhoto post={leadPost} /> : null}

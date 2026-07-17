@@ -23,6 +23,7 @@ interface SmsSubscribePromptProps {
   className?: string
   analyticsPlacement?: AnalyticsPlacement
   newsletter?: AnalyticsNewsletter
+  homepageLabel?: string
   variant?: 'form' | 'homepage'
 }
 
@@ -48,10 +49,11 @@ export function SmsSubscribeDisclosure({
         >
           {displayNumber}
         </a>{' '}
-        to receive recurring automated new-post texts from The Contraption
-        Company LLC through philipithomas.com at this number.
+        to receive recurring automated new-post texts for every active
+        newsletter from The Contraption Company LLC through philipithomas.com at
+        this number.
       </span>
-      <span className="mt-5 block border-t border-gray-200 pt-4 text-sm text-gray-500">
+      <span className="mt-6 block text-sm text-gray-500">
         A new or reactivated signup includes one Bell contact-card MMS to save
         to your contacts. You can also text Bell questions about
         philipithomas.com. Message frequency varies. Message and data rates may
@@ -83,6 +85,7 @@ export function SmsSubscribePrompt({
   className,
   analyticsPlacement = 'unknown',
   newsletter = 'unspecified',
+  homepageLabel = 'SMS',
   variant = 'form',
 }: SmsSubscribePromptProps) {
   const handleSmsOpen = useCallback(() => {
@@ -102,7 +105,7 @@ export function SmsSubscribePrompt({
       <span
         className={cn(
           isHomepage
-            ? 'font-serif text-sm text-gray-500'
+            ? 'font-serif text-gray-500'
             : 'mt-3 block max-w-md font-serif text-sm leading-relaxed text-gray-500',
           align === 'center' && !isHomepage && 'text-center',
           className
@@ -119,7 +122,7 @@ export function SmsSubscribePrompt({
                 : 'decoration-gray-300 hover:text-gray-950'
             )}
           >
-            {isHomepage ? 'SMS' : 'subscribe via SMS'}
+            {isHomepage ? homepageLabel : 'subscribe via SMS'}
           </button>
         </DialogTrigger>
         {isHomepage ? null : '.'}

@@ -23,7 +23,7 @@ const backgroundColors: Record<NewsletterSlug, string> = {
   contraption: '#ffffff',
   workshop: '#ffffff',
   postcard: '#ffffff',
-  umami: '#f5f3f1',
+  umami: '#f1ebe5',
   tsundoku: '#f4f4f2',
 }
 

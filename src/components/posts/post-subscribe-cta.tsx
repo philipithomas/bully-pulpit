@@ -11,7 +11,14 @@ function PostSubscribeCtaForCurrentUrl(props: PostSubscribeCtaProps) {
 
   if (searchParams.get('utm_source') === 'sms') return null
 
-  return <SubscribeCta {...props} />
+  return (
+    <SubscribeCta
+      {...props}
+      buttonClassName={
+        props.buttonClassName ?? 'btn btn-primary btn-newsletter'
+      }
+    />
+  )
 }
 
 export function PostSubscribeCta(props: PostSubscribeCtaProps) {

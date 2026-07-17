@@ -55,7 +55,7 @@ const staticConfig = {
       color: 'umami',
       logo: {
         src: '/images/umami.svg',
-        height: 24,
+        height: 14,
         intrinsicWidth: 1562,
         intrinsicHeight: 369,
       },

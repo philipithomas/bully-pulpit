@@ -31,6 +31,7 @@ const newsletterNoun: Record<Newsletter, string> = {
 interface SubscribeCtaProps {
   newsletter: Newsletter
   className?: string
+  buttonClassName?: string
   align?: 'start' | 'center'
   subscribeEndpoint?: string
   successRedirect?: '/account'
@@ -47,6 +48,7 @@ export function SubscribeCta(props: SubscribeCtaProps) {
 function ActiveSubscribeCta({
   newsletter,
   className = 'mt-16',
+  buttonClassName = 'btn btn-primary',
   align = 'start',
   subscribeEndpoint,
   successRedirect = newsletter === 'umami' ? '/account' : undefined,
@@ -61,7 +63,6 @@ function ActiveSubscribeCta({
   const [saving, setSaving] = useState(false)
   const key = newsletterPreferenceKeys[newsletter]
   const config = siteConfig.newsletters[newsletter]
-  const buttonClassName = 'btn btn-primary'
   const subscribed = preferences ? Boolean(preferences[key]) : false
   const initialMemberClassName =
     hasSession === null ? '[[data-member]_&]:hidden' : ''

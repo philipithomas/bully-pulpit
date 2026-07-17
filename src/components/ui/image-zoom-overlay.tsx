@@ -584,6 +584,7 @@ export function ImageZoomOverlay({
       role="dialog"
       aria-modal="true"
       aria-label={image.alt || 'Image viewer'}
+      data-image-zoom-overlay=""
       tabIndex={-1}
       className={`fixed inset-0 z-60 cursor-zoom-out bg-[#0A0A0A] ${
         phase === 'closing' ? 'image-zoom-closing' : 'image-zoom-opening'
@@ -748,13 +749,13 @@ export function ImageZoomOverlay({
           {isImmersive && caption ? (
             <aside
               data-zoom-caption-panel=""
-              className="immersive-zoom-chrome absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 max-h-[min(48dvh,24rem)] w-[min(calc(100vw-5.5rem),30rem)] cursor-auto overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-black/75 p-4 text-white shadow-2xl backdrop-blur-md landscape:max-h-[calc(100dvh-1.5rem)] landscape:w-[min(40vw,30rem)] sm:p-5"
+              className="immersive-zoom-chrome absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 max-h-[min(48dvh,24rem)] w-[min(calc(100vw-5.5rem),30rem)] cursor-auto overflow-y-auto overscroll-contain rounded-md border border-white/15 bg-black/75 p-4 text-white shadow-2xl backdrop-blur-md landscape:max-h-[calc(100dvh-1.5rem)] landscape:w-[min(40vw,30rem)] sm:p-5"
               onClick={handleCaptionPanelClick}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   {hasCaptionMetadata ? (
-                    <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] leading-5 text-white/75">
+                    <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-sans text-[11px] leading-5 text-white/75">
                       {caption.date ? <time>{caption.date}</time> : null}
                       {caption.date && caption.locationName ? (
                         <span aria-hidden="true">@</span>
@@ -783,7 +784,7 @@ export function ImageZoomOverlay({
                 {hasGallery && gallery ? (
                   <span
                     aria-live="polite"
-                    className="shrink-0 font-mono text-[11px] leading-5 text-white/70"
+                    className="shrink-0 font-sans text-[11px] leading-5 text-white/70"
                   >
                     <span className="sr-only">
                       {caption.title}, image {gallery.index + 1} of{' '}
@@ -800,7 +801,7 @@ export function ImageZoomOverlay({
                   {caption.description}
                 </p>
               ) : null}
-              <footer className="mt-4 flex items-end justify-between gap-4 border-white/15 border-t pt-3">
+              <footer className="mt-5 flex items-end justify-between gap-4">
                 <Link
                   href={collection.href}
                   aria-label={collection.label}
@@ -812,7 +813,7 @@ export function ImageZoomOverlay({
                     alt={collection.label}
                     width={collection.width}
                     height={collection.height}
-                    className="h-[18px] w-auto"
+                    className="h-[16px] w-auto"
                   />
                 </Link>
                 {caption.href ? (

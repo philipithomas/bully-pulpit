@@ -4,6 +4,11 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('@/components/posts/subscribe-cta', () => ({
   SubscribeCta: () => <div data-testid="subscribe-cta" />,
 }))
+vi.mock('@/components/auth/sms-subscribe-prompt', () => ({
+  SmsSubscribePrompt: ({ homepageLabel }: { homepageLabel?: string }) => (
+    <span> or {homepageLabel}</span>
+  ),
+}))
 vi.mock('@/lib/phone/config', () => ({
   sitePhoneDisplayNumber: () => null,
   sitePhoneNumber: () => null,
@@ -30,5 +35,7 @@ describe('UmamiPage viewer contract', () => {
     )
     expect(html).toContain('data-full-sizes="100vw"')
     expect(html).not.toContain('data-zoom-caption-description=')
+    expect(html.indexOf('>RSS<')).toBeLessThan(html.indexOf('SMS'))
+    expect(html).toContain('SMS (all newsletters)')
   })
 })
