@@ -1,6 +1,14 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, ExternalLink, Info, X } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Info,
+  PanelRightClose,
+  X,
+} from 'lucide-react'
 import NextImage from 'next/image'
 import Link from 'next/link'
 import {
@@ -221,6 +229,7 @@ export function ImageZoomOverlay({
   const containerRef = useRef<HTMLDivElement>(null)
   const immediateRef = useRef<HTMLImageElement>(null)
   const detailsToggleRef = useRef<HTMLButtonElement>(null)
+  const detailsCloseRef = useRef<HTMLButtonElement>(null)
   const closingRef = useRef(false)
   const swipeRef = useRef<{
     pointerId: number
@@ -427,6 +436,13 @@ export function ImageZoomOverlay({
     overlayRef.current?.focus()
   }, [])
 
+  // The details trigger leaves the DOM while the panel is open. Move focus to
+  // its matching collapse control, then restore it when the panel closes.
+  useEffect(() => {
+    if (!detailsOpen) return
+    requestAnimationFrame(() => detailsCloseRef.current?.focus())
+  }, [detailsOpen])
+
   // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -558,6 +574,18 @@ export function ImageZoomOverlay({
       onNavigateTo(collection.href)
     },
     [collection.href, onNavigateTo]
+  )
+  const handlePostClick = useCallback(
+    (e: MouseEvent<HTMLAnchorElement>) => {
+      e.stopPropagation()
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+        return
+      }
+      if (!caption?.href || !onNavigateTo) return
+      e.preventDefault()
+      onNavigateTo(caption.href)
+    },
+    [caption?.href, onNavigateTo]
   )
   const handleImmediateLoad = useCallback(() => setImmediateLoaded(true), [])
   const handleCaptionPanelClick = useCallback(
@@ -744,7 +772,7 @@ export function ImageZoomOverlay({
                 : 'group relative flex h-full w-full items-center justify-center'
           }
         >
-          {isImmersive ? (
+          {isImmersive && !detailsOpen ? (
             <button
               type="button"
               onClick={handleCloseButton}
@@ -816,7 +844,7 @@ export function ImageZoomOverlay({
               />
             ) : null}
           </div>
-          {hasGallery && (
+          {hasGallery && (!isImmersive || !detailsOpen) ? (
             <>
               <button
                 type="button"
@@ -849,8 +877,8 @@ export function ImageZoomOverlay({
                 <ChevronRight aria-hidden="true" className="h-7 w-7" />
               </button>
             </>
-          )}
-          {image.originalSrc ? (
+          ) : null}
+          {image.originalSrc && (!isImmersive || !detailsOpen) ? (
             <a
               href={image.originalSrc}
               target="_blank"
@@ -867,13 +895,11 @@ export function ImageZoomOverlay({
               <ExternalLink aria-hidden="true" className="h-5 w-5" />
             </a>
           ) : null}
-          {isImmersive && caption ? (
+          {isImmersive && caption && !detailsOpen ? (
             <button
               ref={detailsToggleRef}
               type="button"
-              aria-label={
-                detailsOpen ? 'Hide photo details' : 'Show photo details'
-              }
+              aria-label="Show photo details"
               aria-controls={detailsId}
               aria-expanded={detailsOpen}
               title="Photo details"
@@ -905,15 +931,33 @@ export function ImageZoomOverlay({
                   </span>
                 ) : null}
                 <button
+                  ref={detailsCloseRef}
                   type="button"
-                  aria-label="Close photo details"
+                  aria-label="Collapse photo details"
+                  title="Collapse photo details"
                   onClick={handleDetailsClose}
+                  className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
+                >
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="h-4 w-4 landscape:hidden md:hidden"
+                  />
+                  <PanelRightClose
+                    aria-hidden="true"
+                    className="hidden h-4 w-4 landscape:block md:block"
+                  />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Close image viewer"
+                  title="Close image viewer"
+                  onClick={handleCloseButton}
                   className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
                 >
                   <X aria-hidden="true" className="h-4 w-4" />
                 </button>
               </div>
-              <div className="my-auto min-w-0 py-3 landscape:py-8 md:py-10">
+              <div className="min-w-0 pt-3 landscape:pt-6 md:pt-8">
                 {hasCaptionMetadata ? (
                   <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-sans text-[11px] leading-5 text-white/65">
                     {caption.date ? <time>{caption.date}</time> : null}
@@ -946,7 +990,7 @@ export function ImageZoomOverlay({
                   </p>
                 ) : null}
               </div>
-              <footer className="flex shrink-0 flex-wrap items-end justify-between gap-x-5 gap-y-3 pt-3">
+              <footer className="mt-6 flex shrink-0 flex-wrap items-end justify-between gap-x-5 gap-y-3 landscape:mt-auto md:mt-auto">
                 <Link
                   href={collection.href}
                   aria-label={collection.label}
@@ -964,13 +1008,10 @@ export function ImageZoomOverlay({
                 {caption.href ? (
                   <Link
                     href={caption.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group inline-flex min-h-11 items-center gap-2 font-sans text-sm text-white/85 transition-colors hover:text-white"
-                    onClick={handleCaptionClick}
+                    className="inline-flex min-h-11 items-center font-sans text-sm text-white/85 underline decoration-white/35 underline-offset-4 transition-colors hover:text-white"
+                    onClick={handlePostClick}
                   >
-                    Open post
-                    <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                    Open post&nbsp;→
                   </Link>
                 ) : null}
               </footer>

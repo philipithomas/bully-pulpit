@@ -6,6 +6,7 @@ import {
   signSession,
 } from '@/lib/auth/jwt'
 import { verifyTokenWithMetadata } from '@/lib/auth/login-service'
+import { setMagicLinkCompletionCookie } from '@/lib/auth/magic-link-completion'
 import {
   applyNewsletterOptIns,
   normalizedNewsletters,
@@ -33,30 +34,25 @@ export async function GET(request: NextRequest) {
       !verification.newlyConfirmed
     )
     const jwt = await signSession(subscriber)
-    // Track on the token-free landing page instead of from this request. The
-    // server Analytics SDK derives its event URL from request context, which
-    // would otherwise include the one-time magic token.
-    const destination = new URL(
-      newsletters.includes('umami') ? '/account' : '/',
-      request.url
+    const isUmamiSignup = newsletters.includes('umami')
+    // Complete analytics on a second, query-free request. Vercel's server SDK
+    // prefers the platform request context, so passing this token-bearing
+    // request directly would expose the magic token as the event URL.
+    const response = NextResponse.redirect(
+      new URL('/auth/complete', request.url)
     )
-    destination.searchParams.set('signed-in', '1')
-    destination.searchParams.set('analytics-signup', 'email-link')
-    destination.searchParams.set(
-      'analytics-newsletter',
-      summarizeNewsletters(requestedNewsletters)
-    )
-    destination.searchParams.set(
-      'analytics-new-subscriber',
-      verification.newlyConfirmed ? '1' : '0'
-    )
-    const response = NextResponse.redirect(destination)
     setSessionCookies(response, jwt)
+    await setMagicLinkCompletionCookie(response, {
+      newsletter: summarizeNewsletters(requestedNewsletters),
+      newSubscriber: verification.newlyConfirmed,
+      destination: isUmamiSignup ? 'account' : 'home',
+    })
     await setNewSubscriberOnboardingCookie(
       response,
       subscriber,
       verification.newlyConfirmed
     )
+    response.headers.set('Cache-Control', 'private, no-store')
     return response
   } catch {
     return NextResponse.redirect(new URL('/?error=invalid-token', request.url))

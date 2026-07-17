@@ -155,9 +155,9 @@ export type ClientAnalyticsEventName = Exclude<
   | 'Bell reply finished'
 >
 
-// Completion can be recorded from the server for code/Google verification or
-// from the token-free landing page after a magic-link redirect. The other
-// server events remain authoritative-only.
+// Completion is recorded from the server for code/Google verification and by
+// the token-free magic-link completion hop. The other server events remain
+// authoritative-only.
 export type ServerAnalyticsEventName =
   | 'Newsletter verification sent'
   | 'Newsletter signup completed'
