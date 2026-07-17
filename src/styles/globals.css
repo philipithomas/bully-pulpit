@@ -243,14 +243,6 @@
   outline-offset: 2px;
 }
 
-/* In short landscape viewports the persistent caption otherwise sits over the
-   previous-image target. Add one control-width gutter after any device inset. */
-@media (orientation: landscape) and (max-height: 500px) {
-  [data-image-zoom-overlay] [data-zoom-caption-panel] {
-    left: calc(env(safe-area-inset-left, 0px) + 4.5rem);
-  }
-}
-
 /* Tier two indicator: a focused text field darkens its border to
    gray-900. Global so a field that forgets a focus:border utility still
    signals focus; unlayered so it also wins over a utility that set a
@@ -726,6 +718,51 @@ body:has(> * [data-bg="umami"]) {
   /* The brand orange remains exact in marks and decoration; this darker
      companion keeps linked text readable on Umami's pale background. */
   --prose-accent: var(--color-umami-ink);
+}
+
+/* Keep the photography within the first view on short landscape phones while
+   retaining both signup paths. The SMS explanation yields to the prominent
+   heading and button only at this unusually constrained height. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .umami-page-shell {
+    padding-top: 0.75rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .umami-page-intro {
+    align-items: start;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .umami-page-brand img {
+    max-width: 11.25rem;
+  }
+
+  .umami-page-brand > p {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .umami-page-email > p {
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .umami-page-sms {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .umami-page-sms-copy {
+    display: none;
+  }
+
+  .umami-page-sms-subscribe,
+  .umami-page-rss {
+    margin-top: 0.5rem;
+  }
 }
 
 .prose a {

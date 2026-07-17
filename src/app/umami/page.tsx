@@ -100,41 +100,6 @@ function viewerData(post: Post) {
   }
 }
 
-function PhotoMetadata({ post }: { post: Post }) {
-  const { location, title } = post.frontmatter
-
-  return (
-    <figcaption className="mt-2 space-y-1 font-sans text-[11px] text-gray-500">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <time dateTime={post.frontmatter.publishedAt}>
-          {post.frontmatter.publishedAt}
-        </time>
-        {location ? (
-          <>
-            <span aria-hidden="true">/</span>
-            <a
-              href={location.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
-            >
-              {location.name}
-            </a>
-          </>
-        ) : null}
-      </div>
-      <div>
-        <Link
-          href={postPath(post.slug)}
-          className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
-        >
-          {title}
-        </Link>
-      </div>
-    </figcaption>
-  )
-}
-
 function LeadPhoto({ post }: { post: Post }) {
   const { coverImage, coverImageAlt, title } = post.frontmatter
   if (!coverImage || !post.coverDimensions) return null
@@ -142,9 +107,10 @@ function LeadPhoto({ post }: { post: Post }) {
 
   return (
     <figure className="mx-auto w-full" style={{ maxWidth: `${ratio * 80}svh` }}>
-      <button
-        type="button"
+      <a
+        href={postPath(post.slug)}
         aria-label={coverImageAlt ?? title}
+        aria-haspopup="dialog"
         {...viewerData(post)}
         className="image-loading-surface group relative flex max-h-[80svh] w-full cursor-zoom-in items-center justify-center overflow-hidden bg-gray-100"
         style={{
@@ -159,8 +125,7 @@ function LeadPhoto({ post }: { post: Post }) {
           className="z-10 object-contain transition-transform duration-700 group-hover:scale-[1.005]"
           priority
         />
-      </button>
-      <PhotoMetadata post={post} />
+      </a>
     </figure>
   )
 }
@@ -179,9 +144,10 @@ function PhotoTile({ post }: { post: Post }) {
         flexBasis: `calc(var(--row-h) * ${ratio.toFixed(4)})`,
       }}
     >
-      <button
-        type="button"
+      <a
+        href={postPath(post.slug)}
         aria-label={coverImageAlt ?? title}
+        aria-haspopup="dialog"
         {...viewerData(post)}
         className="image-loading-surface relative block w-full cursor-zoom-in overflow-hidden bg-gray-100"
         style={{
@@ -195,8 +161,7 @@ function PhotoTile({ post }: { post: Post }) {
           sizes={tileSizes(ratio)}
           className="z-10 object-cover transition-transform duration-700 group-hover:scale-[1.01]"
         />
-      </button>
-      <PhotoMetadata post={post} />
+      </a>
     </figure>
   )
 }
@@ -209,9 +174,9 @@ export default function UmamiPage() {
 
   return (
     <div className="bg-umami-paper" data-bg="umami">
-      <div className="container pt-4 pb-10 sm:pt-6 sm:pb-12 md:pb-14">
-        <div className="mb-12 grid gap-7 text-center sm:mb-14 md:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] md:items-end md:gap-12 md:text-left">
-          <div className="flex flex-col items-center md:items-start">
+      <div className="umami-page-shell container pt-4 pb-10 sm:pt-6 sm:pb-12 md:pb-14">
+        <div className="umami-page-intro mb-12 grid gap-7 text-center sm:mb-14 md:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] md:items-end md:gap-12 md:text-left">
+          <div className="umami-page-brand flex flex-col items-center md:items-start">
             <Link
               href="/umami"
               aria-label="umami"
@@ -230,20 +195,20 @@ export default function UmamiPage() {
             <h1 className="sr-only">umami</h1>
             <UmamiTagline />
           </div>
-          <div className="w-full md:max-w-md md:justify-self-end">
+          <div className="umami-page-signup w-full md:max-w-md md:justify-self-end">
             <SubscribeCta
               newsletter="umami"
               analyticsPlacement="newsletter_page"
               align="start"
-              className="mt-0 md:mx-0"
+              className="umami-page-email mt-0 md:mx-0"
               subscribeEndpoint="/api/subscribe/umami"
             />
             {smsSignupPhoneNumber ? (
-              <div className="mt-6 bg-white/40 px-5 py-4 text-left">
+              <div className="umami-page-sms mt-6 bg-white/40 px-5 py-4 text-left">
                 <h2 className="font-serif text-base text-gray-800">
                   Get umami by text
                 </h2>
-                <p className="mt-1 font-serif text-sm leading-relaxed text-gray-600">
+                <p className="umami-page-sms-copy mt-1 font-serif text-sm leading-relaxed text-gray-600">
                   New umami posts arrive by text, with the photo attached when
                   available. The SMS subscription includes my other active
                   newsletters, too.
@@ -256,11 +221,11 @@ export default function UmamiPage() {
                   triggerClassName="btn-newsletter"
                   triggerLabel="Subscribe by SMS"
                   variant="standalone"
-                  className="mt-4"
+                  className="umami-page-sms-subscribe mt-4"
                 />
               </div>
             ) : null}
-            <p className="mt-4 font-serif text-xs text-gray-500">
+            <p className="umami-page-rss mt-4 font-serif text-xs text-gray-500">
               Prefer a feed? Follow umami via{' '}
               <Link
                 href="/feed/umami/rss.xml"

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  containedImageRect,
   ImageZoomOverlay,
   type ZoomedImage,
 } from '@/components/ui/image-zoom-overlay'
@@ -71,24 +72,39 @@ function controlTag(html: string, label: string): string {
 }
 
 describe('ImageZoomOverlay', () => {
-  it('renders immersive chrome and useful metadata without an empty description', () => {
+  it('measures the visible photo inside a letterboxed immersive stage', () => {
+    const rect = containedImageRect(
+      { top: 0, left: 0, width: 896, height: 800 },
+      2560,
+      1574
+    )
+
+    expect(rect.left).toBe(0)
+    expect(rect.width).toBe(896)
+    expect(rect.height).toBeCloseTo(550.9, 1)
+    expect(rect.top).toBeCloseTo(124.55, 2)
+  })
+
+  it('starts the immersive viewer photo-first with details behind a disclosure', () => {
     const html = renderOverlay(immersiveImage())
 
     expect(html).toContain('role="dialog"')
     expect(html).toContain('aria-modal="true"')
+    expect(html).toContain('aria-label="umami photo viewer"')
+    expect(html).toContain('aria-describedby=')
     expect(html).toContain('aria-label="Close image viewer"')
     expect(html).toContain('aria-label="Previous image"')
     expect(html).toContain('aria-label="Next image"')
     expect(html).toContain('aria-label="Open original image in new tab"')
-    expect(html).toContain('data-zoom-caption-panel=""')
-    expect(html).toContain('SFMOMA')
-    expect(html).toContain('2026-07-11')
-    expect(html).toContain('San Francisco Museum of Modern Art')
-    expect(html).toContain('https://maps.app.goo.gl/YHxezDBcwdY6quHX9')
-    expect(html).toContain('2 / 3')
-    expect(html).toContain('SFMOMA, image 2 of')
-    expect(html).toContain('aria-label="umami"')
-    expect(html).toContain('Open post')
+    expect(html).toContain('aria-label="Show photo details"')
+    expect(html).toContain('aria-controls=')
+    expect(html).toContain('aria-expanded="false"')
+    expect(html).toContain('role="status"')
+    expect(html).toContain('image 2 of 3')
+    expect(html).not.toContain('data-zoom-caption-panel=""')
+    expect(html).not.toContain('2026-07-11')
+    expect(html).not.toContain('San Francisco Museum of Modern Art')
+    expect(html).not.toContain('Open post')
     expect(html).not.toContain('<p class=')
   })
 

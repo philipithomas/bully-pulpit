@@ -383,10 +383,16 @@ export function ImageZoom() {
         '.prose img, [data-zoomable]'
       ) as HTMLElement | null
       if (!matched) return
+      if (
+        matched instanceof HTMLAnchorElement &&
+        (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+      ) {
+        return
+      }
 
       // The matched element is either the image itself (prose images, the
-      // homepage portraits) or a wrapper control around one (the photography
-      // tiles, where keyboard activation targets the button, not the img).
+      // homepage portraits) or a wrapper link/control around one (the photo
+      // tiles, where keyboard activation targets the wrapper, not the img).
       const img =
         matched instanceof HTMLImageElement
           ? matched

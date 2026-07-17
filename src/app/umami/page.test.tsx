@@ -64,12 +64,16 @@ describe('UmamiPage viewer contract', () => {
     )
     expect(html).toContain('data-full-sizes="100vw"')
     expect(html).not.toContain('data-zoom-caption-description=')
+    expect(html).toContain('href="/sfmoma"')
+    expect(html).toContain('aria-haspopup="dialog"')
+    expect(html).not.toContain('<figcaption')
+    expect(html).not.toContain('<time')
   })
 
   it('uses the approved copy and promotes photo MMS above RSS', () => {
     const html = renderToStaticMarkup(<UmamiPage />)
 
-    expect(html).toContain('A photo journal of city life.')
+    expect(html).toContain('Photo journal of city life.')
     expect(html).toContain('Just the good stuff.')
     expect(html).not.toContain('Only the good stuff.')
     expect(html).not.toContain('An ongoing photography newsletter.')
