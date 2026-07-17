@@ -6,6 +6,12 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
+describe('siteConfig.newsletters', () => {
+  it('uses the concise umami description on shared signup surfaces', () => {
+    expect(siteConfig.newsletters.umami.tagline).toBe('Photos of city life.')
+  })
+})
+
 describe('siteConfig.adminEmails', () => {
   it('defaults to mail@philipithomas.com when ADMIN_EMAILS is unset', () => {
     vi.stubEnv('ADMIN_EMAILS', undefined)

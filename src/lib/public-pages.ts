@@ -101,7 +101,7 @@ He currently publishes four newsletters:
 - Postcard (/postcard): ${siteConfig.newsletters.postcard.tagline}
 - umami (/umami): ${siteConfig.newsletters.umami.tagline}
 
-The newsletters are available by email and RSS, and the homepage has a signup form. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
+The newsletters are available by email, RSS, and SMS, and the homepage has a signup form. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
     humanSitemap: true,
     xmlSitemap: true,
   },
@@ -110,7 +110,7 @@ The newsletters are available by email and RSS, and the homepage has a signup fo
   newsletterPage('postcard'),
   newsletterPage(
     'umami',
-    'An ongoing photography newsletter. Only the good stuff.'
+    'An ongoing photography newsletter by Philip Thomas about street scenes, city life, coffee, and other things he notices along the way.'
   ),
   newsletterPage('tsundoku'),
   {

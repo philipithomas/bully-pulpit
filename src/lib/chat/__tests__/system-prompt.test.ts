@@ -139,6 +139,15 @@ describe('getSystemPrompt page context', () => {
 })
 
 describe('getSystemPrompt chronology routing', () => {
+  it('describes umami with its current public positioning', () => {
+    const prompt = getSystemPrompt()
+
+    expect(prompt).toContain('- umami (/umami): Photos of city life.')
+    expect(prompt).not.toContain(
+      '- umami (/umami): Ongoing photography newsletter.'
+    )
+  })
+
   it('routes latest and chronological questions to listPosts', () => {
     const prompt = getSystemPrompt()
 

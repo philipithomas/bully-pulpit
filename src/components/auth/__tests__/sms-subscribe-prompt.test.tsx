@@ -40,6 +40,27 @@ describe('SmsSubscribePrompt', () => {
     expect(html).not.toContain('Or, ')
   })
 
+  it('renders a standalone CTA without connective copy', () => {
+    const html = renderToStaticMarkup(
+      <SmsSubscribePrompt
+        analyticsPlacement="newsletter_page"
+        newsletter="umami"
+        phoneDisplayNumber="+1 212 347 3190"
+        phoneNumber="+12123473190"
+        triggerClassName="btn-newsletter"
+        triggerLabel="Subscribe by SMS"
+        variant="standalone"
+      />
+    )
+
+    expect(html).toContain('>Subscribe by SMS</button>')
+    expect(html).toContain('btn-newsletter')
+    expect(html).toContain('aria-haspopup="dialog"')
+    expect(html).not.toContain('Or, ')
+    expect(html).not.toContain(' or ')
+    expect(html).not.toContain('>Subscribe by SMS</button>.')
+  })
+
   it('renders nothing without a configured phone number', () => {
     const html = renderToStaticMarkup(<SmsSubscribePrompt />)
 
@@ -67,6 +88,9 @@ describe('SmsSubscribePrompt', () => {
     expect(html).toContain('Message and data rates may apply')
     expect(html).toContain('Reply STOP')
     expect(html).toContain('HELP for help')
+    expect(html).toContain('If you previously replied STOP')
+    expect(html).toContain('href="sms:+12123473190?body=START"')
+    expect(html).toContain('or UNSTOP instead')
     expect(html).toContain('Consent is not a condition of purchase')
     expect(html).toContain('block text-gray-800')
     expect(html).toContain('mt-6 block text-sm text-gray-500')

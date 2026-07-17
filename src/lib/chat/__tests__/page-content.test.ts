@@ -10,7 +10,7 @@ describe('getPageText', () => {
     expect(text).toContain('Contraption (/contraption)')
     expect(text).toContain('Workshop (/workshop)')
     expect(text).toContain('Postcard (/postcard)')
-    expect(text).toContain('available by email and RSS')
+    expect(text).toContain('available by email, RSS, and SMS')
     expect(text).not.toContain('snail mail')
     expect(text.length).toBeLessThanOrEqual(PAGE_TEXT_MAX_CHARS)
   })

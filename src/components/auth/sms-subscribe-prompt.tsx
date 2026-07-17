@@ -24,7 +24,9 @@ interface SmsSubscribePromptProps {
   analyticsPlacement?: AnalyticsPlacement
   newsletter?: AnalyticsNewsletter
   homepageLabel?: string
-  variant?: 'form' | 'homepage'
+  triggerClassName?: string
+  triggerLabel?: string
+  variant?: 'form' | 'homepage' | 'standalone'
 }
 
 export function SmsSubscribeDisclosure({
@@ -51,7 +53,15 @@ export function SmsSubscribeDisclosure({
         </a>{' '}
         to receive recurring automated new-post texts for every active
         newsletter from The Contraption Company LLC through philipithomas.com at
-        this number.
+        this number. If you previously replied STOP, text{' '}
+        <a
+          href={`sms:${phoneNumber}?body=START`}
+          onClick={onSmsOpen}
+          className="font-sans text-gray-700 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950"
+        >
+          START
+        </a>{' '}
+        or UNSTOP instead.
       </span>
       <span className="mt-6 block text-sm text-gray-500">
         A new or reactivated signup includes one Bell contact-card MMS to save
@@ -86,6 +96,8 @@ export function SmsSubscribePrompt({
   analyticsPlacement = 'unknown',
   newsletter = 'unspecified',
   homepageLabel = 'SMS',
+  triggerClassName,
+  triggerLabel,
   variant = 'form',
 }: SmsSubscribePromptProps) {
   const handleSmsOpen = useCallback(() => {
@@ -99,33 +111,45 @@ export function SmsSubscribePrompt({
 
   const displayNumber = phoneDisplayNumber ?? phoneNumber
   const isHomepage = variant === 'homepage'
+  const isStandalone = variant === 'standalone'
 
   return (
     <Dialog>
       <span
         className={cn(
-          isHomepage
-            ? 'font-serif text-gray-500'
-            : 'mt-3 block max-w-md font-serif text-sm leading-relaxed text-gray-500',
+          isStandalone
+            ? 'block'
+            : isHomepage
+              ? 'font-serif text-gray-500'
+              : 'mt-3 block max-w-md font-serif text-sm leading-relaxed text-gray-500',
           align === 'center' && !isHomepage && 'text-center',
           className
         )}
       >
-        {isHomepage ? ' or ' : 'Or, '}
+        {isStandalone ? null : isHomepage ? ' or ' : 'Or, '}
         <DialogTrigger asChild>
           <button
             type="button"
             className={cn(
-              'underline underline-offset-2 transition-colors duration-300',
-              isHomepage
-                ? 'decoration-forest hover:text-forest'
-                : 'decoration-gray-300 hover:text-gray-950'
+              isStandalone
+                ? 'btn'
+                : 'underline underline-offset-2 transition-colors duration-300',
+              !isStandalone &&
+                (isHomepage
+                  ? 'decoration-forest hover:text-forest'
+                  : 'decoration-gray-300 hover:text-gray-950'),
+              triggerClassName
             )}
           >
-            {isHomepage ? homepageLabel : 'subscribe via SMS'}
+            {triggerLabel ??
+              (isStandalone
+                ? 'Subscribe by SMS'
+                : isHomepage
+                  ? homepageLabel
+                  : 'subscribe via SMS')}
           </button>
         </DialogTrigger>
-        {isHomepage ? null : '.'}
+        {isHomepage || isStandalone ? null : '.'}
       </span>
 
       <DialogContent>

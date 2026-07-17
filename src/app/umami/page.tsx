@@ -14,6 +14,7 @@ import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 import { publicAppPage } from '@/lib/public-pages'
 
 const umamiPage = publicAppPage('/umami')
+const umamiSocialTitle = `${umamiPage.title} | ${siteConfig.title}`
 
 export const metadata: Metadata = {
   title: umamiPage.title,
@@ -21,6 +22,21 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/umami',
     types: feedDiscovery('umami'),
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: '/umami',
+    siteName: siteConfig.title,
+    title: umamiSocialTitle,
+    description: umamiPage.description,
+    images: [{ url: siteConfig.image, width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: umamiSocialTitle,
+    description: umamiPage.description,
+    images: [{ url: siteConfig.image, width: 1200, height: 630 }],
   },
   icons: {
     icon: [{ url: siteConfig.newsletters.umami.icon, type: 'image/svg+xml' }],
@@ -222,23 +238,36 @@ export default function UmamiPage() {
               className="mt-0 md:mx-0"
               subscribeEndpoint="/api/subscribe/umami"
             />
+            {smsSignupPhoneNumber ? (
+              <div className="mt-6 bg-white/40 px-5 py-4 text-left">
+                <h2 className="font-serif text-base text-gray-800">
+                  Get umami by text
+                </h2>
+                <p className="mt-1 font-serif text-sm leading-relaxed text-gray-600">
+                  New umami posts arrive by text, with the photo attached when
+                  available. The SMS subscription includes my other active
+                  newsletters, too.
+                </p>
+                <SmsSubscribePrompt
+                  analyticsPlacement="newsletter_page"
+                  newsletter="umami"
+                  phoneDisplayNumber={smsSignupDisplayNumber}
+                  phoneNumber={smsSignupPhoneNumber}
+                  triggerClassName="btn-newsletter"
+                  triggerLabel="Subscribe by SMS"
+                  variant="standalone"
+                  className="mt-4"
+                />
+              </div>
+            ) : null}
             <p className="mt-4 font-serif text-xs text-gray-500">
-              Also available via{' '}
+              Prefer a feed? Follow umami via{' '}
               <Link
                 href="/feed/umami/rss.xml"
                 className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
               >
                 RSS
               </Link>
-              <SmsSubscribePrompt
-                analyticsPlacement="newsletter_page"
-                newsletter="umami"
-                phoneDisplayNumber={smsSignupDisplayNumber}
-                phoneNumber={smsSignupPhoneNumber}
-                homepageLabel="SMS (all newsletters)"
-                variant="homepage"
-                className="[&_button]:decoration-umami/50 [&_button:hover]:text-gray-950"
-              />
               .
             </p>
           </div>
