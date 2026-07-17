@@ -8,7 +8,9 @@ afterEach(() => {
 
 describe('siteConfig.newsletters', () => {
   it('uses the concise umami description on shared signup surfaces', () => {
-    expect(siteConfig.newsletters.umami.tagline).toBe('Photos of city life.')
+    expect(siteConfig.newsletters.umami.tagline).toBe(
+      'A photo journal of city life.'
+    )
   })
 })
 

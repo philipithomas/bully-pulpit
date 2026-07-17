@@ -69,7 +69,7 @@ describe('UmamiPage viewer contract', () => {
   it('uses the approved copy and promotes photo MMS above RSS', () => {
     const html = renderToStaticMarkup(<UmamiPage />)
 
-    expect(html).toContain('Photos of city life.')
+    expect(html).toContain('A photo journal of city life.')
     expect(html).toContain('Just the good stuff.')
     expect(html).not.toContain('Only the good stuff.')
     expect(html).not.toContain('An ongoing photography newsletter.')

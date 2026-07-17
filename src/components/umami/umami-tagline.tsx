@@ -35,7 +35,7 @@ export function UmamiTagline() {
 
   return (
     <p className="mt-4 max-w-xl text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
-      Photos of city life.{' '}
+      A photo journal of city life.{' '}
       <span className={highlight ? 'umami-tagline-nudge' : undefined}>
         Just the good stuff.
       </span>
