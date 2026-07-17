@@ -32,6 +32,7 @@ interface SubscribeCtaProps {
   newsletter: Newsletter
   className?: string
   buttonClassName?: string
+  buttonLabel?: string
   align?: 'start' | 'center'
   subscribeEndpoint?: string
   successRedirect?: '/account'
@@ -49,6 +50,7 @@ function ActiveSubscribeCta({
   newsletter,
   className = 'mt-16',
   buttonClassName = 'btn btn-primary',
+  buttonLabel,
   align = 'start',
   subscribeEndpoint,
   successRedirect = newsletter === 'umami' ? '/account' : undefined,
@@ -63,6 +65,7 @@ function ActiveSubscribeCta({
   const [saving, setSaving] = useState(false)
   const key = newsletterPreferenceKeys[newsletter]
   const config = siteConfig.newsletters[newsletter]
+  const resolvedButtonLabel = buttonLabel ?? `Subscribe to ${config.name}`
   const subscribed = preferences ? Boolean(preferences[key]) : false
   const initialMemberClassName =
     hasSession === null ? '[[data-member]_&]:hidden' : ''
@@ -133,7 +136,7 @@ function ActiveSubscribeCta({
               {saving ? (
                 <Spinner className="h-4 w-4" />
               ) : (
-                `Subscribe to ${config.name}`
+                <span>{resolvedButtonLabel}</span>
               )}
             </span>
           </button>
@@ -149,6 +152,7 @@ function ActiveSubscribeCta({
         <InlineSignupForm
           align={align}
           buttonClassName={buttonClassName}
+          buttonLabel={buttonLabel}
           confirmedMessage={`You are subscribed to new ${newsletterNoun[newsletter]} by email.`}
           newsletters={[newsletter]}
           smsSignupDisplayNumber={smsSignupDisplayNumber}

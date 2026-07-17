@@ -200,6 +200,8 @@ export default function UmamiPage() {
               newsletter="umami"
               analyticsPlacement="newsletter_page"
               align="start"
+              buttonClassName="btn btn-primary btn-newsletter"
+              buttonLabel="Follow"
               className="umami-page-email mt-0 md:mx-0"
               subscribeEndpoint="/api/subscribe/umami"
             />

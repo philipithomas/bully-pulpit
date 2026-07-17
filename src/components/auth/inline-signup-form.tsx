@@ -26,6 +26,7 @@ interface Props {
   newsletters?: Newsletter[]
   align?: 'start' | 'center'
   buttonClassName?: string
+  buttonLabel?: string
   subscribeEndpoint?: string
   successRedirect?: '/account'
   confirmedMessage?: string
@@ -50,6 +51,7 @@ export function InlineSignupForm({
   newsletters = [...defaultSignupNewsletters],
   align = 'start',
   buttonClassName = 'btn btn-primary',
+  buttonLabel = 'Subscribe',
   subscribeEndpoint = '/api/subscribe',
   successRedirect,
   confirmedMessage = 'You are subscribed by email.',
@@ -273,7 +275,11 @@ export function InlineSignupForm({
             className={`${buttonClassName} h-10 shrink-0`}
           >
             <span className="btn-text">
-              {loading ? <Spinner className="h-4 w-4" /> : 'Subscribe'}
+              {loading ? (
+                <Spinner className="h-4 w-4" />
+              ) : (
+                <span>{buttonLabel}</span>
+              )}
             </span>
             <span className="btn-arrow">
               {loading ? null : <ArrowIcon className="w-4 h-4" />}

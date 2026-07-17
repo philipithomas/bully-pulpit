@@ -10,9 +10,23 @@ const subscribeMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/components/posts/subscribe-cta', () => ({
-  SubscribeCta: ({ className }: { className?: string }) =>
+  SubscribeCta: ({
+    className,
+    buttonClassName,
+    buttonLabel,
+  }: {
+    className?: string
+    buttonClassName?: string
+    buttonLabel?: string
+  }) =>
     subscribeMocks.visible() ? (
-      <div className={className} data-testid="subscribe-cta" />
+      <div
+        className={className}
+        data-button-class-name={buttonClassName}
+        data-testid="subscribe-cta"
+      >
+        {buttonLabel}
+      </div>
     ) : null,
 }))
 vi.mock('@/components/auth/sms-subscribe-prompt', () => ({
@@ -89,6 +103,10 @@ describe('UmamiPage viewer contract', () => {
     expect(html).toContain('data-newsletter="umami"')
     expect(html).toContain('data-variant="link"')
     expect(html).toContain('>SMS</span>')
+    expect(html).toContain(
+      'data-button-class-name="btn btn-primary btn-newsletter"'
+    )
+    expect(html).toContain('>Follow</div>')
     expect(html).not.toContain('Prefer a feed?')
     expect(html).not.toContain('/feed/umami/rss.xml')
     expect(metadata).toMatchObject({
