@@ -30,6 +30,7 @@ import {
   forceDarkColorScheme,
   forceLightColorScheme,
 } from '@/lib/email/preview'
+import { sendAudienceLabel } from '@/lib/printing-press'
 import { cn } from '@/lib/utils'
 
 type SendStats = {
@@ -258,16 +259,7 @@ export function SendClient({
     active && stats.total === 0
       ? 'Preparing send'
       : `${processed} of ${stats.total} processed${active ? ' · sending' : ''}`
-  const sendAudienceParts = [
-    eligible > 0
-      ? `${eligible} email subscriber${eligible === 1 ? '' : 's'}`
-      : null,
-    smsEligible > 0
-      ? `${smsEligible} SMS subscriber${smsEligible === 1 ? '' : 's'}`
-      : null,
-  ].filter(Boolean)
-  const sendAudience =
-    sendAudienceParts.length > 0 ? sendAudienceParts.join(' and ') : '0 people'
+  const sendAudience = sendAudienceLabel(eligible, smsEligible)
   const canSend =
     sendingEnabled && (eligible > 0 || smsEligible > 0) && !active && !starting
   const canRetry =
