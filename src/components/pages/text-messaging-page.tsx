@@ -34,11 +34,11 @@ export function TextMessagingConsent({
             Contraption Company LLC through philipithomas.com.
           </p>
           <p>
-            The texts announce new Contraption, Workshop, and Postcard posts. A
-            new or reactivated subscription also sends one Bell contact-card
-            MMS. On iPhone, open the attachment, then tap Create New Contact to
-            save Bell so later messages show Bell's name and photo. Message
-            frequency varies. Message and data rates may apply.
+            The texts announce new Contraption, Workshop, Postcard, and umami
+            posts. A new or reactivated subscription also sends one Bell
+            contact-card MMS. On iPhone, open the attachment, then tap Create
+            New Contact to save Bell so later messages show Bell's name and
+            photo. Message frequency varies. Message and data rates may apply.
           </p>
           <p>
             For a first-time subscription, text SUBSCRIBE, START, or JOIN. After

@@ -47,6 +47,26 @@ describe('newsletter SMS', () => {
     )
   })
 
+  it('preserves lowercase umami and attaches its cover', () => {
+    const umamiPost = post({
+      slug: 'sfmoma',
+      newsletter: 'umami',
+      frontmatter: {
+        ...post().frontmatter,
+        title: 'SFMOMA',
+        publishedAt: '2026-07-11',
+        coverImage: '/images/covers/umami/sfmoma.jpg',
+      },
+    })
+
+    expect(renderNewsletterSms(umamiPost)).toBe(
+      'New umami post:\nSFMOMA\nhttps://www.philipithomas.com/sfmoma?utm_source=sms\n\n(Reply STOP to unsubscribe.)'
+    )
+    expect(newsletterSmsMediaUrl(umamiPost)).toBe(
+      'https://www.philipithomas.com/api/phone/newsletter-cover/sfmoma?v=%2Fimages%2Fcovers%2Fumami%2Fsfmoma.jpg'
+    )
+  })
+
   it('attaches a versioned normalized cover for photography newsletters', () => {
     expect(newsletterSmsMediaUrl(post())).toBe(
       'https://www.philipithomas.com/api/phone/newsletter-cover/first-photo?v=%2Fimages%2Fcovers%2Ftsundoku%2Fselfie.jpg'

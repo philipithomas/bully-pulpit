@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/printing-press/page-header'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth/admin'
+import { siteConfig } from '@/lib/config'
 import { getAllPosts } from '@/lib/content/loader'
 import { allSendStats } from '@/lib/db/queries/email-sends'
 import { activeSendRunSlugs } from '@/lib/email/send-guard'
@@ -91,8 +92,8 @@ export default async function PostsPage() {
                   {post.frontmatter.title}
                 </p>
                 <p className="mt-0.5 font-mono text-muted-foreground text-xs">
-                  <cite className="font-serif capitalize">
-                    {post.newsletter}
+                  <cite className="font-serif">
+                    {siteConfig.newsletters[post.newsletter].name}
                   </cite>
                   {post.frontmatter.publishedAt
                     ? ` · ${post.frontmatter.publishedAt}`

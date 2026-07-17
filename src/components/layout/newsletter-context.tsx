@@ -8,8 +8,9 @@ import {
   useMemo,
   useState,
 } from 'react'
+import type { Newsletter } from '@/lib/content/types'
 
-type NewsletterState = string | null
+type NewsletterState = Newsletter | null
 
 const NewsletterContext = createContext<{
   newsletter: NewsletterState
@@ -30,7 +31,7 @@ export function useNewsletter() {
   return useContext(NewsletterContext)
 }
 
-export function SetNewsletter({ newsletter }: { newsletter: string | null }) {
+export function SetNewsletter({ newsletter }: { newsletter: NewsletterState }) {
   const { setNewsletter } = useNewsletter()
   useEffect(() => {
     setNewsletter(newsletter)

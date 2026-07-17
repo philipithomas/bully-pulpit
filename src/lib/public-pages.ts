@@ -7,6 +7,7 @@ export const PUBLIC_APP_PAGE_PATHS = [
   '/contraption',
   '/workshop',
   '/postcard',
+  '/umami',
   '/tsundoku',
   '/photography',
   '/print',
@@ -32,7 +33,10 @@ export interface PublicAppPage {
 export const PRINT_EDITION_STATUS_TEXT =
   'The print edition began on 2025-12-10 and is no longer available to order.'
 
-function newsletterPage(newsletter: Newsletter): PublicAppPage {
+function newsletterPage(
+  newsletter: Newsletter,
+  description: string = siteConfig.newsletters[newsletter].tagline
+): PublicAppPage {
   const config = siteConfig.newsletters[newsletter]
   const path = `/${config.slug}` as PublicAppPagePath
 
@@ -40,8 +44,8 @@ function newsletterPage(newsletter: Newsletter): PublicAppPage {
     id: `app-${config.slug}`,
     path,
     title: config.name,
-    description: config.tagline,
-    searchText: `${config.name}. ${config.tagline} This page is the complete ${config.name} newsletter archive, with posts ordered from newest to oldest.`,
+    description,
+    searchText: `${config.name}. ${description} This page is the complete ${config.name} newsletter archive, with posts ordered from newest to oldest.`,
     bellText: () => {
       const recent = getPostsByNewsletter(newsletter)
         .slice(0, 5)
@@ -51,7 +55,7 @@ function newsletterPage(newsletter: Newsletter): PublicAppPage {
         )
 
       return [
-        `This page is the ${config.name} newsletter archive, ordered from newest to oldest. ${config.tagline}`,
+        `This page is the ${config.name} newsletter archive, ordered from newest to oldest. ${description}`,
         '',
         'Most recent posts:',
         ...recent,
@@ -91,19 +95,23 @@ export const publicAppPages = [
     bellText:
       () => `The homepage of philipithomas.com, the personal website and blog of ${siteConfig.author}. Philip crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He is interested in urbanism, coffee, and photography. He does not use social media, so this website contains his writing and media. Visitors can connect with him on GitHub and LinkedIn.
 
-He publishes four newsletters:
+He currently publishes four newsletters:
 - Contraption (/contraption): ${siteConfig.newsletters.contraption.tagline}
 - Workshop (/workshop): ${siteConfig.newsletters.workshop.tagline}
 - Postcard (/postcard): ${siteConfig.newsletters.postcard.tagline}
-- Tsundoku (/tsundoku): ${siteConfig.newsletters.tsundoku.tagline}
+- umami (/umami): ${siteConfig.newsletters.umami.tagline}
 
-The newsletters are available by email and RSS, and the homepage has a signup form.`,
+The newsletters are available by email, RSS, and SMS, and the homepage has a signup form. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
     humanSitemap: true,
     xmlSitemap: true,
   },
   newsletterPage('contraption'),
   newsletterPage('workshop'),
   newsletterPage('postcard'),
+  newsletterPage(
+    'umami',
+    'An ongoing photography newsletter by Philip Thomas about street scenes, city life, coffee, and other things he notices along the way.'
+  ),
   newsletterPage('tsundoku'),
   {
     id: 'app-photography',

@@ -143,9 +143,27 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
   const date = element.dataset.zoomCaptionDate ?? img.dataset.zoomCaptionDate
   const locationName =
     element.dataset.zoomCaptionLocationName ??
-    img.dataset.zoomCaptionLocationName
+    img.dataset.zoomCaptionLocationName ??
+    element.dataset.zoomCaptionLocation ??
+    img.dataset.zoomCaptionLocation
   const locationUrl =
-    element.dataset.zoomCaptionLocationUrl ?? img.dataset.zoomCaptionLocationUrl
+    element.dataset.zoomCaptionLocationUrl ??
+    img.dataset.zoomCaptionLocationUrl ??
+    element.dataset.zoomCaptionLocationHref ??
+    img.dataset.zoomCaptionLocationHref
+  const presentationValue =
+    element.dataset.zoomCaptionPresentation ??
+    img.dataset.zoomCaptionPresentation
+  const presentation =
+    presentationValue === 'immersive' || presentationValue === 'rail'
+      ? presentationValue
+      : undefined
+  const collectionValue =
+    element.dataset.zoomCaptionCollection ?? img.dataset.zoomCaptionCollection
+  const collection =
+    collectionValue === 'umami' || collectionValue === 'tsundoku'
+      ? collectionValue
+      : undefined
   const footerHeading =
     element.dataset.zoomCaptionFooterHeading ??
     img.dataset.zoomCaptionFooterHeading
@@ -185,6 +203,8 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
             date,
             locationName,
             locationUrl,
+            presentation,
+            collection,
             footer:
               footerLinks.length > 0
                 ? {
@@ -363,10 +383,16 @@ export function ImageZoom() {
         '.prose img, [data-zoomable]'
       ) as HTMLElement | null
       if (!matched) return
+      if (
+        matched instanceof HTMLAnchorElement &&
+        (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+      ) {
+        return
+      }
 
       // The matched element is either the image itself (prose images, the
-      // homepage portraits) or a wrapper control around one (the photography
-      // tiles, where keyboard activation targets the button, not the img).
+      // homepage portraits) or a wrapper link/control around one (the photo
+      // tiles, where keyboard activation targets the wrapper, not the img).
       const img =
         matched instanceof HTMLImageElement
           ? matched
@@ -375,9 +401,11 @@ export function ImageZoom() {
 
       e.preventDefault()
       triggerRef.current =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null
+        matched.tabIndex >= 0
+          ? matched
+          : document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null
       const item = zoomItemFromElement(matched)
       if (!item) return
 

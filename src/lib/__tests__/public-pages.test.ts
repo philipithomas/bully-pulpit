@@ -64,7 +64,16 @@ describe('public app page registry', () => {
 
   it('shares the concluded print-edition fact and removes stale snail mail', () => {
     expect(getPageText('/print')).toContain(PRINT_EDITION_STATUS_TEXT)
-    expect(getPageText('/')).toContain('available by email and RSS')
+    expect(getPageText('/')).toContain('available by email, RSS, and SMS')
     expect(getPageText('/')).not.toContain('snail mail')
+  })
+
+  it('gives umami an expressive search and SEO description', () => {
+    const umami = findPublicAppPage('/umami')
+
+    expect(umami?.description).toBe(
+      'An ongoing photography newsletter by Philip Thomas about street scenes, city life, coffee, and other things he notices along the way.'
+    )
+    expect(getPageText('/umami')).toContain(umami?.description)
   })
 })

@@ -24,14 +24,18 @@ const newsletterNoun: Record<Newsletter, string> = {
   contraption: 'essays',
   workshop: 'notes',
   postcard: 'updates',
+  umami: 'photos',
   tsundoku: 'photos',
 }
 
 interface SubscribeCtaProps {
   newsletter: Newsletter
   className?: string
+  buttonClassName?: string
+  buttonLabel?: string
   align?: 'start' | 'center'
   subscribeEndpoint?: string
+  successRedirect?: '/account'
   smsSignupPhoneNumber?: string | null
   smsSignupDisplayNumber?: string | null
   analyticsPlacement?: AnalyticsPlacement
@@ -45,8 +49,11 @@ export function SubscribeCta(props: SubscribeCtaProps) {
 function ActiveSubscribeCta({
   newsletter,
   className = 'mt-16',
+  buttonClassName = 'btn btn-primary',
+  buttonLabel,
   align = 'start',
   subscribeEndpoint,
+  successRedirect = newsletter === 'umami' ? '/account' : undefined,
   smsSignupPhoneNumber = null,
   smsSignupDisplayNumber = null,
   analyticsPlacement = 'post_footer',
@@ -58,7 +65,7 @@ function ActiveSubscribeCta({
   const [saving, setSaving] = useState(false)
   const key = newsletterPreferenceKeys[newsletter]
   const config = siteConfig.newsletters[newsletter]
-  const buttonClassName = 'btn btn-primary'
+  const resolvedButtonLabel = buttonLabel ?? `Subscribe to ${config.name}`
   const subscribed = preferences ? Boolean(preferences[key]) : false
   const initialMemberClassName =
     hasSession === null ? '[[data-member]_&]:hidden' : ''
@@ -88,13 +95,24 @@ function ActiveSubscribeCta({
       setPreferences(
         (prev) => data?.preferences ?? (prev ? { ...prev, [key]: true } : prev)
       )
+      if (successRedirect) {
+        window.location.assign(successRedirect)
+        return
+      }
       toast.success(`Subscribed to ${config.name}`)
     } catch {
       toast.error('Could not subscribe. Try again.')
     } finally {
       setSaving(false)
     }
-  }, [analyticsPlacement, config.name, key, newsletter, setPreferences])
+  }, [
+    analyticsPlacement,
+    config.name,
+    key,
+    newsletter,
+    setPreferences,
+    successRedirect,
+  ])
 
   if (hasSession && loading) return null
   if (user && (!preferences || subscribed)) return null
@@ -118,7 +136,7 @@ function ActiveSubscribeCta({
               {saving ? (
                 <Spinner className="h-4 w-4" />
               ) : (
-                `Subscribe to ${config.name}`
+                <span>{resolvedButtonLabel}</span>
               )}
             </span>
           </button>
@@ -134,11 +152,13 @@ function ActiveSubscribeCta({
         <InlineSignupForm
           align={align}
           buttonClassName={buttonClassName}
+          buttonLabel={buttonLabel}
           confirmedMessage={`You are subscribed to new ${newsletterNoun[newsletter]} by email.`}
           newsletters={[newsletter]}
           smsSignupDisplayNumber={smsSignupDisplayNumber}
           smsSignupPhoneNumber={smsSignupPhoneNumber}
           subscribeEndpoint={subscribeEndpoint}
+          successRedirect={successRedirect}
           analyticsPlacement={analyticsPlacement}
         />
       )}

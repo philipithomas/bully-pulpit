@@ -31,7 +31,15 @@ export const subscribers = pgTable(
       .notNull()
       .default(true),
     subscribedWorkshop: boolean('subscribed_workshop').notNull().default(true),
+    // Keep the storage default off so an older deployment cannot opt readers
+    // into a newsletter it does not know about after this migration lands.
+    // New-code signup paths explicitly choose the active newsletter defaults.
+    subscribedUmami: boolean('subscribed_umami').notNull().default(false),
     subscribedTsundoku: boolean('subscribed_tsundoku').notNull().default(false),
+    umamiOptInNotificationSentAt: timestamp(
+      'umami_opt_in_notification_sent_at',
+      { withTimezone: true }
+    ),
     source: text('source'),
     // Every session JWT snapshots this value. Incrementing it invalidates all
     // previously issued sessions without keeping a server-side token list.
@@ -57,6 +65,9 @@ export const subscribers = pgTable(
     index('idx_subscribers_workshop_created')
       .on(table.createdAt.desc(), table.id.desc())
       .where(sql`${table.subscribedWorkshop} = true`),
+    index('idx_subscribers_umami_created')
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.subscribedUmami} = true`),
     index('idx_subscribers_tsundoku_created')
       .on(table.createdAt.desc(), table.id.desc())
       .where(sql`${table.subscribedTsundoku} = true`),
@@ -230,6 +241,7 @@ export const smsSubscribers = pgTable(
       .notNull()
       .default(true),
     subscribedWorkshop: boolean('subscribed_workshop').notNull().default(true),
+    subscribedUmami: boolean('subscribed_umami').notNull().default(false),
     subscribedTsundoku: boolean('subscribed_tsundoku').notNull().default(false),
     bellContactCardClaimId: uuid('bell_contact_card_claim_id'),
     bellContactCardProcessingAt: timestamp('bell_contact_card_processing_at', {
@@ -258,6 +270,9 @@ export const smsSubscribers = pgTable(
     index('idx_sms_subscribers_workshop_created')
       .on(table.createdAt.desc(), table.id.desc())
       .where(sql`${table.subscribedWorkshop} = true`),
+    index('idx_sms_subscribers_umami_created')
+      .on(table.createdAt.desc(), table.id.desc())
+      .where(sql`${table.subscribedUmami} = true`),
     index('idx_sms_subscribers_tsundoku_created')
       .on(table.createdAt.desc(), table.id.desc())
       .where(sql`${table.subscribedTsundoku} = true`),

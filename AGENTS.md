@@ -55,6 +55,8 @@ pnpm db:studio    # Open Drizzle Studio against the DB
 - Path aliases: `@/*` maps to `./src/*` (relative imports banned by biome)
 - Biome for linting/formatting (not ESLint/Prettier)
 - Single quotes, no semicolons (biome config)
+- Visual design uses spacing and layout instead of decorative horizontal lines to separate page sections. Reserve borders for controls and necessary structural boundaries.
+- Do not use all-caps text with letter-spacing as a label style. Use sentence case, and generally reserve monospace type for code rather than UI labels, dates, or metadata.
 - Integration tests are `*.integration.test.ts`, colocated, and run real SQL against an in-memory PGlite Postgres (no Docker/network) in the same `pnpm test` run. Harness at `src/test/integration/`: swap the Neon client with `vi.mock('@/lib/db/client', () => import('@/test/integration/db'))` (applies the real migrations, fresh DB per file, `resetDb()` per test), `session.ts` replaces `next/headers` for real-JWT sessions, `mocks.ts` has SES/BotID factories. Mock only external I/O — never `@/lib/db/queries/*`
 - Fonts loaded from fonts.philipithomas.com CDN
 - GitHub workflows (`.github/workflows/`): `check.yml` is CI (every push/PR to main: Biome, tsc, tests, `content:check`, `links:check`, build); `postcard-draft.yml` opens a draft postcard PR monthly. External links are not checked automatically because historical references, paywalls, bot blocking, and rate limits make automated reports noisy. There are no Claude automation workflows

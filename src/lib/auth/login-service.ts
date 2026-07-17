@@ -85,6 +85,7 @@ function subscribedNewsletterNames(subscriber: Subscriber): string[] {
   if (subscriber.subscribedContraption) names.push('Contraption')
   if (subscriber.subscribedWorkshop) names.push('Workshop')
   if (subscriber.subscribedPostcard) names.push('Postcard')
+  if (subscriber.subscribedUmami) names.push(siteConfig.newsletters.umami.name)
   return names
 }
 

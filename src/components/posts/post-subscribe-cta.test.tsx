@@ -7,7 +7,9 @@ const { useSearchParams } = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({ useSearchParams }))
 vi.mock('@/components/posts/subscribe-cta', () => ({
-  SubscribeCta: () => <div>Email CTA</div>,
+  SubscribeCta: ({ buttonClassName }: { buttonClassName?: string }) => (
+    <div data-button-class-name={buttonClassName}>Email CTA</div>
+  ),
 }))
 
 import { PostSubscribeCta } from '@/components/posts/post-subscribe-cta'
@@ -30,7 +32,11 @@ describe('PostSubscribeCta', () => {
   })
 
   it('shows the email CTA without the SMS source', () => {
-    expect(renderCta()).toContain('Email CTA')
+    const html = renderCta()
+    expect(html).toContain('Email CTA')
+    expect(html).toContain(
+      'data-button-class-name="btn btn-primary btn-newsletter"'
+    )
     expect(renderCta('utm_source=email')).toContain('Email CTA')
   })
 })

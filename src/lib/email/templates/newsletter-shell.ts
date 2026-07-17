@@ -1,6 +1,7 @@
 import { siteConfig } from '@/lib/config'
 import type { NewsletterSlug } from '@/lib/db/queries/subscribers'
 import { escapeHtml } from '@/lib/email/escape'
+import { isPhotoNewsletter } from '@/lib/newsletters'
 
 // Preheader padding: zero-width characters that stop email clients from pulling
 // body text into the inbox preview after the real preheader. Ported verbatim
@@ -14,6 +15,7 @@ const darkAccentColors: Record<NewsletterSlug, string> = {
   contraption: '#8FB8A5',
   workshop: '#C29B7E',
   postcard: '#97A8D9',
+  umami: '#F2712C',
   tsundoku: '#FF7A82',
 }
 const DEFAULT_DARK_ACCENT = '#A8A49D'
@@ -21,15 +23,14 @@ const backgroundColors: Record<NewsletterSlug, string> = {
   contraption: '#ffffff',
   workshop: '#ffffff',
   postcard: '#ffffff',
+  umami: '#f1ebe5',
   tsundoku: '#f4f4f2',
 }
 
-// Each newsletter wordmark is a solid-ink PNG on transparency. The light-mode
-// asset is the dark accent ink (forest/walnut/indigo); the *-email-dark.png is
-// the same wordmark recolored to cream so it reads on the dark surface without
-// a background pill. We ship both and let the dark media query swap which is
-// shown via display (the email-standard light/dark image swap) — clients that
-// ignore prefers-color-scheme just keep the light wordmark.
+// Each newsletter wordmark is a solid-ink PNG on transparency. Writing brands
+// swap to a cream *-email-dark.png in dark mode. The brighter photo brands use
+// one mark in both schemes; that avoids unreliable SVG email support while
+// preserving their identifying color.
 const wordmarks: Record<
   NewsletterSlug,
   { name: string; file: string; width: number; height: number }
@@ -42,6 +43,7 @@ const wordmarks: Record<
   },
   workshop: { name: 'Workshop', file: 'workshop-brand', width: 87, height: 24 },
   postcard: { name: 'Postcard', file: 'postcard', width: 79, height: 18 },
+  umami: { name: 'umami', file: 'umami', width: 102, height: 24 },
   tsundoku: { name: 'Tsundoku', file: 'tsundoku', width: 157, height: 24 },
 }
 
@@ -51,9 +53,9 @@ function brandHeader(newsletter: NewsletterSlug | '', siteUrl: string): string {
   }
   const mark = wordmarks[newsletter]
   const dims = `height: ${mark.height}px; width: ${mark.width}px;`
-  if (newsletter === 'tsundoku') {
+  if (isPhotoNewsletter(newsletter)) {
     return `<a href="${siteUrl}/${newsletter}" style="text-decoration: none;">
-              <img class="email-brand-tsundoku" src="${siteUrl}/images/${mark.file}-email.png" alt="${mark.name}" width="${mark.width}" height="${mark.height}" style="${dims}">
+              <img class="email-brand-${newsletter}" src="${siteUrl}/images/${mark.file}-email.png" alt="${mark.name}" width="${mark.width}" height="${mark.height}" style="${dims}">
             </a>`
   }
   return `<a href="${siteUrl}/${newsletter}" style="text-decoration: none;">
@@ -75,23 +77,25 @@ export function renderNewsletterShell(input: {
   siteUrl?: string
 }): string {
   const siteUrl = input.siteUrl ?? siteConfig.url
-  const isTsundoku = input.newsletter === 'tsundoku'
+  const isPhoto = input.newsletter ? isPhotoNewsletter(input.newsletter) : false
   const bgColor = input.newsletter
     ? backgroundColors[input.newsletter]
     : '#ffffff'
-  const cardBgColor = isTsundoku ? bgColor : '#ffffff'
-  const brandPadding = isTsundoku ? '36px 20px 28px' : '40px 20px 0'
-  const contentPadding = isTsundoku ? '0 32px 32px' : '32px'
-  const mobileContentPadding = isTsundoku ? '0 20px 24px' : '24px 20px'
-  const footerPadding = isTsundoku ? '12px 20px 28px' : '20px'
-  const contentCellClass = isTsundoku
-    ? 'content-cell content-cell-tsundoku'
+  const cardBgColor = isPhoto ? bgColor : '#ffffff'
+  const brandPadding = isPhoto ? '36px 20px 28px' : '40px 20px 0'
+  const contentPadding = isPhoto ? '0 32px 32px' : '32px'
+  const mobileContentPadding = isPhoto ? '0 20px 24px' : '24px 20px'
+  const footerPadding = isPhoto ? '12px 20px 28px' : '20px'
+  const contentCellClass = isPhoto
+    ? `content-cell content-cell-${input.newsletter}`
     : 'content-cell'
-  const cardClass = isTsundoku ? 'email-card email-card-tsundoku' : 'email-card'
-  const tsundokuDarkOverrides = isTsundoku
+  const cardClass = isPhoto
+    ? `email-card email-card-${input.newsletter}`
+    : 'email-card'
+  const photoDarkOverrides = isPhoto
     ? `
-    .email-card-tsundoku { background-color: #121110 !important; }
-    img.email-brand-tsundoku { display: inline-block !important; opacity: 1 !important; }`
+    .email-card-${input.newsletter} { background-color: #121110 !important; }
+    img.email-brand-${input.newsletter} { display: inline-block !important; opacity: 1 !important; }`
     : ''
   const darkAccent = input.newsletter
     ? darkAccentColors[input.newsletter]
@@ -147,7 +151,7 @@ export function renderNewsletterShell(input: {
     .email-footer p, .email-footer a { color: #A8A49D !important; }
     img.email-brand-light { display: none !important; }
     img.email-brand-dark { display: inline-block !important; }
-    a.email-brand-text { color: #ECE9E4 !important; }${tsundokuDarkOverrides}
+    a.email-brand-text { color: #ECE9E4 !important; }${photoDarkOverrides}
   }
 </style>
 </head>

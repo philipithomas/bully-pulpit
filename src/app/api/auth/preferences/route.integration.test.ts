@@ -9,6 +9,7 @@ vi.mock('@/lib/email/ses', () =>
 
 import { DELETE, GET, PATCH } from '@/app/api/auth/preferences/route'
 import { signSession } from '@/lib/auth/jwt'
+import { siteConfig } from '@/lib/config'
 import { emailSends, logins, subscribers } from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { db, resetDb } from '@/test/integration/db'
@@ -29,6 +30,7 @@ async function seedSubscriber(
       email: 'reader@example.com',
       name: 'Reader',
       confirmedAt: new Date(),
+      subscribedUmami: true,
       ...overrides,
     })
     .returning()
@@ -93,6 +95,7 @@ describe('GET', () => {
       subscribed_contraption: true,
       subscribed_workshop: false,
       subscribed_postcard: true,
+      subscribed_umami: true,
     })
     const [stored] = await db
       .select()
@@ -132,6 +135,7 @@ describe('PATCH', () => {
       subscribed_workshop: false,
       subscribed_contraption: true,
       subscribed_postcard: true,
+      subscribed_umami: true,
     })
 
     const [row] = await db
@@ -141,6 +145,7 @@ describe('PATCH', () => {
     expect(row.subscribedWorkshop).toBe(false)
     expect(row.subscribedContraption).toBe(true)
     expect(row.subscribedPostcard).toBe(true)
+    expect(row.subscribedUmami).toBe(true)
     expect(row.subscribedTsundoku).toBe(false)
     expect(row.name).toBe('Reader')
   })
@@ -159,6 +164,7 @@ describe('PATCH', () => {
         subscribed_contraption: false,
         subscribed_workshop: true,
         subscribed_postcard: false,
+        subscribed_umami: false,
         analytics_placement: 'onboarding',
       })
     )
@@ -169,6 +175,7 @@ describe('PATCH', () => {
       subscribed_contraption: false,
       subscribed_workshop: true,
       subscribed_postcard: false,
+      subscribed_umami: false,
     })
     const [row] = await db
       .select()
@@ -178,8 +185,44 @@ describe('PATCH', () => {
       subscribedContraption: false,
       subscribedWorkshop: true,
       subscribedPostcard: false,
+      subscribedUmami: false,
       subscribedTsundoku: true,
     })
+  })
+
+  it('notifies once when a confirmed reader opts into Umami', async () => {
+    const subscriber = await seedSubscriber({ subscribedUmami: false })
+    await signIn(subscriber)
+
+    const first = await PATCH(patchRequest({ subscribed_umami: true }))
+    expect(first.status).toBe(200)
+    expect((await first.json()).preferences.subscribed_umami).toBe(true)
+
+    const notifications = () =>
+      vi
+        .mocked(sendSimpleEmail)
+        .mock.calls.filter(([message]) =>
+          message.subject.startsWith('Existing subscriber opted into umami:')
+        )
+    expect(notifications()).toHaveLength(1)
+    expect(notifications()[0][0]).toMatchObject({
+      to: siteConfig.adminEmails,
+      subject: 'Existing subscriber opted into umami: reader@example.com',
+    })
+
+    // Saving an already-enabled preference does not duplicate the email. A
+    // rapid opt-out/re-opt-in is also held by the durable one-day claim so a
+    // subscriber cannot use preference toggling to amplify admin email.
+    expect((await PATCH(patchRequest({ subscribed_umami: true }))).status).toBe(
+      200
+    )
+    expect(
+      (await PATCH(patchRequest({ subscribed_umami: false }))).status
+    ).toBe(200)
+    expect((await PATCH(patchRequest({ subscribed_umami: true }))).status).toBe(
+      200
+    )
+    expect(notifications()).toHaveLength(1)
   })
 
   it.each([

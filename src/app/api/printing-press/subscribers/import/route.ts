@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
   const pIdx = col('postcard')
   const cIdx = col('contraption')
   const wIdx = col('workshop')
+  const uIdx = col('umami')
   const tIdx = col('tsundoku')
   const confIdx = col('confirmed')
   const srcIdx = col('source')
@@ -70,6 +71,10 @@ export async function POST(request: NextRequest) {
         wIdx < 0
           ? isNewsletterAcceptingSubscriptions('workshop')
           : truthy(r[wIdx]),
+      umami:
+        uIdx < 0
+          ? isNewsletterAcceptingSubscriptions('umami')
+          : truthy(r[uIdx]),
       tsundoku:
         tIdx < 0
           ? isNewsletterAcceptingSubscriptions('tsundoku')
@@ -91,6 +96,7 @@ export async function POST(request: NextRequest) {
     postcard: pIdx >= 0,
     contraption: cIdx >= 0,
     workshop: wIdx >= 0,
+    umami: uIdx >= 0,
     tsundoku: tIdx >= 0,
     confirmed: confIdx >= 0,
   })

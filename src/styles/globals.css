@@ -110,6 +110,9 @@
   --color-offwhite-cool: #f5f6fa;
   --color-offwhite-dark: #edebe7;
   --color-offwhite-light: #faf9f7;
+  --color-umami: #f2712c;
+  --color-umami-ink: #a6400f;
+  --color-umami-paper: #f1ebe5;
 
   /* Grays */
   --color-gray-50: #f2f2f1; /* alias: keeps the un-padded spelling warm */
@@ -230,6 +233,16 @@
   outline-offset: 2px;
 }
 
+/* The global ink focus ring disappears on the image viewer's near-black
+   stage. Viewer controls and links need the inverse ring in every state. */
+[data-image-zoom-overlay]
+  :focus-visible:not([data-input-otp]):not([data-no-focus-ring]):not(
+    input:not([type="checkbox"]):not([type="radio"])
+  ):not(textarea):not(select) {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
 /* Tier two indicator: a focused text field darkens its border to
    gray-900. Global so a field that forgets a focus:border utility still
    signals focus; unlayered so it also wins over a utility that set a
@@ -281,6 +294,10 @@ body:has(> * [data-bg="offwhite-cool"]) {
 
 body:has(> * [data-bg="gray-050"]) {
   background-color: var(--color-gray-050);
+}
+
+body:has(> * [data-bg="umami"]) {
+  background-color: var(--color-umami-paper);
 }
 
 /* ============================
@@ -525,6 +542,25 @@ body:has(> * [data-bg="gray-050"]) {
   transform: none;
 }
 
+/* Post-page subscription buttons inherit the newsletter identity from the
+   surrounding page. Umami's brighter orange takes dark ink; the writing
+   newsletters retain the light ink supplied by btn-primary. */
+[data-bg] .btn-newsletter {
+  background-color: var(--prose-accent, var(--color-gray-950));
+  border-color: var(--prose-accent, var(--color-gray-950));
+}
+
+[data-bg="umami"] .btn-newsletter {
+  background-color: var(--color-umami);
+  border-color: var(--color-umami);
+  color: var(--color-gray-950);
+}
+
+[data-bg="umami"] .btn-newsletter .btn-text,
+[data-bg="umami"] .btn-newsletter .btn-arrow {
+  color: var(--color-gray-950);
+}
+
 /* ============================
    Workshop logo filter
    ============================ */
@@ -574,8 +610,24 @@ body:has(> * [data-bg="gray-050"]) {
   transform-origin: 50% 10%;
 }
 
+@keyframes umami-tagline-nudge {
+  0%,
+  100% {
+    color: var(--color-gray-600);
+  }
+  38%,
+  62% {
+    color: var(--color-umami-ink);
+  }
+}
+
+.umami-tagline-nudge {
+  animation: umami-tagline-nudge 1800ms ease-in-out 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .bell-discovery-nudge {
+  .bell-discovery-nudge,
+  .umami-tagline-nudge {
     animation: none;
   }
 }
@@ -661,6 +713,53 @@ body:has(> * [data-bg="gray-050"]) {
 }
 [data-bg="offwhite-cool"] {
   --prose-accent: var(--color-indigo);
+}
+[data-bg="umami"] {
+  /* The brand orange remains exact in marks and decoration; this darker
+     companion keeps linked text readable on Umami's pale background. */
+  --prose-accent: var(--color-umami-ink);
+}
+
+.umami-page-sms {
+  margin-top: 0;
+}
+
+.umami-page-email + .umami-page-sms {
+  margin-top: 1rem;
+}
+
+/* Keep the photography within the first view on short landscape phones while
+   retaining email and the secondary SMS path. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .umami-page-shell {
+    padding-top: 0.75rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .umami-page-intro {
+    align-items: start;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .umami-page-brand img {
+    max-width: 11.25rem;
+  }
+
+  .umami-page-brand > p {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .umami-page-email > p {
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .umami-page-email + .umami-page-sms {
+    margin-top: 0.5rem;
+  }
 }
 
 .prose a {
@@ -808,6 +907,22 @@ body.dark-viewport header .btn-primary .btn-arrow {
 
 .image-zoom-hd-out {
   animation: image-zoom-fade-out 300ms ease forwards;
+}
+
+/* Umami's viewer keeps its controls visible on touch screens, including
+   landscape phones. Fine pointers reveal the same chrome on hover or when a
+   keyboard user focuses a control. */
+.immersive-zoom-chrome {
+  transition:
+    opacity 180ms ease,
+    background-color 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .immersive-zoom-stage:not(:hover):not(:focus-within) .immersive-zoom-chrome,
+  [role="dialog"]:not(:hover):not(:focus-within) > .immersive-zoom-chrome {
+    opacity: 0;
+  }
 }
 
 @keyframes image-zoom-fade-in {

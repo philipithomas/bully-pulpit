@@ -1,7 +1,7 @@
 import { checkBotId } from 'botid/server'
 import { and, desc, eq } from 'drizzle-orm'
 import { jwtVerify } from 'jose'
-import { NextRequest } from 'next/server'
+import { NextRequest, type NextResponse } from 'next/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
@@ -22,11 +22,17 @@ vi.mock('node:dns/promises', () => ({
 
 import { POST as verifyPost } from '@/app/api/auth/verify/route'
 import { POST as subscribePost } from '@/app/api/subscribe/route'
+import { POST as subscribeUmamiPost } from '@/app/api/subscribe/umami/route'
 import { GET as verifyMagicLinkGet } from '@/app/auth/verify/route'
 import {
   NEW_SUBSCRIBER_ONBOARDING_COOKIE,
   verifyNewSubscriberOnboardingCookie,
 } from '@/lib/auth/jwt'
+import {
+  MAGIC_LINK_COMPLETION_COOKIE,
+  type MagicLinkCompletion,
+  verifyMagicLinkCompletionCookie,
+} from '@/lib/auth/magic-link-completion'
 import { siteConfig } from '@/lib/config'
 import { MAX_VERIFICATION_ATTEMPTS } from '@/lib/db/queries/logins'
 import { logins, subscribers } from '@/lib/db/schema'
@@ -108,6 +114,31 @@ function adminNotificationCalls() {
   return sesSend.mock.calls.filter(([input]) =>
     input.subject.startsWith('New subscriber:')
   )
+}
+
+function umamiOptInNotificationCalls() {
+  return sesSend.mock.calls.filter(([input]) =>
+    input.subject.startsWith('Existing subscriber opted into umami:')
+  )
+}
+
+async function magicLinkCompletionFrom(
+  response: NextResponse
+): Promise<MagicLinkCompletion> {
+  const marker = response.cookies.get(MAGIC_LINK_COMPLETION_COOKIE)?.value
+  expect(marker).toBeTruthy()
+  const cookie = response.headers
+    .getSetCookie()
+    .find((value) => value.startsWith(`${MAGIC_LINK_COMPLETION_COOKIE}=`))
+  expect(cookie).toMatch(/; Path=\//i)
+  expect(cookie).toMatch(/; Max-Age=120/i)
+  expect(cookie).toMatch(/; Secure/i)
+  expect(cookie).toMatch(/; HttpOnly/i)
+  expect(cookie).toMatch(/; SameSite=lax/i)
+  const completion = await verifyMagicLinkCompletionCookie(marker as string)
+  expect(completion).not.toBeNull()
+  if (!completion) throw new Error('Expected a valid magic-link completion')
+  return completion
 }
 
 /** A 6-digit code guaranteed not to match (still parses as a code token). */
@@ -307,6 +338,7 @@ describe('POST /api/auth/verify', () => {
 
     // ...but no second admin notification for an already-confirmed subscriber.
     expect(adminNotificationCalls()).toHaveLength(1)
+    expect(umamiOptInNotificationCalls()).toHaveLength(0)
   })
 
   it('returns 400 (not 500) for a malformed JSON body', async () => {
@@ -430,6 +462,69 @@ describe('POST /api/auth/verify', () => {
     expect(adminNotificationCalls()).toHaveLength(0)
   })
 
+  it('opts a confirmed reader into Umami only after code verification and notifies once', async () => {
+    const [subscriber] = await db
+      .insert(subscribers)
+      .values({
+        email: 'code-umami-reader@example.com',
+        name: 'Code Reader',
+        confirmedAt: new Date(),
+        subscribedContraption: false,
+        subscribedWorkshop: false,
+        subscribedPostcard: false,
+        subscribedTsundoku: false,
+        subscribedUmami: false,
+      })
+      .returning()
+
+    const signup = await subscribeUmamiPost(
+      jsonPost('http://localhost/api/subscribe/umami', {
+        email: subscriber.email,
+      })
+    )
+    expect(signup.status).toBe(200)
+    expect((await subscriberByEmail(subscriber.email)).subscribedUmami).toBe(
+      false
+    )
+
+    const { token: code } = await latestCodeLogin(subscriber.id)
+    const { token: magicToken } = await latestMagicLogin(subscriber.id)
+    const response = await verify(subscriber.email, code, ['umami'])
+
+    expect(response.status).toBe(200)
+    expect((await response.json()).user.subscribed_umami).toBe(true)
+    expect((await subscriberByEmail(subscriber.email)).subscribedUmami).toBe(
+      true
+    )
+    expect(adminNotificationCalls()).toHaveLength(0)
+    expect(umamiOptInNotificationCalls()).toHaveLength(1)
+    expect(umamiOptInNotificationCalls()[0][0]).toMatchObject({
+      to: siteConfig.adminEmails,
+      subject: `Existing subscriber opted into umami: ${subscriber.email}`,
+    })
+
+    // The sibling magic link is still valid, but replaying the requested opt-in
+    // is idempotent and must not send another notification.
+    const siblingResponse = await verifyMagicLinkGet(
+      new NextRequest(
+        `https://www.philipithomas.com/auth/verify?token=${magicToken}&newsletter=umami`
+      )
+    )
+    expect(siblingResponse.headers.get('location')).toBe(
+      'https://www.philipithomas.com/auth/complete'
+    )
+    expect(siblingResponse.headers.get('location')).not.toContain(magicToken)
+    expect(await magicLinkCompletionFrom(siblingResponse)).toEqual({
+      newsletter: 'umami',
+      newSubscriber: false,
+      destination: 'account',
+    })
+    expect(siblingResponse.headers.get('Cache-Control')).toBe(
+      'private, no-store'
+    )
+    expect(umamiOptInNotificationCalls()).toHaveLength(1)
+  })
+
   it('applies requested newsletter opt-ins from a magic-link sign-in', async () => {
     await db.insert(subscribers).values({
       email: 'contraption-reader@example.com',
@@ -454,8 +549,13 @@ describe('POST /api/auth/verify', () => {
       )
     )
     expect(res.headers.get('location')).toBe(
-      'https://www.philipithomas.com/?signed-in=1&analytics-signup=email-link&analytics-newsletter=contraption&analytics-new-subscriber=0'
+      'https://www.philipithomas.com/auth/complete'
     )
+    expect(await magicLinkCompletionFrom(res)).toEqual({
+      newsletter: 'contraption',
+      newSubscriber: false,
+      destination: 'home',
+    })
     expect(res.cookies.get('__Host-bp_has_session')?.value).toBe('1')
     expect(res.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)).toBe(undefined)
 
@@ -465,6 +565,50 @@ describe('POST /api/auth/verify', () => {
     expect(after.subscribedPostcard).toBe(false)
     expect(after.subscribedTsundoku).toBe(false)
     expect(adminNotificationCalls()).toHaveLength(0)
+  })
+
+  it('opts a confirmed reader into Umami from a magic link and lands on account', async () => {
+    const [subscriber] = await db
+      .insert(subscribers)
+      .values({
+        email: 'magic-umami-reader@example.com',
+        confirmedAt: new Date(),
+        subscribedContraption: false,
+        subscribedWorkshop: false,
+        subscribedPostcard: false,
+        subscribedTsundoku: false,
+        subscribedUmami: false,
+      })
+      .returning()
+
+    const signup = await subscribeUmamiPost(
+      jsonPost('http://localhost/api/subscribe/umami', {
+        email: subscriber.email,
+      })
+    )
+    expect(signup.status).toBe(200)
+    const { token } = await latestMagicLogin(subscriber.id)
+
+    const response = await verifyMagicLinkGet(
+      new NextRequest(
+        `https://www.philipithomas.com/auth/verify?token=${token}&newsletter=umami`
+      )
+    )
+
+    expect(response.headers.get('location')).toBe(
+      'https://www.philipithomas.com/auth/complete'
+    )
+    expect(response.headers.get('location')).not.toContain(token)
+    expect(await magicLinkCompletionFrom(response)).toEqual({
+      newsletter: 'umami',
+      newSubscriber: false,
+      destination: 'account',
+    })
+    expect((await subscriberByEmail(subscriber.email)).subscribedUmami).toBe(
+      true
+    )
+    expect(adminNotificationCalls()).toHaveLength(0)
+    expect(umamiOptInNotificationCalls()).toHaveLength(1)
   })
 
   it('sets onboarding only when a magic link first confirms the subscriber', async () => {
@@ -478,9 +622,14 @@ describe('POST /api/auth/verify', () => {
       )
     )
 
-    expect(response.headers.get('location')).toContain(
-      'analytics-new-subscriber=1'
+    expect(response.headers.get('location')).toBe(
+      'https://www.philipithomas.com/auth/complete'
     )
+    expect(await magicLinkCompletionFrom(response)).toEqual({
+      newsletter: 'unspecified',
+      newSubscriber: true,
+      destination: 'home',
+    })
     const marker = response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value
     expect(marker).toBeTruthy()
     expect(
@@ -518,9 +667,14 @@ describe('POST /api/auth/verify', () => {
       )
     )
 
-    expect(magicResponse.headers.get('location')).toContain(
-      'analytics-new-subscriber=0'
+    expect(magicResponse.headers.get('location')).toBe(
+      'https://www.philipithomas.com/auth/complete'
     )
+    expect(await magicLinkCompletionFrom(magicResponse)).toEqual({
+      newsletter: 'unspecified',
+      newSubscriber: false,
+      destination: 'home',
+    })
     expect(
       magicResponse.headers
         .getSetCookie()

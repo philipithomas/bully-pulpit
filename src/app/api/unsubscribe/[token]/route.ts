@@ -29,6 +29,7 @@ const preferencesSchema = z.strictObject({
   subscribed_postcard: z.boolean().optional(),
   subscribed_contraption: z.boolean().optional(),
   subscribed_workshop: z.boolean().optional(),
+  subscribed_umami: z.boolean().optional(),
 })
 
 async function resolveSubscriber(token: string) {
@@ -56,6 +57,7 @@ export async function GET(
     subscribed_postcard: resolved.subscriber.subscribedPostcard,
     subscribed_contraption: resolved.subscriber.subscribedContraption,
     subscribed_workshop: resolved.subscriber.subscribedWorkshop,
+    subscribed_umami: resolved.subscriber.subscribedUmami,
   })
 }
 
@@ -76,6 +78,18 @@ export async function PATCH(
     return NextResponse.json(
       { error: 'Invalid preferences in request body' },
       { status: 400 }
+    )
+  }
+  // Unsubscribe links are long-lived bearer tokens. They may continue to
+  // manage existing preferences, but a leaked historical token must not bypass
+  // Umami's verified OTP, magic-link, Google, or signed-in opt-in boundary.
+  if (
+    parsed.data.subscribed_umami === true &&
+    !resolved.subscriber.subscribedUmami
+  ) {
+    return NextResponse.json(
+      { error: 'Sign in to subscribe to umami.' },
+      { status: 403 }
     )
   }
   await updateSubscriber(resolved.subscriber.uuid, prefsFromBody(parsed.data))
@@ -101,6 +115,7 @@ export async function DELETE(
     subscribedPostcard: false,
     subscribedContraption: false,
     subscribedWorkshop: false,
+    subscribedUmami: false,
   })
   await markUnsubscribed(resolved.emailSend.id)
   return NextResponse.json({ success: true })
@@ -115,6 +130,8 @@ function unsubscribeUpdate(newsletter: string | null): SubscriberPrefs {
       return { subscribedContraption: false }
     case 'workshop':
       return { subscribedWorkshop: false }
+    case 'umami':
+      return { subscribedUmami: false }
     // Archived newsletter values are historical data and are no longer a
     // public preference. Old unsubscribe tokens are still stamped below.
     case 'tsundoku':
@@ -124,6 +141,7 @@ function unsubscribeUpdate(newsletter: string | null): SubscriberPrefs {
         subscribedPostcard: false,
         subscribedContraption: false,
         subscribedWorkshop: false,
+        subscribedUmami: false,
       }
   }
 }

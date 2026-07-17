@@ -24,6 +24,8 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { siteConfig } from '@/lib/config'
+import type { Newsletter } from '@/lib/content/types'
 import {
   forceDarkColorScheme,
   forceLightColorScheme,
@@ -43,7 +45,7 @@ interface Props {
   adminEmail: string
   subject: string
   previewText: string
-  newsletter: string
+  newsletter: Newsletter
   previewHtml: string
   initialEligible: number
   initialSmsEligible: number
@@ -75,6 +77,7 @@ export function SendClient({
   const [smsEligible, setSmsEligible] = useState(initialSmsEligible)
   const [stats, setStats] = useState<SendStats>(initialStats)
   const [active, setActive] = useState(initialActive)
+  const newsletterName = siteConfig.newsletters[newsletter].name
 
   // Dark preview: the email's own dark-mode block with its media condition
   // rewritten to always apply (a sandboxed iframe cannot be forced into
@@ -273,8 +276,8 @@ export function SendClient({
   return (
     <div>
       <PageHeader title={subject} description={previewText}>
-        <Badge variant="secondary" className="capitalize italic">
-          {newsletter}
+        <Badge variant="secondary" className="italic">
+          {newsletterName}
         </Badge>
         {!sendingEnabled ? <Badge variant="outline">Archived</Badge> : null}
       </PageHeader>
@@ -438,9 +441,9 @@ export function SendClient({
             <AlertDialogTitle>Send this issue</AlertDialogTitle>
             <AlertDialogDescription>
               Send “{subject}” to {sendAudience}. This delivers email to
-              confirmed <cite className="capitalize">{newsletter}</cite>{' '}
-              subscribers and text to eligible SMS subscribers who have not
-              received the issue. Once delivery begins, you cannot take it back.
+              confirmed <cite>{newsletterName}</cite> subscribers and text to
+              eligible SMS subscribers who have not received the issue. Once
+              delivery begins, you cannot take it back.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

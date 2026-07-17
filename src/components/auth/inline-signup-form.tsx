@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { EmailCodeConfirmationDialog } from '@/components/auth/email-code-confirmation-dialog'
-import type { GoogleSignInUser } from '@/components/auth/google-sign-in'
 import { matchesSubmittedEmail } from '@/components/auth/signup-completion'
 import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
@@ -27,7 +26,9 @@ interface Props {
   newsletters?: Newsletter[]
   align?: 'start' | 'center'
   buttonClassName?: string
+  buttonLabel?: string
   subscribeEndpoint?: string
+  successRedirect?: '/account'
   confirmedMessage?: string
   initialSubscriberCount?: number | null
   smsSignupPhoneNumber?: string | null
@@ -50,7 +51,9 @@ export function InlineSignupForm({
   newsletters = [...defaultSignupNewsletters],
   align = 'start',
   buttonClassName = 'btn btn-primary',
+  buttonLabel = 'Subscribe',
   subscribeEndpoint = '/api/subscribe',
+  successRedirect,
   confirmedMessage = 'You are subscribed by email.',
   initialSubscriberCount = null,
   smsSignupPhoneNumber = null,
@@ -157,7 +160,10 @@ export function InlineSignupForm({
           setCode('')
           return
         }
-        const url = new URL(window.location.href)
+        const url = new URL(
+          successRedirect ?? window.location.href,
+          window.location.origin
+        )
         url.searchParams.set('signed-in', '1')
         window.location.assign(url.toString())
       } catch {
@@ -168,7 +174,7 @@ export function InlineSignupForm({
         submittingRef.current = false
       }
     },
-    [analyticsPlacement, email, newsletters]
+    [analyticsPlacement, email, newsletters, successRedirect]
   )
 
   const initialMemberClassName =
@@ -176,20 +182,19 @@ export function InlineSignupForm({
   const rootClassName = `${initialMemberClassName} ${className ?? ''}`
 
   const finishSignedIn = useCallback(() => {
-    const url = new URL(window.location.href)
+    const url = new URL(
+      successRedirect ?? window.location.href,
+      window.location.origin
+    )
     url.searchParams.set('signed-in', '1')
     window.location.assign(url.toString())
-  }, [])
-  const handleGoogleConfirmationSuccess = useCallback(
-    (googleUser: GoogleSignInUser) => {
-      // A different Google account becomes the authenticated identity. The
-      // server applies pending active-newsletter opt-ins to that account only.
-      if (!matchesSubmittedEmail(googleUser.email, email)) return true
-      finishSignedIn()
-      return false
-    },
-    [email, finishSignedIn]
-  )
+  }, [successRedirect])
+  const handleGoogleConfirmationSuccess = useCallback(() => {
+    // A different Google account becomes the authenticated identity. The
+    // server applies pending active-newsletter opt-ins to that account only.
+    finishSignedIn()
+    return false
+  }, [finishSignedIn])
 
   useEffect(() => {
     if (step !== 'code') return
@@ -270,7 +275,11 @@ export function InlineSignupForm({
             className={`${buttonClassName} h-10 shrink-0`}
           >
             <span className="btn-text">
-              {loading ? <Spinner className="h-4 w-4" /> : 'Subscribe'}
+              {loading ? (
+                <Spinner className="h-4 w-4" />
+              ) : (
+                <span>{buttonLabel}</span>
+              )}
             </span>
             <span className="btn-arrow">
               {loading ? null : <ArrowIcon className="w-4 h-4" />}

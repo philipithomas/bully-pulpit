@@ -1,3 +1,5 @@
+import { NEWSLETTERS } from '@/lib/content/types'
+
 export type BellSourceType = 'post' | 'page' | 'image' | 'external'
 
 export interface BellSource {
@@ -10,13 +12,7 @@ export interface BellSource {
 }
 
 const MAX_BELL_SOURCES = 6
-const SOURCE_NEWSLETTERS = new Set([
-  'contraption',
-  'workshop',
-  'postcard',
-  'tsundoku',
-  'page',
-])
+const SOURCE_NEWSLETTERS = new Set([...NEWSLETTERS, 'page'])
 
 type UnknownRecord = Record<string, unknown>
 

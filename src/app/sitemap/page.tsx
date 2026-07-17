@@ -18,6 +18,7 @@ const newsletterLabel: Record<Newsletter, string> = {
   contraption: 'Contraption',
   workshop: 'Workshop',
   postcard: 'Postcard',
+  umami: 'umami',
   tsundoku: 'Tsundoku',
 }
 
@@ -27,6 +28,7 @@ const newsletterColor: Record<Newsletter, string> = {
   contraption: 'text-forest',
   workshop: 'text-walnut',
   postcard: 'text-indigo',
+  umami: 'text-[#A6400F]',
   tsundoku: 'text-sun',
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CAPTIONED_ZOOM_IMAGE_SIZES,
+  IMMERSIVE_ZOOM_IMAGE_SIZES,
   zoomImageDataAttrs,
   zoomImageSources,
 } from '@/lib/content/zoom-image'
@@ -69,6 +70,29 @@ describe('zoom image sources', () => {
       'data-full-width': '5120',
       'data-full-height': '3258',
       'data-full-sizes': CAPTIONED_ZOOM_IMAGE_SIZES,
+    })
+  })
+
+  it('keeps immersive galleries on a full-viewport source contract', () => {
+    const sources = zoomImageSources({
+      src: '/images/covers/umami/sfmoma.jpg',
+      dimensions: { width: 5120, height: 3149 },
+      sizes: IMMERSIVE_ZOOM_IMAGE_SIZES,
+    })
+
+    expect(sources?.sizes).toBe('100vw')
+    expect(sources?.src).toContain('w=5120')
+    expect(
+      zoomImageDataAttrs({
+        src: '/images/covers/umami/sfmoma.jpg',
+        dimensions: { width: 5120, height: 3149 },
+        sizes: IMMERSIVE_ZOOM_IMAGE_SIZES,
+      })
+    ).toEqual({
+      'data-full-src': '/images/covers/umami/sfmoma.jpg',
+      'data-full-width': '5120',
+      'data-full-height': '3149',
+      'data-full-sizes': '100vw',
     })
   })
 })

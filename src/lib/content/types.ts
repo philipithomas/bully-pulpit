@@ -4,6 +4,7 @@ export const NEWSLETTERS = [
   'contraption',
   'workshop',
   'postcard',
+  'umami',
   'tsundoku',
 ] as const
 export const newsletterSchema = z.enum(NEWSLETTERS)

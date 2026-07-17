@@ -12,6 +12,7 @@ import {
   restoreYouTubeEmbedsAsHtml,
   restoreYouTubeEmbedsAsText,
 } from '@/lib/email/youtube-embeds'
+import { isPhotoNewsletter } from '@/lib/newsletters'
 
 export type EmailBody = {
   subject: string
@@ -28,8 +29,9 @@ export type EmailBody = {
  * posts API route and the newsletter send pipeline.
  */
 export async function buildEmailBodyHtml(post: Post): Promise<EmailBody> {
-  const relatedPosts =
-    post.newsletter === 'tsundoku' ? [] : getRelatedPostsForEmail(post.slug)
+  const relatedPosts = isPhotoNewsletter(post.newsletter)
+    ? []
+    : getRelatedPostsForEmail(post.slug)
   // Emails cannot play iframes: each YouTube embed becomes a clickable
   // thumbnail in the HTML part and a watch link in the text part.
   const { markdown: emailSource, embeds } = extractYouTubeEmbeds(post.content)
@@ -55,11 +57,26 @@ export async function buildEmailBodyHtml(post: Post): Promise<EmailBody> {
   // part. The preview renders from the original source so the preheader stays
   // prose (embeds are stripped there, not turned into watch links).
   const bodyPreview = markdownToPlaintext(post.content)
-  const bodyText = restoreYouTubeEmbedsAsText(
+  const renderedBodyText = restoreYouTubeEmbedsAsText(
     markdownToPlaintext(emailSource, 100_000, { preserveParagraphs: true }),
     embeds
   )
-  const previewText = subtitle ? `${subtitle} – ${bodyPreview}` : bodyPreview
+  const fallbackBodyText = [
+    post.frontmatter.title,
+    post.newsletter === 'postcard' ? null : post.frontmatter.publishedAt,
+    post.frontmatter.location?.name,
+    `${siteConfig.url}/${post.slug}`,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join('\n')
+  const bodyText = renderedBodyText || fallbackBodyText
+  const previewFallback =
+    post.frontmatter.coverImageAlt ?? post.frontmatter.title
+  const previewText = subtitle
+    ? bodyPreview
+      ? `${subtitle} – ${bodyPreview}`
+      : subtitle
+    : bodyPreview || previewFallback
   return {
     subject: post.frontmatter.title,
     subtitle,

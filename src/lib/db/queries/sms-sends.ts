@@ -21,6 +21,7 @@ const newsletterColumns = {
   postcard: smsSubscribers.subscribedPostcard,
   contraption: smsSubscribers.subscribedContraption,
   workshop: smsSubscribers.subscribedWorkshop,
+  umami: smsSubscribers.subscribedUmami,
   tsundoku: smsSubscribers.subscribedTsundoku,
 } as const
 

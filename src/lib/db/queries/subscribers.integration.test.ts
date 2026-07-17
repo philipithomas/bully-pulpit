@@ -29,7 +29,13 @@ beforeEach(resetDb)
 async function seed(values: Partial<typeof subscribers.$inferInsert> = {}) {
   const [row] = await db
     .insert(subscribers)
-    .values({ email: `seed-${crypto.randomUUID()}@example.com`, ...values })
+    .values({
+      email: `seed-${crypto.randomUUID()}@example.com`,
+      // Model rows created by the current application. The raw database
+      // default deliberately remains false for deploy compatibility.
+      subscribedUmami: true,
+      ...values,
+    })
     .returning()
   return row
 }
@@ -48,10 +54,11 @@ describe('createSubscriber / findByEmail / updateSubscriber', () => {
     expect(created.name).toBe('Ada Lovelace')
     expect(created.source).toBe('test')
     expect(created.confirmedAt).toBeNull()
-    // Standing newsletter flags default to opted-in. Tsundoku is opt-in only.
+    // Standing newsletter flags default to opted-in. Tsundoku is archived.
     expect(created.subscribedPostcard).toBe(true)
     expect(created.subscribedContraption).toBe(true)
     expect(created.subscribedWorkshop).toBe(true)
+    expect(created.subscribedUmami).toBe(true)
     expect(created.subscribedTsundoku).toBe(false)
   })
 
@@ -78,6 +85,7 @@ describe('createSubscriber / findByEmail / updateSubscriber', () => {
     expect(updated?.name).toBe('Original Name')
     expect(updated?.subscribedPostcard).toBe(true)
     expect(updated?.subscribedWorkshop).toBe(true)
+    expect(updated?.subscribedUmami).toBe(true)
 
     // an explicit null name IS provided and clears the field
     const cleared = await updateSubscriber(created.uuid, { name: null })
@@ -100,6 +108,7 @@ describe('subscriberStats / countActive', () => {
       confirmedAt,
       subscribedPostcard: false,
       subscribedWorkshop: false,
+      subscribedUmami: false,
     })
     // unconfirmed, all flags on — counts toward total only
     await seed()
@@ -109,6 +118,7 @@ describe('subscriberStats / countActive', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
+      subscribedUmami: false,
     })
     // confirmed historical Tsundoku-only row: retained in the raw archive
     // count, excluded from active subscriber totals.
@@ -117,6 +127,7 @@ describe('subscriberStats / countActive', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
+      subscribedUmami: false,
       subscribedTsundoku: true,
     })
 
@@ -126,6 +137,7 @@ describe('subscriberStats / countActive', () => {
       postcard: 1,
       contraption: 2,
       workshop: 1,
+      umami: 1,
       tsundoku: 2,
     })
     // active = confirmed AND at least one active newsletter
@@ -149,6 +161,7 @@ describe('subscriberStats / countActive', () => {
         subscribedPostcard: false,
         subscribedContraption: false,
         subscribedWorkshop: false,
+        subscribedUmami: false,
         subscribedTsundoku: false,
       },
       {
@@ -157,6 +170,7 @@ describe('subscriberStats / countActive', () => {
         subscribedPostcard: false,
         subscribedContraption: false,
         subscribedWorkshop: false,
+        subscribedUmami: false,
         subscribedTsundoku: true,
       },
     ])
@@ -171,6 +185,7 @@ describe('subscriberStats / countActive', () => {
       postcard: 0,
       contraption: 0,
       workshop: 0,
+      umami: 0,
       tsundoku: 0,
     })
     expect(await countActive()).toBe(0)
@@ -200,6 +215,21 @@ describe('eligibility (findEligibleIds / countEligible)', () => {
 
     expect(await findEligibleIds('contraption', slug)).toEqual([eligible.id])
     expect(await countEligible('contraption', slug)).toBe(1)
+  })
+
+  it('treats Umami as independently send-eligible only after confirmation', async () => {
+    const eligible = await seed({
+      confirmedAt: new Date(),
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedUmami: true,
+    })
+    await seed({ subscribedUmami: true })
+    await seed({ confirmedAt: new Date(), subscribedUmami: false })
+
+    expect(await findEligibleIds('umami', slug)).toEqual([eligible.id])
+    expect(await countEligible('umami', slug)).toBe(1)
   })
 
   it('a SENT row and a PENDING row both block; a different slug does not', async () => {
@@ -281,6 +311,7 @@ describe('importSubscribers', () => {
     postcard: true,
     contraption: true,
     workshop: true,
+    umami: true,
     tsundoku: true,
     confirmed: true,
     source: null,
@@ -290,6 +321,7 @@ describe('importSubscribers', () => {
     postcard: true,
     contraption: true,
     workshop: true,
+    umami: true,
     tsundoku: true,
     confirmed: true,
   }
@@ -297,6 +329,7 @@ describe('importSubscribers', () => {
     postcard: false,
     contraption: false,
     workshop: false,
+    umami: false,
     tsundoku: false,
     confirmed: false,
   }
@@ -325,6 +358,7 @@ describe('importSubscribers', () => {
     await seed({
       email: 'veteran@example.com',
       subscribedContraption: false,
+      subscribedUmami: false,
     })
 
     // present=false makes the query apply central new-subscriber defaults.
@@ -337,6 +371,7 @@ describe('importSubscribers', () => {
     const veteran = await findByEmail('veteran@example.com')
     expect(veteran?.subscribedContraption).toBe(false) // NOT re-subscribed
     expect(veteran?.subscribedPostcard).toBe(true)
+    expect(veteran?.subscribedUmami).toBe(false)
     expect(veteran?.subscribedTsundoku).toBe(false)
     expect(veteran?.confirmedAt).toBeNull() // absent confirmed column can't confirm
 
@@ -344,6 +379,7 @@ describe('importSubscribers', () => {
     expect(fresh?.subscribedPostcard).toBe(true)
     expect(fresh?.subscribedContraption).toBe(true)
     expect(fresh?.subscribedWorkshop).toBe(true)
+    expect(fresh?.subscribedUmami).toBe(true)
     expect(fresh?.subscribedTsundoku).toBe(false)
     expect(fresh?.confirmedAt).not.toBeNull()
     expect(fresh?.source).toBe('csv_import')
@@ -510,6 +546,7 @@ describe('importSubscribers', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
+      subscribedUmami: false,
       subscribedTsundoku: true,
       source: 'csv_import',
     })
@@ -526,6 +563,7 @@ describe('importSubscribers', () => {
     expect(optout?.subscribedPostcard).toBe(false) // opt-outs survive
     expect(optout?.subscribedContraption).toBe(false)
     expect(optout?.subscribedWorkshop).toBe(false)
+    expect(optout?.subscribedUmami).toBe(false)
     expect(optout?.subscribedTsundoku).toBe(true)
     expect(optout?.confirmedAt).toBeNull() // absent confirmed column can't confirm
   })
@@ -580,6 +618,22 @@ describe('listSubscribers', () => {
     })
     expect(searched.total).toBe(1)
     expect(searched.rows[0].email).toBe('alice@example.com')
+  })
+
+  it('filters Umami independently from the other active newsletters', async () => {
+    await seed({
+      email: 'umami@example.com',
+      subscribedUmami: true,
+    })
+    await seed({
+      email: 'not-umami@example.com',
+      subscribedUmami: false,
+    })
+
+    const umami = await listSubscribers({ newsletter: 'umami' })
+    expect(umami.total).toBe(1)
+    expect(umami.rows[0].email).toBe('umami@example.com')
+    expect(umami.rows[0].subscribedUmami).toBe(true)
   })
 
   it('offset paging is stable when created_at ties (id tiebreaker)', async () => {

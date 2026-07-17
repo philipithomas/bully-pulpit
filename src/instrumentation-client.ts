@@ -15,6 +15,10 @@ initBotId({
       method: 'POST',
     },
     {
+      path: '/api/subscribe/umami',
+      method: 'POST',
+    },
+    {
       path: '/api/auth/google',
       method: 'POST',
     },

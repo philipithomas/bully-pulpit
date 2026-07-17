@@ -10,6 +10,7 @@ const IMAGE_QUALITY = 100
 export const PLAIN_ZOOM_IMAGE_SIZES = '90vw'
 export const CAPTIONED_ZOOM_IMAGE_SIZES =
   '(max-width: 767px) 100vw, calc(100vw - 26rem)'
+export const IMMERSIVE_ZOOM_IMAGE_SIZES = '100vw'
 
 interface ZoomImageSource {
   src: string

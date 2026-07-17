@@ -47,13 +47,14 @@ describe('analytics dimensions', () => {
     expect(summarizeNewsletters(['workshop'])).toBe('workshop')
     expect(summarizeNewsletters(['workshop', 'postcard'])).toBe('multiple')
     expect(
-      summarizeNewsletters(['contraption', 'workshop', 'postcard', 'tsundoku'])
+      summarizeNewsletters(['contraption', 'workshop', 'postcard', 'umami'])
     ).toBe('all')
   })
 
   it('classifies pages into a small fixed vocabulary', () => {
     expect(analyticsPageType('/')).toBe('home')
     expect(analyticsPageType('/tsundoku')).toBe('newsletter')
+    expect(analyticsPageType('/umami')).toBe('newsletter')
     expect(analyticsPageType('/photography')).toBe('photography')
     expect(analyticsPageType('/privacy')).toBe('content_page')
     expect(analyticsPageType('/a-post')).toBe('post')

@@ -22,7 +22,9 @@ import { decodeJwt, jwtVerify } from 'jose'
 import { POST } from '@/app/api/auth/google/route'
 import { GOOGLE_OAUTH_STATE_COOKIE } from '@/lib/auth/google-oauth-state'
 import { NEW_SUBSCRIBER_ONBOARDING_COOKIE } from '@/lib/auth/jwt'
+import { siteConfig } from '@/lib/config'
 import { subscribers } from '@/lib/db/schema'
+import { sendSimpleEmail } from '@/lib/email/ses'
 import { db, resetDb } from '@/test/integration/db'
 
 function googlePost(body: unknown): Request {
@@ -119,6 +121,7 @@ describe('POST /api/auth/google', () => {
         subscribedWorkshop: false,
         subscribedPostcard: false,
         subscribedTsundoku: false,
+        subscribedUmami: false,
       },
       {
         email: 'bar@gmail.com',
@@ -127,6 +130,7 @@ describe('POST /api/auth/google', () => {
         subscribedWorkshop: false,
         subscribedPostcard: false,
         subscribedTsundoku: false,
+        subscribedUmami: false,
       },
     ])
 
@@ -158,6 +162,40 @@ describe('POST /api/auth/google', () => {
     expect(googleAccount.subscribedContraption).toBe(false)
     expect(googleAccount.subscribedPostcard).toBe(false)
     expect(googleAccount.subscribedTsundoku).toBe(false)
+    expect(googleAccount.subscribedUmami).toBe(false)
+  })
+
+  it('securely opts an existing Google account into Umami and notifies admin', async () => {
+    await db.insert(subscribers).values({
+      email: 'bar@gmail.com',
+      name: 'Bar',
+      confirmedAt: new Date(),
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+      subscribedUmami: false,
+    })
+
+    const response = await POST(
+      googlePost({ code: 'oauth-code', newsletters: ['umami'] })
+    )
+
+    expect(response.status).toBe(200)
+    expect((await response.json()).user.subscribed_umami).toBe(true)
+    expect((await subscriberByEmail('bar@gmail.com')).subscribedUmami).toBe(
+      true
+    )
+    const optInNotifications = vi
+      .mocked(sendSimpleEmail)
+      .mock.calls.filter(([message]) =>
+        message.subject.startsWith('Existing subscriber opted into umami:')
+      )
+    expect(optInNotifications).toHaveLength(1)
+    expect(optInNotifications[0][0]).toMatchObject({
+      to: siteConfig.adminEmails,
+      subject: 'Existing subscriber opted into umami: bar@gmail.com',
+    })
   })
 
   it('sets onboarding when Google creates and confirms a new subscriber', async () => {
@@ -175,7 +213,15 @@ describe('POST /api/auth/google', () => {
       subscribedWorkshop: true,
       subscribedPostcard: true,
       subscribedTsundoku: false,
+      subscribedUmami: true,
     })
+    expect(
+      vi
+        .mocked(sendSimpleEmail)
+        .mock.calls.filter(([message]) =>
+          message.subject.startsWith('Existing subscriber opted into umami:')
+        )
+    ).toHaveLength(0)
     const marker = response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value
     expect(marker).toBeTruthy()
     expect(decodeJwt(marker as string)).toMatchObject({

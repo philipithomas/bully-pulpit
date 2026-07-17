@@ -1,12 +1,22 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, ExternalLink, X } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Info,
+  PanelRightClose,
+  X,
+} from 'lucide-react'
 import NextImage from 'next/image'
 import Link from 'next/link'
 import {
   type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
 } from 'react'
@@ -20,6 +30,8 @@ export interface ZoomCaption {
   date?: string | null
   locationName?: string | null
   locationUrl?: string | null
+  presentation?: 'rail' | 'immersive'
+  collection?: 'tsundoku' | 'umami'
   footer?: ZoomCaptionFooter | null
 }
 
@@ -93,10 +105,34 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-/** Transform that visually moves `node`'s layout box onto the source rect. */
+type LayoutRect = Pick<DOMRect, 'top' | 'left' | 'width' | 'height'>
+
+export function containedImageRect(
+  bounds: LayoutRect,
+  sourceWidth: number | null,
+  sourceHeight: number | null
+): LayoutRect {
+  if (!sourceWidth || !sourceHeight) return bounds
+
+  const scale = Math.min(
+    bounds.width / sourceWidth,
+    bounds.height / sourceHeight
+  )
+  const width = sourceWidth * scale
+  const height = sourceHeight * scale
+
+  return {
+    top: bounds.top + (bounds.height - height) / 2,
+    left: bounds.left + (bounds.width - width) / 2,
+    width,
+    height,
+  }
+}
+
+/** Transform that moves `node`'s visible contained image onto the source rect. */
 function flipTransform(
   source: NonNullable<ZoomedImage['rect']>,
-  layout: DOMRect
+  layout: LayoutRect
 ): string {
   const scale = source.width / layout.width
   const dx = source.left + source.width / 2 - (layout.left + layout.width / 2)
@@ -108,13 +144,17 @@ function focusableOverlayItems(container: HTMLElement | null): HTMLElement[] {
   if (!container) return []
 
   return Array.from(
-    container.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')
+    container.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), [tabindex="0"]'
+    )
   ).filter((el) => el.getClientRects().length > 0)
 }
 
 function containedLoadingDimensions(
   image: ZoomedImage,
-  hasCaption: boolean
+  hasCaption: boolean,
+  immersive: boolean,
+  immersiveDetailsOpen: boolean
 ): { width: number; height: number } | null {
   const sourceWidth = image.width ?? image.rect?.width ?? null
   const sourceHeight = image.height ?? image.rect?.height ?? null
@@ -130,16 +170,32 @@ function containedLoadingDimensions(
     Math.max(viewportWidth * 0.32, 14 * 16),
     26 * 16
   )
-  const maxWidth = hasCaption
-    ? captionUsesSideRail
-      ? Math.max(viewportWidth - captionSideRailWidth, 1)
-      : Math.max(viewportWidth - 16, 1)
-    : viewportWidth * 0.9
-  const maxHeight = hasCaption
-    ? captionUsesSideRail
-      ? viewportHeight
-      : viewportHeight * (viewportWidth >= 640 ? 0.62 : 0.58)
-    : viewportHeight * 0.9
+  const immersiveDetailsUseSideRail =
+    immersiveDetailsOpen &&
+    (viewportWidth >= 768 || viewportWidth > viewportHeight)
+  const immersiveDetailsRailWidth = Math.min(
+    viewportWidth * (viewportWidth >= 768 ? 0.34 : 0.42),
+    24 * 16
+  )
+  const immersiveDetailsPanelHeight = Math.min(viewportHeight * 0.42, 20 * 16)
+  const maxWidth = immersive
+    ? immersiveDetailsUseSideRail
+      ? Math.max(viewportWidth - immersiveDetailsRailWidth, 1)
+      : viewportWidth
+    : hasCaption
+      ? captionUsesSideRail
+        ? Math.max(viewportWidth - captionSideRailWidth, 1)
+        : Math.max(viewportWidth - 16, 1)
+      : viewportWidth * 0.9
+  const maxHeight = immersive
+    ? immersiveDetailsOpen && !immersiveDetailsUseSideRail
+      ? Math.max(viewportHeight - immersiveDetailsPanelHeight, 1)
+      : viewportHeight
+    : hasCaption
+      ? captionUsesSideRail
+        ? viewportHeight
+        : viewportHeight * (viewportWidth >= 640 ? 0.62 : 0.58)
+      : viewportHeight * 0.9
   const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight, 1)
 
   return {
@@ -166,14 +222,38 @@ export function ImageZoomOverlay({
   } | null>(null)
   const [upgrade, setUpgrade] = useState<Upgrade | null>(null)
   const [immediateLoaded, setImmediateLoaded] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const detailsId = useId()
+  const statusId = useId()
   const overlayRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const immediateRef = useRef<HTMLImageElement>(null)
+  const detailsToggleRef = useRef<HTMLButtonElement>(null)
+  const detailsCloseRef = useRef<HTMLButtonElement>(null)
   const closingRef = useRef(false)
+  const swipeRef = useRef<{
+    pointerId: number
+    x: number
+    y: number
+  } | null>(null)
+  const didSwipeRef = useRef(false)
+  const swipeClickResetTimerRef = useRef<number | null>(null)
+  const wheelDeltaRef = useRef(0)
+  const wheelLockedUntilRef = useRef(0)
   const gallery = image.gallery ?? null
+  const isImmersive = image.caption?.presentation === 'immersive'
   const hasGallery = Boolean(gallery && gallery.items.length > 1)
   const canPrevious = Boolean(gallery && gallery.index > 0)
   const canNext = Boolean(gallery && gallery.index < gallery.items.length - 1)
+
+  useEffect(
+    () => () => {
+      if (swipeClickResetTimerRef.current !== null) {
+        window.clearTimeout(swipeClickResetTimerRef.current)
+      }
+    },
+    []
+  )
 
   // Open: animate the image from its on-page rect to the centered layout
   // position. Reduced motion, a missing rect, or a not-yet-measurable layout
@@ -185,7 +265,11 @@ export function ImageZoomOverlay({
       setPhase('open')
       return
     }
-    const layout = node.getBoundingClientRect()
+    const layout = containedImageRect(
+      node.getBoundingClientRect(),
+      image.width ?? immediateRef.current?.naturalWidth ?? null,
+      image.height ?? immediateRef.current?.naturalHeight ?? null
+    )
     if (layout.width === 0 || layout.height === 0) {
       setPhase('open')
       return
@@ -205,7 +289,7 @@ export function ImageZoomOverlay({
       cancelAnimationFrame(raf2)
       clearTimeout(timer)
     }
-  }, [image.rect])
+  }, [image.height, image.rect, image.width])
 
   // Close: animate back to the on-page rect (scroll is locked, so the rect is
   // still where the image sits) while the overlay fades out.
@@ -218,18 +302,33 @@ export function ImageZoomOverlay({
       node.style.transition = `transform ${ZOOM_MS}ms cubic-bezier(0.2, 0, 0.2, 1)`
       node.style.transform = flipTransform(
         image.rect,
-        node.getBoundingClientRect()
+        containedImageRect(
+          node.getBoundingClientRect(),
+          image.width ?? immediateRef.current?.naturalWidth ?? null,
+          image.height ?? immediateRef.current?.naturalHeight ?? null
+        )
       )
       setTimeout(onClose, ZOOM_MS)
     } else {
       setTimeout(onClose, prefersReducedMotion() ? 0 : ZOOM_MS)
     }
-  }, [image.rect, onClose, phase])
+  }, [image.height, image.rect, image.width, onClose, phase])
 
-  // Escape closes; Tab is trapped among the visible overlay controls.
+  const closeDetails = useCallback(() => {
+    setDetailsOpen(false)
+    requestAnimationFrame(() => detailsToggleRef.current?.focus())
+  }, [])
+
+  // Escape dismisses the optional details layer before closing the viewer;
+  // Tab is trapped among the visible overlay controls.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose()
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        if (isImmersive && detailsOpen) closeDetails()
+        else handleClose()
+        return
+      }
       if (hasGallery && canPrevious && e.key === 'ArrowLeft') {
         e.preventDefault()
         onNavigate?.(-1)
@@ -262,11 +361,58 @@ export function ImageZoomOverlay({
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [canNext, canPrevious, handleClose, hasGallery, onNavigate])
+  }, [
+    canNext,
+    canPrevious,
+    closeDetails,
+    detailsOpen,
+    handleClose,
+    hasGallery,
+    isImmersive,
+    onNavigate,
+  ])
 
-  // Scrolling outside the details rail closes, like medium-zoom: the reader is
-  // leaving, get out of the way.
+  // The compact viewer keeps the Medium-style scroll-to-close behavior. In
+  // the immersive photo viewer, a wheel or trackpad gesture instead advances
+  // the gallery so readers can move through photographs without hunting for
+  // the controls.
   useEffect(() => {
+    if (isImmersive) {
+      const navigate = (e: WheelEvent) => {
+        const target = e.target
+        if (
+          target instanceof Element &&
+          target.closest('[data-zoom-caption-panel]')
+        ) {
+          return
+        }
+
+        e.preventDefault()
+        const now = performance.now()
+        if (now < wheelLockedUntilRef.current) return
+
+        const dominantDelta =
+          Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+        if (
+          wheelDeltaRef.current !== 0 &&
+          Math.sign(wheelDeltaRef.current) !== Math.sign(dominantDelta)
+        ) {
+          wheelDeltaRef.current = 0
+        }
+        wheelDeltaRef.current += dominantDelta
+        if (Math.abs(wheelDeltaRef.current) < 48) return
+
+        const direction = wheelDeltaRef.current > 0 ? 1 : -1
+        wheelDeltaRef.current = 0
+        wheelLockedUntilRef.current = now + 420
+        if (direction === -1 && canPrevious) onNavigate?.(-1)
+        if (direction === 1 && canNext) onNavigate?.(1)
+      }
+
+      window.addEventListener('wheel', navigate, { passive: false })
+      return () => window.removeEventListener('wheel', navigate)
+    }
+
     const close = (e: Event) => {
       const target = e.target
       if (
@@ -283,12 +429,19 @@ export function ImageZoomOverlay({
       window.removeEventListener('wheel', close)
       window.removeEventListener('touchmove', close)
     }
-  }, [handleClose])
+  }, [canNext, canPrevious, handleClose, isImmersive, onNavigate])
 
   // Move focus into the overlay on mount; the opener restores it on close
   useEffect(() => {
     overlayRef.current?.focus()
   }, [])
+
+  // The details trigger leaves the DOM while the panel is open. Move focus to
+  // its matching collapse control, then restore it when the panel closes.
+  useEffect(() => {
+    if (!detailsOpen) return
+    requestAnimationFrame(() => detailsCloseRef.current?.focus())
+  }, [detailsOpen])
 
   // Lock body scroll
   useEffect(() => {
@@ -343,13 +496,20 @@ export function ImageZoomOverlay({
   useEffect(() => {
     if (!hdSize || upgrade || phase !== 'open') return
     const immediate = immediateRef.current
+    const outgoingRect = immediate
+      ? containedImageRect(
+          immediate.getBoundingClientRect(),
+          (image.width ?? immediate.naturalWidth) || null,
+          (image.height ?? immediate.naturalHeight) || null
+        )
+      : null
     setUpgrade({
       ...hdSize,
       fading: !prefersReducedMotion(),
-      outgoingWidth: immediate?.offsetWidth ?? 0,
-      outgoingHeight: immediate?.offsetHeight ?? 0,
+      outgoingWidth: outgoingRect?.width ?? 0,
+      outgoingHeight: outgoingRect?.height ?? 0,
     })
-  }, [hdSize, upgrade, phase])
+  }, [hdSize, image.height, image.width, upgrade, phase])
 
   // End the crossfade: unmount the outgoing image.
   useEffect(() => {
@@ -368,14 +528,32 @@ export function ImageZoomOverlay({
   const showImmediate = upgrade === null || upgrade.fading
   const showLoadingSurface = showImmediate && !showFull && !immediateLoaded
   const loadingDimensions = showLoadingSurface
-    ? containedLoadingDimensions(image, hasCaption)
+    ? containedLoadingDimensions(image, hasCaption, isImmersive, detailsOpen)
     : null
   const holdOutgoing =
     upgrade !== null && upgrade.outgoingWidth > 0 && upgrade.outgoingHeight > 0
-  const imageBounds = hasCaption
-    ? 'max-h-[58vh] max-w-[calc(100vw-1rem)] object-contain sm:max-h-[62vh] landscape:max-h-screen landscape:max-w-full md:max-h-screen md:max-w-full'
-    : 'max-h-[90vh] max-w-[90vw] object-contain'
+  const imageBounds = isImmersive
+    ? 'h-full w-full object-contain'
+    : hasCaption
+      ? 'max-h-[58vh] max-w-[calc(100vw-1rem)] object-contain sm:max-h-[62vh] landscape:max-h-screen landscape:max-w-full md:max-h-screen md:max-w-full'
+      : 'max-h-[90vh] max-w-[90vw] object-contain'
   const hasCaptionMetadata = Boolean(caption?.date || caption?.locationName)
+  const collection =
+    caption?.collection === 'umami'
+      ? {
+          href: '/umami',
+          label: 'umami',
+          logo: '/images/umami.svg',
+          width: 1562,
+          height: 369,
+        }
+      : {
+          href: '/tsundoku',
+          label: 'Tsundoku',
+          logo: '/images/tsundoku.svg',
+          width: 884,
+          height: 135,
+        }
   const handleCaptionClick = useCallback((e: MouseEvent<HTMLElement>) => {
     e.stopPropagation()
   }, [])
@@ -393,14 +571,40 @@ export function ImageZoomOverlay({
       }
       if (!onNavigateTo) return
       e.preventDefault()
-      onNavigateTo('/tsundoku')
+      onNavigateTo(collection.href)
     },
-    [onNavigateTo]
+    [collection.href, onNavigateTo]
+  )
+  const handlePostClick = useCallback(
+    (e: MouseEvent<HTMLAnchorElement>) => {
+      e.stopPropagation()
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+        return
+      }
+      if (!caption?.href || !onNavigateTo) return
+      e.preventDefault()
+      onNavigateTo(caption.href)
+    },
+    [caption?.href, onNavigateTo]
   )
   const handleImmediateLoad = useCallback(() => setImmediateLoaded(true), [])
   const handleCaptionPanelClick = useCallback(
     (e: MouseEvent<HTMLElement>) => e.stopPropagation(),
     []
+  )
+  const handleDetailsToggle = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation()
+      setDetailsOpen((open) => !open)
+    },
+    []
+  )
+  const handleDetailsClose = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation()
+      closeDetails()
+    },
+    [closeDetails]
   )
   const handleCloseButton = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
@@ -425,50 +629,165 @@ export function ImageZoomOverlay({
     },
     [canNext, onNavigate]
   )
+  const handleBackdropClick = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      if (didSwipeRef.current) {
+        didSwipeRef.current = false
+        if (swipeClickResetTimerRef.current !== null) {
+          window.clearTimeout(swipeClickResetTimerRef.current)
+          swipeClickResetTimerRef.current = null
+        }
+        e.stopPropagation()
+        return
+      }
+      handleClose()
+    },
+    [handleClose]
+  )
+  const handlePointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (!isImmersive || e.pointerType === 'mouse') return
+      const target = e.target
+      if (
+        target instanceof Element &&
+        target.closest('a, button, [data-zoom-caption-panel]')
+      ) {
+        return
+      }
+      swipeRef.current = {
+        pointerId: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+      }
+      e.currentTarget.setPointerCapture(e.pointerId)
+    },
+    [isImmersive]
+  )
+  const handlePointerUp = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      const start = swipeRef.current
+      swipeRef.current = null
+      if (!start || start.pointerId !== e.pointerId) return
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId)
+      }
+
+      const deltaX = e.clientX - start.x
+      const deltaY = e.clientY - start.y
+      if (Math.abs(deltaX) < 48 || Math.abs(deltaX) <= Math.abs(deltaY)) return
+
+      didSwipeRef.current = true
+      if (swipeClickResetTimerRef.current !== null) {
+        window.clearTimeout(swipeClickResetTimerRef.current)
+      }
+      // A swipe's synthetic click arrives before the next task. If the browser
+      // suppresses that click entirely, release the guard immediately so the
+      // visitor's next ordinary tap still closes the viewer.
+      swipeClickResetTimerRef.current = window.setTimeout(() => {
+        didSwipeRef.current = false
+        swipeClickResetTimerRef.current = null
+      }, 0)
+      if (deltaX > 0 && canPrevious) onNavigate?.(-1)
+      if (deltaX < 0 && canNext) onNavigate?.(1)
+    },
+    [canNext, canPrevious, onNavigate]
+  )
+  const handlePointerCancel = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (swipeRef.current?.pointerId === e.pointerId) swipeRef.current = null
+    },
+    []
+  )
 
   return (
     <div
       ref={overlayRef}
       role="dialog"
       aria-modal="true"
-      aria-label={image.alt || 'Image viewer'}
+      aria-label={
+        isImmersive && caption?.collection === 'umami'
+          ? 'umami photo viewer'
+          : image.alt || 'Image viewer'
+      }
+      aria-describedby={isImmersive && caption ? statusId : undefined}
+      data-image-zoom-overlay=""
       tabIndex={-1}
       className={`fixed inset-0 z-60 cursor-zoom-out bg-[#0A0A0A] ${
         phase === 'closing' ? 'image-zoom-closing' : 'image-zoom-opening'
       }`}
-      style={{ touchAction: hasCaption ? 'auto' : 'none' }}
-      onClick={handleClose}
+      style={{
+        touchAction: isImmersive
+          ? 'pan-y pinch-zoom'
+          : hasCaption
+            ? 'auto'
+            : 'none',
+      }}
+      onClick={handleBackdropClick}
     >
+      {isImmersive && caption ? (
+        <p
+          id={statusId}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+        >
+          {image.alt || caption.title}
+          {hasGallery && gallery
+            ? `, image ${gallery.index + 1} of ${gallery.items.length}`
+            : ''}
+          .
+        </p>
+      ) : null}
       {!caption ? (
         <button
           type="button"
           onClick={handleCloseButton}
           aria-label="Close image viewer"
-          className="absolute top-3 right-3 z-20 flex h-10 w-10 cursor-pointer items-center justify-center text-white/70 transition-colors hover:text-white sm:top-4 sm:right-4"
+          className="absolute top-3 right-3 z-30 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-white transition-[background-color,color,opacity] hover:bg-black/70 focus-visible:bg-black/70 sm:top-4 sm:right-4"
         >
           <X aria-hidden="true" className="h-5 w-5" />
         </button>
       ) : null}
       <div
         className={
-          hasCaption
-            ? 'grid h-full w-full grid-rows-[minmax(0,1fr)_auto] landscape:grid-cols-[minmax(0,1fr)_clamp(14rem,32vw,26rem)] landscape:grid-rows-1 md:grid-cols-[minmax(0,1fr)_clamp(14rem,32vw,26rem)] md:grid-rows-1'
-            : 'flex h-full w-full items-center justify-center'
+          isImmersive
+            ? detailsOpen
+              ? 'grid h-full w-full grid-rows-[minmax(0,1fr)_auto] landscape:grid-cols-[minmax(0,1fr)_min(42vw,24rem)] landscape:grid-rows-1 md:grid-cols-[minmax(0,1fr)_min(34vw,24rem)] md:grid-rows-1'
+              : 'h-full w-full'
+            : hasCaption
+              ? 'grid h-full w-full grid-rows-[minmax(0,1fr)_auto] landscape:grid-cols-[minmax(0,1fr)_clamp(14rem,32vw,26rem)] landscape:grid-rows-1 md:grid-cols-[minmax(0,1fr)_clamp(14rem,32vw,26rem)] md:grid-rows-1'
+              : 'flex h-full w-full items-center justify-center'
         }
       >
         <div
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
           className={
-            hasCaption
-              ? 'group relative flex min-h-0 items-center justify-center overflow-hidden bg-[#0A0A0A] p-2 sm:p-3 landscape:h-screen landscape:p-0 md:h-screen md:p-0'
-              : 'group relative flex h-full w-full items-center justify-center'
+            isImmersive
+              ? 'immersive-zoom-stage group relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden bg-[#0A0A0A]'
+              : hasCaption
+                ? 'group relative flex min-h-0 items-center justify-center overflow-hidden bg-[#0A0A0A] p-2 sm:p-3 landscape:h-screen landscape:p-0 md:h-screen md:p-0'
+                : 'group relative flex h-full w-full items-center justify-center'
           }
         >
+          {isImmersive && !detailsOpen ? (
+            <button
+              type="button"
+              onClick={handleCloseButton}
+              aria-label="Close image viewer"
+              className="immersive-zoom-chrome absolute top-[max(0.75rem,env(safe-area-inset-top))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-black/50 text-white transition-[background-color,color,opacity] hover:bg-black/70 focus-visible:bg-black/70"
+            >
+              <X aria-hidden="true" className="h-5 w-5" />
+            </button>
+          ) : null}
           {/* The full image defines the layout once it has loaded; the
               outgoing image is pinned over it at its captured size so the
               crossfade never moves pixels. */}
           <div
             ref={containerRef}
-            className={`relative ${showLoadingSurface ? 'image-zoom-loading-surface' : ''}`}
+            className={`relative ${isImmersive ? 'flex h-full w-full items-center justify-center' : ''} ${showLoadingSurface ? 'image-zoom-loading-surface' : ''}`}
             style={
               loadingDimensions
                 ? {
@@ -525,17 +844,19 @@ export function ImageZoomOverlay({
               />
             ) : null}
           </div>
-          {hasGallery && (
+          {hasGallery && (!isImmersive || !detailsOpen) ? (
             <>
               <button
                 type="button"
                 onClick={handlePrevious}
                 aria-label="Previous image"
                 disabled={!canPrevious}
-                className={`-translate-y-1/2 absolute top-1/2 left-3 flex h-12 w-12 items-center justify-center rounded-full transition-[background-color,color,opacity] md:left-4 ${
+                className={`-translate-y-1/2 absolute top-1/2 z-20 flex h-12 w-12 items-center justify-center rounded-full transition-[background-color,color,opacity] ${
                   canPrevious
-                    ? 'cursor-pointer bg-black/35 text-white opacity-100 hover:bg-black/50 focus-visible:bg-black/50 md:bg-black/0 md:opacity-0 md:group-focus-within:bg-black/35 md:group-focus-within:opacity-100 md:group-hover:bg-black/35 md:group-hover:opacity-100'
-                    : 'pointer-events-none text-white/15 opacity-0'
+                    ? isImmersive
+                      ? 'immersive-zoom-chrome left-[max(0.75rem,env(safe-area-inset-left))] cursor-pointer bg-black/50 text-white opacity-100 hover:bg-black/70 focus-visible:bg-black/70'
+                      : 'left-3 cursor-pointer bg-black/35 text-white opacity-100 hover:bg-black/50 focus-visible:bg-black/50 md:left-4 md:bg-black/0 md:opacity-0 md:group-focus-within:bg-black/35 md:group-focus-within:opacity-100 md:group-hover:bg-black/35 md:group-hover:opacity-100'
+                    : 'left-3 pointer-events-none text-white/15 opacity-0'
                 }`}
               >
                 <ChevronLeft aria-hidden="true" className="h-7 w-7" />
@@ -545,17 +866,19 @@ export function ImageZoomOverlay({
                 onClick={handleNext}
                 aria-label="Next image"
                 disabled={!canNext}
-                className={`-translate-y-1/2 absolute top-1/2 right-3 flex h-12 w-12 items-center justify-center rounded-full transition-[background-color,color,opacity] md:right-4 ${
+                className={`-translate-y-1/2 absolute top-1/2 z-20 flex h-12 w-12 items-center justify-center rounded-full transition-[background-color,color,opacity] ${
                   canNext
-                    ? 'cursor-pointer bg-black/35 text-white opacity-100 hover:bg-black/50 focus-visible:bg-black/50 md:bg-black/0 md:opacity-0 md:group-focus-within:bg-black/35 md:group-focus-within:opacity-100 md:group-hover:bg-black/35 md:group-hover:opacity-100'
-                    : 'pointer-events-none text-white/15 opacity-0'
+                    ? isImmersive
+                      ? 'immersive-zoom-chrome right-[max(0.75rem,env(safe-area-inset-right))] cursor-pointer bg-black/50 text-white opacity-100 hover:bg-black/70 focus-visible:bg-black/70'
+                      : 'right-3 cursor-pointer bg-black/35 text-white opacity-100 hover:bg-black/50 focus-visible:bg-black/50 md:right-4 md:bg-black/0 md:opacity-0 md:group-focus-within:bg-black/35 md:group-focus-within:opacity-100 md:group-hover:bg-black/35 md:group-hover:opacity-100'
+                    : 'right-3 pointer-events-none text-white/15 opacity-0'
                 }`}
               >
                 <ChevronRight aria-hidden="true" className="h-7 w-7" />
               </button>
             </>
-          )}
-          {image.originalSrc ? (
+          ) : null}
+          {image.originalSrc && (!isImmersive || !detailsOpen) ? (
             <a
               href={image.originalSrc}
               target="_blank"
@@ -563,13 +886,139 @@ export function ImageZoomOverlay({
               aria-label="Open original image in new tab"
               title="Open original image"
               onClick={handleOriginalLinkClick}
-              className="absolute right-3 bottom-3 z-20 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-black/35 text-white opacity-100 transition-[background-color,color,opacity] hover:bg-black/50 focus-visible:bg-black/50 md:right-4 md:bottom-4 md:bg-black/0 md:opacity-0 md:group-focus-within:bg-black/35 md:group-focus-within:opacity-100 md:group-hover:bg-black/35 md:group-hover:opacity-100"
+              className={`absolute z-20 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-white opacity-100 transition-[background-color,color,opacity] hover:bg-black/70 focus-visible:bg-black/70 ${
+                isImmersive
+                  ? 'immersive-zoom-chrome right-[max(0.75rem,env(safe-area-inset-right))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] bg-black/50'
+                  : 'right-3 bottom-3 bg-black/35 md:right-4 md:bottom-4 md:bg-black/0 md:opacity-0 md:group-focus-within:bg-black/35 md:group-focus-within:opacity-100 md:group-hover:bg-black/35 md:group-hover:opacity-100'
+              }`}
             >
               <ExternalLink aria-hidden="true" className="h-5 w-5" />
             </a>
           ) : null}
+          {isImmersive && caption && !detailsOpen ? (
+            <button
+              ref={detailsToggleRef}
+              type="button"
+              aria-label="Show photo details"
+              aria-controls={detailsId}
+              aria-expanded={detailsOpen}
+              title="Photo details"
+              onClick={handleDetailsToggle}
+              className="immersive-zoom-chrome absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-black/50 text-white transition-[background-color,color,opacity] hover:bg-black/70 focus-visible:bg-black/70"
+            >
+              <Info aria-hidden="true" className="h-5 w-5" />
+            </button>
+          ) : null}
         </div>
-        {caption ? (
+        {isImmersive && caption && detailsOpen ? (
+          <aside
+            id={detailsId}
+            data-zoom-caption-panel=""
+            role="region"
+            aria-label="Photo details"
+            tabIndex={0}
+            className="min-h-0 min-w-0 max-h-[min(42dvh,20rem)] w-full cursor-auto overflow-y-auto overscroll-contain bg-[#171717] px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white landscape:h-full landscape:max-h-none landscape:py-6 landscape:pr-[max(1.5rem,env(safe-area-inset-right))] landscape:pl-6 md:h-full md:max-h-none md:py-8 md:pr-8 md:pl-8"
+            onClick={handleCaptionPanelClick}
+          >
+            <div className="flex min-h-full flex-col">
+              <div className="flex min-h-12 shrink-0 items-start justify-end gap-1">
+                {hasGallery && gallery ? (
+                  <span
+                    aria-hidden="true"
+                    className="pt-3.5 font-sans text-[11px] leading-5 text-white/55"
+                  >
+                    {gallery.index + 1} / {gallery.items.length}
+                  </span>
+                ) : null}
+                <button
+                  ref={detailsCloseRef}
+                  type="button"
+                  aria-label="Collapse photo details"
+                  title="Collapse photo details"
+                  onClick={handleDetailsClose}
+                  className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
+                >
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="h-4 w-4 landscape:hidden md:hidden"
+                  />
+                  <PanelRightClose
+                    aria-hidden="true"
+                    className="hidden h-4 w-4 landscape:block md:block"
+                  />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Close image viewer"
+                  title="Close image viewer"
+                  onClick={handleCloseButton}
+                  className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
+                >
+                  <X aria-hidden="true" className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="min-w-0 pt-3 landscape:pt-6 md:pt-8">
+                {hasCaptionMetadata ? (
+                  <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-sans text-[11px] leading-5 text-white/65">
+                    {caption.date ? <time>{caption.date}</time> : null}
+                    {caption.date && caption.locationName ? (
+                      <span aria-hidden="true">@</span>
+                    ) : null}
+                    {caption.locationName ? (
+                      caption.locationUrl ? (
+                        <a
+                          href={caption.locationUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="break-words underline decoration-white/35 underline-offset-2 transition-colors hover:text-white"
+                          onClick={handleCaptionClick}
+                        >
+                          {caption.locationName}
+                        </a>
+                      ) : (
+                        <span>{caption.locationName}</span>
+                      )
+                    ) : null}
+                  </div>
+                ) : null}
+                <h2 className="break-words font-serif text-lg font-normal leading-snug text-white sm:text-xl">
+                  {caption.title}
+                </h2>
+                {caption.description ? (
+                  <p className="mt-4 break-words font-serif text-sm leading-6 text-white/80 sm:text-base sm:leading-7">
+                    {caption.description}
+                  </p>
+                ) : null}
+              </div>
+              <footer className="mt-6 flex shrink-0 flex-wrap items-end justify-between gap-x-5 gap-y-3 landscape:mt-auto md:mt-auto">
+                <Link
+                  href={collection.href}
+                  aria-label={collection.label}
+                  className="inline-flex min-h-11 shrink-0 items-center transition-opacity hover:opacity-80"
+                  onClick={handleLogoClick}
+                >
+                  <NextImage
+                    src={collection.logo}
+                    alt={collection.label}
+                    width={collection.width}
+                    height={collection.height}
+                    className="h-[16px] w-auto"
+                  />
+                </Link>
+                {caption.href ? (
+                  <Link
+                    href={caption.href}
+                    className="inline-flex min-h-11 items-center font-sans text-sm text-white/85 underline decoration-white/35 underline-offset-4 transition-colors hover:text-white"
+                    onClick={handlePostClick}
+                  >
+                    Open post&nbsp;→
+                  </Link>
+                ) : null}
+              </footer>
+            </div>
+          </aside>
+        ) : null}
+        {caption && !isImmersive ? (
           <aside
             data-zoom-caption-panel=""
             className="min-w-0 max-h-[42vh] w-full cursor-auto overflow-hidden overscroll-contain border-gray-200 border-t bg-[#f4f4f2] text-gray-900 landscape:h-screen landscape:max-h-none landscape:border-t-0 landscape:border-l md:h-screen md:max-h-none md:border-t-0 md:border-l"
@@ -652,16 +1101,16 @@ export function ImageZoomOverlay({
               ) : caption.href ? (
                 <footer className="flex shrink-0 items-center justify-between gap-4 border-gray-200 border-t px-5 py-4 md:px-7 md:py-5">
                   <Link
-                    href="/tsundoku"
-                    aria-label="Tsundoku"
+                    href={collection.href}
+                    aria-label={collection.label}
                     className="shrink-0 transition-opacity hover:opacity-80"
                     onClick={handleLogoClick}
                   >
                     <NextImage
-                      src="/images/tsundoku.svg"
-                      alt="Tsundoku"
-                      width={92}
-                      height={14}
+                      src={collection.logo}
+                      alt={collection.label}
+                      width={collection.width}
+                      height={collection.height}
                       className="h-[14px] w-auto"
                     />
                   </Link>

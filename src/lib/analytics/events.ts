@@ -1,6 +1,7 @@
 import { track } from '@vercel/analytics'
 import type { BellSuggestionKind } from '@/lib/chat/starter-questions'
 import type { Newsletter } from '@/lib/content/types'
+import { acceptingSubscriptionNewsletters } from '@/lib/newsletters'
 
 export type AnalyticsPrimitive = string | number | boolean | null | undefined
 
@@ -154,9 +155,9 @@ export type ClientAnalyticsEventName = Exclude<
   | 'Bell reply finished'
 >
 
-// Completion can be recorded from the server for code/Google verification or
-// from the token-free landing page after a magic-link redirect. The other
-// server events remain authoritative-only.
+// Completion is recorded from the server for code/Google verification and by
+// the token-free magic-link completion hop. The other server events remain
+// authoritative-only.
 export type ServerAnalyticsEventName =
   | 'Newsletter verification sent'
   | 'Newsletter signup completed'
@@ -224,8 +225,8 @@ export function summarizeNewsletters(
   if (!newsletters || newsletters.length === 0) return 'unspecified'
   const unique = new Set(newsletters)
   if (
-    unique.size === 4 &&
-    ['contraption', 'workshop', 'postcard', 'tsundoku'].every((newsletter) =>
+    unique.size === acceptingSubscriptionNewsletters.length &&
+    acceptingSubscriptionNewsletters.every((newsletter) =>
       unique.has(newsletter)
     )
   ) {
@@ -237,6 +238,7 @@ export function summarizeNewsletters(
     newsletter === 'contraption' ||
     newsletter === 'workshop' ||
     newsletter === 'postcard' ||
+    newsletter === 'umami' ||
     newsletter === 'tsundoku'
   ) {
     return newsletter
@@ -249,6 +251,7 @@ export function parseAnalyticsNewsletter(value: unknown): AnalyticsNewsletter {
     value === 'contraption' ||
     value === 'workshop' ||
     value === 'postcard' ||
+    value === 'umami' ||
     value === 'tsundoku' ||
     value === 'page' ||
     value === 'all' ||
@@ -267,6 +270,7 @@ export function analyticsPageType(pathname: string): AnalyticsPageType {
     pathname === '/contraption' ||
     pathname === '/workshop' ||
     pathname === '/postcard' ||
+    pathname === '/umami' ||
     pathname === '/tsundoku'
   ) {
     return 'newsletter'
