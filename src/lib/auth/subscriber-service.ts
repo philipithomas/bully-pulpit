@@ -154,9 +154,8 @@ export async function notifyExistingSubscriberOptIns(
     return
   }
 
-  if (!(await claimUmamiOptInNotification(after.id))) return
-
   try {
+    if (!(await claimUmamiOptInNotification(after.id))) return
     await sendExistingSubscriberOptInNotification(
       after.email,
       after.name,
