@@ -720,9 +720,16 @@ body:has(> * [data-bg="umami"]) {
   --prose-accent: var(--color-umami-ink);
 }
 
+.umami-page-sms {
+  margin-top: 0;
+}
+
+.umami-page-email + .umami-page-sms {
+  margin-top: 1rem;
+}
+
 /* Keep the photography within the first view on short landscape phones while
-   retaining both signup paths. The SMS explanation yields to the prominent
-   heading and button only at this unusually constrained height. */
+   retaining email and the secondary SMS path. */
 @media (orientation: landscape) and (max-height: 500px) {
   .umami-page-shell {
     padding-top: 0.75rem;
@@ -750,17 +757,7 @@ body:has(> * [data-bg="umami"]) {
     font-size: 1rem;
   }
 
-  .umami-page-sms {
-    margin-top: 0.75rem;
-    padding: 0.75rem 1rem;
-  }
-
-  .umami-page-sms-copy {
-    display: none;
-  }
-
-  .umami-page-sms-subscribe,
-  .umami-page-rss {
+  .umami-page-email + .umami-page-sms {
     margin-top: 0.5rem;
   }
 }

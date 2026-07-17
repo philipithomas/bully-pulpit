@@ -204,37 +204,20 @@ export default function UmamiPage() {
               subscribeEndpoint="/api/subscribe/umami"
             />
             {smsSignupPhoneNumber ? (
-              <div className="umami-page-sms mt-6 bg-white/40 px-5 py-4 text-left">
-                <h2 className="font-serif text-base text-gray-800">
-                  Get umami by text
-                </h2>
-                <p className="umami-page-sms-copy mt-1 font-serif text-sm leading-relaxed text-gray-600">
-                  New umami posts arrive by text, with the photo attached when
-                  available. The SMS subscription includes my other active
-                  newsletters, too.
-                </p>
+              <p className="umami-page-sms text-left font-serif text-sm text-gray-500">
+                Also available via{' '}
                 <SmsSubscribePrompt
                   analyticsPlacement="newsletter_page"
                   newsletter="umami"
                   phoneDisplayNumber={smsSignupDisplayNumber}
                   phoneNumber={smsSignupPhoneNumber}
-                  triggerClassName="btn-newsletter"
-                  triggerLabel="Subscribe by SMS"
-                  variant="standalone"
-                  className="umami-page-sms-subscribe mt-4"
+                  triggerClassName="decoration-umami/60 hover:text-umami-ink"
+                  triggerLabel="SMS"
+                  variant="link"
                 />
-              </div>
+                .
+              </p>
             ) : null}
-            <p className="umami-page-rss mt-4 font-serif text-xs text-gray-500">
-              Prefer a feed? Follow umami via{' '}
-              <Link
-                href="/feed/umami/rss.xml"
-                className="underline decoration-umami/50 underline-offset-2 transition-colors hover:text-gray-950"
-              >
-                RSS
-              </Link>
-              .
-            </p>
           </div>
         </div>
 

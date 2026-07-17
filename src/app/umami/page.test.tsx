@@ -5,9 +5,15 @@ const phoneMocks = vi.hoisted(() => ({
   displayNumber: vi.fn((): string | null => '+1 212 347 3190'),
   number: vi.fn((): string | null => '+12123473190'),
 }))
+const subscribeMocks = vi.hoisted(() => ({
+  visible: vi.fn(() => true),
+}))
 
 vi.mock('@/components/posts/subscribe-cta', () => ({
-  SubscribeCta: () => <div data-testid="subscribe-cta" />,
+  SubscribeCta: ({ className }: { className?: string }) =>
+    subscribeMocks.visible() ? (
+      <div className={className} data-testid="subscribe-cta" />
+    ) : null,
 }))
 vi.mock('@/components/auth/sms-subscribe-prompt', () => ({
   SmsSubscribePrompt: ({
@@ -43,6 +49,7 @@ const SEO_DESCRIPTION =
 afterEach(() => {
   phoneMocks.displayNumber.mockReturnValue('+1 212 347 3190')
   phoneMocks.number.mockReturnValue('+12123473190')
+  subscribeMocks.visible.mockReturnValue(true)
 })
 
 describe('UmamiPage viewer contract', () => {
@@ -70,24 +77,20 @@ describe('UmamiPage viewer contract', () => {
     expect(html).not.toContain('<time')
   })
 
-  it('uses the approved copy and promotes photo MMS above RSS', () => {
+  it('uses the approved copy and offers SMS as a secondary signup path', () => {
     const html = renderToStaticMarkup(<UmamiPage />)
 
     expect(html).toContain('Photo journal of city life.')
     expect(html).toContain('Just the good stuff.')
     expect(html).not.toContain('Only the good stuff.')
     expect(html).not.toContain('An ongoing photography newsletter.')
-    expect(html).toContain('Get umami by text')
-    expect(html).toContain(
-      'New umami posts arrive by text, with the photo attached when available. The SMS subscription includes my other active newsletters, too.'
-    )
+    expect(html).toContain('Also available via')
     expect(html).toContain('data-analytics-placement="newsletter_page"')
     expect(html).toContain('data-newsletter="umami"')
-    expect(html).toContain('data-variant="standalone"')
-    expect(html).toContain('Subscribe by SMS')
-    expect(html).toContain('Prefer a feed? Follow umami via')
-    expect(html).toContain('>RSS</a>')
-    expect(html.indexOf('Subscribe by SMS')).toBeLessThan(html.indexOf('>RSS<'))
+    expect(html).toContain('data-variant="link"')
+    expect(html).toContain('>SMS</span>')
+    expect(html).not.toContain('Prefer a feed?')
+    expect(html).not.toContain('/feed/umami/rss.xml')
     expect(metadata).toMatchObject({
       description: SEO_DESCRIPTION,
       openGraph: { description: SEO_DESCRIPTION },
@@ -95,15 +98,25 @@ describe('UmamiPage viewer contract', () => {
     })
   })
 
-  it('keeps RSS visible when SMS is not configured', () => {
+  it('omits the secondary signup row when SMS is not configured', () => {
     phoneMocks.displayNumber.mockReturnValue(null)
     phoneMocks.number.mockReturnValue(null)
 
     const html = renderToStaticMarkup(<UmamiPage />)
 
-    expect(html).not.toContain('Get umami by text')
-    expect(html).not.toContain('Subscribe by SMS')
-    expect(html).toContain('Prefer a feed? Follow umami via')
-    expect(html).toContain('>RSS</a>')
+    expect(html).not.toContain('Also available via')
+    expect(html).not.toContain('>SMS</span>')
+    expect(html).not.toContain('/feed/umami/rss.xml')
+  })
+
+  it('lets SMS lead without an empty gap when the email CTA is absent', () => {
+    subscribeMocks.visible.mockReturnValue(false)
+
+    const html = renderToStaticMarkup(<UmamiPage />)
+
+    expect(html).not.toContain('data-testid="subscribe-cta"')
+    expect(html).not.toContain('umami-page-email')
+    expect(html).toContain('class="umami-page-sms')
+    expect(html).toContain('Also available via')
   })
 })

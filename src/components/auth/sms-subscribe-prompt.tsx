@@ -26,7 +26,7 @@ interface SmsSubscribePromptProps {
   homepageLabel?: string
   triggerClassName?: string
   triggerLabel?: string
-  variant?: 'form' | 'homepage' | 'standalone'
+  variant?: 'form' | 'homepage' | 'link' | 'standalone'
 }
 
 export function SmsSubscribeDisclosure({
@@ -111,6 +111,7 @@ export function SmsSubscribePrompt({
 
   const displayNumber = phoneDisplayNumber ?? phoneNumber
   const isHomepage = variant === 'homepage'
+  const isLink = variant === 'link'
   const isStandalone = variant === 'standalone'
 
   return (
@@ -121,12 +122,14 @@ export function SmsSubscribePrompt({
             ? 'block'
             : isHomepage
               ? 'font-serif text-gray-500'
-              : 'mt-3 block max-w-md font-serif text-sm leading-relaxed text-gray-500',
+              : isLink
+                ? 'inline'
+                : 'mt-3 block max-w-md font-serif text-sm leading-relaxed text-gray-500',
           align === 'center' && !isHomepage && 'text-center',
           className
         )}
       >
-        {isStandalone ? null : isHomepage ? ' or ' : 'Or, '}
+        {isStandalone || isLink ? null : isHomepage ? ' or ' : 'Or, '}
         <DialogTrigger asChild>
           <button
             type="button"
@@ -149,7 +152,7 @@ export function SmsSubscribePrompt({
                   : 'subscribe via SMS')}
           </button>
         </DialogTrigger>
-        {isHomepage || isStandalone ? null : '.'}
+        {isHomepage || isLink || isStandalone ? null : '.'}
       </span>
 
       <DialogContent>

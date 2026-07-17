@@ -61,6 +61,25 @@ describe('SmsSubscribePrompt', () => {
     expect(html).not.toContain('>Subscribe by SMS</button>.')
   })
 
+  it('renders a bare secondary link for custom surrounding copy', () => {
+    const html = renderToStaticMarkup(
+      <SmsSubscribePrompt
+        analyticsPlacement="newsletter_page"
+        newsletter="umami"
+        phoneDisplayNumber="+1 212 347 3190"
+        phoneNumber="+12123473190"
+        triggerLabel="SMS"
+        variant="link"
+      />
+    )
+
+    expect(html).toContain('>SMS</button>')
+    expect(html).toContain('underline')
+    expect(html).not.toContain('Or, ')
+    expect(html).not.toContain(' or ')
+    expect(html).not.toContain('>SMS</button>.')
+  })
+
   it('renders nothing without a configured phone number', () => {
     const html = renderToStaticMarkup(<SmsSubscribePrompt />)
 
