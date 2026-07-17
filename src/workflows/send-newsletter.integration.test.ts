@@ -56,7 +56,11 @@ import {
   resetFailedSmsBySlug,
   SMS_SEND_SKIPPED_UNSUBSCRIBED,
 } from '@/lib/db/queries/sms-sends'
-import { deleteSmsDataForPhoneNumber } from '@/lib/db/queries/sms-subscribers'
+import {
+  countActiveSms,
+  countEligibleSms,
+  deleteSmsDataForPhoneNumber,
+} from '@/lib/db/queries/sms-subscribers'
 import {
   type EmailSend,
   emailSends,
@@ -559,6 +563,51 @@ describe('sendNewsletterWorkflow', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('resumes a completed email send for the global SMS audience regardless of legacy newsletter flags', async () => {
+    mockedGetPost.mockReturnValue({ ...POST, newsletter: 'umami' })
+    const emailSubscriber = await seedSubscriber({
+      email: 'reader@example.com',
+    })
+    await seedSendRow(emailSubscriber.id, {
+      newsletter: 'umami',
+      sentAt: new Date(),
+    })
+    const [smsSubscriber] = await db
+      .insert(smsSubscribers)
+      .values({
+        phoneNumber: '+15551234567',
+        confirmedAt: new Date(),
+        subscribedPostcard: false,
+        subscribedContraption: false,
+        subscribedWorkshop: false,
+        subscribedUmami: false,
+        subscribedTsundoku: false,
+      })
+      .returning()
+
+    expect(await countActiveSms()).toBe(1)
+    expect(await countEligibleSms('umami', SLUG)).toBe(1)
+
+    const result = await sendNewsletterWorkflow(SLUG)
+
+    expect(result).toEqual(
+      workflowResult({
+        batches: 0,
+        sent: 0,
+        failed: 0,
+        smsBatches: 1,
+        smsSent: 1,
+        smsFailed: 0,
+      })
+    )
+    expect(mockedSes).not.toHaveBeenCalled()
+    expect(fetch).toHaveBeenCalledTimes(1)
+    const smsRow = smsRowFor(await allSmsRows(), smsSubscriber.id)
+    expect(smsRow.newsletter).toBe('umami')
+    expect(smsRow.sentAt).not.toBeNull()
+    expect(await countEligibleSms('umami', SLUG)).toBe(0)
+  })
+
   it('marks a failed SMS row and keeps the email send complete', async () => {
     await seedSubscriber({ email: 'alice@example.com' })
     const smsSubscriber = await seedSmsSubscriber({
@@ -689,6 +738,33 @@ describe('sendNewsletterWorkflow', () => {
 
     expect(ids).toEqual([])
     expect(await allSmsRows()).toHaveLength(0)
+  })
+
+  it('queues a confirmed SMS id regardless of its legacy newsletter flags', async () => {
+    const [subscriber] = await db
+      .insert(smsSubscribers)
+      .values({
+        phoneNumber: '+15551234567',
+        confirmedAt: new Date(),
+        subscribedPostcard: false,
+        subscribedContraption: false,
+        subscribedWorkshop: false,
+        subscribedUmami: false,
+        subscribedTsundoku: false,
+      })
+      .returning()
+
+    const ids = await bulkCreateQueuedSms({
+      smsSubscriberIds: [subscriber.id],
+      postSlug: SLUG,
+      newsletter: 'umami',
+      body: 'Umami: Hello world',
+    })
+
+    expect(ids).toHaveLength(1)
+    expect(smsRowFor(await allSmsRows(), subscriber.id).newsletter).toBe(
+      'umami'
+    )
   })
 
   it('snapshots the MMS cover URL when queuing a send', async () => {

@@ -5,7 +5,6 @@ import {
   findSmsSubscriberById,
   listSmsSubscribers,
 } from '@/lib/db/queries/sms-subscribers'
-import { isNewsletter, type NewsletterSlug } from '@/lib/db/queries/subscribers'
 
 const PAGE_SIZE = 50
 const MAX_SEARCH_LENGTH = 32
@@ -36,14 +35,6 @@ export async function GET(request: NextRequest) {
     return privateJson({ error: 'Invalid phone search' }, 400)
   }
 
-  const rawNewsletter = params.get('newsletter') ?? undefined
-  let newsletter: NewsletterSlug | undefined
-  if (rawNewsletter && isNewsletter(rawNewsletter)) {
-    newsletter = rawNewsletter
-  } else if (rawNewsletter) {
-    return privateJson({ error: 'Invalid newsletter' }, 400)
-  }
-
   const rawOffset = params.get('offset') ?? '0'
   const offset = Number(rawOffset)
   if (!Number.isSafeInteger(offset) || offset < 0) {
@@ -53,7 +44,6 @@ export async function GET(request: NextRequest) {
   try {
     const result = await listSmsSubscribers({
       search: search || undefined,
-      newsletter,
       offset,
       limit: PAGE_SIZE,
     })

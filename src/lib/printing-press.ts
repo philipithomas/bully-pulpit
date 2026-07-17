@@ -19,6 +19,20 @@ export function isRecent(
 }
 
 /**
+ * Keep both delivery channels visible, including a zero count. Omitting one
+ * makes the send preview look email-only even though SMS is part of every
+ * newsletter send.
+ */
+export function sendAudienceLabel(
+  emailEligible: number,
+  smsEligible: number
+): string {
+  const email = `${emailEligible} email subscriber${emailEligible === 1 ? '' : 's'}`
+  const sms = `${smsEligible} SMS subscriber${smsEligible === 1 ? '' : 's'}`
+  return `${email} and ${sms}`
+}
+
+/**
  * One prose sentence for the subscribers list describing why delivery to an
  * address is off. The suppression-sync cron writes the SES suppression list's
  * terse enum ('BOUNCE'), but the reason column is free text, so any other

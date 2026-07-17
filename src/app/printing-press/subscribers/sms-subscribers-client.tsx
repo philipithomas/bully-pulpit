@@ -37,26 +37,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { NativeSelect } from '@/components/ui/native-select'
 import { Spinner } from '@/components/ui/spinner'
-import { siteConfig } from '@/lib/config'
-import type { Newsletter } from '@/lib/content/types'
 import type { SmsSubscriberListItem } from '@/lib/db/queries/sms-subscribers'
-import { newsletterAccentDots, newsletterList } from '@/lib/newsletters'
 import { formatPhoneNumberForDisplay } from '@/lib/phone/config'
-
-type NewsletterFilter = Newsletter | ''
-
-const NEWSLETTERS = newsletterList.map((newsletter) => ({
-  slug: newsletter,
-  key: `subscribed${newsletter[0].toUpperCase()}${newsletter.slice(1)}` as keyof SmsSubscriberListItem,
-  name: siteConfig.newsletters[newsletter].name,
-  dot: newsletterAccentDots[newsletter],
-}))
-
-function isNewsletterFilter(value: string): value is NewsletterFilter {
-  return value === '' || newsletterList.includes(value as Newsletter)
-}
 
 function joinedLabel(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10)
@@ -64,16 +47,13 @@ function joinedLabel(iso: string): string {
 
 function smsSubscribersUrl({
   query,
-  newsletter,
   offset,
 }: {
   query: string
-  newsletter: NewsletterFilter
   offset?: number
 }): string {
   const params = new URLSearchParams()
   if (query) params.set('q', query)
-  if (newsletter) params.set('newsletter', newsletter)
   if (offset) params.set('offset', String(offset))
   const queryString = params.toString()
   return queryString
@@ -84,27 +64,16 @@ function smsSubscribersUrl({
 function subscriberCountLabel({
   total,
   query,
-  newsletter,
 }: {
   total: number
   query: string
-  newsletter: NewsletterFilter
 }): string {
   const noun = total === 1 ? 'SMS subscriber' : 'SMS subscribers'
-  const scope = newsletter
-    ? `${siteConfig.newsletters[newsletter].name} ${noun}`
-    : noun
-  return query ? `${total} matching ${scope}` : `${total} ${scope}`
+  return query ? `${total} matching ${noun}` : `${total} ${noun}`
 }
 
-function emptyLabel(query: string, newsletter: NewsletterFilter): string {
-  if (query && newsletter) {
-    return `No ${siteConfig.newsletters[newsletter].name} SMS subscribers match “${query}”.`
-  }
+function emptyLabel(query: string): string {
   if (query) return `No SMS subscribers match “${query}”.`
-  if (newsletter) {
-    return `No ${siteConfig.newsletters[newsletter].name} SMS subscribers.`
-  }
   return 'No SMS subscribers yet.'
 }
 
@@ -118,10 +87,7 @@ export function SmsSubscribersClient({
   const [rows, setRows] = useState(initialRows)
   const [total, setTotal] = useState(initialTotal)
   const [query, setQuery] = useState('')
-  const [newsletterFilter, setNewsletterFilter] = useState<NewsletterFilter>('')
   const [appliedQuery, setAppliedQuery] = useState('')
-  const [appliedNewsletterFilter, setAppliedNewsletterFilter] =
-    useState<NewsletterFilter>('')
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [copied, setCopied] = useState<number | null>(null)
@@ -134,48 +100,38 @@ export function SmsSubscribersClient({
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const actionTriggerRef = useRef<HTMLButtonElement>(null)
 
-  const runSearch = useCallback(
-    async (nextQuery: string, newsletter: NewsletterFilter) => {
-      const id = ++requestId.current
-      setLoading(true)
-      try {
-        const response = await fetch(
-          smsSubscribersUrl({ query: nextQuery, newsletter })
-        )
-        const data = await response.json().catch(() => null)
-        if (id !== requestId.current) return
-        if (response.ok && data) {
-          setRows(data.rows)
-          setTotal(data.total)
-          setAppliedQuery(nextQuery)
-          setAppliedNewsletterFilter(newsletter)
-        } else {
-          setRows([])
-          setTotal(0)
-          setAppliedQuery(nextQuery)
-          setAppliedNewsletterFilter(newsletter)
-          toast.error(data?.error ?? 'Search failed')
-        }
-      } catch {
-        toast.error('Search failed. Check your connection.')
-      } finally {
-        if (id === requestId.current) setLoading(false)
+  const runSearch = useCallback(async (nextQuery: string) => {
+    const id = ++requestId.current
+    setLoading(true)
+    try {
+      const response = await fetch(smsSubscribersUrl({ query: nextQuery }))
+      const data = await response.json().catch(() => null)
+      if (id !== requestId.current) return
+      if (response.ok && data) {
+        setRows(data.rows)
+        setTotal(data.total)
+        setAppliedQuery(nextQuery)
+      } else {
+        setRows([])
+        setTotal(0)
+        setAppliedQuery(nextQuery)
+        toast.error(data?.error ?? 'Search failed')
       }
-    },
-    []
-  )
+    } catch {
+      toast.error('Search failed. Check your connection.')
+    } finally {
+      if (id === requestId.current) setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false
       return
     }
-    const timeout = setTimeout(
-      () => void runSearch(query, newsletterFilter),
-      300
-    )
+    const timeout = setTimeout(() => void runSearch(query), 300)
     return () => clearTimeout(timeout)
-  }, [newsletterFilter, query, runSearch])
+  }, [query, runSearch])
 
   const loadMore = useCallback(async () => {
     const id = requestId.current
@@ -184,7 +140,6 @@ export function SmsSubscribersClient({
       const response = await fetch(
         smsSubscribersUrl({
           query: appliedQuery,
-          newsletter: appliedNewsletterFilter,
           offset: rows.length,
         })
       )
@@ -209,15 +164,7 @@ export function SmsSubscribersClient({
     } finally {
       setLoadingMore(false)
     }
-  }, [appliedNewsletterFilter, appliedQuery, rows.length])
-
-  const onNewsletterFilterChange = useCallback(
-    (event: ChangeEvent<HTMLSelectElement>) => {
-      const next = event.target.value
-      if (isNewsletterFilter(next)) setNewsletterFilter(next)
-    },
-    []
-  )
+  }, [appliedQuery, rows.length])
 
   const onQueryChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value)
@@ -302,8 +249,8 @@ export function SmsSubscribersClient({
 
   return (
     <div>
-      <div className="mb-5 flex w-full flex-col gap-2 sm:max-w-xl sm:flex-row">
-        <div className="relative min-w-0 flex-1">
+      <div className="mb-5 w-full sm:max-w-xl">
+        <div className="relative">
           <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-muted-foreground" />
           <Input
             type="search"
@@ -317,37 +264,18 @@ export function SmsSubscribersClient({
             <Spinner className="-translate-y-1/2 absolute top-1/2 right-3 size-4 text-muted-foreground" />
           ) : null}
         </div>
-        <div className="w-full sm:w-44 sm:shrink-0">
-          <NativeSelect
-            value={newsletterFilter}
-            onChange={onNewsletterFilterChange}
-            aria-label="Filter SMS subscribers by newsletter"
-          >
-            <option value="">All subscribers</option>
-            {NEWSLETTERS.map((newsletter) => (
-              <option
-                key={newsletter.slug}
-                value={newsletter.slug}
-                className="italic"
-              >
-                {newsletter.name}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
       </div>
 
       <p className="mb-3 font-mono text-muted-foreground text-xs">
         {subscriberCountLabel({
           total,
           query: appliedQuery,
-          newsletter: appliedNewsletterFilter,
         })}
       </p>
 
       {rows.length === 0 ? (
         <div className="bg-card px-4 py-12 text-center text-muted-foreground text-sm">
-          {emptyLabel(appliedQuery, appliedNewsletterFilter)}
+          {emptyLabel(appliedQuery)}
         </div>
       ) : (
         <ul className="space-y-1 bg-card p-1">
@@ -372,19 +300,6 @@ export function SmsSubscribersClient({
                   )}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-muted-foreground text-xs">
-                  {NEWSLETTERS.filter(
-                    (newsletter) => subscriber[newsletter.key]
-                  ).map((newsletter) => (
-                    <cite
-                      key={newsletter.key}
-                      className="inline-flex items-center gap-1 font-serif"
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${newsletter.dot}`}
-                      />
-                      {newsletter.name}
-                    </cite>
-                  ))}
                   <span>
                     {subscriber.confirmedAt ? 'joined' : 'recorded'}{' '}
                     {joinedLabel(subscriber.createdAt)}

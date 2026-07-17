@@ -159,18 +159,13 @@ describe('GET list', () => {
       id: expect.any(Number),
       phoneNumber: '+15551110002',
       confirmedAt: null,
-      subscribedPostcard: false,
-      subscribedContraption: false,
-      subscribedWorkshop: false,
-      subscribedUmami: false,
-      subscribedTsundoku: false,
       source: 'twilio_stop',
       createdAt: '2026-07-02T12:00:00.000Z',
     })
     expect(json.rows[1].confirmedAt).toBe('2026-07-01T12:00:00.000Z')
   })
 
-  it('normalizes a formatted phone search and combines it with a newsletter filter', async () => {
+  it('normalizes a formatted phone search and ignores the legacy newsletter parameter', async () => {
     await signInAsAdmin()
     await seedSmsSubscriber({
       phoneNumber: '+15551110001',
@@ -193,8 +188,10 @@ describe('GET list', () => {
       listRequest({ q: '+1 (555) 111-000', newsletter: 'workshop' })
     )
     const json = await response.json()
-    expect(json.total).toBe(1)
-    expect(json.rows[0].phoneNumber).toBe('+15551110001')
+    expect(json.total).toBe(2)
+    expect(
+      json.rows.map((row: { phoneNumber: string }) => row.phoneNumber).sort()
+    ).toEqual(['+15551110001', '+15551110002'])
   })
 
   it('supports offset pagination', async () => {
@@ -216,13 +213,9 @@ describe('GET list', () => {
     await signInAsAdmin()
     const responses = await Promise.all([
       listSmsSubscribers(listRequest({ q: 'not a number' })),
-      listSmsSubscribers(listRequest({ newsletter: 'bogus' })),
-      listSmsSubscribers(listRequest({ newsletter: 'constructor' })),
       listSmsSubscribers(listRequest({ offset: '-1' })),
     ])
-    expect(responses.map((response) => response.status)).toEqual([
-      400, 400, 400, 400,
-    ])
+    expect(responses.map((response) => response.status)).toEqual([400, 400])
     for (const response of responses) expectPrivate(response)
   })
 })

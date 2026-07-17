@@ -229,17 +229,7 @@ export async function countActive(): Promise<number> {
   const smsRows = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(smsSubscribers)
-    .where(
-      and(
-        isNotNull(smsSubscribers.confirmedAt),
-        or(
-          eq(smsSubscribers.subscribedPostcard, true),
-          eq(smsSubscribers.subscribedContraption, true),
-          eq(smsSubscribers.subscribedWorkshop, true),
-          eq(smsSubscribers.subscribedUmami, true)
-        )
-      )
-    )
+    .where(isNotNull(smsSubscribers.confirmedAt))
   return (emailRows[0]?.count ?? 0) + (smsRows[0]?.count ?? 0)
 }
 

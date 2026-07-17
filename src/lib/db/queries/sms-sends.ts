@@ -17,14 +17,6 @@ const INSERT_CHUNK = 500
 export const SMS_SEND_SKIPPED_UNSUBSCRIBED =
   'Skipped: unsubscribed before SMS send'
 
-const newsletterColumns = {
-  postcard: smsSubscribers.subscribedPostcard,
-  contraption: smsSubscribers.subscribedContraption,
-  workshop: smsSubscribers.subscribedWorkshop,
-  umami: smsSubscribers.subscribedUmami,
-  tsundoku: smsSubscribers.subscribedTsundoku,
-} as const
-
 export async function bulkCreateQueuedSms(input: {
   smsSubscriberIds: number[]
   postSlug: string
@@ -36,9 +28,6 @@ export async function bulkCreateQueuedSms(input: {
   const ids: number[] = []
   for (let i = 0; i < input.smsSubscriberIds.length; i += INSERT_CHUNK) {
     const chunk = input.smsSubscriberIds.slice(i, i + INSERT_CHUNK)
-    const newsletterColumn =
-      newsletterColumns[input.newsletter as keyof typeof newsletterColumns]
-    if (!newsletterColumn) continue
     const result = await getDb().execute<{ id: number }>(sql`
       INSERT INTO ${smsSends}
         (sms_subscriber_id, post_slug, newsletter, body, media_url, next_attempt_at)
@@ -52,8 +41,7 @@ export async function bulkCreateQueuedSms(input: {
       FROM ${smsSubscribers}
       WHERE ${and(
         inArray(smsSubscribers.id, chunk),
-        isNotNull(smsSubscribers.confirmedAt),
-        eq(newsletterColumn, true)
+        isNotNull(smsSubscribers.confirmedAt)
       )}
       ORDER BY ${smsSubscribers.id} DESC
       ON CONFLICT (sms_subscriber_id, post_slug) DO NOTHING

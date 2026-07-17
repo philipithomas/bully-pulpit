@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { suppressionSentence } from '@/lib/printing-press'
+import { sendAudienceLabel, suppressionSentence } from '@/lib/printing-press'
+
+describe('sendAudienceLabel', () => {
+  it.each([
+    [1, 0, '1 email subscriber and 0 SMS subscribers'],
+    [0, 1, '0 email subscribers and 1 SMS subscriber'],
+    [0, 0, '0 email subscribers and 0 SMS subscribers'],
+    [2, 3, '2 email subscribers and 3 SMS subscribers'],
+  ])('formats %i email and %i SMS recipients', (email, sms, expected) => {
+    expect(sendAudienceLabel(email, sms)).toBe(expected)
+  })
+})
 
 describe('suppressionSentence', () => {
   it('renders a rich free-text bounce reason as one prose sentence', () => {

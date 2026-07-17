@@ -15,7 +15,7 @@ export default async function SubscribersPage() {
     <div>
       <PageHeader
         title="Subscribers"
-        description="Email and SMS newsletter subscriptions."
+        description="Email newsletter preferences and the all-posts SMS list."
       />
       <SubscriberTabsClient
         initialEmailRows={emailSubscribers.rows}
