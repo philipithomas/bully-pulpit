@@ -236,6 +236,8 @@ export const smsSubscribers = pgTable(
     id: bigserial('id', { mode: 'number' }).primaryKey(),
     phoneNumber: text('phone_number').notNull().unique(),
     confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    // Legacy rollout columns: SMS membership is global and uses confirmedAt.
+    // Keep these until a later contract migration can safely drop them.
     subscribedPostcard: boolean('subscribed_postcard').notNull().default(true),
     subscribedContraption: boolean('subscribed_contraption')
       .notNull()

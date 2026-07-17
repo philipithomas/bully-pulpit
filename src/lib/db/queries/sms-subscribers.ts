@@ -27,6 +27,9 @@ import {
   isNewsletterSendingEnabled,
 } from '@/lib/newsletters'
 
+// These writes keep the legacy columns rollback-compatible during the
+// expand/contract migration. Delivery membership is global and uses only
+// confirmedAt below; the per-newsletter values are not preferences.
 const defaultSmsSubscriptions = {
   postcard: isNewsletterAcceptingSubscriptions('postcard'),
   contraption: isNewsletterAcceptingSubscriptions('contraption'),
@@ -34,14 +37,6 @@ const defaultSmsSubscriptions = {
   umami: isNewsletterAcceptingSubscriptions('umami'),
   tsundoku: isNewsletterAcceptingSubscriptions('tsundoku'),
 }
-
-const newsletterColumns = {
-  postcard: smsSubscribers.subscribedPostcard,
-  contraption: smsSubscribers.subscribedContraption,
-  workshop: smsSubscribers.subscribedWorkshop,
-  umami: smsSubscribers.subscribedUmami,
-  tsundoku: smsSubscribers.subscribedTsundoku,
-} as const
 
 const BELL_CONTACT_CARD_CLAIM_MS = 2 * 60 * 1000
 
@@ -354,10 +349,9 @@ export async function deleteSmsDataForPhoneNumber(
   `)
 }
 
-function eligibilityWhere(newsletter: NewsletterSlug, postSlug: string) {
+function eligibilityWhere(postSlug: string) {
   return and(
     isNotNull(smsSubscribers.confirmedAt),
-    eq(newsletterColumns[newsletter], true),
     sql`NOT EXISTS (
       SELECT 1 FROM ${smsSends}
       WHERE ${smsSends.smsSubscriberId} = ${smsSubscribers.id}
@@ -379,7 +373,7 @@ export async function findEligibleSmsIds(
   const rows = await getDb()
     .select({ id: smsSubscribers.id })
     .from(smsSubscribers)
-    .where(eligibilityWhere(newsletter, postSlug))
+    .where(eligibilityWhere(postSlug))
     .orderBy(desc(smsSubscribers.createdAt), desc(smsSubscribers.id))
   return rows.map((r) => r.id)
 }
@@ -392,7 +386,7 @@ export async function countEligibleSms(
   const rows = await getDb()
     .select({ count: sql<number>`count(*)::int` })
     .from(smsSubscribers)
-    .where(eligibilityWhere(newsletter, postSlug))
+    .where(eligibilityWhere(postSlug))
   return rows[0]?.count ?? 0
 }
 
@@ -400,17 +394,7 @@ export async function countActiveSms(): Promise<number> {
   const rows = await getDb()
     .select({ count: sql<number>`count(*)::int` })
     .from(smsSubscribers)
-    .where(
-      and(
-        isNotNull(smsSubscribers.confirmedAt),
-        or(
-          eq(smsSubscribers.subscribedPostcard, true),
-          eq(smsSubscribers.subscribedContraption, true),
-          eq(smsSubscribers.subscribedWorkshop, true),
-          eq(smsSubscribers.subscribedUmami, true)
-        )
-      )
-    )
+    .where(isNotNull(smsSubscribers.confirmedAt))
   return rows[0]?.count ?? 0
 }
 
@@ -418,11 +402,6 @@ export type SmsSubscriberListItem = {
   id: number
   phoneNumber: string
   confirmedAt: string | null
-  subscribedPostcard: boolean
-  subscribedContraption: boolean
-  subscribedWorkshop: boolean
-  subscribedUmami: boolean
-  subscribedTsundoku: boolean
   source: string | null
   createdAt: string
 }
@@ -430,7 +409,6 @@ export type SmsSubscriberListItem = {
 /** Paginated SMS subscriber list for the Printing press admin. */
 export async function listSmsSubscribers(opts: {
   search?: string
-  newsletter?: NewsletterSlug
   limit?: number
   offset?: number
 }): Promise<{ rows: SmsSubscriberListItem[]; total: number }> {
@@ -440,9 +418,6 @@ export async function listSmsSubscribers(opts: {
   const filters: SQL[] = []
   if (search) {
     filters.push(sql`${smsSubscribers.phoneNumber} LIKE ${`%${search}%`}`)
-  }
-  if (opts.newsletter) {
-    filters.push(eq(newsletterColumns[opts.newsletter], true))
   }
   const where = filters.length > 0 ? and(...filters) : undefined
 
@@ -467,11 +442,6 @@ export async function listSmsSubscribers(opts: {
       confirmedAt: subscriber.confirmedAt
         ? subscriber.confirmedAt.toISOString()
         : null,
-      subscribedPostcard: subscriber.subscribedPostcard,
-      subscribedContraption: subscriber.subscribedContraption,
-      subscribedWorkshop: subscriber.subscribedWorkshop,
-      subscribedUmami: subscriber.subscribedUmami,
-      subscribedTsundoku: subscriber.subscribedTsundoku,
       source: subscriber.source,
       createdAt: subscriber.createdAt.toISOString(),
     })),

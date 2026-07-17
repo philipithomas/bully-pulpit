@@ -144,7 +144,7 @@ describe('subscriberStats / countActive', () => {
     expect(await countActive()).toBe(2)
   })
 
-  it('includes active SMS subscribers in the public count', async () => {
+  it('counts every confirmed SMS subscriber regardless of legacy newsletter flags', async () => {
     const confirmedAt = new Date()
     await seed({ confirmedAt })
     await db.insert(smsSubscribers).values([
@@ -175,7 +175,7 @@ describe('subscriberStats / countActive', () => {
       },
     ])
 
-    expect(await countActive()).toBe(2)
+    expect(await countActive()).toBe(4)
   })
 
   it('returns zeros on an empty table', async () => {
