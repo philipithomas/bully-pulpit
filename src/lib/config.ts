@@ -50,7 +50,7 @@ const staticConfig = {
     },
     umami: {
       name: 'umami',
-      tagline: 'Photo journal of city life.',
+      tagline: 'Photo journal of city life. Just what lingers.',
       slug: 'umami',
       color: 'umami',
       logo: {

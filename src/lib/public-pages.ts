@@ -108,10 +108,7 @@ The newsletters are available by email, RSS, and SMS, and the homepage has a sig
   newsletterPage('contraption'),
   newsletterPage('workshop'),
   newsletterPage('postcard'),
-  newsletterPage(
-    'umami',
-    'An ongoing photography newsletter by Philip Thomas about street scenes, city life, coffee, and other things he notices along the way.'
-  ),
+  newsletterPage('umami'),
   newsletterPage('tsundoku'),
   {
     id: 'app-photography',
