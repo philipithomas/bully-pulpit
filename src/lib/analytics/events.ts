@@ -25,6 +25,7 @@ export type AnalyticsPlacement =
 
 export type AnalyticsPageType =
   | 'home'
+  | 'bell'
   | 'post'
   | 'newsletter'
   | 'content_page'
@@ -92,7 +93,7 @@ export interface AnalyticsEventProperties {
     newsletter: AnalyticsNewsletter
   }
   'Bell opened': {
-    entry_source: 'header' | 'search' | 'onboarding' | 'other'
+    entry_source: 'header' | 'search' | 'onboarding' | 'page' | 'other'
     signed_in: boolean
     page_type: AnalyticsPageType
   }
@@ -265,6 +266,7 @@ export function parseAnalyticsNewsletter(value: unknown): AnalyticsNewsletter {
 
 export function analyticsPageType(pathname: string): AnalyticsPageType {
   if (pathname === '/') return 'home'
+  if (pathname === '/bell') return 'bell'
   if (pathname === '/photography') return 'photography'
   if (
     pathname === '/contraption' ||

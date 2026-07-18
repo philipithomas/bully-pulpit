@@ -3,7 +3,7 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { Search } from 'lucide-react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import {
   mergeTypeaheadResults,
@@ -114,6 +114,7 @@ export function SearchDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -285,9 +286,11 @@ export function SearchDialog({
       had_results: results.length > 0,
       search_mode: searchMode,
     })
-    useChatSidebar.getState().openSidebar(query)
+    useChatSidebar
+      .getState()
+      .startSearchHandoff(query, pathname === '/bell' ? 'page' : 'sidebar')
     onOpenChange(false)
-  }, [query, results.length, searchMode, onOpenChange])
+  }, [query, results.length, searchMode, pathname, onOpenChange])
 
   const showAskAI = query.length >= 2
   const displayResults = query.length < 2 ? recentPosts : results

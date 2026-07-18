@@ -2,8 +2,15 @@
 
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, type UIMessage } from 'ai'
-import { PanelRight, PanelRightClose, RotateCcw, X } from 'lucide-react'
+import {
+  Maximize2,
+  PanelRight,
+  PanelRightClose,
+  RotateCcw,
+  X,
+} from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   type MouseEvent,
@@ -109,14 +116,16 @@ function WelcomeScreen({
   )
 }
 
-export function ChatSidebar() {
+type BellChatVariant = 'page' | 'sidebar'
+
+function BellChat({ variant }: { variant: BellChatVariant }) {
+  const isPage = variant === 'page'
   const pathname = usePathname()
   const {
     open,
     pinned,
     initialQuery,
     entrySource,
-    savedMessages,
     pendingLocalMessage,
     chatId,
     closeSidebar,
@@ -128,12 +137,21 @@ export function ChatSidebar() {
     consumeInitialQuery,
     syncConversationIdentity,
   } = useChatSidebar()
+  const active = isPage || open
   const { user, loading: authLoading } = useAuthContext()
   const [entered, setEntered] = useState(false)
   useEffect(() => {
+    if (isPage) return
     const raf = requestAnimationFrame(() => setEntered(true))
     return () => cancelAnimationFrame(raf)
-  }, [])
+  }, [isPage])
+
+  // The dedicated page owns the single mounted Bell chat instance while it is
+  // visible. Close the sidebar state so navigating away does not immediately
+  // reopen the panel, while leaving the shared conversation intact.
+  useEffect(() => {
+    if (isPage && open) closeSidebar()
+  }, [closeSidebar, isPage, open])
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -212,12 +230,34 @@ export function ChatSidebar() {
     chat,
     experimental_throttle: 50,
   })
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesScrollRef = useRef<HTMLDivElement>(null)
   const lastHandoffChatIdRef = useRef('')
   const messagesRef = useRef(messages)
   messagesRef.current = messages
+  const statusRef = useRef(status)
+  statusRef.current = status
+  const stopRef = useRef(stop)
+  stopRef.current = stop
   const userRef = useRef(user)
   userRef.current = user
+
+  // Route transitions replace the full-page Chat with the sidebar instance.
+  // Snapshot the current transcript first and abort any unfinished request so
+  // a detached stream cannot finish after the new surface has hydrated.
+  useEffect(
+    () => () => {
+      const state = useChatSidebar.getState()
+      if (state.chatId !== chatId) return
+      state.saveMessages(chatId, messagesRef.current)
+      if (
+        statusRef.current === 'submitted' ||
+        statusRef.current === 'streaming'
+      ) {
+        stopRef.current()
+      }
+    },
+    [chatId]
+  )
 
   // Keep the current AI SDK Chat instance stoppable from store actions that
   // rotate chatId. Calling stop after the rotation would target the new empty
@@ -241,42 +281,42 @@ export function ChatSidebar() {
 
   // Count an open once per visible session. Search handoffs and the header
   // share the same panel but represent meaningfully different entry points.
-  const wasOpenRef = useRef(false)
+  const wasActiveRef = useRef(false)
   useEffect(() => {
-    if (open && !wasOpenRef.current) {
+    if (authLoading) return
+    if (active && !wasActiveRef.current) {
       try {
         sessionStorage.setItem(BELL_DISCOVERY_OPENED_KEY, 'true')
       } catch {
         // Analytics and opening Bell do not depend on browser storage.
       }
       trackClientEvent('Bell opened', {
-        entry_source: entrySource,
+        entry_source: isPage ? 'page' : entrySource,
         signed_in: Boolean(user),
         page_type: analyticsPageType(pathname),
       })
     }
-    wasOpenRef.current = open
-  }, [entrySource, open, pathname, user])
+    wasActiveRef.current = active
+  }, [active, authLoading, entrySource, isPage, pathname, user])
 
-  // Hydrate useChat from sessionStorage on mount (once).
-  // Uses refs so the effect deps stay empty without lying to the linter.
-  const savedMessagesRef = useRef(savedMessages)
-  const setMessagesRef = useRef(setMessages)
-  const hasHydratedRef = useRef(false)
+  // Hydrate from the store at effect time rather than capturing the render's
+  // snapshot. During a page/sidebar route transition, React renders the new
+  // surface before running the old surface's passive cleanup; all old passive
+  // cleanups run before new passive setups, so this lookup receives the
+  // transcript that cleanup just saved.
   useEffect(() => {
-    if (hasHydratedRef.current) return
-    hasHydratedRef.current = true
-    if (savedMessagesRef.current.length > 0) {
-      setMessagesRef.current(savedMessagesRef.current)
+    const state = useChatSidebar.getState()
+    if (state.chatId === chatId && state.savedMessages.length > 0) {
+      setMessages(state.savedMessages)
     }
-  }, [])
+  }, [chatId, setMessages])
 
   // Local system-owned welcomes render directly without sending a prompt to
   // the model. The store stopped the superseded Chat before rotating chatId;
   // this effect installs the welcome into the new instance. This also handles
   // Bell already being mounted but closed.
   useEffect(() => {
-    if (!open || !pendingLocalMessage) return
+    if (!active || !pendingLocalMessage) return
     setMessages([pendingLocalMessage])
     const text = messageText(pendingLocalMessage)
     if (text) setAnnouncement(text)
@@ -284,7 +324,7 @@ export function ChatSidebar() {
   }, [
     chatId,
     consumePendingLocalMessage,
-    open,
+    active,
     pendingLocalMessage,
     setMessages,
   ])
@@ -294,14 +334,14 @@ export function ChatSidebar() {
   // otherwise cancel the effect between clearing the old transcript and
   // sending the query, leaving Bell open with an empty thread.
   useEffect(() => {
-    if (!open || !initialQuery || lastHandoffChatIdRef.current === chatId) {
+    if (!active || !initialQuery || lastHandoffChatIdRef.current === chatId) {
       return
     }
     setMessages([])
     const timeout = window.setTimeout(() => {
       const state = useChatSidebar.getState()
       if (
-        !state.open ||
+        (!isPage && !state.open) ||
         state.chatId !== chatId ||
         state.initialQuery !== initialQuery
       ) {
@@ -322,7 +362,8 @@ export function ChatSidebar() {
     chatId,
     consumeInitialQuery,
     initialQuery,
-    open,
+    active,
+    isPage,
     sendMessage,
     setMessages,
   ])
@@ -332,24 +373,27 @@ export function ChatSidebar() {
   // gate the behavior here too.
   useEffect(() => {
     if (messages.length > 0 || status === 'submitted') {
+      const container = messagesScrollRef.current
+      if (!container) return
       const reduceMotion = window.matchMedia(
         '(prefers-reduced-motion: reduce)'
       ).matches
-      messagesEndRef.current?.scrollIntoView({
+      container.scrollTo({
         behavior: reduceMotion ? 'auto' : 'smooth',
+        top: container.scrollHeight,
       })
     }
   }, [messages, status])
 
   // Escape key closes sidebar
   useEffect(() => {
-    if (!open) return
+    if (isPage || !open) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeSidebar()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, closeSidebar])
+  }, [closeSidebar, isPage, open])
 
   // Lock body scroll on mobile when open (not pinned), and make the page
   // behind the modal inert so focus and screen readers stay inside the
@@ -357,7 +401,7 @@ export function ChatSidebar() {
   // `header > div` selector would catch the panel itself), so inert the page
   // regions around it: the skip link, the header container, main, and footer.
   useEffect(() => {
-    if (!open || pinned) return
+    if (isPage || !open || pinned) return
     const isMobile = window.innerWidth < 640
     if (!isMobile) return
     document.body.style.overflow = 'hidden'
@@ -373,11 +417,11 @@ export function ChatSidebar() {
         el.removeAttribute('inert')
       }
     }
-  }, [open, pinned])
+  }, [isPage, open, pinned])
 
   // Set/remove data-chat-pinned on body
   useEffect(() => {
-    if (open && pinned) {
+    if (!isPage && open && pinned) {
       document.body.dataset.chatPinned = ''
     } else {
       delete document.body.dataset.chatPinned
@@ -385,11 +429,11 @@ export function ChatSidebar() {
     return () => {
       delete document.body.dataset.chatPinned
     }
-  }, [open, pinned])
+  }, [isPage, open, pinned])
 
   // Auto-unpin when viewport shrinks below lg
   useEffect(() => {
-    if (!pinned) return
+    if (isPage || !pinned) return
     const mql = window.matchMedia('(min-width: 1024px)')
     const handler = (e: MediaQueryListEvent) => {
       if (!e.matches) {
@@ -398,7 +442,7 @@ export function ChatSidebar() {
     }
     mql.addEventListener('change', handler)
     return () => mql.removeEventListener('change', handler)
-  }, [pinned])
+  }, [isPage, pinned])
 
   const handleNewConversation = useCallback(() => {
     const previousTurns = messagesRef.current.filter(
@@ -482,6 +526,112 @@ export function ChatSidebar() {
     [pathname, submitMessage]
   )
 
+  const messagesPanel = (
+    <div
+      ref={messagesScrollRef}
+      className={cn(
+        'flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-4',
+        isPage && 'sm:px-6 sm:py-6'
+      )}
+    >
+      {showWelcome ? (
+        <WelcomeScreen
+          userName={user?.name}
+          pathname={pathname}
+          onSuggestionSelect={handleSuggestionSelect}
+        />
+      ) : (
+        <div className="flex flex-col gap-4">
+          {messages.map((message, index) => (
+            <ChatMessage
+              key={message.id}
+              message={message}
+              turn={bucketTurn(
+                messages
+                  .slice(0, index + 1)
+                  .filter((candidate) => candidate.role === 'user').length
+              )}
+              isStreaming={
+                isStreaming &&
+                message === messages[messages.length - 1] &&
+                message.role === 'assistant'
+              }
+              pinOnCitation={!isPage}
+            />
+          ))}
+
+          {showScriptedStarters ? (
+            <div className="px-2 pt-1">
+              <StarterQuestions
+                pathname={pathname}
+                onSuggestionSelect={handleSuggestionSelect}
+              />
+            </div>
+          ) : null}
+
+          {/* Thinking indicator before streaming starts */}
+          {isSubmitted && <ThinkingIndicator />}
+
+          {/* Error message */}
+          {isError && Boolean(error) && (
+            <div className="flex justify-start">
+              <div className="min-w-0 max-w-[85%] wrap-anywhere rounded-lg px-3.5 py-2.5 font-sans text-sm text-red">
+                <p className="mb-2">{chatErrorMessage(error)}</p>
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="text-xs text-red underline underline-offset-2 transition-colors hover:text-red/80"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+
+  const liveRegion = (
+    // Wiring aria-live to the streaming message list would re-announce the
+    // growing text on every token, so announce only the completed snapshot.
+    <div aria-live="polite" className="sr-only">
+      {announcement}
+    </div>
+  )
+
+  const input = (
+    <ChatInput
+      onSend={handleSend}
+      onStop={handleStop}
+      isStreaming={isStreaming || isSubmitted}
+      focus={!isPage && active}
+    />
+  )
+
+  if (isPage) {
+    return (
+      <section
+        aria-label="Bell chat"
+        className="bell-page-chat flex flex-none flex-col overflow-hidden bg-offwhite-light"
+      >
+        <div className="flex items-center justify-end px-2 py-2 sm:px-4">
+          <button
+            type="button"
+            onClick={handleNewConversation}
+            className="flex min-h-10 items-center gap-2 px-2 font-sans text-sm text-gray-500 transition-colors hover:bg-gray-050 hover:text-gray-950"
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            New conversation
+          </button>
+        </div>
+        {messagesPanel}
+        {liveRegion}
+        {input}
+      </section>
+    )
+  }
+
   return (
     <>
       {/* Mobile backdrop — hidden when pinned */}
@@ -527,6 +677,14 @@ export function ChatSidebar() {
             >
               <RotateCcw className="h-4 w-4" />
             </button>
+            <Link
+              href="/bell"
+              onClick={closeSidebar}
+              className="-m-1 p-3 text-gray-400 transition-colors hover:bg-gray-050 hover:text-gray-600"
+              aria-label="Open full-page Bell"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Link>
             <button
               type="button"
               onClick={togglePin}
@@ -550,80 +708,18 @@ export function ChatSidebar() {
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-4">
-          {showWelcome ? (
-            <WelcomeScreen
-              userName={user?.name}
-              pathname={pathname}
-              onSuggestionSelect={handleSuggestionSelect}
-            />
-          ) : (
-            <div className="flex flex-col gap-4">
-              {messages.map((message, index) => (
-                <ChatMessage
-                  key={message.id}
-                  message={message}
-                  turn={bucketTurn(
-                    messages
-                      .slice(0, index + 1)
-                      .filter((candidate) => candidate.role === 'user').length
-                  )}
-                  isStreaming={
-                    isStreaming &&
-                    message === messages[messages.length - 1] &&
-                    message.role === 'assistant'
-                  }
-                />
-              ))}
-
-              {showScriptedStarters ? (
-                <div className="px-2 pt-1">
-                  <StarterQuestions
-                    pathname={pathname}
-                    onSuggestionSelect={handleSuggestionSelect}
-                  />
-                </div>
-              ) : null}
-
-              {/* Thinking indicator before streaming starts */}
-              {isSubmitted && <ThinkingIndicator />}
-
-              {/* Error message */}
-              {isError && Boolean(error) && (
-                <div className="flex justify-start">
-                  <div className="min-w-0 max-w-[85%] wrap-anywhere rounded-lg px-3.5 py-2.5 font-sans text-sm text-red">
-                    <p className="mb-2">{chatErrorMessage(error)}</p>
-                    <button
-                      type="button"
-                      onClick={handleRetry}
-                      className="text-xs text-red underline underline-offset-2 transition-colors hover:text-red/80"
-                    >
-                      Try again
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Polite live region: announces each completed reply once. Wiring
-            aria-live to the streaming message list would re-announce the
-            growing text on every token. */}
-        <div aria-live="polite" className="sr-only">
-          {announcement}
-        </div>
-
-        {/* Input */}
-        <ChatInput
-          onSend={handleSend}
-          onStop={handleStop}
-          isStreaming={isStreaming || isSubmitted}
-          focus={open}
-        />
+        {messagesPanel}
+        {liveRegion}
+        {input}
       </div>
     </>
   )
+}
+
+export function ChatSidebar() {
+  return <BellChat variant="sidebar" />
+}
+
+export function BellPageChat() {
+  return <BellChat variant="page" />
 }

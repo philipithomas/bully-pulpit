@@ -53,6 +53,7 @@ interface ChatSidebarState {
   // replay one person's transcript into another person's conversation.
   conversationIdentity: string | null
   openSidebar: (query?: string) => void
+  startSearchHandoff: (query: string, destination: 'page' | 'sidebar') => void
   openSidebarWithLocalMessage: (
     message: string,
     options: {
@@ -96,22 +97,26 @@ export const useChatSidebar = create<ChatSidebarState>()(
       chatId: generateChatId(),
       conversationIdentity: null,
       openSidebar: (query?: string) => {
-        const searchHandoff = Boolean(query)
+        if (query) {
+          get().startSearchHandoff(query, 'sidebar')
+          return
+        }
+        set({ open: true, hasOpened: true, entrySource: 'header' })
+      },
+      startSearchHandoff: (query, destination) => {
+        // A search handoff deliberately presents a fresh thread. Stop the
+        // superseded Chat before rotating its durable ID so a stale stream
+        // cannot finish into the new conversation.
+        get().activeChatStop?.()
         set({
-          open: true,
+          open: destination === 'sidebar',
           hasOpened: true,
-          initialQuery: query ?? '',
-          entrySource: searchHandoff ? 'search' : 'header',
-          // Asking Bell from search deliberately presents a fresh thread.
-          // Rotate the durable ID and clear both persisted and in-memory
-          // history before the handoff can send its first message.
-          ...(searchHandoff
-            ? {
-                savedMessages: [],
-                pendingLocalMessage: null,
-                chatId: generateChatId(),
-              }
-            : {}),
+          pinned: false,
+          initialQuery: query,
+          entrySource: 'search',
+          savedMessages: [],
+          pendingLocalMessage: null,
+          chatId: generateChatId(),
         })
       },
       openSidebarWithLocalMessage: (message, options) => {
@@ -144,14 +149,16 @@ export const useChatSidebar = create<ChatSidebarState>()(
       saveMessages: (chatId: string, messages: UIMessage[]) => {
         if (get().chatId === chatId) set({ savedMessages: messages })
       },
-      clearMessages: () =>
+      clearMessages: () => {
+        get().activeChatStop?.()
         set({
           savedMessages: [],
           chatId: generateChatId(),
           initialQuery: '',
           entrySource: 'header',
           pendingLocalMessage: null,
-        }),
+        })
+      },
       consumePendingLocalMessage: (chatId: string) => {
         if (get().chatId === chatId) set({ pendingLocalMessage: null })
       },

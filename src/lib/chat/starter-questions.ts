@@ -90,7 +90,7 @@ export function bellStarterQuestions(
   pathname: string
 ): readonly BellStarterQuestion[] {
   const normalized = normalizePathname(pathname)
-  if (normalized === '/') return DEFAULT_QUESTIONS
+  if (normalized === '/' || normalized === '/bell') return DEFAULT_QUESTIONS
   if (normalized === '/photography') return PHOTOGRAPHY_QUESTIONS
 
   const newsletter = NEWSLETTERS.get(normalized)

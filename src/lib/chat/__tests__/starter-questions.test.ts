@@ -16,6 +16,10 @@ describe('Bell starter questions', () => {
     ])
   })
 
+  it('uses archive search starters on the dedicated Bell page', () => {
+    expect(bellStarterQuestions('/bell')).toEqual(bellStarterQuestions('/'))
+  })
+
   it('uses photography-specific starters on the photo search page', () => {
     expect(
       bellStarterQuestions('/photography').map((item) => item.kind)

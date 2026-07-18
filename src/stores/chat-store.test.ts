@@ -64,6 +64,41 @@ describe('Bell chat boundaries', () => {
     expect(useChatSidebar.getState().chatId).toBe(handoffId)
   })
 
+  it('keeps a search handoff on the Bell page from opening the sidebar', () => {
+    const stop = vi.fn()
+    useChatSidebar.setState({
+      open: true,
+      pinned: true,
+      savedMessages: [MESSAGE],
+      activeChatStop: stop,
+    })
+
+    useChatSidebar
+      .getState()
+      .startSearchHandoff('How does Philip think about cities?', 'page')
+
+    const handoff = useChatSidebar.getState()
+    expect(stop).toHaveBeenCalledOnce()
+    expect(handoff.open).toBe(false)
+    expect(handoff.hasOpened).toBe(true)
+    expect(handoff.pinned).toBe(false)
+    expect(handoff.initialQuery).toBe('How does Philip think about cities?')
+    expect(handoff.entrySource).toBe('search')
+    expect(handoff.savedMessages).toEqual([])
+  })
+
+  it('stops the active request before starting a new conversation', () => {
+    const stop = vi.fn()
+    const previousId = useChatSidebar.getState().chatId
+    useChatSidebar.setState({ activeChatStop: stop, savedMessages: [MESSAGE] })
+
+    useChatSidebar.getState().clearMessages()
+
+    expect(stop).toHaveBeenCalledOnce()
+    expect(useChatSidebar.getState().chatId).not.toBe(previousId)
+    expect(useChatSidebar.getState().savedMessages).toEqual([])
+  })
+
   it('keeps an in-flight finish bound to its originating chat', async () => {
     let releaseStream: () => void = () => {}
     const streamReady = new Promise<void>((resolve) => {

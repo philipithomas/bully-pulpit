@@ -192,26 +192,40 @@ export function Header() {
               aria-hidden="true"
             />
           </button>
-          <button
-            type="button"
-            onClick={handleOpenBell}
-            onMouseEnter={prefetchChat}
-            onFocus={prefetchChat}
-            aria-label="Open Bell"
-            className="group p-3 -m-3 cursor-pointer"
-          >
-            <BellIcon
-              className={`h-[18px] w-[18px] text-gray-400 transition-colors group-hover:text-gray-600 ${nudgeBell ? 'bell-discovery-nudge' : ''}`}
-              aria-hidden="true"
-            />
-          </button>
+          {pathname === '/bell' ? (
+            <Link
+              href="/bell"
+              aria-label="Bell"
+              aria-current="page"
+              className="group p-3 -m-3"
+            >
+              <BellIcon
+                className="h-[18px] w-[18px] text-gray-950"
+                aria-hidden="true"
+              />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenBell}
+              onMouseEnter={prefetchChat}
+              onFocus={prefetchChat}
+              aria-label="Open Bell"
+              className="group p-3 -m-3 cursor-pointer"
+            >
+              <BellIcon
+                className={`h-[18px] w-[18px] text-gray-400 transition-colors group-hover:text-gray-600 ${nudgeBell ? 'bell-discovery-nudge' : ''}`}
+                aria-hidden="true"
+              />
+            </button>
+          )}
           <MemberMenu />
         </nav>
       </div>
       {searchHasOpened ? (
         <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
       ) : null}
-      {hasOpened ? <ChatSidebar /> : null}
+      {hasOpened && pathname !== '/bell' ? <ChatSidebar /> : null}
     </header>
   )
 }

@@ -519,10 +519,12 @@ export function ChatMessage({
   message,
   isStreaming,
   turn,
+  pinOnCitation = true,
 }: {
   message: UIMessage
   isStreaming: boolean
   turn: TurnBucket
+  pinOnCitation?: boolean
 }) {
   const isUser = message.role === 'user'
   const isScripted = !isUser && isScriptedChatMessage(message)
@@ -538,7 +540,7 @@ export function ChatMessage({
       destinationType: 'post' | 'page' | 'image' | 'external' | 'unknown',
       newsletter: AnalyticsNewsletter
     ) => {
-      if (window.innerWidth >= 1024) {
+      if (pinOnCitation && window.innerWidth >= 1024) {
         useChatSidebar.getState().setPinned(true)
       }
       trackClientEvent('Bell citation selected', {
@@ -547,7 +549,7 @@ export function ChatMessage({
         newsletter,
       })
     },
-    []
+    [pinOnCitation]
   )
 
   const handleImageCitationClick = useCallback(

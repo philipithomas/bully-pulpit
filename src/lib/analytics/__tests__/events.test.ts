@@ -53,6 +53,7 @@ describe('analytics dimensions', () => {
 
   it('classifies pages into a small fixed vocabulary', () => {
     expect(analyticsPageType('/')).toBe('home')
+    expect(analyticsPageType('/bell')).toBe('bell')
     expect(analyticsPageType('/tsundoku')).toBe('newsletter')
     expect(analyticsPageType('/umami')).toBe('newsletter')
     expect(analyticsPageType('/photography')).toBe('photography')

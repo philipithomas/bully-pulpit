@@ -4,6 +4,7 @@ import type { Newsletter } from '@/lib/content/types'
 
 export const PUBLIC_APP_PAGE_PATHS = [
   '/',
+  '/bell',
   '/contraption',
   '/workshop',
   '/postcard',
@@ -102,6 +103,19 @@ He currently publishes four newsletters:
 - umami (/umami): ${siteConfig.newsletters.umami.tagline}
 
 The newsletters are available by email, RSS, and SMS, and the homepage has a signup form. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
+    humanSitemap: true,
+    xmlSitemap: true,
+  },
+  {
+    id: 'app-bell',
+    path: '/bell',
+    title: 'Search with Bell',
+    description:
+      "Search Philip Thomas's writing, photographs, and projects with Bell, the site's AI research assistant.",
+    searchText:
+      "Search with Bell. Bell is the AI research assistant for philipithomas.com. Ask questions across Philip Thomas's writing, photographs, projects, and newsletter archive, then follow Bell's links to the original pages and posts.",
+    bellText: () =>
+      "Bell is the AI research assistant for philipithomas.com. This dedicated search page lets visitors ask questions across Philip's writing, photographs, projects, and newsletter archive. Bell answers with links to relevant original pages and posts.",
     humanSitemap: true,
     xmlSitemap: true,
   },

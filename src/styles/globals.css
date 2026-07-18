@@ -943,6 +943,54 @@ body.dark-viewport header .btn-primary .btn-arrow {
   }
 }
 
+/* The dedicated Bell surface keeps its composer in view and gives the
+   transcript a definite scroll area. */
+.bell-page-chat {
+  height: calc(100svh - 13rem);
+  min-height: 26rem;
+  max-height: 52rem;
+}
+
+@media (min-width: 640px) {
+  .bell-page-chat {
+    min-height: 32rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .bell-page-chat {
+    height: calc(100svh - 17rem);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .bell-page-shell {
+    padding-top: 0.5rem;
+    padding-bottom: 1rem;
+  }
+
+  .bell-page-heading {
+    padding-bottom: 0.5rem;
+  }
+
+  .bell-page-heading h1 {
+    font-size: 1.5rem;
+  }
+
+  .bell-page-heading p {
+    display: none;
+  }
+
+  .bell-page-chat {
+    height: calc(100svh - 9rem);
+    min-height: 15rem;
+  }
+
+  .bell-page-disclaimer {
+    padding-top: 0.75rem;
+  }
+}
+
 /* ============================
    Pinned chat sidebar layout
    ============================ */
