@@ -8,6 +8,16 @@ const phoneMocks = vi.hoisted(() => ({
 const subscribeMocks = vi.hoisted(() => ({
   visible: vi.fn(() => true),
 }))
+const authMocks = vi.hoisted(() => ({
+  context: vi.fn(() => ({
+    user: null as null | { uuid: string; email: string },
+    hasSession: false as boolean | null,
+  })),
+}))
+
+vi.mock('@/components/auth/auth-provider', () => ({
+  useAuthContext: authMocks.context,
+}))
 
 vi.mock('@/components/posts/subscribe-cta', () => ({
   SubscribeCta: ({
@@ -57,13 +67,13 @@ vi.mock('@/lib/phone/config', () => ({
 
 import UmamiPage, { metadata } from '@/app/umami/page'
 
-const SEO_DESCRIPTION =
-  'An ongoing photography newsletter by Philip Thomas about street scenes, city life, coffee, and other things he notices along the way.'
+const SEO_DESCRIPTION = 'Photo journal of city life. Just what lingers.'
 
 afterEach(() => {
   phoneMocks.displayNumber.mockReturnValue('+1 212 347 3190')
   phoneMocks.number.mockReturnValue('+12123473190')
   subscribeMocks.visible.mockReturnValue(true)
+  authMocks.context.mockReturnValue({ user: null, hasSession: false })
 })
 
 describe('UmamiPage viewer contract', () => {
@@ -95,7 +105,8 @@ describe('UmamiPage viewer contract', () => {
     const html = renderToStaticMarkup(<UmamiPage />)
 
     expect(html).toContain('Photo journal of city life.')
-    expect(html).toContain('Just the good stuff.')
+    expect(html).toContain('Just what lingers.')
+    expect(html).not.toContain('Just the good stuff.')
     expect(html).not.toContain('Only the good stuff.')
     expect(html).not.toContain('An ongoing photography newsletter.')
     expect(html).toContain('Also available via')
@@ -136,5 +147,34 @@ describe('UmamiPage viewer contract', () => {
     expect(html).not.toContain('umami-page-email')
     expect(html).toContain('class="umami-page-sms')
     expect(html).toContain('Also available via')
+  })
+
+  it('hides SMS signup before and after a logged-in session resolves', () => {
+    authMocks.context.mockReturnValue({ user: null, hasSession: null })
+
+    const initialHtml = renderToStaticMarkup(<UmamiPage />)
+
+    expect(initialHtml).toContain('umami-page-sms')
+    expect(initialHtml).toContain('[[data-member]_&amp;]:hidden')
+
+    authMocks.context.mockReturnValue({ user: null, hasSession: true })
+
+    const pendingHtml = renderToStaticMarkup(<UmamiPage />)
+
+    expect(pendingHtml).not.toContain('Also available via')
+    expect(pendingHtml).not.toContain('>SMS</span>')
+
+    authMocks.context.mockReturnValue({
+      user: {
+        uuid: '00000000-0000-4000-8000-000000000001',
+        email: 'reader@example.com',
+      },
+      hasSession: true,
+    })
+
+    const resolvedHtml = renderToStaticMarkup(<UmamiPage />)
+
+    expect(resolvedHtml).not.toContain('Also available via')
+    expect(resolvedHtml).not.toContain('>SMS</span>')
   })
 })

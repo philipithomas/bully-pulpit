@@ -37,7 +37,7 @@ export function UmamiTagline() {
     <p className="mt-4 max-w-xl text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
       Photo journal of city life.{' '}
       <span className={highlight ? 'umami-tagline-nudge' : undefined}>
-        Just the good stuff.
+        Just what lingers.
       </span>
     </p>
   )
