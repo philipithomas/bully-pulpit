@@ -57,9 +57,9 @@ afterEach(() => {
 })
 
 describe('GET /auth/complete', () => {
-  it('records an Umami completion on the token-free request and lands on account', async () => {
+  it('records a Tidbits completion on the token-free request and lands on account', async () => {
     const marker = await markerFor({
-      newsletter: 'umami',
+      newsletter: 'tidbits',
       newSubscriber: false,
       destination: 'account',
     })
@@ -77,7 +77,7 @@ describe('GET /auth/complete', () => {
       {
         method: 'email_link',
         placement: 'unknown',
-        newsletter: 'umami',
+        newsletter: 'tidbits',
         new_subscriber: false,
       }
     )
@@ -85,7 +85,7 @@ describe('GET /auth/complete', () => {
     expectMarkerCleared(response)
   })
 
-  it('records a non-Umami completion and lands on the homepage', async () => {
+  it('records a non-Tidbits completion and lands on the homepage', async () => {
     const marker = await markerFor({
       newsletter: 'contraption',
       newSubscriber: true,
@@ -125,7 +125,7 @@ describe('GET /auth/complete', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-07-17T20:00:00Z'))
     const marker = await markerFor({
-      newsletter: 'umami',
+      newsletter: 'tidbits',
       newSubscriber: false,
       destination: 'account',
     })
@@ -144,7 +144,7 @@ describe('GET /auth/complete', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     trackServerEventMock.mockRejectedValueOnce(new Error('analytics down'))
     const marker = await markerFor({
-      newsletter: 'umami',
+      newsletter: 'tidbits',
       newSubscriber: false,
       destination: 'account',
     })

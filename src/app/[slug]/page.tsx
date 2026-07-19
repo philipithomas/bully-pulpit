@@ -237,7 +237,7 @@ export default async function SlugPage({ params }: Props) {
     workshop: { className: 'bg-offwhite-warm', dataBg: 'offwhite-warm' },
     contraption: { className: 'bg-gray-050', dataBg: 'gray-050' },
     postcard: { className: 'bg-offwhite-cool', dataBg: 'offwhite-cool' },
-    umami: { className: 'bg-umami-paper', dataBg: 'umami' },
+    tidbits: { className: 'bg-tidbits-paper', dataBg: 'tidbits' },
     tsundoku: { className: 'bg-[#f4f4f2]', dataBg: 'tsundoku' },
   }
   const bg = post?.newsletter ? bgMap[post.newsletter] : undefined
@@ -247,7 +247,7 @@ export default async function SlugPage({ params }: Props) {
     post && post.newsletter !== 'postcard' ? post.frontmatter.publishedAt : null
   const showPostMetadata = Boolean(postDate || location)
   const isPhotoPost = Boolean(post && isPhotoNewsletter(post.newsletter))
-  const isUmamiPost = post?.newsletter === 'umami'
+  const isTidbitsPost = post?.newsletter === 'tidbits'
   const coverZoomCaption =
     isPhotoPost && post
       ? {
@@ -257,14 +257,16 @@ export default async function SlugPage({ params }: Props) {
           'data-zoom-caption-date': post.frontmatter.publishedAt,
           'data-zoom-caption-location-name': location?.name,
           'data-zoom-caption-location-url': location?.url,
-          'data-zoom-caption-presentation': isUmamiPost ? 'immersive' : 'rail',
+          'data-zoom-caption-presentation': isTidbitsPost
+            ? 'immersive'
+            : 'rail',
           'data-zoom-caption-collection': post.newsletter,
         }
       : {}
   const postMetadata = showPostMetadata ? (
     <div
       className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 ${
-        isUmamiPost
+        isTidbitsPost
           ? 'justify-start font-sans sm:justify-end'
           : 'justify-center font-mono'
       }`}
@@ -286,7 +288,7 @@ export default async function SlugPage({ params }: Props) {
   const coverImage = item.frontmatter.coverImage ? (
     <div
       className={`image-loading-surface w-full ${
-        isUmamiPost ? 'mb-0' : isPhotoPost ? 'mb-8' : 'mb-10'
+        isTidbitsPost ? 'mb-0' : isPhotoPost ? 'mb-8' : 'mb-10'
       }`}
     >
       <button
@@ -296,7 +298,7 @@ export default async function SlugPage({ params }: Props) {
         {...zoomImageDataAttrs({
           src: item.frontmatter.coverImage,
           dimensions: post?.coverDimensions,
-          sizes: isUmamiPost
+          sizes: isTidbitsPost
             ? IMMERSIVE_ZOOM_IMAGE_SIZES
             : isPhotoPost
               ? CAPTIONED_ZOOM_IMAGE_SIZES
@@ -334,11 +336,11 @@ export default async function SlugPage({ params }: Props) {
         }
       >
         <div>
-          {/* Umami leads with the photo in both visual and keyboard order. */}
-          {isUmamiPost && !isFindAiPage ? coverImage : null}
+          {/* Tidbits leads with the photo in both visual and keyboard order. */}
+          {isTidbitsPost && !isFindAiPage ? coverImage : null}
 
           {/* Header */}
-          {isUmamiPost ? (
+          {isTidbitsPost ? (
             <header className="mt-5 mb-12 grid gap-3 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
               <div className="min-w-0">
                 <h1 className="font-sans font-semibold text-2xl text-gray-950 leading-tight tracking-tight text-pretty sm:text-3xl">
@@ -408,7 +410,7 @@ export default async function SlugPage({ params }: Props) {
           )}
 
           {/* Cover image */}
-          {!isFindAiPage && !isUmamiPost ? coverImage : null}
+          {!isFindAiPage && !isTidbitsPost ? coverImage : null}
         </div>
 
         {/* Content */}

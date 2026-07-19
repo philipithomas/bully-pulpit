@@ -121,7 +121,7 @@ describe('POST /api/auth/google', () => {
         subscribedWorkshop: false,
         subscribedPostcard: false,
         subscribedTsundoku: false,
-        subscribedUmami: false,
+        subscribedTidbits: false,
       },
       {
         email: 'bar@gmail.com',
@@ -130,7 +130,7 @@ describe('POST /api/auth/google', () => {
         subscribedWorkshop: false,
         subscribedPostcard: false,
         subscribedTsundoku: false,
-        subscribedUmami: false,
+        subscribedTidbits: false,
       },
     ])
 
@@ -162,10 +162,10 @@ describe('POST /api/auth/google', () => {
     expect(googleAccount.subscribedContraption).toBe(false)
     expect(googleAccount.subscribedPostcard).toBe(false)
     expect(googleAccount.subscribedTsundoku).toBe(false)
-    expect(googleAccount.subscribedUmami).toBe(false)
+    expect(googleAccount.subscribedTidbits).toBe(false)
   })
 
-  it('securely opts an existing Google account into Umami and notifies admin', async () => {
+  it('securely opts an existing Google account into Tidbits and notifies admin', async () => {
     await db.insert(subscribers).values({
       email: 'bar@gmail.com',
       name: 'Bar',
@@ -174,27 +174,27 @@ describe('POST /api/auth/google', () => {
       subscribedWorkshop: false,
       subscribedPostcard: false,
       subscribedTsundoku: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
     })
 
     const response = await POST(
-      googlePost({ code: 'oauth-code', newsletters: ['umami'] })
+      googlePost({ code: 'oauth-code', newsletters: ['tidbits'] })
     )
 
     expect(response.status).toBe(200)
-    expect((await response.json()).user.subscribed_umami).toBe(true)
-    expect((await subscriberByEmail('bar@gmail.com')).subscribedUmami).toBe(
+    expect((await response.json()).user.subscribed_tidbits).toBe(true)
+    expect((await subscriberByEmail('bar@gmail.com')).subscribedTidbits).toBe(
       true
     )
     const optInNotifications = vi
       .mocked(sendSimpleEmail)
       .mock.calls.filter(([message]) =>
-        message.subject.startsWith('Existing subscriber opted into umami:')
+        message.subject.startsWith('Existing subscriber opted into tidbits:')
       )
     expect(optInNotifications).toHaveLength(1)
     expect(optInNotifications[0][0]).toMatchObject({
       to: siteConfig.adminEmails,
-      subject: 'Existing subscriber opted into umami: bar@gmail.com',
+      subject: 'Existing subscriber opted into tidbits: bar@gmail.com',
     })
   })
 
@@ -213,13 +213,13 @@ describe('POST /api/auth/google', () => {
       subscribedWorkshop: true,
       subscribedPostcard: true,
       subscribedTsundoku: false,
-      subscribedUmami: true,
+      subscribedTidbits: true,
     })
     expect(
       vi
         .mocked(sendSimpleEmail)
         .mock.calls.filter(([message]) =>
-          message.subject.startsWith('Existing subscriber opted into umami:')
+          message.subject.startsWith('Existing subscriber opted into tidbits:')
         )
     ).toHaveLength(0)
     const marker = response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value

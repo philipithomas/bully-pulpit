@@ -7,7 +7,7 @@ export const PUBLIC_APP_PAGE_PATHS = [
   '/contraption',
   '/workshop',
   '/postcard',
-  '/umami',
+  '/tidbits',
   '/tsundoku',
   '/photography',
   '/print',
@@ -99,7 +99,7 @@ He currently publishes four newsletters:
 - Contraption (/contraption): ${siteConfig.newsletters.contraption.tagline}
 - Workshop (/workshop): ${siteConfig.newsletters.workshop.tagline}
 - Postcard (/postcard): ${siteConfig.newsletters.postcard.tagline}
-- umami (/umami): ${siteConfig.newsletters.umami.tagline}
+- tidbits (/tidbits): ${siteConfig.newsletters.tidbits.tagline}
 
 The newsletters are available by email, RSS, and SMS, and the homepage has a signup form. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
     humanSitemap: true,
@@ -108,7 +108,7 @@ The newsletters are available by email, RSS, and SMS, and the homepage has a sig
   newsletterPage('contraption'),
   newsletterPage('workshop'),
   newsletterPage('postcard'),
-  newsletterPage('umami'),
+  newsletterPage('tidbits'),
   newsletterPage('tsundoku'),
   {
     id: 'app-photography',

@@ -65,9 +65,9 @@ vi.mock('@/lib/phone/config', () => ({
   sitePhoneNumber: phoneMocks.number,
 }))
 
-import UmamiPage, { metadata } from '@/app/umami/page'
+import TidbitsPage, { metadata } from '@/app/tidbits/page'
 
-const SEO_DESCRIPTION = 'Photo journal of city life. Just what lingers.'
+const SEO_DESCRIPTION = 'Photo journal'
 
 afterEach(() => {
   phoneMocks.displayNumber.mockReturnValue('+1 212 347 3190')
@@ -76,13 +76,13 @@ afterEach(() => {
   authMocks.context.mockReturnValue({ user: null, hasSession: false })
 })
 
-describe('UmamiPage viewer contract', () => {
+describe('TidbitsPage viewer contract', () => {
   it('emits immersive parser data for the description-free SFMOMA photo', () => {
-    const html = renderToStaticMarkup(<UmamiPage />)
+    const html = renderToStaticMarkup(<TidbitsPage />)
 
     expect(html).toContain('data-zoom-caption-presentation="immersive"')
-    expect(html).toContain('data-zoom-caption-collection="umami"')
-    expect(html).toContain('data-zoom-group="umami"')
+    expect(html).toContain('data-zoom-caption-collection="tidbits"')
+    expect(html).toContain('data-zoom-group="tidbits"')
     expect(html).toContain('data-zoom-caption-href="/sfmoma"')
     expect(html).toContain('href="/sfmoma"')
     expect(html).toContain('data-zoom-caption-title="SFMOMA"')
@@ -102,16 +102,17 @@ describe('UmamiPage viewer contract', () => {
   })
 
   it('uses the approved copy and offers SMS as a secondary signup path', () => {
-    const html = renderToStaticMarkup(<UmamiPage />)
+    const html = renderToStaticMarkup(<TidbitsPage />)
 
-    expect(html).toContain('Photo journal of city life.')
-    expect(html).toContain('Just what lingers.')
+    expect(html).toContain('>Photo journal</p>')
+    expect(html).not.toContain('Photo journal of city life.')
+    expect(html).not.toContain('Just what lingers.')
     expect(html).not.toContain('Just the good stuff.')
     expect(html).not.toContain('Only the good stuff.')
     expect(html).not.toContain('An ongoing photography newsletter.')
     expect(html).toContain('Also available via')
     expect(html).toContain('data-analytics-placement="newsletter_page"')
-    expect(html).toContain('data-newsletter="umami"')
+    expect(html).toContain('data-newsletter="tidbits"')
     expect(html).toContain('data-variant="link"')
     expect(html).toContain('>SMS</span>')
     expect(html).toContain(
@@ -119,7 +120,7 @@ describe('UmamiPage viewer contract', () => {
     )
     expect(html).toContain('>Follow</div>')
     expect(html).not.toContain('Prefer a feed?')
-    expect(html).not.toContain('/feed/umami/rss.xml')
+    expect(html).not.toContain('/feed/tidbits/rss.xml')
     expect(metadata).toMatchObject({
       description: SEO_DESCRIPTION,
       openGraph: { description: SEO_DESCRIPTION },
@@ -131,35 +132,35 @@ describe('UmamiPage viewer contract', () => {
     phoneMocks.displayNumber.mockReturnValue(null)
     phoneMocks.number.mockReturnValue(null)
 
-    const html = renderToStaticMarkup(<UmamiPage />)
+    const html = renderToStaticMarkup(<TidbitsPage />)
 
     expect(html).not.toContain('Also available via')
     expect(html).not.toContain('>SMS</span>')
-    expect(html).not.toContain('/feed/umami/rss.xml')
+    expect(html).not.toContain('/feed/tidbits/rss.xml')
   })
 
   it('lets SMS lead without an empty gap when the email CTA is absent', () => {
     subscribeMocks.visible.mockReturnValue(false)
 
-    const html = renderToStaticMarkup(<UmamiPage />)
+    const html = renderToStaticMarkup(<TidbitsPage />)
 
     expect(html).not.toContain('data-testid="subscribe-cta"')
-    expect(html).not.toContain('umami-page-email')
-    expect(html).toContain('class="umami-page-sms')
+    expect(html).not.toContain('tidbits-page-email')
+    expect(html).toContain('class="tidbits-page-sms')
     expect(html).toContain('Also available via')
   })
 
   it('hides SMS signup before and after a logged-in session resolves', () => {
     authMocks.context.mockReturnValue({ user: null, hasSession: null })
 
-    const initialHtml = renderToStaticMarkup(<UmamiPage />)
+    const initialHtml = renderToStaticMarkup(<TidbitsPage />)
 
-    expect(initialHtml).toContain('umami-page-sms')
+    expect(initialHtml).toContain('tidbits-page-sms')
     expect(initialHtml).toContain('[[data-member]_&amp;]:hidden')
 
     authMocks.context.mockReturnValue({ user: null, hasSession: true })
 
-    const pendingHtml = renderToStaticMarkup(<UmamiPage />)
+    const pendingHtml = renderToStaticMarkup(<TidbitsPage />)
 
     expect(pendingHtml).not.toContain('Also available via')
     expect(pendingHtml).not.toContain('>SMS</span>')
@@ -172,7 +173,7 @@ describe('UmamiPage viewer contract', () => {
       hasSession: true,
     })
 
-    const resolvedHtml = renderToStaticMarkup(<UmamiPage />)
+    const resolvedHtml = renderToStaticMarkup(<TidbitsPage />)
 
     expect(resolvedHtml).not.toContain('Also available via')
     expect(resolvedHtml).not.toContain('>SMS</span>')

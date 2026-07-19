@@ -234,7 +234,7 @@ describe('Bell tool provenance', () => {
     ])
   })
 
-  it('accepts an Umami post as validated current-page provenance', () => {
+  it('accepts a Tidbits post as validated current-page provenance', () => {
     expect(
       bellSourcesFromMessage({
         parts: [{ type: 'text', text: 'This photo was taken at SFMOMA.' }],
@@ -244,7 +244,7 @@ describe('Bell tool provenance', () => {
             title: 'SFMOMA',
             url: '/sfmoma',
             publishedAt: '2026-07-11',
-            newsletter: 'umami',
+            newsletter: 'tidbits',
           },
         },
       })
@@ -254,7 +254,7 @@ describe('Bell tool provenance', () => {
         title: 'SFMOMA',
         url: '/sfmoma',
         publishedAt: '2026-07-11',
-        newsletter: 'umami',
+        newsletter: 'tidbits',
       },
     ])
   })

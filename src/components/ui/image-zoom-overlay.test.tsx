@@ -21,7 +21,7 @@ function galleryItem(
       href: `/${title.toLowerCase()}`,
       title,
       presentation: 'immersive',
-      collection: 'umami',
+      collection: 'tidbits',
     },
   }
 }
@@ -45,7 +45,7 @@ function immersiveImage(index = 1): ZoomedImage {
       locationName: 'San Francisco Museum of Modern Art',
       locationUrl: 'https://maps.app.goo.gl/YHxezDBcwdY6quHX9',
       presentation: 'immersive',
-      collection: 'umami',
+      collection: 'tidbits',
     },
     gallery: { items, index },
   }
@@ -90,7 +90,7 @@ describe('ImageZoomOverlay', () => {
 
     expect(html).toContain('role="dialog"')
     expect(html).toContain('aria-modal="true"')
-    expect(html).toContain('aria-label="umami photo viewer"')
+    expect(html).toContain('aria-label="tidbits photo viewer"')
     expect(html).toContain('aria-describedby=')
     expect(html).toContain('aria-label="Close image viewer"')
     expect(html).toContain('aria-label="Previous image"')

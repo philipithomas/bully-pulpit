@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-19T00:41:41.009Z",
+  "generatedAt": "2026-07-19T20:24:48.711Z",
   "posts": {
     "adding-sms-support": {
       "related": [
@@ -21,15 +21,15 @@
       "related": [
         {
           "slug": "fresh-coat-of-paint",
-          "score": 0.3128498
+          "score": 0.3078207
         },
         {
           "slug": "chroma",
-          "score": 0.3424174
+          "score": 0.3378092
         },
         {
-          "slug": "dt-suzuki-bench",
-          "score": 0.3595298
+          "slug": "workshop-welcome",
+          "score": 0.3556801
         }
       ]
     },

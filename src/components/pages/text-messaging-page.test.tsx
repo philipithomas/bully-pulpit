@@ -14,7 +14,7 @@ describe('TextMessagingConsent', () => {
 
     expect(html).toContain('href="sms:+12123473190?body=SUBSCRIBE"')
     expect(html).toContain('recurring automated new-post texts')
-    expect(html).toContain('Contraption, Workshop, Postcard, and umami')
+    expect(html).toContain('Contraption, Workshop, Postcard, and tidbits')
     expect(html).toContain(
       'For a first-time subscription, text SUBSCRIBE, START, or JOIN'
     )

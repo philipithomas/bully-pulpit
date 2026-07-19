@@ -56,11 +56,11 @@ const newsletterLogos: Record<
     height: 636.8,
     className: 'h-[18px] w-auto',
   },
-  umami: {
-    src: '/images/umami.svg',
-    width: 1562,
+  tidbits: {
+    src: '/images/tidbits.svg',
+    width: 1601,
     height: 369,
-    className: 'h-[20px] w-auto',
+    className: 'h-[19px] w-auto',
   },
   tsundoku: {
     src: '/images/tsundoku.svg',

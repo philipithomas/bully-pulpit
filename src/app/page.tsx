@@ -23,7 +23,7 @@ const HOMEPAGE_NEWSLETTER_ORDER = [
   'postcard',
   'contraption',
   'workshop',
-  'umami',
+  'tidbits',
 ] as const satisfies readonly Newsletter[]
 
 async function buildTimeSubscriberCount(): Promise<number | null> {

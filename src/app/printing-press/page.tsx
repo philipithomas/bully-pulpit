@@ -51,7 +51,8 @@ export default async function OverviewPage() {
               <cite className="text-forest">Contraption</cite>{' '}
               {n(stats.contraption)},{' '}
               <cite className="text-walnut">Workshop</cite> {n(stats.workshop)},
-              and <cite className="text-umami">umami</cite> {n(stats.umami)}.
+              and <cite className="text-tidbits">tidbits</cite>{' '}
+              {n(stats.tidbits)}.
             </>
           )}
         </p>

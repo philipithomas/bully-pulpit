@@ -31,7 +31,7 @@ export interface ZoomCaption {
   locationName?: string | null
   locationUrl?: string | null
   presentation?: 'rail' | 'immersive'
-  collection?: 'tsundoku' | 'umami'
+  collection?: 'tsundoku' | 'tidbits'
   footer?: ZoomCaptionFooter | null
 }
 
@@ -539,12 +539,12 @@ export function ImageZoomOverlay({
       : 'max-h-[90vh] max-w-[90vw] object-contain'
   const hasCaptionMetadata = Boolean(caption?.date || caption?.locationName)
   const collection =
-    caption?.collection === 'umami'
+    caption?.collection === 'tidbits'
       ? {
-          href: '/umami',
-          label: 'umami',
-          logo: '/images/umami.svg',
-          width: 1562,
+          href: '/tidbits',
+          label: 'tidbits',
+          logo: '/images/tidbits.svg',
+          width: 1601,
           height: 369,
         }
       : {
@@ -705,8 +705,8 @@ export function ImageZoomOverlay({
       role="dialog"
       aria-modal="true"
       aria-label={
-        isImmersive && caption?.collection === 'umami'
-          ? 'umami photo viewer'
+        isImmersive && caption?.collection === 'tidbits'
+          ? 'tidbits photo viewer'
           : image.alt || 'Image viewer'
       }
       aria-describedby={isImmersive && caption ? statusId : undefined}

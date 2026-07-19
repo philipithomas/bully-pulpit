@@ -5,11 +5,11 @@ import { generateRss } from '@/lib/feeds/rss'
 export const dynamic = 'force-static'
 
 export async function GET() {
-  const posts = getPostsByNewsletter('umami')
+  const posts = getPostsByNewsletter('tidbits')
   const xml = await generateRss(posts, {
-    title: `${siteConfig.newsletters.umami.name} | ${siteConfig.title}`,
-    description: siteConfig.newsletters.umami.tagline,
-    feedUrl: `${siteConfig.url}/feed/umami/rss.xml`,
+    title: `${siteConfig.newsletters.tidbits.name} | ${siteConfig.title}`,
+    description: siteConfig.newsletters.tidbits.tagline,
+    feedUrl: `${siteConfig.url}/feed/tidbits/rss.xml`,
   })
   return new Response(xml, {
     headers: {

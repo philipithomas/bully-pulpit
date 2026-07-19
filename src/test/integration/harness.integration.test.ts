@@ -32,6 +32,49 @@ describe('integration harness', () => {
     expect(names).toContain('idx_subscribers_confirmed_at')
   })
 
+  it('applies the Tidbits column and index renames', async () => {
+    const columns = await db.execute(sql`
+      SELECT table_name, column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name IN ('subscribers', 'sms_subscribers')
+        AND (
+          column_name LIKE '%umami%'
+          OR column_name IN (
+            'subscribed_tidbits',
+            'tidbits_opt_in_notification_sent_at'
+          )
+        )
+      ORDER BY table_name, column_name
+    `)
+    expect(columns.rows).toEqual([
+      {
+        table_name: 'sms_subscribers',
+        column_name: 'subscribed_tidbits',
+      },
+      {
+        table_name: 'subscribers',
+        column_name: 'subscribed_tidbits',
+      },
+      {
+        table_name: 'subscribers',
+        column_name: 'tidbits_opt_in_notification_sent_at',
+      },
+    ])
+
+    const indexes = await db.execute(sql`
+      SELECT indexname
+      FROM pg_indexes
+      WHERE schemaname = 'public'
+        AND (indexname LIKE '%umami%' OR indexname LIKE '%tidbits%')
+      ORDER BY indexname
+    `)
+    expect(indexes.rows.map((row) => row.indexname)).toEqual([
+      'idx_sms_subscribers_tidbits_created',
+      'idx_subscribers_tidbits_created',
+    ])
+  })
+
   it('getDb returns the PGlite-backed drizzle instance', async () => {
     const [row] = await getDb()
       .insert(subscribers)

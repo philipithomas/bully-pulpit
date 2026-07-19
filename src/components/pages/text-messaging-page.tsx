@@ -34,7 +34,7 @@ export function TextMessagingConsent({
             Contraption Company LLC through philipithomas.com.
           </p>
           <p>
-            The texts announce new Contraption, Workshop, Postcard, and umami
+            The texts announce new Contraption, Workshop, Postcard, and tidbits
             posts. A new or reactivated subscription also sends one Bell
             contact-card MMS. On iPhone, open the attachment, then tap Create
             New Contact to save Bell so later messages show Bell's name and

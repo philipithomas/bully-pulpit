@@ -66,7 +66,7 @@ async function signInAs(email: string) {
     subscribedPostcard: false,
     subscribedContraption: false,
     subscribedWorkshop: false,
-    subscribedUmami: false,
+    subscribedTidbits: false,
     subscribedTsundoku: false,
     source: null,
     sessionVersion: 1,
@@ -82,7 +82,7 @@ const signInAsAdmin = () => signInAs('admin@example.com')
 async function seedSubscriber(values: NewSubscriber) {
   const [row] = await db
     .insert(subscribers)
-    .values({ subscribedUmami: true, ...values })
+    .values({ subscribedTidbits: true, ...values })
     .returning()
   return row
 }
@@ -160,7 +160,7 @@ describe('GET list', () => {
       subscribedPostcard: true,
       subscribedContraption: true,
       subscribedWorkshop: true,
-      subscribedUmami: true,
+      subscribedTidbits: true,
       source: 'https://news.ycombinator.com',
     })
     expect(alice.uuid).toMatch(/^[0-9a-f-]{36}$/)
@@ -219,22 +219,22 @@ describe('GET list', () => {
     expect(searched.rows[0].email).toBe('tsundoku@example.com')
   })
 
-  it('filters the new Umami subscription independently', async () => {
+  it('filters the new Tidbits subscription independently', async () => {
     await signInAsAdmin()
     await seedSubscriber({
-      email: 'umami@example.com',
-      subscribedUmami: true,
+      email: 'tidbits@example.com',
+      subscribedTidbits: true,
     })
     await seedSubscriber({
-      email: 'not-umami@example.com',
-      subscribedUmami: false,
+      email: 'not-tidbits@example.com',
+      subscribedTidbits: false,
     })
 
     const filtered = await (
-      await listGet(listRequest('?newsletter=umami'))
+      await listGet(listRequest('?newsletter=tidbits'))
     ).json()
     expect(filtered.total).toBe(1)
-    expect(filtered.rows[0].email).toBe('umami@example.com')
+    expect(filtered.rows[0].email).toBe('tidbits@example.com')
   })
 
   it('rejects an invalid newsletter filter', async () => {
@@ -370,7 +370,7 @@ describe('POST import', () => {
       expect(row.subscribedPostcard).toBe(true)
       expect(row.subscribedContraption).toBe(true)
       expect(row.subscribedWorkshop).toBe(true)
-      expect(row.subscribedUmami).toBe(true)
+      expect(row.subscribedTidbits).toBe(true)
       expect(row.subscribedTsundoku).toBe(false)
       expect(row.confirmedAt).not.toBeNull()
       expect(row.source).toBe('csv_import')
@@ -388,7 +388,7 @@ describe('POST import', () => {
     expect(subscriber.subscribedPostcard).toBe(true)
     expect(subscriber.subscribedContraption).toBe(true)
     expect(subscriber.subscribedWorkshop).toBe(true)
-    expect(subscriber.subscribedUmami).toBe(true)
+    expect(subscriber.subscribedTidbits).toBe(true)
     expect(subscriber.subscribedTsundoku).toBe(false)
   })
 
@@ -415,7 +415,7 @@ describe('POST import', () => {
     expect(a.subscribedWorkshop).toBe(false) // opt-out preserved
     expect(a.subscribedPostcard).toBe(true)
     expect(a.subscribedContraption).toBe(true)
-    expect(a.subscribedUmami).toBe(true)
+    expect(a.subscribedTidbits).toBe(true)
     expect(a.subscribedTsundoku).toBe(false)
   })
 
@@ -426,14 +426,14 @@ describe('POST import', () => {
       subscribedPostcard: false,
       subscribedContraption: true,
       subscribedWorkshop: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
       subscribedTsundoku: false,
       confirmedAt: new Date(),
     })
 
     const res = await importPost(
       importRequest(
-        'email,name,postcard,contraption,workshop,umami,tsundoku,confirmed\n' +
+        'email,name,postcard,contraption,workshop,tidbits,tsundoku,confirmed\n' +
           'a@example.com,Alice,true,false,yes,true,1,1\n'
       )
     )
@@ -449,9 +449,26 @@ describe('POST import', () => {
     expect(a.subscribedPostcard).toBe(true)
     expect(a.subscribedContraption).toBe(false)
     expect(a.subscribedWorkshop).toBe(true)
-    expect(a.subscribedUmami).toBe(true)
+    expect(a.subscribedTidbits).toBe(true)
     expect(a.subscribedTsundoku).toBe(false)
     expect(a.confirmedAt).not.toBeNull()
+  })
+
+  it('preserves Tidbits consent from a pre-rename backup column', async () => {
+    await signInAsAdmin()
+    await seedSubscriber({
+      email: 'legacy-photo@example.com',
+      subscribedTidbits: true,
+      confirmedAt: new Date(),
+    })
+
+    const res = await importPost(
+      importRequest('email,umami\nlegacy-photo@example.com,false\n')
+    )
+    expect(res.status).toBe(200)
+    expect(
+      (await subscriberByEmail('legacy-photo@example.com')).subscribedTidbits
+    ).toBe(false)
   })
 
   it('preserves a legacy inactive subscription until an explicit opt-out', async () => {
@@ -617,7 +634,7 @@ describe('GET export', () => {
       'postcard',
       'contraption',
       'workshop',
-      'umami',
+      'tidbits',
       'tsundoku',
       'confirmed',
       'source',
@@ -646,7 +663,7 @@ describe('GET export', () => {
     await signInAsAdmin()
     await importPost(
       importRequest(
-        'email,name,postcard,contraption,workshop,umami,tsundoku,confirmed,source\n' +
+        'email,name,postcard,contraption,workshop,tidbits,tsundoku,confirmed,source\n' +
           'rt1@example.com,One,true,false,true,false,true,true,https://example.org/\n' +
           'rt2@example.com,,false,true,false,true,false,false,\n'
       )
@@ -666,7 +683,7 @@ describe('GET export', () => {
     expect(rt1.subscribedPostcard).toBe(true)
     expect(rt1.subscribedContraption).toBe(false)
     expect(rt1.subscribedWorkshop).toBe(true)
-    expect(rt1.subscribedUmami).toBe(false)
+    expect(rt1.subscribedTidbits).toBe(false)
     expect(rt1.subscribedTsundoku).toBe(false)
     expect(rt1.confirmedAt).not.toBeNull()
     expect(rt1.source).toBe('https://example.org/')
@@ -676,7 +693,7 @@ describe('GET export', () => {
     expect(rt2.subscribedPostcard).toBe(false)
     expect(rt2.subscribedContraption).toBe(true)
     expect(rt2.subscribedWorkshop).toBe(false)
-    expect(rt2.subscribedUmami).toBe(true)
+    expect(rt2.subscribedTidbits).toBe(true)
     expect(rt2.subscribedTsundoku).toBe(false)
     expect(rt2.confirmedAt).toBeNull()
     expect(rt2.source).toBe('csv_import')

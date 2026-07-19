@@ -34,7 +34,7 @@ const defaultSmsSubscriptions = {
   postcard: isNewsletterAcceptingSubscriptions('postcard'),
   contraption: isNewsletterAcceptingSubscriptions('contraption'),
   workshop: isNewsletterAcceptingSubscriptions('workshop'),
-  umami: isNewsletterAcceptingSubscriptions('umami'),
+  tidbits: isNewsletterAcceptingSubscriptions('tidbits'),
   tsundoku: isNewsletterAcceptingSubscriptions('tsundoku'),
 }
 
@@ -61,7 +61,7 @@ export async function subscribeSmsNumber(input: {
             subscribed_postcard,
             subscribed_contraption,
             subscribed_workshop,
-            subscribed_umami,
+            subscribed_tidbits,
             subscribed_tsundoku,
             source
           )
@@ -71,7 +71,7 @@ export async function subscribeSmsNumber(input: {
           ${defaultSmsSubscriptions.postcard},
           ${defaultSmsSubscriptions.contraption},
           ${defaultSmsSubscriptions.workshop},
-          ${defaultSmsSubscriptions.umami},
+          ${defaultSmsSubscriptions.tidbits},
           ${defaultSmsSubscriptions.tsundoku},
           ${input.source ?? null}
         )
@@ -89,9 +89,9 @@ export async function subscribeSmsNumber(input: {
             WHEN ${defaultSmsSubscriptions.workshop} THEN true
             ELSE sms_subscribers.subscribed_workshop
           END,
-          subscribed_umami = CASE
-            WHEN ${defaultSmsSubscriptions.umami} THEN true
-            ELSE sms_subscribers.subscribed_umami
+          subscribed_tidbits = CASE
+            WHEN ${defaultSmsSubscriptions.tidbits} THEN true
+            ELSE sms_subscribers.subscribed_tidbits
           END,
           subscribed_tsundoku = CASE
             WHEN ${defaultSmsSubscriptions.tsundoku} THEN true
@@ -120,7 +120,7 @@ export async function subscribeSmsNumber(input: {
       subscribedPostcard: defaultSmsSubscriptions.postcard,
       subscribedContraption: defaultSmsSubscriptions.contraption,
       subscribedWorkshop: defaultSmsSubscriptions.workshop,
-      subscribedUmami: defaultSmsSubscriptions.umami,
+      subscribedTidbits: defaultSmsSubscriptions.tidbits,
       subscribedTsundoku: defaultSmsSubscriptions.tsundoku,
       source: input.source ?? null,
     })
@@ -140,9 +140,9 @@ export async function subscribeSmsNumber(input: {
           WHEN ${defaultSmsSubscriptions.workshop} THEN true
           ELSE ${smsSubscribers.subscribedWorkshop}
         END`,
-        subscribedUmami: sql`CASE
-          WHEN ${defaultSmsSubscriptions.umami} THEN true
-          ELSE ${smsSubscribers.subscribedUmami}
+        subscribedTidbits: sql`CASE
+          WHEN ${defaultSmsSubscriptions.tidbits} THEN true
+          ELSE ${smsSubscribers.subscribedTidbits}
         END`,
         subscribedTsundoku: sql`CASE
           WHEN ${defaultSmsSubscriptions.tsundoku} THEN true

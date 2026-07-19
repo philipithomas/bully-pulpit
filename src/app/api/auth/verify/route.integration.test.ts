@@ -22,7 +22,7 @@ vi.mock('node:dns/promises', () => ({
 
 import { POST as verifyPost } from '@/app/api/auth/verify/route'
 import { POST as subscribePost } from '@/app/api/subscribe/route'
-import { POST as subscribeUmamiPost } from '@/app/api/subscribe/umami/route'
+import { POST as subscribeTidbitsPost } from '@/app/api/subscribe/tidbits/route'
 import { GET as verifyMagicLinkGet } from '@/app/auth/verify/route'
 import {
   NEW_SUBSCRIBER_ONBOARDING_COOKIE,
@@ -116,9 +116,9 @@ function adminNotificationCalls() {
   )
 }
 
-function umamiOptInNotificationCalls() {
+function tidbitsOptInNotificationCalls() {
   return sesSend.mock.calls.filter(([input]) =>
-    input.subject.startsWith('Existing subscriber opted into umami:')
+    input.subject.startsWith('Existing subscriber opted into tidbits:')
   )
 }
 
@@ -338,7 +338,7 @@ describe('POST /api/auth/verify', () => {
 
     // ...but no second admin notification for an already-confirmed subscriber.
     expect(adminNotificationCalls()).toHaveLength(1)
-    expect(umamiOptInNotificationCalls()).toHaveLength(0)
+    expect(tidbitsOptInNotificationCalls()).toHaveLength(0)
   })
 
   it('returns 400 (not 500) for a malformed JSON body', async () => {
@@ -462,52 +462,52 @@ describe('POST /api/auth/verify', () => {
     expect(adminNotificationCalls()).toHaveLength(0)
   })
 
-  it('opts a confirmed reader into Umami only after code verification and notifies once', async () => {
+  it('opts a confirmed reader into Tidbits only after code verification and notifies once', async () => {
     const [subscriber] = await db
       .insert(subscribers)
       .values({
-        email: 'code-umami-reader@example.com',
+        email: 'code-tidbits-reader@example.com',
         name: 'Code Reader',
         confirmedAt: new Date(),
         subscribedContraption: false,
         subscribedWorkshop: false,
         subscribedPostcard: false,
         subscribedTsundoku: false,
-        subscribedUmami: false,
+        subscribedTidbits: false,
       })
       .returning()
 
-    const signup = await subscribeUmamiPost(
-      jsonPost('http://localhost/api/subscribe/umami', {
+    const signup = await subscribeTidbitsPost(
+      jsonPost('http://localhost/api/subscribe/tidbits', {
         email: subscriber.email,
       })
     )
     expect(signup.status).toBe(200)
-    expect((await subscriberByEmail(subscriber.email)).subscribedUmami).toBe(
+    expect((await subscriberByEmail(subscriber.email)).subscribedTidbits).toBe(
       false
     )
 
     const { token: code } = await latestCodeLogin(subscriber.id)
     const { token: magicToken } = await latestMagicLogin(subscriber.id)
-    const response = await verify(subscriber.email, code, ['umami'])
+    const response = await verify(subscriber.email, code, ['tidbits'])
 
     expect(response.status).toBe(200)
-    expect((await response.json()).user.subscribed_umami).toBe(true)
-    expect((await subscriberByEmail(subscriber.email)).subscribedUmami).toBe(
+    expect((await response.json()).user.subscribed_tidbits).toBe(true)
+    expect((await subscriberByEmail(subscriber.email)).subscribedTidbits).toBe(
       true
     )
     expect(adminNotificationCalls()).toHaveLength(0)
-    expect(umamiOptInNotificationCalls()).toHaveLength(1)
-    expect(umamiOptInNotificationCalls()[0][0]).toMatchObject({
+    expect(tidbitsOptInNotificationCalls()).toHaveLength(1)
+    expect(tidbitsOptInNotificationCalls()[0][0]).toMatchObject({
       to: siteConfig.adminEmails,
-      subject: `Existing subscriber opted into umami: ${subscriber.email}`,
+      subject: `Existing subscriber opted into tidbits: ${subscriber.email}`,
     })
 
     // The sibling magic link is still valid, but replaying the requested opt-in
     // is idempotent and must not send another notification.
     const siblingResponse = await verifyMagicLinkGet(
       new NextRequest(
-        `https://www.philipithomas.com/auth/verify?token=${magicToken}&newsletter=umami`
+        `https://www.philipithomas.com/auth/verify?token=${magicToken}&newsletter=tidbits`
       )
     )
     expect(siblingResponse.headers.get('location')).toBe(
@@ -515,14 +515,14 @@ describe('POST /api/auth/verify', () => {
     )
     expect(siblingResponse.headers.get('location')).not.toContain(magicToken)
     expect(await magicLinkCompletionFrom(siblingResponse)).toEqual({
-      newsletter: 'umami',
+      newsletter: 'tidbits',
       newSubscriber: false,
       destination: 'account',
     })
     expect(siblingResponse.headers.get('Cache-Control')).toBe(
       'private, no-store'
     )
-    expect(umamiOptInNotificationCalls()).toHaveLength(1)
+    expect(tidbitsOptInNotificationCalls()).toHaveLength(1)
   })
 
   it('applies requested newsletter opt-ins from a magic-link sign-in', async () => {
@@ -567,22 +567,22 @@ describe('POST /api/auth/verify', () => {
     expect(adminNotificationCalls()).toHaveLength(0)
   })
 
-  it('opts a confirmed reader into Umami from a magic link and lands on account', async () => {
+  it('opts a confirmed reader into Tidbits from a magic link and lands on account', async () => {
     const [subscriber] = await db
       .insert(subscribers)
       .values({
-        email: 'magic-umami-reader@example.com',
+        email: 'magic-tidbits-reader@example.com',
         confirmedAt: new Date(),
         subscribedContraption: false,
         subscribedWorkshop: false,
         subscribedPostcard: false,
         subscribedTsundoku: false,
-        subscribedUmami: false,
+        subscribedTidbits: false,
       })
       .returning()
 
-    const signup = await subscribeUmamiPost(
-      jsonPost('http://localhost/api/subscribe/umami', {
+    const signup = await subscribeTidbitsPost(
+      jsonPost('http://localhost/api/subscribe/tidbits', {
         email: subscriber.email,
       })
     )
@@ -591,7 +591,7 @@ describe('POST /api/auth/verify', () => {
 
     const response = await verifyMagicLinkGet(
       new NextRequest(
-        `https://www.philipithomas.com/auth/verify?token=${token}&newsletter=umami`
+        `https://www.philipithomas.com/auth/verify?token=${token}&newsletter=tidbits`
       )
     )
 
@@ -600,15 +600,15 @@ describe('POST /api/auth/verify', () => {
     )
     expect(response.headers.get('location')).not.toContain(token)
     expect(await magicLinkCompletionFrom(response)).toEqual({
-      newsletter: 'umami',
+      newsletter: 'tidbits',
       newSubscriber: false,
       destination: 'account',
     })
-    expect((await subscriberByEmail(subscriber.email)).subscribedUmami).toBe(
+    expect((await subscriberByEmail(subscriber.email)).subscribedTidbits).toBe(
       true
     )
     expect(adminNotificationCalls()).toHaveLength(0)
-    expect(umamiOptInNotificationCalls()).toHaveLength(1)
+    expect(tidbitsOptInNotificationCalls()).toHaveLength(1)
   })
 
   it('sets onboarding only when a magic link first confirms the subscriber', async () => {

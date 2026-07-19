@@ -67,7 +67,7 @@ describe('GET /api/unsubscribe/[token]', () => {
       subscribed_postcard: true,
       subscribed_contraption: true,
       subscribed_workshop: true,
-      subscribed_umami: true,
+      subscribed_tidbits: true,
     })
   })
 })
@@ -86,20 +86,20 @@ describe('POST /api/unsubscribe/[token] (RFC 8058 one-click)', () => {
     expect(after.subscribedPostcard).toBe(true)
     expect(after.subscribedContraption).toBe(true)
     expect(after.subscribedTsundoku).toBe(false)
-    expect(after.subscribedUmami).toBe(true)
+    expect(after.subscribedTidbits).toBe(true)
 
     const stamped = await sendRow(send.id)
     expect(stamped.triggeredUnsubscribeAt).toBeInstanceOf(Date)
   })
 
-  it('flips only Umami for an Umami send', async () => {
-    const { subscriber, token } = await seed('umami')
+  it('flips only Tidbits for a Tidbits send', async () => {
+    const { subscriber, token } = await seed('tidbits')
 
     const res = await POST(request(token, { method: 'POST' }), params(token))
 
     expect(res.status).toBe(200)
     const after = await subscriberRow(subscriber.id)
-    expect(after.subscribedUmami).toBe(false)
+    expect(after.subscribedTidbits).toBe(false)
     expect(after.subscribedWorkshop).toBe(true)
     expect(after.subscribedPostcard).toBe(true)
     expect(after.subscribedContraption).toBe(true)
@@ -129,7 +129,7 @@ describe('DELETE /api/unsubscribe/[token]', () => {
     expect(after.subscribedContraption).toBe(false)
     expect(after.subscribedWorkshop).toBe(false)
     expect(after.subscribedTsundoku).toBe(true)
-    expect(after.subscribedUmami).toBe(false)
+    expect(after.subscribedTidbits).toBe(false)
 
     const stamped = await sendRow(send.id)
     expect(stamped.triggeredUnsubscribeAt).toBeInstanceOf(Date)
@@ -157,21 +157,21 @@ describe('PATCH /api/unsubscribe/[token]', () => {
     expect(after.subscribedContraption).toBe(true)
     expect(after.subscribedWorkshop).toBe(true)
     expect(after.subscribedTsundoku).toBe(false)
-    expect(after.subscribedUmami).toBe(true)
+    expect(after.subscribedTidbits).toBe(true)
     expect(after.name).toBe('Janet')
   })
 
-  it('requires verified sign-in before a historical token can enable Umami', async () => {
+  it('requires verified sign-in before a historical token can enable Tidbits', async () => {
     const { subscriber, token } = await seed()
     await db
       .update(subscribers)
-      .set({ subscribedUmami: false, confirmedAt: new Date() })
+      .set({ subscribedTidbits: false, confirmedAt: new Date() })
       .where(eq(subscribers.id, subscriber.id))
 
     const res = await PATCH(
       request(token, {
         method: 'PATCH',
-        body: JSON.stringify({ subscribed_umami: true }),
+        body: JSON.stringify({ subscribed_tidbits: true }),
         headers: { 'content-type': 'application/json' },
       }),
       params(token)
@@ -179,9 +179,9 @@ describe('PATCH /api/unsubscribe/[token]', () => {
 
     expect(res.status).toBe(403)
     await expect(res.json()).resolves.toEqual({
-      error: 'Sign in to subscribe to umami.',
+      error: 'Sign in to subscribe to tidbits.',
     })
-    expect((await subscriberRow(subscriber.id)).subscribedUmami).toBe(false)
+    expect((await subscriberRow(subscriber.id)).subscribedTidbits).toBe(false)
   })
 
   it('returns 400 (not 500) for a malformed JSON body and changes nothing', async () => {
@@ -206,7 +206,7 @@ describe('PATCH /api/unsubscribe/[token]', () => {
     expect(after.subscribedContraption).toBe(true)
     expect(after.subscribedWorkshop).toBe(true)
     expect(after.subscribedTsundoku).toBe(false)
-    expect(after.subscribedUmami).toBe(true)
+    expect(after.subscribedTidbits).toBe(true)
   })
 
   it.each([
@@ -278,7 +278,7 @@ describe('unknown token', () => {
     expect(after.subscribedContraption).toBe(true)
     expect(after.subscribedWorkshop).toBe(true)
     expect(after.subscribedTsundoku).toBe(false)
-    expect(after.subscribedUmami).toBe(true)
+    expect(after.subscribedTidbits).toBe(true)
   })
 
   it('returns 404 (not 500) for a malformed non-UUID token', async () => {

@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Subscriber } from '@/lib/db/schema'
 
 const mocks = vi.hoisted(() => ({
-  claimUmamiOptInNotification: vi.fn(),
+  claimTidbitsOptInNotification: vi.fn(),
   sendExistingSubscriberOptInNotification: vi.fn(),
 }))
 
 vi.mock('@/lib/db/queries/subscribers', () => ({
-  claimUmamiOptInNotification: mocks.claimUmamiOptInNotification,
+  claimTidbitsOptInNotification: mocks.claimTidbitsOptInNotification,
   confirmSubscriber: vi.fn(),
   createSubscriber: vi.fn(),
   findByEmail: vi.fn(),
@@ -20,19 +20,22 @@ vi.mock('@/lib/email/send', () => ({
   sendNewSubscriberNotification: vi.fn(),
 }))
 
-import { notifyExistingSubscriberOptIns } from '@/lib/auth/subscriber-service'
+import {
+  normalizedNewsletters,
+  notifyExistingSubscriberOptIns,
+} from '@/lib/auth/subscriber-service'
 
 const existingSubscriber = {
   id: 1,
   email: 'reader@example.com',
   name: 'Reader',
   confirmedAt: new Date('2026-07-16T00:00:00Z'),
-  subscribedUmami: false,
+  subscribedTidbits: false,
 } as Subscriber
 
 const optedInSubscriber = {
   ...existingSubscriber,
-  subscribedUmami: true,
+  subscribedTidbits: true,
 } as Subscriber
 
 describe('notifyExistingSubscriberOptIns', () => {
@@ -42,7 +45,7 @@ describe('notifyExistingSubscriberOptIns', () => {
 
   it('does not fail verification when claiming the admin notification fails', async () => {
     const error = new Error('temporary database failure')
-    mocks.claimUmamiOptInNotification.mockRejectedValue(error)
+    mocks.claimTidbitsOptInNotification.mockRejectedValue(error)
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await expect(
@@ -51,9 +54,17 @@ describe('notifyExistingSubscriberOptIns', () => {
 
     expect(mocks.sendExistingSubscriberOptInNotification).not.toHaveBeenCalled()
     expect(consoleError).toHaveBeenCalledWith(
-      '[subscriber] Umami opt-in notification failed:',
+      '[subscriber] Tidbits opt-in notification failed:',
       error
     )
     consoleError.mockRestore()
+  })
+})
+
+describe('normalizedNewsletters', () => {
+  it('carries legacy Umami signup consent forward to Tidbits', () => {
+    expect(
+      normalizedNewsletters(['umami', 'tidbits', 'not-a-newsletter'])
+    ).toEqual(['tidbits'])
   })
 })

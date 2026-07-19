@@ -50,6 +50,21 @@ export function getRedirects(): Redirect[] {
       destination: '/printing-press/:path*',
       permanent: false,
     },
+    // Umami was renamed to Tidbits. Preserve the public archive, feed
+    // subscriptions, and Markdown mirrors. Legacy image URLs are rewrites in
+    // src/lib/rewrites.ts because image consumers require a direct 200.
+    { source: '/umami', destination: '/tidbits', permanent: true },
+    { source: '/umami.md', destination: '/tidbits.md', permanent: true },
+    {
+      source: '/feed/umami/rss.xml',
+      destination: '/feed/tidbits/rss.xml',
+      permanent: true,
+    },
+    {
+      source: '/feed/umami/feed.json',
+      destination: '/feed/tidbits/feed.json',
+      permanent: true,
+    },
     // Ghost legacy: /posts index -> /contraption
     {
       source: '/posts',

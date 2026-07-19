@@ -15,7 +15,7 @@ initBotId({
       method: 'POST',
     },
     {
-      path: '/api/subscribe/umami',
+      path: '/api/subscribe/tidbits',
       method: 'POST',
     },
     {

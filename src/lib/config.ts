@@ -48,18 +48,18 @@ const staticConfig = {
       },
       icon: '/images/workshop-icon.svg',
     },
-    umami: {
-      name: 'umami',
-      tagline: 'Photo journal of city life. Just what lingers.',
-      slug: 'umami',
-      color: 'umami',
+    tidbits: {
+      name: 'tidbits',
+      tagline: 'Photo journal',
+      slug: 'tidbits',
+      color: 'tidbits',
       logo: {
-        src: '/images/umami.svg',
-        height: 14,
-        intrinsicWidth: 1562,
+        src: '/images/tidbits.svg',
+        height: 13,
+        intrinsicWidth: 1601,
         intrinsicHeight: 369,
       },
-      icon: '/images/umami-icon.svg',
+      icon: '/images/tidbits-icon.svg',
     },
     tsundoku: {
       name: 'Tsundoku',

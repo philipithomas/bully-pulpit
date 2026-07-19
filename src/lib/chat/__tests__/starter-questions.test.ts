@@ -29,10 +29,10 @@ describe('Bell starter questions', () => {
     })
   })
 
-  it('preserves the lowercase umami name', () => {
-    expect(bellStarterQuestions('/umami')[0]).toEqual({
+  it('preserves the lowercase tidbits name', () => {
+    expect(bellStarterQuestions('/tidbits')[0]).toEqual({
       kind: 'newsletter_overview',
-      text: 'What is umami about?',
+      text: 'What is tidbits about?',
     })
   })
 

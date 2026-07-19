@@ -564,12 +564,12 @@ describe('sendNewsletterWorkflow', () => {
   })
 
   it('resumes a completed email send for the global SMS audience regardless of legacy newsletter flags', async () => {
-    mockedGetPost.mockReturnValue({ ...POST, newsletter: 'umami' })
+    mockedGetPost.mockReturnValue({ ...POST, newsletter: 'tidbits' })
     const emailSubscriber = await seedSubscriber({
       email: 'reader@example.com',
     })
     await seedSendRow(emailSubscriber.id, {
-      newsletter: 'umami',
+      newsletter: 'tidbits',
       sentAt: new Date(),
     })
     const [smsSubscriber] = await db
@@ -580,13 +580,13 @@ describe('sendNewsletterWorkflow', () => {
         subscribedPostcard: false,
         subscribedContraption: false,
         subscribedWorkshop: false,
-        subscribedUmami: false,
+        subscribedTidbits: false,
         subscribedTsundoku: false,
       })
       .returning()
 
     expect(await countActiveSms()).toBe(1)
-    expect(await countEligibleSms('umami', SLUG)).toBe(1)
+    expect(await countEligibleSms('tidbits', SLUG)).toBe(1)
 
     const result = await sendNewsletterWorkflow(SLUG)
 
@@ -603,9 +603,9 @@ describe('sendNewsletterWorkflow', () => {
     expect(mockedSes).not.toHaveBeenCalled()
     expect(fetch).toHaveBeenCalledTimes(1)
     const smsRow = smsRowFor(await allSmsRows(), smsSubscriber.id)
-    expect(smsRow.newsletter).toBe('umami')
+    expect(smsRow.newsletter).toBe('tidbits')
     expect(smsRow.sentAt).not.toBeNull()
-    expect(await countEligibleSms('umami', SLUG)).toBe(0)
+    expect(await countEligibleSms('tidbits', SLUG)).toBe(0)
   })
 
   it('marks a failed SMS row and keeps the email send complete', async () => {
@@ -749,7 +749,7 @@ describe('sendNewsletterWorkflow', () => {
         subscribedPostcard: false,
         subscribedContraption: false,
         subscribedWorkshop: false,
-        subscribedUmami: false,
+        subscribedTidbits: false,
         subscribedTsundoku: false,
       })
       .returning()
@@ -757,13 +757,13 @@ describe('sendNewsletterWorkflow', () => {
     const ids = await bulkCreateQueuedSms({
       smsSubscriberIds: [subscriber.id],
       postSlug: SLUG,
-      newsletter: 'umami',
-      body: 'Umami: Hello world',
+      newsletter: 'tidbits',
+      body: 'Tidbits: Hello world',
     })
 
     expect(ids).toHaveLength(1)
     expect(smsRowFor(await allSmsRows(), subscriber.id).newsletter).toBe(
-      'umami'
+      'tidbits'
     )
   })
 

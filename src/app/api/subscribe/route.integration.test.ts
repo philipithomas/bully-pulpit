@@ -21,8 +21,9 @@ vi.mock('node:dns/promises', () => ({
 
 import { resolve4, resolve6, resolveMx } from 'node:dns/promises'
 import { POST } from '@/app/api/subscribe/route'
+import { POST as POST_TIDBITS } from '@/app/api/subscribe/tidbits/route'
 import { POST as POST_TSUNDOKU } from '@/app/api/subscribe/tsundoku/route'
-import { POST as POST_UMAMI } from '@/app/api/subscribe/umami/route'
+import { POST as POST_UMAMI_COMPAT } from '@/app/api/subscribe/umami/route'
 import { clearDeliverabilityCache } from '@/lib/email/deliverability'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { db, resetDb } from '@/test/integration/db'
@@ -107,7 +108,7 @@ describe('POST /api/subscribe', () => {
     expect(rows[0].subscribedWorkshop).toBe(true)
     expect(rows[0].subscribedPostcard).toBe(true)
     expect(rows[0].subscribedTsundoku).toBe(false)
-    expect(rows[0].subscribedUmami).toBe(true)
+    expect(rows[0].subscribedTidbits).toBe(true)
 
     // Both login rows: a 6-digit code and a magic link, both marked emailed
     const loginRows = await db
@@ -135,10 +136,10 @@ describe('POST /api/subscribe', () => {
       'Confirm your subscription to philipithomas.com'
     )
     expect(message.html).toContain(
-      'Thanks for subscribing to Contraption, Workshop, Postcard, and umami at'
+      'Thanks for subscribing to Contraption, Workshop, Postcard, and tidbits at'
     )
     expect(message.text).toContain(
-      'Thanks for subscribing to Contraption, Workshop, Postcard, and umami at philipithomas.com.'
+      'Thanks for subscribing to Contraption, Workshop, Postcard, and tidbits at philipithomas.com.'
     )
     expect(message.html).toContain(codeLogin?.token)
     expect(message.text).toContain(codeLogin?.token)
@@ -200,7 +201,7 @@ describe('POST /api/subscribe', () => {
     expect(row.subscribedPostcard).toBe(true)
     expect(row.subscribedWorkshop).toBe(true)
     expect(row.subscribedTsundoku).toBe(false)
-    expect(row.subscribedUmami).toBe(true)
+    expect(row.subscribedTidbits).toBe(true)
     expect(row.source).toBeNull()
 
     // New subscribers get the full list in their confirmation email.
@@ -209,7 +210,7 @@ describe('POST /api/subscribe', () => {
       'Confirm your subscription to philipithomas.com'
     )
     expect(message.text).toContain(
-      'Thanks for subscribing to Contraption, Workshop, Postcard, and umami at philipithomas.com.'
+      'Thanks for subscribing to Contraption, Workshop, Postcard, and tidbits at philipithomas.com.'
     )
   })
 
@@ -222,7 +223,7 @@ describe('POST /api/subscribe', () => {
       subscribedWorkshop: false,
       subscribedPostcard: false,
       subscribedTsundoku: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
     })
 
     // Requested newsletter flags opt in, while name and source remain untouched.
@@ -251,7 +252,7 @@ describe('POST /api/subscribe', () => {
     expect(rows[0].subscribedWorkshop).toBe(true)
     expect(rows[0].subscribedPostcard).toBe(true)
     expect(rows[0].subscribedTsundoku).toBe(false)
-    expect(rows[0].subscribedUmami).toBe(false)
+    expect(rows[0].subscribedTidbits).toBe(false)
     expect(rows[0].name).toBe('Original Name')
     expect(rows[0].source).toBe('https://news.ycombinator.com')
 
@@ -276,7 +277,7 @@ describe('POST /api/subscribe', () => {
       subscribedContraption: false,
       subscribedWorkshop: false,
       subscribedPostcard: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
     })
 
     const res = await POST(
@@ -303,7 +304,7 @@ describe('POST /api/subscribe', () => {
     expect(row.subscribedWorkshop).toBe(false)
     expect(row.subscribedPostcard).toBe(false)
     expect(row.subscribedTsundoku).toBe(false)
-    expect(row.subscribedUmami).toBe(false)
+    expect(row.subscribedTidbits).toBe(false)
     expect(row.name).toBe('Opted Down')
     expect(row.source).toBe('https://original.example')
 
@@ -330,7 +331,7 @@ describe('POST /api/subscribe', () => {
       subscribedWorkshop: false,
       subscribedPostcard: false,
       subscribedTsundoku: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
     })
 
     const res = await POST(
@@ -356,7 +357,7 @@ describe('POST /api/subscribe', () => {
     expect(row.subscribedWorkshop).toBe(false)
     expect(row.subscribedPostcard).toBe(false)
     expect(row.subscribedTsundoku).toBe(false)
-    expect(row.subscribedUmami).toBe(false)
+    expect(row.subscribedTidbits).toBe(false)
     expect(row.name).toBe('Careful Reader')
     expect(row.source).toBe('https://original.example')
 
@@ -385,7 +386,7 @@ describe('POST /api/subscribe', () => {
       subscribedWorkshop: false,
       subscribedPostcard: false,
       subscribedTsundoku: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
     })
 
     const res = await POST(
@@ -410,28 +411,28 @@ describe('POST /api/subscribe', () => {
     expect(row.subscribedWorkshop).toBe(false)
     expect(row.subscribedPostcard).toBe(false)
     expect(row.subscribedTsundoku).toBe(false)
-    expect(row.subscribedUmami).toBe(false)
+    expect(row.subscribedTidbits).toBe(false)
 
     expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
     const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
     expect(message.subject).toBe('Your sign-in code for philipithomas.com')
   })
 
-  it('keeps a confirmed reader opted out until they verify the dedicated Umami signup', async () => {
+  it('keeps a confirmed reader opted out until they verify the dedicated Tidbits signup', async () => {
     await db.insert(subscribers).values({
-      email: 'umami-reader@example.com',
-      name: 'Umami Reader',
+      email: 'tidbits-reader@example.com',
+      name: 'Tidbits Reader',
       confirmedAt: new Date(),
       subscribedContraption: false,
       subscribedWorkshop: false,
       subscribedPostcard: false,
       subscribedTsundoku: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
     })
 
-    const res = await POST_UMAMI(
+    const res = await POST_TIDBITS(
       subscribeRequest({
-        email: 'umami-reader@example.com',
+        email: 'tidbits-reader@example.com',
         // The server-owned endpoint constrains the requested newsletter.
         newsletters: ['contraption'],
         allowExistingSubscriberOptIn: true,
@@ -447,14 +448,14 @@ describe('POST /api/subscribe', () => {
     const [row] = await db
       .select()
       .from(subscribers)
-      .where(eq(subscribers.email, 'umami-reader@example.com'))
+      .where(eq(subscribers.email, 'tidbits-reader@example.com'))
     expect(row.subscribedContraption).toBe(false)
-    expect(row.subscribedUmami).toBe(false)
+    expect(row.subscribedTidbits).toBe(false)
 
     expect(sendSimpleEmail).toHaveBeenCalledTimes(1)
     const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
     expect(message.subject).toBe('Your sign-in code for philipithomas.com')
-    expect(message.text).toContain('newsletter=umami')
+    expect(message.text).toContain('newsletter=tidbits')
     expect(message.text).not.toContain('newsletter=contraption')
   })
 
@@ -552,5 +553,18 @@ describe('POST /api/subscribe', () => {
     expect(await res.json()).toEqual({ error: 'Email is required' })
     expect(sendSimpleEmail).not.toHaveBeenCalled()
     expect(await db.select().from(subscribers)).toHaveLength(0)
+  })
+
+  it('carries a legacy Umami endpoint signup forward to Tidbits', async () => {
+    const res = await POST_UMAMI_COMPAT(
+      subscribeRequest({ email: 'open-page@example.com' })
+    )
+
+    expect(res.status).toBe(200)
+    const [subscriber] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.email, 'open-page@example.com'))
+    expect(subscriber.subscribedTidbits).toBe(true)
   })
 })

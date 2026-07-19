@@ -126,7 +126,7 @@ describe('useAuth session resolution', () => {
       subscribed_contraption: true,
       subscribed_workshop: false,
       subscribed_postcard: true,
-      subscribed_umami: true,
+      subscribed_tidbits: true,
     }
     const fetcher = vi
       .fn()

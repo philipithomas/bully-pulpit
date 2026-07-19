@@ -30,7 +30,7 @@ const newsletterColumns = {
   postcard: subscribers.subscribedPostcard,
   contraption: subscribers.subscribedContraption,
   workshop: subscribers.subscribedWorkshop,
-  umami: subscribers.subscribedUmami,
+  tidbits: subscribers.subscribedTidbits,
   tsundoku: subscribers.subscribedTsundoku,
 } as const
 
@@ -98,7 +98,7 @@ export async function createSubscriber(input: {
   subscribedPostcard?: boolean
   subscribedContraption?: boolean
   subscribedWorkshop?: boolean
-  subscribedUmami?: boolean
+  subscribedTidbits?: boolean
   subscribedTsundoku?: boolean
 }): Promise<Subscriber> {
   const rows = await getDb()
@@ -107,7 +107,7 @@ export async function createSubscriber(input: {
       email: input.email.toLowerCase(),
       name: input.name ?? null,
       source: input.source ?? null,
-      // New-code signup paths choose Umami explicitly. Its database default is
+      // New-code signup paths choose Tidbits explicitly. Its database default is
       // deliberately false so an older deployment remains safe while the
       // additive migration is live.
       ...(input.subscribedPostcard !== undefined
@@ -119,8 +119,9 @@ export async function createSubscriber(input: {
       ...(input.subscribedWorkshop !== undefined
         ? { subscribedWorkshop: input.subscribedWorkshop }
         : {}),
-      subscribedUmami:
-        input.subscribedUmami ?? isNewsletterAcceptingSubscriptions('umami'),
+      subscribedTidbits:
+        input.subscribedTidbits ??
+        isNewsletterAcceptingSubscriptions('tidbits'),
       ...(input.subscribedTsundoku !== undefined
         ? { subscribedTsundoku: input.subscribedTsundoku }
         : {}),
@@ -143,7 +144,7 @@ export type SubscriberPrefs = {
   subscribedPostcard?: boolean
   subscribedContraption?: boolean
   subscribedWorkshop?: boolean
-  subscribedUmami?: boolean
+  subscribedTidbits?: boolean
   subscribedTsundoku?: boolean
 }
 
@@ -168,8 +169,8 @@ export async function updateSubscriber(
       ...(prefs.subscribedWorkshop !== undefined
         ? { subscribedWorkshop: prefs.subscribedWorkshop }
         : {}),
-      ...(prefs.subscribedUmami !== undefined
-        ? { subscribedUmami: prefs.subscribedUmami }
+      ...(prefs.subscribedTidbits !== undefined
+        ? { subscribedTidbits: prefs.subscribedTidbits }
         : {}),
       ...(prefs.subscribedTsundoku !== undefined
         ? { subscribedTsundoku: prefs.subscribedTsundoku }
@@ -183,24 +184,24 @@ export async function updateSubscriber(
 
 /**
  * Atomically claims the best-effort admin email for an existing reader's
- * Umami opt-in. The one-day window prevents preference toggling or concurrent
+ * Tidbits opt-in. The one-day window prevents preference toggling or concurrent
  * requests from turning the notification into an email amplification path.
  */
-export async function claimUmamiOptInNotification(
+export async function claimTidbitsOptInNotification(
   subscriberId: number
 ): Promise<boolean> {
   const rows = await getDb()
     .update(subscribers)
-    .set({ umamiOptInNotificationSentAt: sql`NOW()` })
+    .set({ tidbitsOptInNotificationSentAt: sql`NOW()` })
     .where(
       and(
         eq(subscribers.id, subscriberId),
         isNotNull(subscribers.confirmedAt),
-        eq(subscribers.subscribedUmami, true),
+        eq(subscribers.subscribedTidbits, true),
         or(
-          isNull(subscribers.umamiOptInNotificationSentAt),
+          isNull(subscribers.tidbitsOptInNotificationSentAt),
           lt(
-            subscribers.umamiOptInNotificationSentAt,
+            subscribers.tidbitsOptInNotificationSentAt,
             sql`NOW() - INTERVAL '1 day'`
           )
         )
@@ -222,7 +223,7 @@ export async function countActive(): Promise<number> {
           eq(subscribers.subscribedPostcard, true),
           eq(subscribers.subscribedContraption, true),
           eq(subscribers.subscribedWorkshop, true),
-          eq(subscribers.subscribedUmami, true)
+          eq(subscribers.subscribedTidbits, true)
         )
       )
     )
@@ -301,7 +302,7 @@ export type SerializedSubscriber = {
   subscribed_postcard: boolean
   subscribed_contraption: boolean
   subscribed_workshop: boolean
-  subscribed_umami: boolean
+  subscribed_tidbits: boolean
   source: string | null
   created_at: string
   updated_at: string
@@ -317,7 +318,7 @@ export function serializeSubscriber(s: Subscriber): SerializedSubscriber {
     subscribed_postcard: s.subscribedPostcard,
     subscribed_contraption: s.subscribedContraption,
     subscribed_workshop: s.subscribedWorkshop,
-    subscribed_umami: s.subscribedUmami,
+    subscribed_tidbits: s.subscribedTidbits,
     source: s.source,
     created_at: s.createdAt.toISOString(),
     updated_at: s.updatedAt.toISOString(),
@@ -332,7 +333,7 @@ export function serializeSubscriberPreferences(
     subscribed_contraption: s.subscribedContraption,
     subscribed_workshop: s.subscribedWorkshop,
     subscribed_postcard: s.subscribedPostcard,
-    subscribed_umami: s.subscribedUmami,
+    subscribed_tidbits: s.subscribedTidbits,
   }
 }
 
@@ -346,8 +347,8 @@ export function prefsFromBody(body: Record<string, unknown>): SubscriberPrefs {
     prefs.subscribedContraption = body.subscribed_contraption
   if (typeof body.subscribed_workshop === 'boolean')
     prefs.subscribedWorkshop = body.subscribed_workshop
-  if (typeof body.subscribed_umami === 'boolean')
-    prefs.subscribedUmami = body.subscribed_umami
+  if (typeof body.subscribed_tidbits === 'boolean')
+    prefs.subscribedTidbits = body.subscribed_tidbits
   return prefs
 }
 
@@ -357,7 +358,7 @@ export type SubscriberStats = {
   postcard: number
   contraption: number
   workshop: number
-  umami: number
+  tidbits: number
   tsundoku: number
 }
 
@@ -368,7 +369,7 @@ export async function subscriberStats(): Promise<SubscriberStats> {
     ${subscribers.subscribedPostcard}
     OR ${subscribers.subscribedContraption}
     OR ${subscribers.subscribedWorkshop}
-    OR ${subscribers.subscribedUmami}
+    OR ${subscribers.subscribedTidbits}
   )`
   const rows = await getDb()
     .select({
@@ -377,7 +378,7 @@ export async function subscriberStats(): Promise<SubscriberStats> {
       postcard: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedPostcard}))::int`,
       contraption: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedContraption}))::int`,
       workshop: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedWorkshop}))::int`,
-      umami: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedUmami}))::int`,
+      tidbits: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedTidbits}))::int`,
       tsundoku: sql<number>`(count(*) FILTER (WHERE ${confirmed} AND ${subscribers.subscribedTsundoku}))::int`,
     })
     .from(subscribers)
@@ -388,7 +389,7 @@ export async function subscriberStats(): Promise<SubscriberStats> {
       postcard: 0,
       contraption: 0,
       workshop: 0,
-      umami: 0,
+      tidbits: 0,
       tsundoku: 0,
     }
   )
@@ -402,7 +403,7 @@ export type SubscriberListItem = {
   subscribedPostcard: boolean
   subscribedContraption: boolean
   subscribedWorkshop: boolean
-  subscribedUmami: boolean
+  subscribedTidbits: boolean
   subscribedTsundoku: boolean
   /** Where the signup came from (external referrer origin, or a placeholder like csv_import). */
   source: string | null
@@ -467,7 +468,7 @@ export async function listSubscribers(opts: {
       subscribedPostcard: s.subscribedPostcard,
       subscribedContraption: s.subscribedContraption,
       subscribedWorkshop: s.subscribedWorkshop,
-      subscribedUmami: s.subscribedUmami,
+      subscribedTidbits: s.subscribedTidbits,
       subscribedTsundoku: s.subscribedTsundoku,
       source: s.source,
       createdAt: s.createdAt.toISOString(),
@@ -484,7 +485,7 @@ export type ExportRow = {
   postcard: boolean
   contraption: boolean
   workshop: boolean
-  umami: boolean
+  tidbits: boolean
   tsundoku: boolean
   confirmed: boolean
   source: string | null
@@ -503,7 +504,7 @@ export async function allSubscribersForExport(): Promise<ExportRow[]> {
     postcard: s.subscribedPostcard,
     contraption: s.subscribedContraption,
     workshop: s.subscribedWorkshop,
-    umami: s.subscribedUmami,
+    tidbits: s.subscribedTidbits,
     tsundoku: s.subscribedTsundoku,
     confirmed: s.confirmedAt != null,
     source: s.source,
@@ -517,7 +518,7 @@ export type ImportRow = {
   postcard: boolean
   contraption: boolean
   workshop: boolean
-  umami: boolean
+  tidbits: boolean
   tsundoku: boolean
   confirmed: boolean
   source: string | null
@@ -553,7 +554,7 @@ export type ImportColumnsPresent = {
   postcard: boolean
   contraption: boolean
   workshop: boolean
-  umami: boolean
+  tidbits: boolean
   tsundoku: boolean
   confirmed: boolean
 }
@@ -607,10 +608,10 @@ export async function importSubscribers(
             r.workshop,
             present.workshop
           ),
-          subscribedUmami: importedNewsletterPreference(
-            'umami',
-            r.umami,
-            present.umami
+          subscribedTidbits: importedNewsletterPreference(
+            'tidbits',
+            r.tidbits,
+            present.tidbits
           ),
           subscribedTsundoku: importedNewsletterPreference(
             'tsundoku',
@@ -662,13 +663,13 @@ export async function importSubscribers(
                     ),
               }
             : {}),
-          ...(present.umami
+          ...(present.tidbits
             ? {
-                subscribedUmami: isNewsletterAcceptingSubscriptions('umami')
-                  ? sql`excluded.subscribed_umami`
+                subscribedTidbits: isNewsletterAcceptingSubscriptions('tidbits')
+                  ? sql`excluded.subscribed_tidbits`
                   : inactiveNewsletterImportUpdate(
-                      subscribers.subscribedUmami,
-                      requestedOptInEmails('umami')
+                      subscribers.subscribedTidbits,
+                      requestedOptInEmails('tidbits')
                     ),
               }
             : {}),

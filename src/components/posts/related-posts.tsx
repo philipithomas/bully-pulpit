@@ -9,7 +9,7 @@ const accentBg: Record<Newsletter, string> = {
   contraption: 'bg-forest',
   workshop: 'bg-walnut',
   postcard: 'bg-indigo',
-  umami: 'bg-umami',
+  tidbits: 'bg-tidbits',
   tsundoku: 'bg-sun',
 }
 

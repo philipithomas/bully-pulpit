@@ -37,6 +37,18 @@ describe('redirects', () => {
     }
   })
 
+  describe('Tidbits rename', () => {
+    it.each([
+      ['/umami', '/tidbits'],
+      ['/umami.md', '/tidbits.md'],
+      ['/feed/umami/rss.xml', '/feed/tidbits/rss.xml'],
+      ['/feed/umami/feed.json', '/feed/tidbits/feed.json'],
+    ])('%s -> %s', (source, destination) => {
+      expect(findRedirect(source)?.destination).toBe(destination)
+      expect(findRedirect(source)?.permanent).toBe(true)
+    })
+  })
+
   describe('Ghost /posts legacy', () => {
     it('/posts -> /contraption', () => {
       expect(findRedirect('/posts')?.destination).toBe('/contraption')

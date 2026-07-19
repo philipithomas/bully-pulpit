@@ -19,7 +19,7 @@ const preferencesSchema = z.strictObject({
   subscribed_postcard: z.boolean().optional(),
   subscribed_contraption: z.boolean().optional(),
   subscribed_workshop: z.boolean().optional(),
-  subscribed_umami: z.boolean().optional(),
+  subscribed_tidbits: z.boolean().optional(),
   analytics_placement: z.string().optional(),
 })
 
@@ -40,9 +40,9 @@ const NEWSLETTER_PREFERENCES = [
     newsletter: 'postcard',
   },
   {
-    requestKey: 'subscribed_umami',
-    databaseKey: 'subscribedUmami',
-    newsletter: 'umami',
+    requestKey: 'subscribed_tidbits',
+    databaseKey: 'subscribedTidbits',
+    newsletter: 'tidbits',
   },
 ] as const
 

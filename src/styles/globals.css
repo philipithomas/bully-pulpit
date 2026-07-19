@@ -110,9 +110,11 @@
   --color-offwhite-cool: #f5f6fa;
   --color-offwhite-dark: #edebe7;
   --color-offwhite-light: #faf9f7;
-  --color-umami: #f2712c;
-  --color-umami-ink: #a6400f;
-  --color-umami-paper: #f1ebe5;
+  --color-tidbits: #f41986;
+  --color-tidbits-ink: #c80f6b;
+  /* Oaxaca blanket blush: sampled from its pale rose squares and lifted so
+     photography stays dominant. */
+  --color-tidbits-paper: #f6eae9;
 
   /* Grays */
   --color-gray-50: #f2f2f1; /* alias: keeps the un-padded spelling warm */
@@ -296,8 +298,8 @@ body:has(> * [data-bg="gray-050"]) {
   background-color: var(--color-gray-050);
 }
 
-body:has(> * [data-bg="umami"]) {
-  background-color: var(--color-umami-paper);
+body:has(> * [data-bg="tidbits"]) {
+  background-color: var(--color-tidbits-paper);
 }
 
 /* ============================
@@ -543,21 +545,21 @@ body:has(> * [data-bg="umami"]) {
 }
 
 /* Post-page subscription buttons inherit the newsletter identity from the
-   surrounding page. Umami's brighter orange takes dark ink; the writing
+   surrounding page. Tidbits's vivid cochineal takes dark ink; the writing
    newsletters retain the light ink supplied by btn-primary. */
 [data-bg] .btn-newsletter {
   background-color: var(--prose-accent, var(--color-gray-950));
   border-color: var(--prose-accent, var(--color-gray-950));
 }
 
-[data-bg="umami"] .btn-newsletter {
-  background-color: var(--color-umami);
-  border-color: var(--color-umami);
+[data-bg="tidbits"] .btn-newsletter {
+  background-color: var(--color-tidbits);
+  border-color: var(--color-tidbits);
   color: var(--color-gray-950);
 }
 
-[data-bg="umami"] .btn-newsletter .btn-text,
-[data-bg="umami"] .btn-newsletter .btn-arrow {
+[data-bg="tidbits"] .btn-newsletter .btn-text,
+[data-bg="tidbits"] .btn-newsletter .btn-arrow {
   color: var(--color-gray-950);
 }
 
@@ -610,24 +612,8 @@ body:has(> * [data-bg="umami"]) {
   transform-origin: 50% 10%;
 }
 
-@keyframes umami-tagline-nudge {
-  0%,
-  100% {
-    color: var(--color-gray-600);
-  }
-  38%,
-  62% {
-    color: var(--color-umami-ink);
-  }
-}
-
-.umami-tagline-nudge {
-  animation: umami-tagline-nudge 1800ms ease-in-out 1;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .bell-discovery-nudge,
-  .umami-tagline-nudge {
+  .bell-discovery-nudge {
     animation: none;
   }
 }
@@ -714,50 +700,50 @@ body:has(> * [data-bg="umami"]) {
 [data-bg="offwhite-cool"] {
   --prose-accent: var(--color-indigo);
 }
-[data-bg="umami"] {
-  /* The brand orange remains exact in marks and decoration; this darker
-     companion keeps linked text readable on Umami's pale background. */
-  --prose-accent: var(--color-umami-ink);
+[data-bg="tidbits"] {
+  /* The brand cochineal remains exact in marks and decoration; this darker
+     companion keeps linked text readable on Tidbits's pale background. */
+  --prose-accent: var(--color-tidbits-ink);
 }
 
-.umami-page-sms {
+.tidbits-page-sms {
   margin-top: 0;
 }
 
-.umami-page-email + .umami-page-sms {
+.tidbits-page-email + .tidbits-page-sms {
   margin-top: 1rem;
 }
 
 /* Keep the photography within the first view on short landscape phones while
    retaining email and the secondary SMS path. */
 @media (orientation: landscape) and (max-height: 500px) {
-  .umami-page-shell {
+  .tidbits-page-shell {
     padding-top: 0.75rem;
     padding-bottom: 1.5rem;
   }
 
-  .umami-page-intro {
+  .tidbits-page-intro {
     align-items: start;
     gap: 2rem;
     margin-bottom: 1.5rem;
   }
 
-  .umami-page-brand img {
+  .tidbits-page-brand img {
     max-width: 11.25rem;
   }
 
-  .umami-page-brand > p {
+  .tidbits-page-brand > p {
     margin-top: 0.5rem;
     font-size: 1rem;
     line-height: 1.4;
   }
 
-  .umami-page-email > p {
+  .tidbits-page-email > p {
     margin-bottom: 0.5rem;
     font-size: 1rem;
   }
 
-  .umami-page-email + .umami-page-sms {
+  .tidbits-page-email + .tidbits-page-sms {
     margin-top: 0.5rem;
   }
 }
@@ -909,7 +895,7 @@ body.dark-viewport header .btn-primary .btn-arrow {
   animation: image-zoom-fade-out 300ms ease forwards;
 }
 
-/* Umami's viewer keeps its controls visible on touch screens, including
+/* Tidbits's viewer keeps its controls visible on touch screens, including
    landscape phones. Fine pointers reveal the same chrome on hover or when a
    keyboard user focuses a control. */
 .immersive-zoom-chrome {

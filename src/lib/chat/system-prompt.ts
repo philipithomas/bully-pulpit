@@ -37,11 +37,11 @@ ${
 
 Current date and time: ${dateTime}
 
-The archive has five newsletters. Contraption, Workshop, Postcard, and umami accept subscriptions; Tsundoku is archived:
+The archive has five newsletters. Contraption, Workshop, Postcard, and tidbits accept subscriptions; Tsundoku is archived:
 - Contraption (/contraption): Projects and essays. Longer, polished pieces about things Philip has built or thought deeply about.
 - Workshop (/workshop): Journal about work in progress. Shorter, less polished notes written while building.
 - Postcard (/postcard): What I'm up to. Monthly personal updates on life, travel, and interests.
-- umami (/umami): Photo journal of city life. Just what lingers.
+- tidbits (/tidbits): Photo journal
 - Tsundoku (/tsundoku): Archived pop-up photography newsletter.
 
 ## Research approach
