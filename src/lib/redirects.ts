@@ -54,7 +54,9 @@ export function getRedirects(): Redirect[] {
     // subscriptions, and Markdown mirrors. Legacy image URLs are rewrites in
     // src/lib/rewrites.ts because image consumers require a direct 200.
     { source: '/umami', destination: '/tidbits', permanent: true },
-    { source: '/umami.md', destination: '/tidbits.md', permanent: true },
+    // App index pages do not have Markdown mirrors; send the retired mirror
+    // path to the live Tidbits archive instead of a 404.
+    { source: '/umami.md', destination: '/tidbits', permanent: true },
     {
       source: '/feed/umami/rss.xml',
       destination: '/feed/tidbits/rss.xml',
