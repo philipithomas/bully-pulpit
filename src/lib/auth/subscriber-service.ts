@@ -1,7 +1,7 @@
 import { createAndSendLogin } from '@/lib/auth/login-service'
 import { type Newsletter, newsletterSchema } from '@/lib/content/types'
 import {
-  claimUmamiOptInNotification,
+  claimTidbitsOptInNotification,
   confirmSubscriber,
   createSubscriber,
   findByEmail,
@@ -76,7 +76,7 @@ function changedNewsletterOptIns(
     ['contraption', 'subscribedContraption'],
     ['workshop', 'subscribedWorkshop'],
     ['postcard', 'subscribedPostcard'],
-    ['umami', 'subscribedUmami'],
+    ['tidbits', 'subscribedTidbits'],
   ] as const
   return preferences
     .filter(([, key]) => !before[key] && after[key])
@@ -89,7 +89,10 @@ export function normalizedNewsletters(
   if (!newsletters) return []
   const seen = new Set<Newsletter>()
   for (const newsletter of newsletters) {
-    const parsed = newsletterSchema.safeParse(newsletter)
+    // Magic links and open signup forms issued just before the rename remain
+    // valid for 15 minutes. Carry their consent forward to Tidbits.
+    const currentNewsletter = newsletter === 'umami' ? 'tidbits' : newsletter
+    const parsed = newsletterSchema.safeParse(currentNewsletter)
     if (parsed.success && isNewsletterAcceptingSubscriptions(parsed.data)) {
       seen.add(parsed.data)
     }
@@ -107,7 +110,7 @@ export function prefsForNewsletters(
     ...(accepts('contraption') ? { subscribedContraption: true } : {}),
     ...(accepts('workshop') ? { subscribedWorkshop: true } : {}),
     ...(accepts('postcard') ? { subscribedPostcard: true } : {}),
-    ...(accepts('umami') ? { subscribedUmami: true } : {}),
+    ...(accepts('tidbits') ? { subscribedTidbits: true } : {}),
   }
 }
 
@@ -130,14 +133,14 @@ function creationPrefsForNewSubscriber() {
     subscribedContraption: defaults.has('contraption'),
     subscribedWorkshop: defaults.has('workshop'),
     subscribedPostcard: defaults.has('postcard'),
-    subscribedUmami: defaults.has('umami'),
+    subscribedTidbits: defaults.has('tidbits'),
     // Archived newsletter columns remain for historical data only.
     subscribedTsundoku: false,
   }
 }
 
 /**
- * Best-effort admin notification for the deliberate existing-reader Umami
+ * Best-effort admin notification for the deliberate existing-reader Tidbits
  * transition. New confirmations have their own notification and must not emit
  * this one as well.
  */
@@ -148,21 +151,21 @@ export async function notifyExistingSubscriberOptIns(
 ): Promise<void> {
   if (
     !wasExistingConfirmed ||
-    before.subscribedUmami ||
-    !after.subscribedUmami
+    before.subscribedTidbits ||
+    !after.subscribedTidbits
   ) {
     return
   }
 
   try {
-    if (!(await claimUmamiOptInNotification(after.id))) return
+    if (!(await claimTidbitsOptInNotification(after.id))) return
     await sendExistingSubscriberOptInNotification(
       after.email,
       after.name,
-      'umami'
+      'tidbits'
     )
   } catch (err) {
-    console.error('[subscriber] Umami opt-in notification failed:', err)
+    console.error('[subscriber] Tidbits opt-in notification failed:', err)
   }
 }
 

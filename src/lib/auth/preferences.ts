@@ -3,7 +3,7 @@ export type SubscriberPreferences = {
   subscribed_contraption: boolean
   subscribed_workshop: boolean
   subscribed_postcard: boolean
-  subscribed_umami: boolean
+  subscribed_tidbits: boolean
 }
 
 export type SubscriberPreferenceKey = Exclude<

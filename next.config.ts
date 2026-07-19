@@ -3,6 +3,7 @@ import type { NextConfig } from 'next'
 import { withWorkflow } from 'workflow/next'
 import { OPTIMIZED_IMAGE_WIDTHS } from '@/lib/content/zoom-image'
 import { getRedirects } from '@/lib/redirects'
+import { getRewrites } from '@/lib/rewrites'
 import {
   CONTENT_SECURITY_POLICY,
   CONTENT_SECURITY_POLICY_REPORT_ONLY,
@@ -150,12 +151,7 @@ const nextConfig: NextConfig = {
     ]
   },
   async rewrites() {
-    return [
-      {
-        source: '/:slug(.*)\\.md',
-        destination: '/api/md/:slug',
-      },
-    ]
+    return getRewrites()
   },
   async redirects() {
     return getRedirects()

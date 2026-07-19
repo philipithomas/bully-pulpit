@@ -139,14 +139,12 @@ describe('getSystemPrompt page context', () => {
 })
 
 describe('getSystemPrompt chronology routing', () => {
-  it('describes umami with its current public positioning', () => {
+  it('describes tidbits with its current public positioning', () => {
     const prompt = getSystemPrompt()
 
-    expect(prompt).toContain(
-      '- umami (/umami): Photo journal of city life. Just what lingers.'
-    )
+    expect(prompt).toContain('- tidbits (/tidbits): Photo journal')
     expect(prompt).not.toContain(
-      '- umami (/umami): Ongoing photography newsletter.'
+      '- tidbits (/tidbits): Ongoing photography newsletter.'
     )
   })
 

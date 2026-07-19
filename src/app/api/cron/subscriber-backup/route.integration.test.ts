@@ -38,7 +38,7 @@ function request(authorization?: string) {
 async function seedSubscriber(values: NewSubscriber) {
   const [row] = await db
     .insert(subscribers)
-    .values({ subscribedUmami: true, ...values })
+    .values({ subscribedTidbits: true, ...values })
     .returning()
   return row
 }
@@ -119,7 +119,7 @@ describe('backup send', () => {
       'postcard',
       'contraption',
       'workshop',
-      'umami',
+      'tidbits',
       'tsundoku',
       'confirmed',
       'source',

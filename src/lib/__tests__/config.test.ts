@@ -7,10 +7,8 @@ afterEach(() => {
 })
 
 describe('siteConfig.newsletters', () => {
-  it('uses the concise umami description on shared signup surfaces', () => {
-    expect(siteConfig.newsletters.umami.tagline).toBe(
-      'Photo journal of city life. Just what lingers.'
-    )
+  it('uses the concise tidbits description on shared signup surfaces', () => {
+    expect(siteConfig.newsletters.tidbits.tagline).toBe('Photo journal')
   })
 })
 

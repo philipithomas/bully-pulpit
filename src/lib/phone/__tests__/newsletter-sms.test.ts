@@ -47,23 +47,23 @@ describe('newsletter SMS', () => {
     )
   })
 
-  it('preserves lowercase umami and attaches its cover', () => {
-    const umamiPost = post({
+  it('preserves lowercase tidbits and attaches its cover', () => {
+    const tidbitsPost = post({
       slug: 'sfmoma',
-      newsletter: 'umami',
+      newsletter: 'tidbits',
       frontmatter: {
         ...post().frontmatter,
         title: 'SFMOMA',
         publishedAt: '2026-07-11',
-        coverImage: '/images/covers/umami/sfmoma.jpg',
+        coverImage: '/images/covers/tidbits/sfmoma.jpg',
       },
     })
 
-    expect(renderNewsletterSms(umamiPost)).toBe(
-      'New umami post:\nSFMOMA\nhttps://www.philipithomas.com/sfmoma?utm_source=sms\n\n(Reply STOP to unsubscribe.)'
+    expect(renderNewsletterSms(tidbitsPost)).toBe(
+      'New tidbits post:\nSFMOMA\nhttps://www.philipithomas.com/sfmoma?utm_source=sms\n\n(Reply STOP to unsubscribe.)'
     )
-    expect(newsletterSmsMediaUrl(umamiPost)).toBe(
-      'https://www.philipithomas.com/api/phone/newsletter-cover/sfmoma?v=%2Fimages%2Fcovers%2Fumami%2Fsfmoma.jpg'
+    expect(newsletterSmsMediaUrl(tidbitsPost)).toBe(
+      'https://www.philipithomas.com/api/phone/newsletter-cover/sfmoma?v=%2Fimages%2Fcovers%2Ftidbits%2Fsfmoma.jpg'
     )
   })
 

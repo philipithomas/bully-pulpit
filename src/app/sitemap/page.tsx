@@ -18,17 +18,17 @@ const newsletterLabel: Record<Newsletter, string> = {
   contraption: 'Contraption',
   workshop: 'Workshop',
   postcard: 'Postcard',
-  umami: 'umami',
+  tidbits: 'tidbits',
   tsundoku: 'Tsundoku',
 }
 
 // Tailwind utility classes for each newsletter accent. Uses the site color
-// tokens (forest / walnut / indigo / sun) defined in globals.css, no hex values.
+// tokens defined in globals.css, with no duplicated hex values.
 const newsletterColor: Record<Newsletter, string> = {
   contraption: 'text-forest',
   workshop: 'text-walnut',
   postcard: 'text-indigo',
-  umami: 'text-[#A6400F]',
+  tidbits: 'text-tidbits-ink',
   tsundoku: 'text-sun',
 }
 

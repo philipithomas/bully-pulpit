@@ -24,7 +24,7 @@ const newsletterNoun: Record<Newsletter, string> = {
   contraption: 'essays',
   workshop: 'notes',
   postcard: 'updates',
-  umami: 'photos',
+  tidbits: 'photos',
   tsundoku: 'photos',
 }
 
@@ -53,7 +53,7 @@ function ActiveSubscribeCta({
   buttonLabel,
   align = 'start',
   subscribeEndpoint,
-  successRedirect = newsletter === 'umami' ? '/account' : undefined,
+  successRedirect = newsletter === 'tidbits' ? '/account' : undefined,
   smsSignupPhoneNumber = null,
   smsSignupDisplayNumber = null,
   analyticsPlacement = 'post_footer',

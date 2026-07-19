@@ -15,7 +15,7 @@ const darkAccentColors: Record<NewsletterSlug, string> = {
   contraption: '#8FB8A5',
   workshop: '#C29B7E',
   postcard: '#97A8D9',
-  umami: '#F2712C',
+  tidbits: '#F41986',
   tsundoku: '#FF7A82',
 }
 const DEFAULT_DARK_ACCENT = '#A8A49D'
@@ -23,7 +23,7 @@ const backgroundColors: Record<NewsletterSlug, string> = {
   contraption: '#ffffff',
   workshop: '#ffffff',
   postcard: '#ffffff',
-  umami: '#f1ebe5',
+  tidbits: '#f6eae9',
   tsundoku: '#f4f4f2',
 }
 
@@ -43,7 +43,7 @@ const wordmarks: Record<
   },
   workshop: { name: 'Workshop', file: 'workshop-brand', width: 87, height: 24 },
   postcard: { name: 'Postcard', file: 'postcard', width: 79, height: 18 },
-  umami: { name: 'umami', file: 'umami', width: 102, height: 24 },
+  tidbits: { name: 'tidbits', file: 'tidbits', width: 104, height: 24 },
   tsundoku: { name: 'Tsundoku', file: 'tsundoku', width: 157, height: 24 },
 }
 

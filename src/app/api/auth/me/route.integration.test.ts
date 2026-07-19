@@ -44,7 +44,7 @@ async function seedSubscriber(
       email: 'reader@example.com',
       name: 'Reader',
       confirmedAt: new Date(),
-      subscribedUmami: true,
+      subscribedTidbits: true,
       ...overrides,
     })
     .returning()
@@ -101,7 +101,7 @@ describe('GET /api/auth/me', () => {
         subscribed_contraption: true,
         subscribed_workshop: false,
         subscribed_postcard: true,
-        subscribed_umami: true,
+        subscribed_tidbits: true,
       },
       newSubscriberOnboarding: false,
     })

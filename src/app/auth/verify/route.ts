@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       !verification.newlyConfirmed
     )
     const jwt = await signSession(subscriber)
-    const isUmamiSignup = newsletters.includes('umami')
+    const isTidbitsSignup = newsletters.includes('tidbits')
     // Complete analytics on a second, query-free request. Vercel's server SDK
     // prefers the platform request context, so passing this token-bearing
     // request directly would expose the magic token as the event URL.
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     await setMagicLinkCompletionCookie(response, {
       newsletter: summarizeNewsletters(requestedNewsletters),
       newSubscriber: verification.newlyConfirmed,
-      destination: isUmamiSignup ? 'account' : 'home',
+      destination: isTidbitsSignup ? 'account' : 'home',
     })
     await setNewSubscriberOnboardingCookie(
       response,

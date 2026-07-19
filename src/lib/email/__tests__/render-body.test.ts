@@ -90,7 +90,7 @@ describe('buildEmailBodyHtml with YouTube embeds', () => {
 
 describe('buildEmailBodyHtml newsletter-specific blocks', () => {
   it.each([
-    'umami',
+    'tidbits',
     'tsundoku',
   ] as const)('omits related posts from %s photo emails', async (newsletter) => {
     const post = getPostsByNewsletter(newsletter)[0]
@@ -101,8 +101,8 @@ describe('buildEmailBodyHtml newsletter-specific blocks', () => {
     expect(body.html).not.toContain('Keep reading')
   })
 
-  it('keeps a description-free Umami issue useful in previews and plaintext', async () => {
-    const post = getPostsByNewsletter('umami')[0]
+  it('keeps a description-free Tidbits issue useful in previews and plaintext', async () => {
+    const post = getPostsByNewsletter('tidbits')[0]
     expect(post).toBeDefined()
 
     const body = await buildEmailBodyHtml(post)

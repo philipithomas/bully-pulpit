@@ -141,6 +141,13 @@
       "when": 1784329116372,
       "tag": "0019_global_sms_subscription",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1784492587448,
+      "tag": "0020_rename_umami_to_tidbits",
+      "breakpoints": true
     }
   ]
 }

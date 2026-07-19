@@ -68,12 +68,10 @@ describe('public app page registry', () => {
     expect(getPageText('/')).not.toContain('snail mail')
   })
 
-  it('shares the approved umami description with search and SEO', () => {
-    const umami = findPublicAppPage('/umami')
+  it('shares the approved tidbits description with search and SEO', () => {
+    const tidbits = findPublicAppPage('/tidbits')
 
-    expect(umami?.description).toBe(
-      'Photo journal of city life. Just what lingers.'
-    )
-    expect(getPageText('/umami')).toContain(umami?.description)
+    expect(tidbits?.description).toBe('Photo journal')
+    expect(getPageText('/tidbits')).toContain(tidbits?.description)
   })
 })

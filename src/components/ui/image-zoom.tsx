@@ -161,7 +161,7 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
   const collectionValue =
     element.dataset.zoomCaptionCollection ?? img.dataset.zoomCaptionCollection
   const collection =
-    collectionValue === 'umami' || collectionValue === 'tsundoku'
+    collectionValue === 'tidbits' || collectionValue === 'tsundoku'
       ? collectionValue
       : undefined
   const footerHeading =

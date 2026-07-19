@@ -3,15 +3,15 @@
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 
-interface UmamiSmsSignupProps {
+interface TidbitsSmsSignupProps {
   phoneDisplayNumber: string | null
   phoneNumber: string | null
 }
 
-export function UmamiSmsSignup({
+export function TidbitsSmsSignup({
   phoneDisplayNumber,
   phoneNumber,
-}: UmamiSmsSignupProps) {
+}: TidbitsSmsSignupProps) {
   const { user, hasSession } = useAuthContext()
 
   if (!phoneNumber || user || hasSession) return null
@@ -21,15 +21,15 @@ export function UmamiSmsSignup({
 
   return (
     <p
-      className={`umami-page-sms text-left font-serif text-sm text-gray-500 ${initialMemberClassName}`}
+      className={`tidbits-page-sms text-left font-serif text-sm text-gray-500 ${initialMemberClassName}`}
     >
       Also available via{' '}
       <SmsSubscribePrompt
         analyticsPlacement="newsletter_page"
-        newsletter="umami"
+        newsletter="tidbits"
         phoneDisplayNumber={phoneDisplayNumber}
         phoneNumber={phoneNumber}
-        triggerClassName="decoration-umami/60 hover:text-umami-ink"
+        triggerClassName="decoration-tidbits/60 hover:text-tidbits-ink"
         triggerLabel="SMS"
         variant="link"
       />

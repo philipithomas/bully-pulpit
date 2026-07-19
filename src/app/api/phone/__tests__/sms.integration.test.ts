@@ -148,7 +148,7 @@ describe('POST /api/phone/sms', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
       subscribedTsundoku: true,
     })
 
@@ -347,7 +347,7 @@ describe('POST /api/phone/sms', () => {
       subscribedPostcard: true,
       subscribedContraption: true,
       subscribedWorkshop: true,
-      subscribedUmami: true,
+      subscribedTidbits: true,
       subscribedTsundoku: false,
       source: 'sms:phone',
     })
@@ -714,7 +714,7 @@ describe('POST /api/phone/sms', () => {
     expect(subscriber.subscribedPostcard).toBe(true)
     expect(subscriber.subscribedContraption).toBe(true)
     expect(subscriber.subscribedWorkshop).toBe(true)
-    expect(subscriber.subscribedUmami).toBe(true)
+    expect(subscriber.subscribedTidbits).toBe(true)
     expect(subscriber.subscribedTsundoku).toBe(false)
     expect(subscriber.bellContactCardSentAt).toBeInstanceOf(Date)
     expect(vi.mocked(sendSms)).toHaveBeenCalled()
@@ -763,7 +763,7 @@ describe('POST /api/phone/sms', () => {
     const [subscriber] = await db.select().from(smsSubscribers)
     expect(subscriber.confirmedAt).toBeInstanceOf(Date)
     expect(subscriber.subscribedPostcard).toBe(true)
-    expect(subscriber.subscribedUmami).toBe(true)
+    expect(subscriber.subscribedTidbits).toBe(true)
     expect(vi.mocked(sendSms)).toHaveBeenCalledWith({
       from: '+12123473190',
       to: phoneNumber,

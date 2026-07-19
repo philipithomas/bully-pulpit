@@ -2,8 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
-import { UmamiSmsSignup } from '@/components/umami/umami-sms-signup'
-import { UmamiTagline } from '@/components/umami/umami-tagline'
+import { TidbitsSmsSignup } from '@/components/tidbits/tidbits-sms-signup'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import { markdownToPlaintext } from '@/lib/content/render-html'
@@ -13,34 +12,34 @@ import { feedDiscovery } from '@/lib/feeds/discovery'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 import { publicAppPage } from '@/lib/public-pages'
 
-const umamiPage = publicAppPage('/umami')
-const umamiSocialTitle = `${umamiPage.title} | ${siteConfig.title}`
+const tidbitsPage = publicAppPage('/tidbits')
+const tidbitsSocialTitle = `${tidbitsPage.title} | ${siteConfig.title}`
 
 export const metadata: Metadata = {
-  title: umamiPage.title,
-  description: umamiPage.description,
+  title: tidbitsPage.title,
+  description: tidbitsPage.description,
   alternates: {
-    canonical: '/umami',
-    types: feedDiscovery('umami'),
+    canonical: '/tidbits',
+    types: feedDiscovery('tidbits'),
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: '/umami',
+    url: '/tidbits',
     siteName: siteConfig.title,
-    title: umamiSocialTitle,
-    description: umamiPage.description,
+    title: tidbitsSocialTitle,
+    description: tidbitsPage.description,
     images: [{ url: siteConfig.image, width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: umamiSocialTitle,
-    description: umamiPage.description,
+    title: tidbitsSocialTitle,
+    description: tidbitsPage.description,
     images: [{ url: siteConfig.image, width: 1200, height: 630 }],
   },
   icons: {
-    icon: [{ url: siteConfig.newsletters.umami.icon, type: 'image/svg+xml' }],
-    apple: siteConfig.newsletters.umami.icon,
+    icon: [{ url: siteConfig.newsletters.tidbits.icon, type: 'image/svg+xml' }],
+    apple: siteConfig.newsletters.tidbits.icon,
   },
 }
 
@@ -83,9 +82,9 @@ function viewerData(post: Post) {
   const { location } = post.frontmatter
   return {
     'data-zoomable': '',
-    'data-zoom-group': 'umami',
+    'data-zoom-group': 'tidbits',
     'data-zoom-caption-presentation': 'immersive',
-    'data-zoom-caption-collection': 'umami',
+    'data-zoom-caption-collection': 'tidbits',
     'data-zoom-caption-href': postPath(post.slug),
     'data-zoom-caption-title': post.frontmatter.title,
     'data-zoom-caption-description': photoViewerDescription(post),
@@ -166,46 +165,48 @@ function PhotoTile({ post }: { post: Post }) {
   )
 }
 
-export default function UmamiPage() {
-  const posts = getPostsByNewsletter('umami')
+export default function TidbitsPage() {
+  const posts = getPostsByNewsletter('tidbits')
   const [leadPost, ...archivePosts] = posts
   const smsSignupPhoneNumber = sitePhoneNumber()
   const smsSignupDisplayNumber = sitePhoneDisplayNumber()
 
   return (
-    <div className="bg-umami-paper" data-bg="umami">
-      <div className="umami-page-shell container pt-4 pb-10 sm:pt-6 sm:pb-12 md:pb-14">
-        <div className="umami-page-intro mb-12 grid gap-7 text-center sm:mb-14 md:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] md:items-end md:gap-12 md:text-left">
-          <div className="umami-page-brand flex flex-col items-center md:items-start">
+    <div className="bg-tidbits-paper" data-bg="tidbits">
+      <div className="tidbits-page-shell container pt-4 pb-10 sm:pt-6 sm:pb-12 md:pb-14">
+        <div className="tidbits-page-intro mb-12 grid gap-7 text-center sm:mb-14 md:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] md:items-end md:gap-12 md:text-left">
+          <div className="tidbits-page-brand flex flex-col items-center md:items-start">
             <Link
-              href="/umami"
-              aria-label="umami"
+              href="/tidbits"
+              aria-label="tidbits"
               className="block transition-opacity hover:opacity-80"
             >
               <Image
-                src="/images/umami.svg"
-                alt="umami"
-                width={1562}
+                src="/images/tidbits.svg"
+                alt="tidbits"
+                width={1601}
                 height={369}
                 sizes="(max-width: 640px) 52vw, (max-width: 768px) 220px, 240px"
                 className="h-auto w-full max-w-[52vw] sm:max-w-[220px] md:max-w-[240px]"
                 priority
               />
             </Link>
-            <h1 className="sr-only">umami</h1>
-            <UmamiTagline />
+            <h1 className="sr-only">tidbits</h1>
+            <p className="mt-4 max-w-xl text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
+              {siteConfig.newsletters.tidbits.tagline}
+            </p>
           </div>
-          <div className="umami-page-signup w-full md:max-w-md md:justify-self-end">
+          <div className="tidbits-page-signup w-full md:max-w-md md:justify-self-end">
             <SubscribeCta
-              newsletter="umami"
+              newsletter="tidbits"
               analyticsPlacement="newsletter_page"
               align="start"
               buttonClassName="btn btn-primary btn-newsletter"
               buttonLabel="Follow"
-              className="umami-page-email mt-0 md:mx-0"
-              subscribeEndpoint="/api/subscribe/umami"
+              className="tidbits-page-email mt-0 md:mx-0"
+              subscribeEndpoint="/api/subscribe/tidbits"
             />
-            <UmamiSmsSignup
+            <TidbitsSmsSignup
               phoneDisplayNumber={smsSignupDisplayNumber}
               phoneNumber={smsSignupPhoneNumber}
             />

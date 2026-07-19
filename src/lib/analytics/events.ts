@@ -238,7 +238,7 @@ export function summarizeNewsletters(
     newsletter === 'contraption' ||
     newsletter === 'workshop' ||
     newsletter === 'postcard' ||
-    newsletter === 'umami' ||
+    newsletter === 'tidbits' ||
     newsletter === 'tsundoku'
   ) {
     return newsletter
@@ -251,7 +251,7 @@ export function parseAnalyticsNewsletter(value: unknown): AnalyticsNewsletter {
     value === 'contraption' ||
     value === 'workshop' ||
     value === 'postcard' ||
-    value === 'umami' ||
+    value === 'tidbits' ||
     value === 'tsundoku' ||
     value === 'page' ||
     value === 'all' ||
@@ -270,7 +270,7 @@ export function analyticsPageType(pathname: string): AnalyticsPageType {
     pathname === '/contraption' ||
     pathname === '/workshop' ||
     pathname === '/postcard' ||
-    pathname === '/umami' ||
+    pathname === '/tidbits' ||
     pathname === '/tsundoku'
   ) {
     return 'newsletter'

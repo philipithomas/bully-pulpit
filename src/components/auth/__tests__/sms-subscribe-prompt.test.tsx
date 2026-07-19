@@ -44,7 +44,7 @@ describe('SmsSubscribePrompt', () => {
     const html = renderToStaticMarkup(
       <SmsSubscribePrompt
         analyticsPlacement="newsletter_page"
-        newsletter="umami"
+        newsletter="tidbits"
         phoneDisplayNumber="+1 212 347 3190"
         phoneNumber="+12123473190"
         triggerClassName="btn-newsletter"
@@ -65,7 +65,7 @@ describe('SmsSubscribePrompt', () => {
     const html = renderToStaticMarkup(
       <SmsSubscribePrompt
         analyticsPlacement="newsletter_page"
-        newsletter="umami"
+        newsletter="tidbits"
         phoneDisplayNumber="+1 212 347 3190"
         phoneNumber="+12123473190"
         triggerLabel="SMS"

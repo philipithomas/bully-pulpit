@@ -65,7 +65,7 @@ async function signInAs(email: string) {
     subscribedPostcard: false,
     subscribedContraption: false,
     subscribedWorkshop: false,
-    subscribedUmami: false,
+    subscribedTidbits: false,
     subscribedTsundoku: false,
     source: null,
     sessionVersion: 1,
@@ -141,7 +141,7 @@ describe('GET list', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
       source: 'twilio_stop',
       createdAt: new Date('2026-07-02T12:00:00.000Z'),
       bellContactCardClaimId: randomUUID(),
@@ -176,7 +176,7 @@ describe('GET list', () => {
       phoneNumber: '+15551110002',
       confirmedAt: new Date(),
       subscribedWorkshop: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
     })
     await seedSmsSubscriber({
       phoneNumber: '+442079460123',
@@ -326,7 +326,7 @@ describe('DELETE', () => {
       subscribedPostcard: false,
       subscribedContraption: false,
       subscribedWorkshop: false,
-      subscribedUmami: false,
+      subscribedTidbits: false,
     })
     await db.insert(smsSends).values({
       smsSubscriberId: target.id,
@@ -361,7 +361,7 @@ describe('DELETE', () => {
             subscribedPostcard: false,
             subscribedContraption: false,
             subscribedWorkshop: false,
-            subscribedUmami: false,
+            subscribedTidbits: false,
           })
           .where(eq(smsSubscribers.id, id))
         return false

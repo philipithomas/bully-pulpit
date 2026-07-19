@@ -22,7 +22,7 @@ interface Preferences {
   subscribed_postcard: boolean
   subscribed_contraption: boolean
   subscribed_workshop: boolean
-  subscribed_umami: boolean
+  subscribed_tidbits: boolean
 }
 
 function UnsubscribeContent() {
