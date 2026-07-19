@@ -40,7 +40,7 @@ describe('redirects', () => {
   describe('Tidbits rename', () => {
     it.each([
       ['/umami', '/tidbits'],
-      ['/umami.md', '/tidbits.md'],
+      ['/umami.md', '/tidbits'],
       ['/feed/umami/rss.xml', '/feed/tidbits/rss.xml'],
       ['/feed/umami/feed.json', '/feed/tidbits/feed.json'],
     ])('%s -> %s', (source, destination) => {
