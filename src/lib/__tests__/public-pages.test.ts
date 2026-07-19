@@ -71,7 +71,7 @@ describe('public app page registry', () => {
   it('shares the approved tidbits description with search and SEO', () => {
     const tidbits = findPublicAppPage('/tidbits')
 
-    expect(tidbits?.description).toBe('Photo journal')
+    expect(tidbits?.description).toBe('Photo journal.')
     expect(getPageText('/tidbits')).toContain(tidbits?.description)
   })
 })

@@ -50,7 +50,7 @@ const staticConfig = {
     },
     tidbits: {
       name: 'tidbits',
-      tagline: 'Photo journal',
+      tagline: 'Photo journal.',
       slug: 'tidbits',
       color: 'tidbits',
       logo: {
