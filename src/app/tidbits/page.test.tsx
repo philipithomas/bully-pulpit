@@ -67,7 +67,8 @@ vi.mock('@/lib/phone/config', () => ({
 
 import TidbitsPage, { metadata } from '@/app/tidbits/page'
 
-const SEO_DESCRIPTION = 'Photo journal'
+const SEO_DESCRIPTION =
+  'An ongoing photo journal of city life, travel, food, and the details that linger.'
 
 afterEach(() => {
   phoneMocks.displayNumber.mockReturnValue('+1 212 347 3190')
@@ -104,7 +105,7 @@ describe('TidbitsPage viewer contract', () => {
   it('uses the approved copy and offers SMS as a secondary signup path', () => {
     const html = renderToStaticMarkup(<TidbitsPage />)
 
-    expect(html).toContain('>Photo journal</p>')
+    expect(html).toContain('>Photo journal.</p>')
     expect(html).not.toContain('Photo journal of city life.')
     expect(html).not.toContain('Just what lingers.')
     expect(html).not.toContain('Just the good stuff.')

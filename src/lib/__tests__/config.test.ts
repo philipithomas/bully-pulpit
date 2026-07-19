@@ -8,7 +8,7 @@ afterEach(() => {
 
 describe('siteConfig.newsletters', () => {
   it('uses the concise tidbits description on shared signup surfaces', () => {
-    expect(siteConfig.newsletters.tidbits.tagline).toBe('Photo journal')
+    expect(siteConfig.newsletters.tidbits.tagline).toBe('Photo journal.')
   })
 })
 

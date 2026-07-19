@@ -41,7 +41,7 @@ The archive has five newsletters. Contraption, Workshop, Postcard, and tidbits a
 - Contraption (/contraption): Projects and essays. Longer, polished pieces about things Philip has built or thought deeply about.
 - Workshop (/workshop): Journal about work in progress. Shorter, less polished notes written while building.
 - Postcard (/postcard): What I'm up to. Monthly personal updates on life, travel, and interests.
-- tidbits (/tidbits): Photo journal
+- tidbits (/tidbits): Photo journal.
 - Tsundoku (/tsundoku): Archived pop-up photography newsletter.
 
 ## Research approach
