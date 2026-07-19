@@ -108,7 +108,10 @@ The newsletters are available by email, RSS, and SMS, and the homepage has a sig
   newsletterPage('contraption'),
   newsletterPage('workshop'),
   newsletterPage('postcard'),
-  newsletterPage('tidbits'),
+  newsletterPage(
+    'tidbits',
+    'An ongoing photo journal of city life, travel, food, and the details that linger.'
+  ),
   newsletterPage('tsundoku'),
   {
     id: 'app-photography',

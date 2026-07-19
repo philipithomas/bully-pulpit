@@ -67,7 +67,8 @@ vi.mock('@/lib/phone/config', () => ({
 
 import TidbitsPage, { metadata } from '@/app/tidbits/page'
 
-const SEO_DESCRIPTION = 'Photo journal.'
+const SEO_DESCRIPTION =
+  'An ongoing photo journal of city life, travel, food, and the details that linger.'
 
 afterEach(() => {
   phoneMocks.displayNumber.mockReturnValue('+1 212 347 3190')
