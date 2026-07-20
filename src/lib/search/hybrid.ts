@@ -283,10 +283,9 @@ function toImageMatch(
 function logEmbeddingFailureOnce(err: unknown) {
   if (hasLoggedEmbeddingFailure) return
   hasLoggedEmbeddingFailure = true
-  const message =
-    err instanceof Error ? err.message.split('\n')[0] : String(err)
+  const category = err instanceof Error ? err.name : 'UnknownError'
   console.error(
-    `Query embedding failed or timed out, using BM25 only: ${message}`
+    `Query embedding failed or timed out, using BM25 only: ${category}`
   )
 }
 
