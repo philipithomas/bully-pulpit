@@ -10,6 +10,7 @@ export const PUBLIC_APP_PAGE_PATHS = [
   '/tidbits',
   '/tsundoku',
   '/photography',
+  '/mcp',
   '/print',
   '/sitemap',
 ] as const
@@ -122,6 +123,19 @@ The newsletters are available by email, RSS, and SMS, and the homepage has a sig
       'Photography. Philip takes and edits all photos on the site. This page gathers post cover photography into a searchable gallery. Visitors can search the photographs by subject and open each image to see the posts where it appeared.',
     bellText: () =>
       "The Photography page gathers the cover photographs from Philip's posts into a gallery. Philip takes and edits all photos on the site. Visitors can search the photographs by subject and open a photo to see the posts where it appeared. Bell can search the same collection with image search.",
+    humanSitemap: true,
+    xmlSitemap: true,
+  },
+  {
+    id: 'app-mcp',
+    path: '/mcp',
+    title: 'MCP server',
+    description:
+      "Connect an AI client to search, list, and read Philip Ilic Thomas's public writing.",
+    searchText:
+      'MCP server. Connect Claude, ChatGPT, or another compatible AI client to search, list, and read public writing on philipithomas.com. The Streamable HTTP endpoint is /api/mcp, is read-only, and requires no authentication. It exposes search, fetch, and list_posts tools.',
+    bellText: () =>
+      'The MCP server page documents the public, read-only Streamable HTTP endpoint at /api/mcp. It requires no authentication and exposes search, fetch, and list_posts tools so Claude, ChatGPT, and other compatible AI clients can search and read public writing on philipithomas.com.',
     humanSitemap: true,
     xmlSitemap: true,
   },
