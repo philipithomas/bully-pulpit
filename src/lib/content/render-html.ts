@@ -320,7 +320,7 @@ export function renderRelatedPostsHtml(posts: Post[], siteUrl: string): string {
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 40px; border-top: 1px solid #e0ddd8;">
       <tr><td style="font-size: 1px; line-height: 24px; height: 24px;">&nbsp;</td></tr>
       <tr>
-        <td style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #7e7a73; padding-bottom: 12px;">
+        <td style="font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 400; line-height: 1.4; color: #111110; padding-bottom: 12px;">
           Keep reading
         </td>
       </tr>
