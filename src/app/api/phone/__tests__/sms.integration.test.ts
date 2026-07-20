@@ -61,6 +61,7 @@ import {
 } from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
+import { verifyPhoneIvrAudioToken } from '@/lib/phone/ivr-audio'
 import {
   SMS_BELL_CONTACT_ONBOARDING,
   SMS_HELP_RESPONSE,
@@ -95,6 +96,15 @@ function voiceMenuRequest(form: Record<string, string>) {
     form,
     SECRET
   )
+}
+
+function playedText(xml: string): string {
+  return Array.from(xml.matchAll(/<Play>([^<]+)<\/Play>/g), ([, rawUrl]) => {
+    const token = new URL(rawUrl.replaceAll('&amp;', '&')).searchParams.get(
+      'token'
+    )
+    return verifyPhoneIvrAudioToken(token)?.text ?? ''
+  }).join(' ')
 }
 
 beforeEach(async () => {
@@ -1012,8 +1022,9 @@ describe('POST /api/phone/voice-menu', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(xml).toContain('You are subscribed')
-    expect(xml).toContain('Text STOP to unsubscribe or HELP for help')
+    const spoken = playedText(xml)
+    expect(spoken).toContain('You are subscribed')
+    expect(spoken).toContain('Text STOP to unsubscribe or HELP for help')
     const subscribers = await db.select().from(smsSubscribers)
     expect(subscribers).toHaveLength(1)
     expect(subscribers[0]).toMatchObject({
@@ -1116,7 +1127,7 @@ describe('POST /api/phone/voice-menu', () => {
     const duplicate = await voiceMenuPost(voiceMenuRequest(voiceForm))
     const xml = await duplicate.text()
 
-    expect(xml).toContain('already handled')
+    expect(playedText(xml)).toContain('already handled')
     await flushAfterTasks()
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
     expect(await db.select().from(smsSubscribers)).toHaveLength(0)
@@ -1145,7 +1156,7 @@ describe('POST /api/phone/voice-menu', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(xml).toContain('You are subscribed')
+    expect(playedText(xml)).toContain('You are subscribed')
     await flushAfterTasks()
     const [subscriber] = await db.select().from(smsSubscribers)
     expect(subscriber.confirmedAt).toBeInstanceOf(Date)
@@ -1155,7 +1166,7 @@ describe('POST /api/phone/voice-menu', () => {
     expect(vi.mocked(sendSimpleEmail)).toHaveBeenCalled()
 
     const duplicate = await voiceMenuPost(voiceMenuRequest(voiceForm))
-    expect(await duplicate.text()).toContain('already handled')
+    expect(playedText(await duplicate.text())).toContain('already handled')
   })
 
   it('still gives spoken STOP instructions when voice confirmation SMS fails', async () => {
@@ -1171,8 +1182,9 @@ describe('POST /api/phone/voice-menu', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(xml).toContain('You are subscribed')
-    expect(xml).toContain('Text STOP to unsubscribe or HELP for help')
+    const spoken = playedText(xml)
+    expect(spoken).toContain('You are subscribed')
+    expect(spoken).toContain('Text STOP to unsubscribe or HELP for help')
     await flushAfterTasks()
     const messages = await db.select().from(textMessages)
     expect(messages).toHaveLength(1)
@@ -1243,7 +1255,7 @@ describe('POST /api/phone/voice-menu', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(xml).toContain('Leave a message after the tone.')
+    expect(playedText(xml)).toContain('Leave a message after the tone.')
     expect(xml).toContain('<Record maxLength="120"')
     expect(await db.select().from(smsSubscribers)).toHaveLength(0)
   })

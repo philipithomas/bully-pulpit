@@ -9,9 +9,9 @@ import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 
 // Voicemail processing. Ported from junk-drawer's ProcessVoicemailJob:
 // download the recording from Twilio, transcribe it, and email the
-// transcription with the audio attached. Transcription uses the OpenAI
-// provider directly (OPENAI_API_KEY) because the AI Gateway routes language,
-// embedding, and image models but not audio transcription.
+// transcription with the audio attached. Transcription currently stays on the
+// direct OpenAI API (OPENAI_API_KEY); the IVR speech route uses AI Gateway
+// separately.
 
 export type VoicemailInput = {
   recordingUrl: string

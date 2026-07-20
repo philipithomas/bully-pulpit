@@ -1,9 +1,13 @@
 // TwiML builders for the Twilio voice and SMS webhooks. Ported from
-// junk-drawer's controllers, with two changes: all interpolated values are
-// XML-escaped (the Rails version interpolated raw strings), and the greeting
-// uses Twilio's <Say> with an Amazon Polly neural voice instead of a separate
-// OpenAI TTS endpoint. That removes the greeting-audio route and its cache
-// token handoff, which has no good equivalent on serverless.
+// junk-drawer's controllers. All interpolated values are XML-escaped (the
+// Rails version interpolated raw strings), and spoken prompts use signed
+// <Play> URLs backed by Vercel AI Gateway speech generation.
+
+import {
+  PHONE_IVR_FALLBACK_PROMPTS,
+  type PhoneIvrFallbackKey,
+  phoneIvrAudioUrl,
+} from '@/lib/phone/ivr-audio'
 
 /** Escapes a string for use in XML text content or attribute values. */
 export function escapeXml(value: string): string {
@@ -15,9 +19,9 @@ export function escapeXml(value: string): string {
     .replace(/'/g, '&apos;')
 }
 
-const SAY_VOICE = 'Polly.Matthew-Neural'
-
-const VOICEMAIL_INSTRUCTION = 'Leave a message after the tone.'
+function play(text: string, fallback: PhoneIvrFallbackKey): string {
+  return `<Play>${escapeXml(phoneIvrAudioUrl(text, fallback))}</Play>`
+}
 
 /** Optionally greets the caller, then records a voicemail with callbacks. */
 export function voicemailTwiml(input: {
@@ -26,12 +30,12 @@ export function voicemailTwiml(input: {
   recordingCompleteUrl: string
 }): string {
   const greeting = input.greeting
-    ? `  <Say voice="${SAY_VOICE}">${escapeXml(input.greeting)}</Say>\n`
+    ? `  ${play(input.greeting, 'greeting')}\n`
     : ''
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-${greeting}  <Say voice="${SAY_VOICE}">${VOICEMAIL_INSTRUCTION}</Say>
+${greeting}  ${play(PHONE_IVR_FALLBACK_PROMPTS.voicemail, 'voicemail')}
   <Record maxLength="120" recordingStatusCallback="${escapeXml(input.recordingStatusUrl)}" recordingStatusCallbackMethod="POST" action="${escapeXml(input.recordingCompleteUrl)}" method="POST" />
 </Response>`
 }
@@ -45,11 +49,11 @@ export function voiceMenuTwiml(input: {
 }): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${SAY_VOICE}">${escapeXml(input.greeting)}</Say>
+  ${play(input.greeting, 'greeting')}
   <Gather action="${escapeXml(input.menuActionUrl)}" method="POST" input="dtmf" numDigits="1" timeout="6">
-    <Say voice="${SAY_VOICE}">Press 1 to leave a voicemail. Press 2 to subscribe to recurring new-post texts from philipithomas.com. A new or reactivated subscription includes one Bell contact-card multimedia message. Frequency varies. Message and data rates may apply. Text STOP to unsubscribe or HELP for help.</Say>
+    ${play(PHONE_IVR_FALLBACK_PROMPTS.menu, 'menu')}
   </Gather>
-  <Say voice="${SAY_VOICE}">Leave a message after the tone.</Say>
+  ${play(PHONE_IVR_FALLBACK_PROMPTS.voicemail, 'voicemail')}
   <Record maxLength="120" recordingStatusCallback="${escapeXml(input.recordingStatusUrl)}" recordingStatusCallbackMethod="POST" action="${escapeXml(input.recordingCompleteUrl)}" method="POST" />
 </Response>`
 }
@@ -58,15 +62,15 @@ export function voiceMenuTwiml(input: {
 export function goodbyeTwiml(): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${SAY_VOICE}">Thank you. Goodbye.</Say>
+  ${play(PHONE_IVR_FALLBACK_PROMPTS.goodbye, 'goodbye')}
   <Hangup/>
 </Response>`
 }
 
-export function sayAndHangupTwiml(message: string): string {
+export function playAndHangupTwiml(message: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${SAY_VOICE}">${escapeXml(message)}</Say>
+  ${play(message, 'goodbye')}
   <Hangup/>
 </Response>`
 }

@@ -14,7 +14,7 @@ import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { isE164, numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import { sendSmsSignupNotification } from '@/lib/phone/notifications'
 import {
-  sayAndHangupTwiml,
+  playAndHangupTwiml,
   twimlResponse,
   voicemailTwiml,
 } from '@/lib/phone/twiml'
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   if (digits === '2' && confirmationFrom) {
     if (!isE164(from)) {
       return twimlResponse(
-        sayAndHangupTwiml(
+        playAndHangupTwiml(
           'We could not subscribe this caller ID. Please text SUBSCRIBE to the number you called.'
         )
       )
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       : null
     if (webhookEvent?.event.processedAt) {
       return twimlResponse(
-        sayAndHangupTwiml(
+        playAndHangupTwiml(
           'This phone menu request was already handled. Goodbye.'
         )
       )
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       : null
     if (webhookEvent && !lease) {
       return twimlResponse(
-        sayAndHangupTwiml(
+        playAndHangupTwiml(
           'This phone menu request was already handled. Goodbye.'
         )
       )
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       await Promise.all(tasks)
     })
     return twimlResponse(
-      sayAndHangupTwiml(
+      playAndHangupTwiml(
         'You are subscribed to new-post texts from philipithomas.com. Text STOP to unsubscribe or HELP for help. Goodbye.'
       )
     )

@@ -13,11 +13,11 @@ import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
 import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
 
 /**
- * Twilio voice webhook for incoming calls. Generates a fresh greeting, speaks
- * it with <Say>, and records a voicemail with callbacks into the
- * recording-status and recording-complete routes. The caller, called number,
- * and initial caller metadata ride along on the status callback URL because
- * Twilio's recording callbacks do not include them.
+ * Twilio voice webhook for incoming calls. Generates a fresh greeting, plays
+ * it through the signed AI speech route, and records a voicemail with callbacks
+ * into the recording-status and recording-complete routes. The caller, called
+ * number, and initial caller metadata ride along on the status callback URL
+ * because Twilio's recording callbacks do not include them.
  */
 export async function POST(request: Request) {
   const form = await validatedPhoneWebhookForm(request)

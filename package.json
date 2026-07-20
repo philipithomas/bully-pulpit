@@ -15,6 +15,7 @@
     "search:index": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.development.local scripts/generate-search-index.ts",
     "bell:eval": "tsx scripts/check-bell-evals.ts",
     "bell:eval:live": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env.development.local --env-file-if-exists=.env scripts/evaluate-bell.ts",
+    "phone:audio": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/generate-phone-ivr-audio.ts",
     "images:optimize": "tsx scripts/optimize-images.ts",
     "content:check": "tsx scripts/check-content.ts",
     "links:check": "tsx scripts/check-links.ts",

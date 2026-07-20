@@ -114,6 +114,10 @@ describe('generateGreeting', () => {
     vi.restoreAllMocks()
   })
 
+  it('identifies Bell as an AI-generated voice', () => {
+    expect(FALLBACK_GREETING).toContain('This is Bell, an AI-generated voice.')
+  })
+
   it.each([
     [0, 'Good evening from New York City.'],
     [1, 'Good evening from NYC.'],

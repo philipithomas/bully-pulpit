@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
+import { verifyPhoneIvrAudioToken } from '@/lib/phone/ivr-audio'
 import {
   connectCallTwiml,
   emptyTwiml,
@@ -7,11 +8,30 @@ import {
   mediaMessageTwiml,
   messagesTwiml,
   messageTwiml,
-  sayAndHangupTwiml,
+  playAndHangupTwiml,
   twimlResponse,
   voiceMenuTwiml,
   voicemailTwiml,
 } from '@/lib/phone/twiml'
+
+const originalTwilioSecret = process.env.TWILIO_SECRET
+process.env.TWILIO_SECRET = 'test-twilio-auth-token'
+
+afterAll(() => {
+  if (originalTwilioSecret === undefined) delete process.env.TWILIO_SECRET
+  else process.env.TWILIO_SECRET = originalTwilioSecret
+})
+
+function playedTexts(xml: string): string[] {
+  return Array.from(xml.matchAll(/<Play>([^<]+)<\/Play>/g), ([, rawUrl]) => {
+    const token = new URL(rawUrl.replaceAll('&amp;', '&')).searchParams.get(
+      'token'
+    )
+    const verified = verifyPhoneIvrAudioToken(token)
+    expect(verified).not.toBeNull()
+    return verified?.text ?? ''
+  })
+}
 
 describe('escapeXml', () => {
   it('escapes the five XML special characters', () => {
@@ -36,13 +56,14 @@ describe('voicemailTwiml', () => {
       'https://philipithomas.com/api/phone/recording-complete',
   })
 
-  it('speaks the greeting with a Polly neural voice', () => {
-    expect(xml).toContain(
-      '<Say voice="Polly.Matthew-Neural">You have reached the Contraption Company &amp; friends.</Say>'
-    )
-    expect(xml).toContain(
-      '<Say voice="Polly.Matthew-Neural">Leave a message after the tone.</Say>'
-    )
+  it('plays the greeting and voicemail instruction from signed audio urls', () => {
+    expect(xml).not.toContain('<Say')
+    expect(xml).toContain('<Play>')
+    expect(xml).toContain('/api/phone/ivr-audio?token=')
+    expect(playedTexts(xml)).toEqual([
+      'You have reached the Contraption Company & friends.',
+      'Leave a message after the tone.',
+    ])
   })
 
   it('records with escaped callback urls', () => {
@@ -61,8 +82,10 @@ describe('voicemailTwiml', () => {
       recordingCompleteUrl: 'https://philipithomas.com/recording-complete',
     })
 
-    expect(instructionOnly.match(/<Say /g)).toHaveLength(1)
-    expect(instructionOnly).toContain('Leave a message after the tone.')
+    expect(instructionOnly.match(/<Play>/g)).toHaveLength(1)
+    expect(playedTexts(instructionOnly)).toEqual([
+      'Leave a message after the tone.',
+    ])
   })
 })
 
@@ -80,15 +103,12 @@ describe('voiceMenuTwiml', () => {
     expect(xml).toContain(
       '<Gather action="https://philipithomas.com/api/phone/voice-menu" method="POST" input="dtmf" numDigits="1" timeout="6">'
     )
-    expect(xml).toContain('Press 1 to leave a voicemail.')
-    expect(xml).toContain(
-      'Press 2 to subscribe to recurring new-post texts from philipithomas.com.'
-    )
-    expect(xml).toContain(
-      'A new or reactivated subscription includes one Bell contact-card multimedia message.'
-    )
-    expect(xml).toContain('Frequency varies. Message and data rates may apply.')
-    expect(xml).toContain('Text STOP to unsubscribe or HELP for help.')
+    expect(playedTexts(xml)).toEqual([
+      'You have reached the Contraption Company.',
+      'Press 1 to leave a voicemail. Press 2 to subscribe to recurring new-post texts from philipithomas.com. A new or reactivated subscription includes one Bell contact-card multimedia message. Frequency varies. Message and data rates may apply. Text STOP to unsubscribe or HELP for help.',
+      'Leave a message after the tone.',
+    ])
+    expect(xml).not.toContain('<Say')
     expect(xml).toContain('<Record maxLength="120"')
   })
 })
@@ -96,15 +116,16 @@ describe('voiceMenuTwiml', () => {
 describe('goodbyeTwiml', () => {
   it('thanks the caller and hangs up', () => {
     const xml = goodbyeTwiml()
-    expect(xml).toContain('Thank you. Goodbye.')
+    expect(playedTexts(xml)).toEqual(['Thank you. Goodbye.'])
     expect(xml).toContain('<Hangup/>')
   })
 })
 
-describe('sayAndHangupTwiml', () => {
-  it('speaks escaped text and hangs up', () => {
-    const xml = sayAndHangupTwiml('Subscribed & ready.')
-    expect(xml).toContain('Subscribed &amp; ready.')
+describe('playAndHangupTwiml', () => {
+  it('plays the exact signed text and hangs up', () => {
+    const xml = playAndHangupTwiml('Subscribed & ready.')
+    expect(playedTexts(xml)).toEqual(['Subscribed & ready.'])
+    expect(xml).not.toContain('Subscribed & ready.')
     expect(xml).toContain('<Hangup/>')
   })
 })
