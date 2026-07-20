@@ -1,5 +1,8 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import { verifyPhoneIvrAudioToken } from '@/lib/phone/ivr-audio'
+import {
+  phoneIvrFallbackAudioPath,
+  verifyPhoneIvrAudioToken,
+} from '@/lib/phone/ivr-audio'
 import {
   connectCallTwiml,
   emptyTwiml,
@@ -122,10 +125,20 @@ describe('goodbyeTwiml', () => {
 })
 
 describe('playAndHangupTwiml', () => {
-  it('plays the exact signed text and hangs up', () => {
-    const xml = playAndHangupTwiml('Subscribed & ready.')
-    expect(playedTexts(xml)).toEqual(['Subscribed & ready.'])
-    expect(xml).not.toContain('Subscribed & ready.')
+  it('plays the exact signed static outcome and hangs up', () => {
+    const xml = playAndHangupTwiml('subscribed')
+    const rawUrl = xml.match(/<Play>([^<]+)<\/Play>/)?.[1] ?? ''
+    const token = new URL(rawUrl.replaceAll('&amp;', '&')).searchParams.get(
+      'token'
+    )
+    expect(playedTexts(xml)).toEqual([
+      'You are subscribed to new-post texts from philipithomas.com. Text STOP to unsubscribe or HELP for help. Goodbye.',
+    ])
+    expect(verifyPhoneIvrAudioToken(token)).toMatchObject({
+      fallbackPath: phoneIvrFallbackAudioPath('subscribed'),
+      isStaticPrompt: true,
+    })
+    expect(xml).not.toContain('You are subscribed')
     expect(xml).toContain('<Hangup/>')
   })
 })

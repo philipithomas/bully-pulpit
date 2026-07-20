@@ -41,11 +41,7 @@ export async function POST(request: Request) {
 
   if (digits === '2' && confirmationFrom) {
     if (!isE164(from)) {
-      return twimlResponse(
-        playAndHangupTwiml(
-          'We could not subscribe this caller ID. Please text SUBSCRIBE to the number you called.'
-        )
-      )
+      return twimlResponse(playAndHangupTwiml('subscribeFailed'))
     }
 
     const webhookEvent = callSid
@@ -55,11 +51,7 @@ export async function POST(request: Request) {
         })
       : null
     if (webhookEvent?.event.processedAt) {
-      return twimlResponse(
-        playAndHangupTwiml(
-          'This phone menu request was already handled. Goodbye.'
-        )
-      )
+      return twimlResponse(playAndHangupTwiml('alreadyHandled'))
     }
 
     const existing = await findSmsSubscriberByPhoneNumber(from)
@@ -67,11 +59,7 @@ export async function POST(request: Request) {
       ? await claimPhoneWebhookEvent(webhookEvent.event.id)
       : null
     if (webhookEvent && !lease) {
-      return twimlResponse(
-        playAndHangupTwiml(
-          'This phone menu request was already handled. Goodbye.'
-        )
-      )
+      return twimlResponse(playAndHangupTwiml('alreadyHandled'))
     }
 
     try {
@@ -120,11 +108,7 @@ export async function POST(request: Request) {
       }
       await Promise.all(tasks)
     })
-    return twimlResponse(
-      playAndHangupTwiml(
-        'You are subscribed to new-post texts from philipithomas.com. Text STOP to unsubscribe or HELP for help. Goodbye.'
-      )
-    )
+    return twimlResponse(playAndHangupTwiml('subscribed'))
   }
 
   return twimlResponse(

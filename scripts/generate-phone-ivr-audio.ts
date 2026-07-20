@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { access, mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { gateway } from '@ai-sdk/gateway'
 import { generateSpeech } from 'ai'
@@ -27,6 +27,16 @@ async function main(): Promise<void> {
   >
 
   for (const [key, text] of prompts) {
+    const relativePath = phoneIvrFallbackAudioPath(key).slice(1)
+    const outputPath = path.join(process.cwd(), 'public', relativePath)
+    try {
+      await access(outputPath)
+      console.log(`[phone:audio] kept ${relativePath}`)
+      continue
+    } catch {
+      // A configuration or prompt change creates a new hashed path.
+    }
+
     const { audio, warnings } = await generateSpeech({
       model,
       text,
@@ -40,8 +50,6 @@ async function main(): Promise<void> {
       console.warn(`[phone:audio] ${key} warnings:`, warnings)
     }
 
-    const relativePath = phoneIvrFallbackAudioPath(key).slice(1)
-    const outputPath = path.join(process.cwd(), 'public', relativePath)
     await mkdir(path.dirname(outputPath), { recursive: true })
     await writeFile(outputPath, audio.uint8Array)
     console.log(`[phone:audio] wrote ${relativePath}`)

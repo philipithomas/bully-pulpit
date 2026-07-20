@@ -67,10 +67,10 @@ export function goodbyeTwiml(): string {
 </Response>`
 }
 
-export function playAndHangupTwiml(message: string): string {
+export function playAndHangupTwiml(prompt: PhoneIvrFallbackKey): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  ${play(message, 'goodbye')}
+  ${play(PHONE_IVR_FALLBACK_PROMPTS[prompt], prompt)}
   <Hangup/>
 </Response>`
 }
