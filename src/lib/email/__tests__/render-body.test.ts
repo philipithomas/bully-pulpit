@@ -108,9 +108,11 @@ describe('buildEmailBodyHtml newsletter-specific blocks', () => {
     const body = await buildEmailBodyHtml(post)
 
     expect(body.previewText).toBe(post.frontmatter.coverImageAlt)
-    expect(body.bodyText).toContain('SFMOMA')
-    expect(body.bodyText).toContain('2026-07-11')
-    expect(body.bodyText).toContain('San Francisco Museum of Modern Art')
-    expect(body.bodyText).toContain('https://www.philipithomas.com/sfmoma')
+    expect(body.bodyText).toContain(post.frontmatter.title)
+    expect(body.bodyText).toContain(post.frontmatter.publishedAt)
+    expect(body.bodyText).toContain(post.frontmatter.location?.name)
+    expect(body.bodyText).toContain(
+      `https://www.philipithomas.com/${post.slug}`
+    )
   })
 })

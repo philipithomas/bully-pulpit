@@ -39,7 +39,7 @@ describe('listPosts tool output', () => {
         url: `/${expected.slug}`,
         newsletter: expected.newsletter,
         publishedAt: expected.frontmatter.publishedAt,
-        description: expected.excerpt,
+        description: expected.excerpt || expected.frontmatter.title,
       },
     ])
     expect(result.posts[0]).not.toHaveProperty('coverImage')
