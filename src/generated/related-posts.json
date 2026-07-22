@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-07-19T21:02:31.910Z",
+  "generatedAt": "2026-07-22T00:26:37.507Z",
   "posts": {
+    "sunrise-in-chinatown": {
+      "related": [
+        {
+          "slug": "workshop-welcome",
+          "score": 0.3073985
+        },
+        {
+          "slug": "backup-plans",
+          "score": 0.3213601
+        },
+        {
+          "slug": "almost-perfect",
+          "score": 0.3267062
+        }
+      ]
+    },
     "adding-sms-support": {
       "related": [
         {
