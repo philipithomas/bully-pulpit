@@ -6,6 +6,7 @@ import {
   PHONE_IVR_FALLBACK_PROMPTS,
   PHONE_IVR_SPEECH_FORMAT,
   PHONE_IVR_SPEECH_MODEL_ID,
+  PHONE_IVR_SPEECH_SPEED,
   PHONE_IVR_SPEECH_VOICE,
   type PhoneIvrFallbackKey,
   phoneIvrFallbackAudioPath,
@@ -42,6 +43,7 @@ async function main(): Promise<void> {
       text,
       voice: PHONE_IVR_SPEECH_VOICE,
       outputFormat: PHONE_IVR_SPEECH_FORMAT,
+      speed: PHONE_IVR_SPEECH_SPEED,
     })
     if (audio.mediaType !== 'audio/wav' || !isWaveAudio(audio.uint8Array)) {
       throw new Error(`Unexpected ${key} audio type: ${audio.mediaType}`)

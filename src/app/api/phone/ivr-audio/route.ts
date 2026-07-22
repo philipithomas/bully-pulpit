@@ -3,6 +3,7 @@ import { generateSpeech } from 'ai'
 import {
   PHONE_IVR_SPEECH_FORMAT,
   PHONE_IVR_SPEECH_MODEL_ID,
+  PHONE_IVR_SPEECH_SPEED,
   PHONE_IVR_SPEECH_VOICE,
   verifyPhoneIvrAudioToken,
 } from '@/lib/phone/ivr-audio'
@@ -59,7 +60,7 @@ async function staticAudioResponse(
   })
 }
 
-/** Signed Twilio <Play> target for Bell's AI-generated phone IVR voice. */
+/** Signed Twilio <Play> target for the AI-generated phone IVR voice. */
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url)
   if (url.searchParams.size !== 1 || !url.searchParams.has('token')) {
@@ -95,6 +96,7 @@ export async function GET(request: Request): Promise<Response> {
       text: verified.text,
       voice: PHONE_IVR_SPEECH_VOICE,
       outputFormat: PHONE_IVR_SPEECH_FORMAT,
+      speed: PHONE_IVR_SPEECH_SPEED,
       abortSignal: AbortSignal.timeout(PHONE_IVR_SPEECH_TIMEOUT_MS),
       maxRetries: 1,
     })
