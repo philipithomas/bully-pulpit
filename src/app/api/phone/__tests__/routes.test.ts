@@ -42,6 +42,7 @@ import {
   markPhoneWebhookEventProcessed,
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
+import { verifyPhoneIvrAudioToken } from '@/lib/phone/ivr-audio'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 import { twilioPostRequest } from '@/test/twilio'
 
@@ -58,6 +59,15 @@ function twilioPost(
     AUTH_TOKEN,
     options
   )
+}
+
+function playedTexts(xml: string): string[] {
+  return Array.from(xml.matchAll(/<Play>([^<]+)<\/Play>/g), ([, rawUrl]) => {
+    const token = new URL(rawUrl.replaceAll('&amp;', '&')).searchParams.get(
+      'token'
+    )
+    return verifyPhoneIvrAudioToken(token)?.text ?? ''
+  })
 }
 
 beforeEach(() => {
@@ -116,8 +126,12 @@ describe('POST /api/phone/voice', () => {
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Type')).toContain('text/xml')
     const xml = await response.text()
-    expect(xml).toContain('You have reached the test suite.')
-    expect(xml).toContain('Leave a message after the tone.')
+    expect(playedTexts(xml)).toEqual([
+      'You have reached the test suite.',
+      'Press 1 to leave a voicemail. Press 2 to subscribe to recurring new-post texts from philipithomas.com. A new or reactivated subscription includes one Bell contact-card multimedia message. Frequency varies. Message and data rates may apply. Text STOP to unsubscribe or HELP for help.',
+      'Leave a message after the tone.',
+    ])
+    expect(xml).not.toContain('<Say')
     expect(xml).toContain('<Gather')
     expect(xml).toContain('/api/phone/voice-menu')
     expect(xml).toContain('/api/phone/recording-status?caller=')
@@ -156,21 +170,20 @@ describe('POST /api/phone/voice', () => {
     const xml = await response.text()
     expect(xml).toContain('<Gather')
     expect(xml).toContain('/api/phone/voice-menu')
-    expect(xml.indexOf('You have reached the test suite.')).toBeLessThan(
-      xml.indexOf('<Gather')
-    )
-    expect(xml.indexOf('Leave a message after the tone.')).toBeGreaterThan(
-      xml.indexOf('</Gather>')
-    )
+    expect(xml.indexOf('<Play>')).toBeLessThan(xml.indexOf('<Gather'))
+    expect(xml.lastIndexOf('<Play>')).toBeGreaterThan(xml.indexOf('</Gather>'))
     expect(xml).not.toContain('secret=')
-    expect(xml).toContain(
+    const menu = playedTexts(xml)[1]
+    expect(menu).toContain(
       'Press 2 to subscribe to recurring new-post texts from philipithomas.com.'
     )
-    expect(xml).toContain(
+    expect(menu).toContain(
       'A new or reactivated subscription includes one Bell contact-card multimedia message.'
     )
-    expect(xml).toContain('Frequency varies. Message and data rates may apply.')
-    expect(xml).toContain('Text STOP to unsubscribe or HELP for help.')
+    expect(menu).toContain(
+      'Frequency varies. Message and data rates may apply.'
+    )
+    expect(menu).toContain('Text STOP to unsubscribe or HELP for help.')
   })
 
   it('falls back to voicemail when the public phone number is unavailable', async () => {
@@ -185,7 +198,10 @@ describe('POST /api/phone/voice', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(xml).toContain('Leave a message after the tone.')
+    expect(playedTexts(xml)).toEqual([
+      'You have reached the test suite.',
+      'Leave a message after the tone.',
+    ])
     expect(xml).not.toContain('<Gather')
     expect(xml).not.toContain('/api/phone/voice-menu')
   })
@@ -333,7 +349,7 @@ describe('POST /api/phone/recording-complete', () => {
     )
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(xml).toContain('Thank you. Goodbye.')
+    expect(playedTexts(xml)).toEqual(['Thank you. Goodbye.'])
     expect(xml).toContain('<Hangup/>')
   })
 })

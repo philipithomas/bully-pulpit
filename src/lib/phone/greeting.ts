@@ -3,7 +3,7 @@ import {
   getPhoneGreetingProviderOptions,
   phoneGreetingModel,
 } from '@/lib/chat/bell-model'
-import { siteIdentity } from '@/lib/site-identity'
+import { PHONE_IVR_FALLBACK_PROMPTS } from '@/lib/phone/ivr-audio'
 import {
   fetchNycWeatherSnapshot,
   type NycWeatherSnapshot,
@@ -13,7 +13,7 @@ import {
 // TwilioVoicemailController#generate_dynamic_greeting, rewritten on the AI
 // Gateway instead of a direct provider client.
 
-export const FALLBACK_GREETING = `You have reached the Contraption Company and ${siteIdentity.name}.`
+export const FALLBACK_GREETING = PHONE_IVR_FALLBACK_PROMPTS.greeting
 
 // Twilio gives voice webhooks 15 seconds to respond before playing an
 // application error to the caller. The shared weather fetch gets one 2 second
