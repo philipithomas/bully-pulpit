@@ -335,10 +335,14 @@ export default async function SlugPage({ params }: Props) {
             : 'container py-12 md:py-16'
         }
       >
-        <div>
-          {/* Tidbits leads with the photo in both visual and keyboard order. */}
-          {isTidbitsPost && !isFindAiPage ? coverImage : null}
+        {/* Tidbits leads with the photo in both visual and keyboard order. */}
+        {isTidbitsPost && !isFindAiPage ? coverImage : null}
 
+        <div
+          className={
+            isTidbitsPost ? 'tidbits-post-body mx-auto max-w-5xl' : 'contents'
+          }
+        >
           {/* Header */}
           {isTidbitsPost ? (
             <header className="mt-5 mb-12 grid gap-3 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
@@ -411,51 +415,59 @@ export default async function SlugPage({ params }: Props) {
 
           {/* Cover image */}
           {!isFindAiPage && !isTidbitsPost ? coverImage : null}
-        </div>
 
-        {/* Content */}
-        <div className="prose prose-xl font-serif mx-auto max-w-2xl">
-          <MDXRemote
-            source={item.content}
-            options={{
-              mdxOptions: {
-                remarkPlugins: [remarkGfm],
-                rehypePlugins: [
-                  [
-                    rehypeShikiFromHighlighter,
-                    highlighter,
-                    // Unknown fence languages render as plain text on the
-                    // same surface instead of failing the build.
-                    { theme: codeThemeName, fallbackLanguage: 'text' },
+          {/* Content */}
+          <div
+            className={`prose prose-xl max-w-2xl font-serif ${
+              isTidbitsPost ? '' : 'mx-auto'
+            }`}
+          >
+            <MDXRemote
+              source={item.content}
+              options={{
+                mdxOptions: {
+                  remarkPlugins: [remarkGfm],
+                  rehypePlugins: [
+                    [
+                      rehypeShikiFromHighlighter,
+                      highlighter,
+                      // Unknown fence languages render as plain text on the
+                      // same surface instead of failing the build.
+                      { theme: codeThemeName, fallbackLanguage: 'text' },
+                    ],
                   ],
-                ],
-              },
-            }}
-            components={{
-              SpotifyEmbed,
-              YouTubeEmbed,
-              ...mdxComponents,
-              ...createHeadingComponents(),
-            }}
-          />
+                },
+              }}
+              components={{
+                SpotifyEmbed,
+                YouTubeEmbed,
+                ...mdxComponents,
+                ...createHeadingComponents(),
+              }}
+            />
+          </div>
+
+          {/* Keep the readable footer blocks on the same left edge as the
+              wider Tidbits header and related-post grid. */}
+          <div className={isTidbitsPost ? 'max-w-2xl' : 'contents'}>
+            {/* Subscribe CTA for posts */}
+            {post && (
+              <PostSubscribeCta
+                newsletter={post.newsletter}
+                smsSignupDisplayNumber={smsSignupDisplayNumber}
+                smsSignupPhoneNumber={smsSignupPhoneNumber}
+              />
+            )}
+
+            {/* Previous and next posts in the same newsletter */}
+            {post && <PostNavigation previous={previous} next={next} />}
+          </div>
+
+          {/* Related posts */}
+          {post && relatedPosts.length > 0 && (
+            <RelatedPosts posts={relatedPosts} />
+          )}
         </div>
-
-        {/* Subscribe CTA for posts */}
-        {post && (
-          <PostSubscribeCta
-            newsletter={post.newsletter}
-            smsSignupDisplayNumber={smsSignupDisplayNumber}
-            smsSignupPhoneNumber={smsSignupPhoneNumber}
-          />
-        )}
-
-        {/* Previous and next posts in the same newsletter */}
-        {post && <PostNavigation previous={previous} next={next} />}
-
-        {/* Related posts */}
-        {post && relatedPosts.length > 0 && (
-          <RelatedPosts posts={relatedPosts} />
-        )}
       </div>
     </article>
   )
