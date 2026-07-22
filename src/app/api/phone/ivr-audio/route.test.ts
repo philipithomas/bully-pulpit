@@ -30,8 +30,9 @@ const AUDIO_BYTES = new Uint8Array([82, 73, 70, 70, 0, 0, 0, 0, 87, 65, 86, 69])
 const FALLBACK_BYTES = new Uint8Array([
   82, 73, 70, 70, 1, 0, 0, 0, 87, 65, 86, 69,
 ])
+const DYNAMIC_GREETING = `Good morning from NYC. ${PHONE_IVR_FALLBACK_PROMPTS.greeting}`
 
-function validAudioUrl(text = 'This is Bell, an AI-generated voice.'): string {
+function validAudioUrl(text = DYNAMIC_GREETING): string {
   return phoneIvrAudioUrl(text, 'greeting')
 }
 
@@ -76,7 +77,7 @@ describe('GET /api/phone/ivr-audio', () => {
     )
     const call = mockedGenerateSpeech.mock.calls[0][0]
     expect(call.model).toBe(mocks.speechModel)
-    expect(call.text).toBe('This is Bell, an AI-generated voice.')
+    expect(call.text).toBe(DYNAMIC_GREETING)
     expect(call.voice).toBe(PHONE_IVR_SPEECH_VOICE)
     expect(call.outputFormat).toBe('wav')
     expect(call.abortSignal).toBeInstanceOf(AbortSignal)

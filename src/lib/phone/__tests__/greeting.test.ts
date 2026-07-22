@@ -17,6 +17,7 @@ import {
   FALLBACK_GREETING,
   generateGreeting,
 } from '@/lib/phone/greeting'
+import { siteIdentity } from '@/lib/site-identity'
 import { fetchNycWeatherSnapshot } from '@/lib/weather/nyc'
 
 const mockedGenerateText = vi.mocked(generateText)
@@ -114,8 +115,12 @@ describe('generateGreeting', () => {
     vi.restoreAllMocks()
   })
 
-  it('identifies Bell as an AI-generated voice', () => {
-    expect(FALLBACK_GREETING).toContain('This is Bell, an AI-generated voice.')
+  it('uses the pronunciation spelling only in the spoken identification', () => {
+    expect(FALLBACK_GREETING).toBe(
+      'You have reached the Contraption Company and Philip Ilić Thomas. This is Bell.'
+    )
+    expect(FALLBACK_GREETING).not.toContain('AI-generated')
+    expect(siteIdentity.name).toBe('Philip Ilic Thomas')
   })
 
   it.each([
