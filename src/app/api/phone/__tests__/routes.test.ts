@@ -22,6 +22,9 @@ vi.mock('@/lib/db/queries/phone-webhook-events', () => ({
   markPhoneWebhookEventProcessed: vi.fn(async () => true),
   releasePhoneWebhookEvent: vi.fn(async () => undefined),
 }))
+vi.mock('@/lib/db/queries/sms-subscribers', () => ({
+  findSmsSubscriberByPhoneNumber: vi.fn(async () => null),
+}))
 vi.mock('@/lib/phone/greeting', () => ({
   generateGreeting: vi.fn(async () => 'You have reached the test suite.'),
 }))
@@ -42,6 +45,7 @@ import {
   markPhoneWebhookEventProcessed,
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
+import { findSmsSubscriberByPhoneNumber } from '@/lib/db/queries/sms-subscribers'
 import { verifyPhoneIvrAudioToken } from '@/lib/phone/ivr-audio'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 import { twilioPostRequest } from '@/test/twilio'
@@ -186,6 +190,54 @@ describe('POST /api/phone/voice', () => {
     expect(menu).toContain('Text STOP to unsubscribe or HELP for help.')
   })
 
+  it('routes confirmed SMS subscribers directly to voicemail', async () => {
+    vi.mocked(findSmsSubscriberByPhoneNumber).mockResolvedValueOnce({
+      confirmedAt: new Date('2026-07-21T00:00:00Z'),
+      // biome-ignore lint/suspicious/noExplicitAny: the route only reads confirmedAt
+    } as any)
+
+    const response = await voicePost(
+      twilioPost('/api/phone/voice', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(findSmsSubscriberByPhoneNumber).toHaveBeenCalledWith('+15551234567')
+    expect(playedTexts(xml)).toEqual([
+      'You have reached the test suite.',
+      'Leave a message after the tone.',
+    ])
+    expect(xml).not.toContain('<Gather')
+    expect(xml).not.toContain('/api/phone/voice-menu')
+  })
+
+  it('keeps the signup menu available when subscriber lookup fails', async () => {
+    vi.mocked(findSmsSubscriberByPhoneNumber).mockRejectedValueOnce(
+      new Error('database unavailable')
+    )
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const response = await voicePost(
+      twilioPost('/api/phone/voice', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(xml).toContain('<Gather')
+    expect(xml).toContain('/api/phone/voice-menu')
+    expect(consoleError).toHaveBeenCalledWith(
+      '[phone/voice] SMS subscription lookup failed:',
+      expect.any(Error)
+    )
+    consoleError.mockRestore()
+  })
+
   it('falls back to voicemail when the public phone number is unavailable', async () => {
     delete process.env.PHONE_NUMBER
 
@@ -204,6 +256,7 @@ describe('POST /api/phone/voice', () => {
     ])
     expect(xml).not.toContain('<Gather')
     expect(xml).not.toContain('/api/phone/voice-menu')
+    expect(findSmsSubscriberByPhoneNumber).not.toHaveBeenCalled()
   })
 })
 

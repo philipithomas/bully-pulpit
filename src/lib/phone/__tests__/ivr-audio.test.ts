@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe('phone IVR audio tokens', () => {
   it('round-trips exact text through a stable signed URL', () => {
-    const text = 'This is Bell, an AI-generated voice.'
+    const text = `Good morning from NYC. ${PHONE_IVR_FALLBACK_PROMPTS.greeting}`
     const first = phoneIvrAudioUrl(text, 'greeting')
     const second = phoneIvrAudioUrl(text, 'greeting')
     const token = new URL(first).searchParams.get('token')
