@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import matter from 'gray-matter'
+import { comparePostsNewestFirst } from '@/lib/content/post-order'
 import type {
   ImageDimensions,
   Newsletter,
@@ -121,27 +122,16 @@ export function getPostsByNewsletter(newsletter: Newsletter): Post[] {
     })
     .filter((p): p is Post => p !== null)
 
-  return posts.sort(comparePosts)
+  return posts.sort(comparePostsNewestFirst)
 }
 
 export function getAllPosts(): Post[] {
-  return newsletters.flatMap((n) => getPostsByNewsletter(n)).sort(comparePosts)
+  return newsletters
+    .flatMap((n) => getPostsByNewsletter(n))
+    .sort(comparePostsNewestFirst)
 }
 
 const newsletters: readonly Newsletter[] = NEWSLETTERS
-
-function comparePosts(a: Post, b: Post): number {
-  const dateDiff =
-    new Date(b.frontmatter.publishedAt).getTime() -
-    new Date(a.frontmatter.publishedAt).getTime()
-  if (dateDiff !== 0) return dateDiff
-
-  const sequenceDiff =
-    (b.frontmatter.sequence ?? 0) - (a.frontmatter.sequence ?? 0)
-  if (sequenceDiff !== 0) return sequenceDiff
-
-  return a.slug.localeCompare(b.slug)
-}
 
 export function getPostBySlug(slug: string): Post | null {
   const all = getAllPosts()
