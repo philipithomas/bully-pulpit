@@ -233,6 +233,8 @@ describe('renderRelatedPostsHtml', () => {
     const posts = getAllPosts().filter((p) => p.frontmatter.coverImage)
     if (posts.length === 0) return
     const html = renderRelatedPostsHtml(posts.slice(0, 3), siteUrl)
+    expect(html).toContain('Keep reading')
+    expect(html).not.toContain('text-transform: uppercase')
     expect(html).toContain(
       'src="https://www.philipithomas.com/_next/image?url=%2Fimages%2Fcovers%2F'
     )

@@ -24,9 +24,7 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
   // stacks to one column.
   return (
     <div className="mx-auto max-w-5xl mt-20 md:mt-28">
-      {/* No visible label: whitespace separates the cards from the post.
-          The sr-only heading keeps the section named for screen readers. */}
-      <h3 className="sr-only">Keep reading</h3>
+      <h2 className="font-serif text-xl text-gray-950 mb-6">Keep reading</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {posts.map((post) => {
           return (
