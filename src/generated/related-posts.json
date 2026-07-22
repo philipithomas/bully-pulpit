@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-07-22T02:04:27.197Z",
+  "generatedAt": "2026-07-22T02:28:40.872Z",
   "posts": {
     "cable-car": {
       "related": [
         {
           "slug": "introducing-tidbits-ongoing-photo-journal",
-          "score": 0.1523583
+          "score": 0.1477293
         },
         {
           "slug": "sunrise-in-chinatown",
@@ -21,15 +21,15 @@
       "related": [
         {
           "slug": "introducing-tsundoku",
-          "score": 0.1628945
+          "score": 0.1677162
         },
         {
           "slug": "2023-10",
-          "score": 0.2023763
+          "score": 0.1922201
         },
         {
           "slug": "2026-07",
-          "score": 0.2153869
+          "score": 0.2055493
         }
       ]
     },
@@ -37,7 +37,7 @@
       "related": [
         {
           "slug": "introducing-tidbits-ongoing-photo-journal",
-          "score": 0.285043
+          "score": 0.2782567
         },
         {
           "slug": "workshop-welcome",
@@ -76,8 +76,8 @@
           "score": 0.3378092
         },
         {
-          "slug": "workshop-welcome",
-          "score": 0.3556801
+          "slug": "introducing-tidbits-ongoing-photo-journal",
+          "score": 0.3526342
         }
       ]
     },
