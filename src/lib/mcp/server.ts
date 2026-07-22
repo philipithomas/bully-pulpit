@@ -42,7 +42,7 @@ export function createSiteMcpServer(
       version: '1.0.0',
       description:
         "Search, list, and read the public writing and pages on Philip Ilic Thomas's website.",
-      websiteUrl: `${siteIdentity.productionUrl}/mcp`,
+      websiteUrl: `${siteIdentity.productionUrl}/mcp/setup`,
       icons: [
         {
           src: `${siteIdentity.productionUrl}/icon-512.png`,

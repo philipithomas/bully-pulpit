@@ -4,10 +4,10 @@ vi.mock('@/lib/rate-limit', () => ({
   checkRateLimitStatus: vi.fn(async () => 'unavailable'),
 }))
 
-import { DELETE, GET, POST } from '@/app/api/mcp/route'
+import { DELETE, GET, POST } from '@/app/mcp/route'
 import { checkRateLimitStatus } from '@/lib/rate-limit'
 
-const MCP_URL = 'https://www.philipithomas.com/api/mcp'
+const MCP_URL = 'https://www.philipithomas.com/mcp'
 const PROTOCOL_VERSION = '2025-11-25'
 
 const mockedCheckRateLimitStatus = vi.mocked(checkRateLimitStatus)
@@ -104,7 +104,7 @@ function expectStructuredTextResult(result: Record<string, unknown>) {
   return structuredContent
 }
 
-describe('POST /api/mcp', () => {
+describe('POST /mcp', () => {
   beforeEach(() => {
     mockedCheckRateLimitStatus.mockReset()
     mockedCheckRateLimitStatus.mockResolvedValue('unavailable')
@@ -124,7 +124,7 @@ describe('POST /api/mcp', () => {
         name: 'philipithomas-content',
         title: "Philip Ilic Thomas's writing",
         version: '1.0.0',
-        websiteUrl: 'https://www.philipithomas.com/mcp',
+        websiteUrl: 'https://www.philipithomas.com/mcp/setup',
       },
     })
     expect(result.instructions).toContain('Use search')
@@ -330,7 +330,7 @@ describe('POST /api/mcp', () => {
   })
 })
 
-describe('non-POST /api/mcp methods', () => {
+describe('non-POST /mcp methods', () => {
   it.each([
     ['GET', GET],
     ['DELETE', DELETE],

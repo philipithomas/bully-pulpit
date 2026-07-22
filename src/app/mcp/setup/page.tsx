@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { feedDiscovery } from '@/lib/feeds/discovery'
 import { siteIdentity } from '@/lib/site-identity'
 
-const endpoint = `${siteIdentity.productionUrl}/api/mcp`
+const endpoint = `${siteIdentity.productionUrl}/mcp`
 
 const linkClassName =
   'underline decoration-gray-300 underline-offset-4 transition-colors duration-300 hover:text-gray-950 hover:decoration-gray-950'
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: 'MCP server',
   description:
     "Connect an AI client to search, list, and read Philip Ilic Thomas's public writing.",
-  alternates: { canonical: '/mcp', types: feedDiscovery() },
+  alternates: { canonical: '/mcp/setup', types: feedDiscovery() },
 }
 
 function CodeBlock({ children }: { children: string }) {
@@ -235,7 +235,7 @@ export default function McpPage() {
               <div className="mt-5 space-y-5 font-serif text-gray-700 text-lg leading-relaxed">
                 <p>
                   If the tools do not appear, confirm that the endpoint ends in{' '}
-                  <code className="font-mono">/api/mcp</code>, then reconnect or
+                  <code className="font-mono">/mcp</code>, then reconnect or
                   refresh the client’s tool list. Claude Code reports the
                   connection under <code className="font-mono">/mcp</code>.
                   ChatGPT provides a Scan tools action while creating the app.
