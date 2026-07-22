@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  speechModel: { provider: 'gateway', modelId: 'openai/tts-1' },
+  speechModel: {
+    provider: 'gateway',
+    modelId: 'xai/grok-tts',
+  },
   speechModelFactory: vi.fn(),
 }))
 
@@ -19,6 +22,7 @@ import { GET } from '@/app/api/phone/ivr-audio/route'
 import {
   PHONE_IVR_FALLBACK_PROMPTS,
   PHONE_IVR_SPEECH_MODEL_ID,
+  PHONE_IVR_SPEECH_SPEED,
   PHONE_IVR_SPEECH_VOICE,
   phoneIvrAudioUrl,
   phoneIvrFallbackAudioPath,
@@ -59,7 +63,7 @@ afterEach(() => {
 })
 
 describe('GET /api/phone/ivr-audio', () => {
-  it('generates cacheable Sage WAV audio through AI Gateway', async () => {
+  it('generates cacheable, brisk Iris WAV audio through AI Gateway', async () => {
     const response = await GET(new Request(validAudioUrl()))
 
     expect(response.status).toBe(200)
@@ -75,15 +79,17 @@ describe('GET /api/phone/ivr-audio', () => {
     expect(mocks.speechModelFactory).toHaveBeenCalledWith(
       PHONE_IVR_SPEECH_MODEL_ID
     )
+    expect(PHONE_IVR_SPEECH_MODEL_ID).toBe('xai/grok-tts')
+    expect(PHONE_IVR_SPEECH_VOICE).toBe('iris')
+    expect(PHONE_IVR_SPEECH_SPEED).toBe(1.35)
     const call = mockedGenerateSpeech.mock.calls[0][0]
     expect(call.model).toBe(mocks.speechModel)
     expect(call.text).toBe(DYNAMIC_GREETING)
     expect(call.voice).toBe(PHONE_IVR_SPEECH_VOICE)
     expect(call.outputFormat).toBe('wav')
+    expect(call.speed).toBe(PHONE_IVR_SPEECH_SPEED)
     expect(call.abortSignal).toBeInstanceOf(AbortSignal)
     expect(call.maxRetries).toBe(1)
-    expect(call).not.toHaveProperty('instructions')
-    expect(call).not.toHaveProperty('speed')
   })
 
   it('serves a committed Gateway-generated WAV for fixed prompts', async () => {
@@ -138,7 +144,7 @@ describe('GET /api/phone/ivr-audio', () => {
     expect(mockedGenerateSpeech).not.toHaveBeenCalled()
   })
 
-  it('serves the static Sage WAV when speech generation fails', async () => {
+  it('serves the static Iris WAV when speech generation fails', async () => {
     mockedGenerateSpeech.mockRejectedValueOnce(new Error('gateway unavailable'))
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const fetchMock = vi

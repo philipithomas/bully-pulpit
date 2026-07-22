@@ -117,8 +117,9 @@ describe('generateGreeting', () => {
 
   it('uses the pronunciation spelling only in the spoken identification', () => {
     expect(FALLBACK_GREETING).toBe(
-      'You have reached the Contraption Company and Philip Ilić Thomas. This is Bell.'
+      'You have reached the Contraption Company and Philip Eelitch Thomas.'
     )
+    expect(FALLBACK_GREETING).not.toContain('Bell')
     expect(FALLBACK_GREETING).not.toContain('AI-generated')
     expect(siteIdentity.name).toBe('Philip Ilic Thomas')
   })

@@ -3,14 +3,15 @@ import { siteConfig } from '@/lib/config'
 import { twilioSecret } from '@/lib/phone/config'
 import { siteIdentity } from '@/lib/site-identity'
 
-export const PHONE_IVR_SPEECH_MODEL_ID = 'openai/tts-1'
-export const PHONE_IVR_SPEECH_VOICE = 'sage'
+export const PHONE_IVR_SPEECH_MODEL_ID = 'xai/grok-tts'
+export const PHONE_IVR_SPEECH_VOICE = 'iris'
 export const PHONE_IVR_SPEECH_FORMAT = 'wav'
-const PHONE_IVR_SPOKEN_NAME = siteIdentity.name.replace('Ilic', 'Ilić')
+export const PHONE_IVR_SPEECH_SPEED = 1.35
+const PHONE_IVR_SPOKEN_NAME = siteIdentity.name.replace('Ilic', 'Eelitch')
 export const PHONE_IVR_FALLBACK_PROMPTS = {
   alreadyHandled: 'This phone menu request was already handled. Goodbye.',
   goodbye: 'Thank you. Goodbye.',
-  greeting: `You have reached the Contraption Company and ${PHONE_IVR_SPOKEN_NAME}. This is Bell.`,
+  greeting: `You have reached the Contraption Company and ${PHONE_IVR_SPOKEN_NAME}.`,
   menu: 'Press 1 to leave a voicemail. Press 2 to subscribe to recurring new-post texts from philipithomas.com. A new or reactivated subscription includes one Bell contact-card multimedia message. Frequency varies. Message and data rates may apply. Text STOP to unsubscribe or HELP for help.',
   subscribeFailed:
     'We could not subscribe this caller ID. Please text SUBSCRIBE to the number you called.',
@@ -27,6 +28,7 @@ const PHONE_IVR_AUDIO_VERSION = [
   PHONE_IVR_SPEECH_MODEL_ID,
   PHONE_IVR_SPEECH_VOICE,
   PHONE_IVR_SPEECH_FORMAT,
+  String(PHONE_IVR_SPEECH_SPEED),
   `schema-${PHONE_IVR_AUDIO_SCHEMA_VERSION}`,
 ].join('\0')
 const PHONE_IVR_AUDIO_SIGNING_CONTEXT = 'phone-ivr-audio'
@@ -52,7 +54,7 @@ function isPhoneIvrFallbackKey(value: unknown): value is PhoneIvrFallbackKey {
   )
 }
 
-/** Static Sage WAV for a fixed prompt or a dynamic prompt's outage fallback. */
+/** Static Iris WAV for a fixed prompt or a dynamic prompt's outage fallback. */
 export function phoneIvrFallbackAudioPath(
   fallback: PhoneIvrFallbackKey
 ): string {
