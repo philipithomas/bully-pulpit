@@ -1,19 +1,51 @@
 {
-  "generatedAt": "2026-07-22T01:02:04.935Z",
+  "generatedAt": "2026-07-23T14:04:19.581Z",
   "posts": {
+    "introducing-tidbits-ongoing-photo-journal": {
+      "related": [
+        {
+          "slug": "introducing-tsundoku",
+          "score": 0.1515988
+        },
+        {
+          "slug": "2023-10",
+          "score": 0.1746665
+        },
+        {
+          "slug": "tacit-knowledge-in-software",
+          "score": 0.1829911
+        }
+      ]
+    },
+    "cable-car": {
+      "related": [
+        {
+          "slug": "introducing-tidbits-ongoing-photo-journal",
+          "score": 0.1875879
+        },
+        {
+          "slug": "sunrise-in-chinatown",
+          "score": 0.3198735
+        },
+        {
+          "slug": "carrera",
+          "score": 0.3407392
+        }
+      ]
+    },
     "sunrise-in-chinatown": {
       "related": [
+        {
+          "slug": "introducing-tidbits-ongoing-photo-journal",
+          "score": 0.2877616
+        },
         {
           "slug": "workshop-welcome",
           "score": 0.3073985
         },
         {
-          "slug": "backup-plans",
-          "score": 0.3213601
-        },
-        {
-          "slug": "almost-perfect",
-          "score": 0.3267062
+          "slug": "cable-car",
+          "score": 0.3198735
         }
       ]
     },
@@ -289,6 +321,22 @@
         }
       ]
     },
+    "introducing-tsundoku": {
+      "related": [
+        {
+          "slug": "2026-07",
+          "score": 0.1204616
+        },
+        {
+          "slug": "code-as-content-and-digital-proprioception",
+          "score": 0.12974
+        },
+        {
+          "slug": "2023-10",
+          "score": 0.1397996
+        }
+      ]
+    },
     "dt-suzuki-bench": {
       "related": [
         {
@@ -350,22 +398,6 @@
         {
           "slug": "avant-garde-coffee",
           "score": 0.2077236
-        }
-      ]
-    },
-    "introducing-tsundoku": {
-      "related": [
-        {
-          "slug": "2026-07",
-          "score": 0.1204616
-        },
-        {
-          "slug": "code-as-content-and-digital-proprioception",
-          "score": 0.12974
-        },
-        {
-          "slug": "2023-10",
-          "score": 0.1397996
         }
       ]
     },
@@ -433,6 +465,22 @@
         }
       ]
     },
+    "spring-cleaning": {
+      "related": [
+        {
+          "slug": "software-in-the-ai-era",
+          "score": 0.0982147
+        },
+        {
+          "slug": "maintenance",
+          "score": 0.1028626
+        },
+        {
+          "slug": "build-and-tinker",
+          "score": 0.1072394
+        }
+      ]
+    },
     "downpour": {
       "related": [
         {
@@ -478,22 +526,6 @@
         {
           "slug": "more-geisha",
           "score": 0.2346246
-        }
-      ]
-    },
-    "spring-cleaning": {
-      "related": [
-        {
-          "slug": "software-in-the-ai-era",
-          "score": 0.0982147
-        },
-        {
-          "slug": "maintenance",
-          "score": 0.1028626
-        },
-        {
-          "slug": "build-and-tinker",
-          "score": 0.1072394
         }
       ]
     },
@@ -600,12 +632,12 @@
           "score": 0.1543372
         },
         {
-          "slug": "2023-10",
-          "score": 0.2152081
+          "slug": "introducing-tidbits-ongoing-photo-journal",
+          "score": 0.2079665
         },
         {
-          "slug": "code-as-content-and-digital-proprioception",
-          "score": 0.2206891
+          "slug": "2023-10",
+          "score": 0.2152081
         }
       ]
     },
@@ -977,22 +1009,6 @@
         }
       ]
     },
-    "2025-11": {
-      "related": [
-        {
-          "slug": "2025-12",
-          "score": 0.0298258
-        },
-        {
-          "slug": "2023-11",
-          "score": 0.0322699
-        },
-        {
-          "slug": "2025-10",
-          "score": 0.0373085
-        }
-      ]
-    },
     "introducing-workshop": {
       "related": [
         {
@@ -1006,6 +1022,22 @@
         {
           "slug": "the-next-iteration-of-contraption-company",
           "score": 0.1060377
+        }
+      ]
+    },
+    "2025-11": {
+      "related": [
+        {
+          "slug": "2025-12",
+          "score": 0.0298258
+        },
+        {
+          "slug": "2023-11",
+          "score": 0.0322699
+        },
+        {
+          "slug": "2025-10",
+          "score": 0.0373085
         }
       ]
     },

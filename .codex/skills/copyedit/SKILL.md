@@ -24,8 +24,8 @@ Use the MDX file path supplied by the user. If no path is provided, ask which fi
    - Do not link generic words, existing links, headings, image alt text, or code blocks.
    - Do not add more than one link to the same post.
 6. Make light style edits only:
-   - Fix contractions.
-   - Replace em dashes with other punctuation.
+   - Avoid contractions, but preserve intentional uses that suit the author's voice.
+   - Replace em dashes with normal dashes.
    - Remove the word `very`.
    - Add missing Oxford commas.
    - Remove exclamation points.
