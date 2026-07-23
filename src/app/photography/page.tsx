@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { PhotographyImageSearch } from '@/app/photography/image-search'
 import { getAllPosts } from '@/lib/content/loader'
-import type { Post } from '@/lib/content/types'
+import type { PhotoMetadata, Post } from '@/lib/content/types'
 import {
   CAPTIONED_ZOOM_IMAGE_SIZES,
   zoomImageDataAttrs,
@@ -43,6 +43,7 @@ interface Photo {
   alt: string
   width: number
   height: number
+  photo?: PhotoMetadata
   mentions: PhotoMention[]
 }
 
@@ -82,6 +83,7 @@ function collectPhotos(): Photo[] {
     const existing = bySrc.get(coverImage)
     if (existing) {
       existing.mentions.push(photoMention(post))
+      existing.photo ??= post.frontmatter.photo
       continue
     }
     const photo = {
@@ -89,6 +91,7 @@ function collectPhotos(): Photo[] {
       alt: coverImageAlt ?? title,
       width: post.coverDimensions.width,
       height: post.coverDimensions.height,
+      photo: post.frontmatter.photo,
       mentions: [photoMention(post)],
     }
     photos.push(photo)
@@ -151,6 +154,9 @@ export default function PhotographyPage() {
               data-zoomable=""
               data-zoom-group="photography"
               data-zoom-caption-title={photo.alt}
+              data-zoom-caption-photo={
+                photo.photo ? JSON.stringify(photo.photo) : undefined
+              }
               data-zoom-caption-footer-heading="Featured on"
               data-zoom-caption-links={JSON.stringify(photo.mentions)}
               {...zoomImageDataAttrs({

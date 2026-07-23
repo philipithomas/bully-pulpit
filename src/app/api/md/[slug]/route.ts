@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
+import { photoMetadataText } from '@/lib/content/photo-metadata'
 import {
   formatPhoneNumberForDisplay,
   sitePhoneNumber,
@@ -29,6 +30,9 @@ export async function GET(_request: Request, { params }: Props) {
     item.frontmatter.description ? `\n> ${item.frontmatter.description}` : '',
     item.frontmatter.publishedAt
       ? `\nDate: ${item.frontmatter.publishedAt}`
+      : '',
+    item.frontmatter.photo
+      ? `\nPhoto: ${photoMetadataText(item.frontmatter.photo)}`
       : '',
     '\n---\n',
     content,

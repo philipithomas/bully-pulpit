@@ -92,6 +92,11 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
         data-zoom-caption-date={post.frontmatter.publishedAt}
         data-zoom-caption-location-name={location?.name}
         data-zoom-caption-location-url={location?.url}
+        data-zoom-caption-photo={
+          post.frontmatter.photo
+            ? JSON.stringify(post.frontmatter.photo)
+            : undefined
+        }
         {...zoomImageDataAttrs({
           src: coverImage,
           dimensions: post.coverDimensions,

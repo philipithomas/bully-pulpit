@@ -1,4 +1,5 @@
 import { siteConfig } from '@/lib/config'
+import { photoMetadataText } from '@/lib/content/photo-metadata'
 import { getRelatedPostsForEmail } from '@/lib/content/related-email'
 import {
   markdownToPlaintext,
@@ -50,7 +51,8 @@ export async function buildEmailBodyHtml(post: Post): Promise<EmailBody> {
     post.frontmatter.coverImage,
     post.frontmatter.coverImageAlt,
     post.newsletter === 'postcard' ? null : post.frontmatter.publishedAt,
-    post.frontmatter.location
+    post.frontmatter.location,
+    post.frontmatter.photo
   )
   const html = emailHeader + markdownHtml + relatedPostsHtml
   // Short snippet for the preheader/preview; full text for the text/plain
@@ -69,7 +71,10 @@ export async function buildEmailBodyHtml(post: Post): Promise<EmailBody> {
   ]
     .filter((part): part is string => Boolean(part))
     .join('\n')
-  const bodyText = renderedBodyText || fallbackBodyText
+  const photoText = photoMetadataText(post.frontmatter.photo)
+  const bodyText = renderedBodyText
+    ? [photoText, renderedBodyText].filter(Boolean).join('\n\n')
+    : [fallbackBodyText, photoText].filter(Boolean).join('\n')
   const previewFallback =
     post.frontmatter.coverImageAlt ?? post.frontmatter.title
   const previewText = subtitle

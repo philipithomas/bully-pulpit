@@ -8,6 +8,7 @@ import {
   MAX_PUBLIC_IMAGE_BYTES,
   MAX_PUBLIC_IMAGE_EDGE,
 } from '@/lib/content/image-policy'
+import { imageHasEmbeddedLocationMetadata } from '@/lib/content/image-privacy'
 import { getAllPosts, getPages } from '@/lib/content/loader'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { renderFullNewsletter } from '@/lib/email/send'
@@ -26,19 +27,26 @@ import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
  * run.
  *
  *   1. Cover images referenced by frontmatter exist on disk.
- *   2. Public web images fit the local deployment policy: web-sized sources
+ *   2. Photo-newsletter cover images contain no embedded GPS/location
+ *      metadata, including draft and orphaned files in their cover folders.
+ *   3. Public web images fit the local deployment policy: web-sized sources
  *      only, no camera originals or LFS pointers in the Vercel artifact.
- *   3. The committed search index matches the recomputed merkle tree over the
+ *   4. The committed search index matches the recomputed merkle tree over the
  *      searchable corpus, and related-posts.json covers every post without
  *      recommending photo posts from non-photo posts (pnpm search:index).
- *   4. In-article image sources are covered by the same public image policy.
- *   5. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
+ *   5. In-article image sources are covered by the same public image policy.
+ *   6. Every body image (markdown `![](src)` and MDX `<img>`/`<Image>`) ships
  *      with non-empty alt text — a missing or empty alt fails the build.
- *   6. The rendered email HTML for every non-exempt post stays under Gmail's
+ *   7. The rendered email HTML for every non-exempt post stays under Gmail's
  *      clipping threshold (warn near the line, fail over it).
  */
 
 const IMAGES = path.join(process.cwd(), 'public/images')
+const COVERS = path.join(IMAGES, 'covers')
+const PHOTO_COVER_DIRS = [
+  path.join(COVERS, 'tidbits'),
+  path.join(COVERS, 'tsundoku'),
+]
 const RELATED_JSON = path.join(
   process.cwd(),
   'src/generated/related-posts.json'
@@ -79,9 +87,25 @@ async function checkPublicImagePolicy(filePath: string) {
   }
 }
 
+async function checkPublicCoverPrivacy(filePath: string) {
+  const relative = path.relative(process.cwd(), filePath)
+  try {
+    if (await imageHasEmbeddedLocationMetadata(filePath)) {
+      errors.push(
+        `${relative} contains embedded GPS/location metadata — export with Strip GPS Location before publishing`
+      )
+    }
+  } catch {
+    errors.push(
+      `${relative} could not be checked for embedded GPS/location metadata`
+    )
+  }
+}
+
 async function main() {
   const posts = getAllPosts()
   const pages = getPages()
+  const referencedPhotoCovers = new Set<string>()
 
   // 1: cover images referenced by frontmatter must exist
   for (const post of posts) {
@@ -90,10 +114,15 @@ async function main() {
     const source = path.join(process.cwd(), 'public', cover)
     if (!fs.existsSync(source)) {
       errors.push(`${post.slug}: coverImage ${cover} does not exist on disk`)
+    } else if (isPhotoNewsletter(post.newsletter)) {
+      referencedPhotoCovers.add(source)
     }
   }
 
-  // 2 + 4: every deployable public raster image must fit the web image policy.
+  // 2 + 3: every photo-newsletter cover must be free of embedded location
+  // metadata, and every deployable public raster image must fit the web image
+  // policy. Scanning the newsletter directories catches draft and orphaned
+  // covers too; the explicit set also catches legacy/shared cover locations.
   if (fs.existsSync(IMAGES)) {
     const stack = [IMAGES]
     while (stack.length > 0) {
@@ -105,6 +134,12 @@ async function main() {
           continue
         }
         if (!entry.isFile() || !isPolicyImagePath(full)) continue
+        const isPhotoCover =
+          referencedPhotoCovers.has(full) ||
+          PHOTO_COVER_DIRS.some((dir) => full.startsWith(`${dir}${path.sep}`))
+        if (isPhotoCover) {
+          await checkPublicCoverPrivacy(full)
+        }
         await checkPublicImagePolicy(full)
       }
     }

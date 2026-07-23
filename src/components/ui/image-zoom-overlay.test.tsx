@@ -44,6 +44,15 @@ function immersiveImage(index = 1): ZoomedImage {
       date: '2026-07-11',
       locationName: 'San Francisco Museum of Modern Art',
       locationUrl: 'https://maps.app.goo.gl/YHxezDBcwdY6quHX9',
+      photo: {
+        camera: 'Leica M11-P',
+        lens: 'Summicron-M 35 f/2 ASPH.',
+        focalLength: '35 mm',
+        aperture: 'f/5.6',
+        apertureEstimated: true,
+        exposureTime: '1/250 s',
+        iso: 2000,
+      },
       presentation: 'immersive',
       collection: 'tidbits',
     },
@@ -127,9 +136,25 @@ describe('ImageZoomOverlay', () => {
     }
 
     const html = renderOverlay(image)
+    const captionPanel =
+      html.match(
+        /<aside[^>]*data-zoom-caption-panel=""[^>]*>[\s\S]*?<\/aside>/
+      )?.[0] ?? ''
 
     expect(html).toContain('landscape:grid-cols-')
     expect(html).toContain('aria-label="Tsundoku"')
+    expect(html).toContain('aria-label="Photo metadata"')
+    expect(html).toContain('Leica M11-P')
+    expect(html).toContain('Summicron-M 35 f/2 ASPH.')
+    expect(html).toContain('35 mm')
+    expect(html).toContain('f/5.6')
+    expect(html).toContain('1/250 s')
+    expect(html).toContain('ISO 2000')
+    expect(html).toContain('data-slot="popover-trigger"')
+    expect(html).not.toMatch(/>\s*Estimated(?: aperture)?\s*</)
+    expect(captionPanel.indexOf('aria-label="Photo metadata"')).toBeGreaterThan(
+      captionPanel.indexOf('>SFMOMA</h2>')
+    )
     expect(html).not.toContain('immersive-zoom-stage')
     expect(html).not.toContain('immersive-zoom-chrome')
   })

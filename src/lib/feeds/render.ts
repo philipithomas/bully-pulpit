@@ -1,4 +1,5 @@
 import { siteConfig } from '@/lib/config'
+import { photoMetadataItems } from '@/lib/content/photo-metadata'
 import {
   markdownToPlaintext,
   renderMarkdownToHtml,
@@ -52,6 +53,21 @@ function renderCoverImageHtml(post: Post): string {
   return `<p><img src="${siteConfig.url}${post.frontmatter.coverImage}" alt="${alt}"></p>`
 }
 
+function renderPhotoMetadataHtml(post: Post): string {
+  const items = photoMetadataItems(post.frontmatter.photo)
+  if (items.length === 0) return ''
+
+  const values = items
+    .map((item) => {
+      const value = escapeHtml(item.value)
+      return item.estimated
+        ? `<span title="Estimated aperture" aria-label="${value}, estimated">${value}</span>`
+        : value
+    })
+    .join(' <span aria-hidden="true">·</span> ')
+  return `<p>${values}</p>`
+}
+
 function postPlaintextFallback(post: Post): string {
   const plain = markdownToPlaintext(post.content, 2000)
   if (plain) return plain
@@ -71,6 +87,11 @@ export async function renderPostContentHtml(post: Post): Promise<string> {
     restoreYouTubeEmbedsAsHtml(html, embeds, renderEmbedHtml),
     siteConfig.url
   ).trim()
+  if (post.frontmatter.photo) {
+    return [renderCoverImageHtml(post), renderPhotoMetadataHtml(post), resolved]
+      .filter(Boolean)
+      .join('\n')
+  }
   if (resolved) return resolved
   return (
     renderCoverImageHtml(post) ||

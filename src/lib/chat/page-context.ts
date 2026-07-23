@@ -1,4 +1,5 @@
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
+import { photoMetadataLabeledText } from '@/lib/content/photo-metadata'
 import {
   NEWSLETTERS,
   type Newsletter,
@@ -61,16 +62,20 @@ export function toPlaintext(mdx: string): string {
  * then adds the active number here for live page reads.
  */
 export function toPagePlaintext(
-  item: Pick<Page | Post, 'slug' | 'content'>
+  item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>
 ): string {
   const plain = toPlaintext(item.content)
   if (item.slug === 'stargazing') {
     return toPlaintext(stargazingPageContent(item.content))
   }
-  if (item.slug !== 'contact') return plain
+  const photo = photoMetadataLabeledText(item.frontmatter.photo)
+  const content = [photo ? `Photo metadata: ${photo}` : '', plain]
+    .filter(Boolean)
+    .join('\n\n')
+  if (item.slug !== 'contact') return content
 
   const phoneNumber = sitePhoneDisplayNumber()
-  return phoneNumber ? `${plain}\n\nTelephone: ${phoneNumber}` : plain
+  return phoneNumber ? `${content}\n\nTelephone: ${phoneNumber}` : content
 }
 
 /**

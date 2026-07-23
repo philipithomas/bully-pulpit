@@ -63,6 +63,7 @@ export const fetchPost = tool({
       description: item.frontmatter.description ?? null,
       publishedAt: item.frontmatter.publishedAt ?? null,
       newsletter: 'newsletter' in item ? item.newsletter : null,
+      photo: item.frontmatter.photo ?? null,
       outline,
       images,
       content,
