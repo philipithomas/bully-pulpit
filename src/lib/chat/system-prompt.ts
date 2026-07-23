@@ -1,5 +1,6 @@
 import type { PageContextContent } from '@/lib/chat/page-context'
 import { siteConfig } from '@/lib/config'
+import { smsSiteOrigin } from '@/lib/phone/sms-url'
 import { publicAppPages } from '@/lib/public-pages'
 
 interface SystemPromptOptions {
@@ -11,6 +12,7 @@ interface SystemPromptOptions {
 
 export function getSystemPrompt(options?: SystemPromptOptions) {
   const isSms = options?.surface === 'sms'
+  const smsOrigin = smsSiteOrigin()
   const readableAppPages = publicAppPages
     .map((page) => `${page.path} (${page.title})`)
     .join(', ')
@@ -74,13 +76,13 @@ Once you have enough context, stop searching and answer. ${isSms ? 'Use at most 
 
 ${
   isSms
-    ? 'When a source link materially helps, cite only the single most useful source. Write its title followed by the full URL returned by the tool. Do not use Markdown link syntax. Never fabricate or guess URLs. For site sources, make relative URLs absolute on https://www.philipithomas.com.'
+    ? `When a source link materially helps, cite only the single most useful source. Write its title followed by the full URL returned by the tool. Do not use Markdown link syntax. Never fabricate or guess URLs. For site sources, make relative URLs absolute on ${smsOrigin}.`
     : 'Always link to every post, page, or external source you mention or draw from. Use markdown links with the exact URL returned by a tool: [Post Title](/slug) or [External title](https://example.com/page). Never fabricate or guess URLs.'
 }
 
 ${
   isSms
-    ? 'Search excerpts and fetchPost outlines may include a section URL with a heading anchor. If you cite one, keep the exact path and anchor returned by the tool, make it absolute on https://www.philipithomas.com, and put it at the end of the reply.'
+    ? `Search excerpts and fetchPost outlines may include a section URL with a heading anchor. If you cite one, keep the exact path and anchor returned by the tool, make it absolute on ${smsOrigin}, and put it at the end of the reply.`
     : 'Search excerpts and fetchPost outlines may include a section url with a heading anchor, like /slug#heading-anchor. When the content you cite sits under a heading, link to that section url instead of the bare post url, so the reader lands on the exact section. Use only section urls the tools returned. Never construct an anchor yourself, and never add an anchor to a post url that came without one.\n\nPrefer linking inline within your prose. When a post supports a point but is not mentioned by name in the sentence, put the link in parentheses at the end of the sentence. For example: "Philip built a home server for analytics and email. ([A mini data center](/a-mini-data-center))"'
 }
 

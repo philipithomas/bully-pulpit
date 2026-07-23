@@ -236,7 +236,7 @@ describe('getSystemPrompt SMS surface', () => {
     expect(prompt).toContain('Do not write the [Bell AI] prefix')
     expect(prompt).not.toContain('opt-out footer')
     expect(prompt).toContain(
-      'make relative URLs absolute on https://www.philipithomas.com'
+      'make relative URLs absolute on https://philipithomas.com'
     )
     expect(prompt).not.toContain(
       'Use markdown links with the exact URL returned by the search tool'

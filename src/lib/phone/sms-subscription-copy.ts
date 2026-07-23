@@ -5,7 +5,7 @@ export const SMS_BELL_CONTACT_ONBOARDING =
   "philipithomas.com: Let's give this number a name and photo. Open the attached card, then tap Create New Contact to save Bell. Text Bell questions about philipithomas.com."
 
 export const SMS_BELL_CONTACT_FALLBACK =
-  'philipithomas.com: Open https://www.philipithomas.com/bell.vcf, then tap Create New Contact to save Bell. The attachment did not work.'
+  'philipithomas.com: Open https://philipithomas.com/bell.vcf, then tap Create New Contact to save Bell. The attachment did not work.'
 
 export const SMS_HELP_RESPONSE =
   'philipithomas.com: Help at mail@philipithomas.com. You receive new-post texts. Frequency varies. Message and data rates may apply. Reply STOP to unsubscribe.'

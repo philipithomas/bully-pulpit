@@ -24,9 +24,9 @@ function post(input?: Partial<Post>): Post {
 }
 
 describe('newsletter SMS', () => {
-  it('renders the attributed post link and compliance footer', () => {
+  it('renders one compact line with the apex post link', () => {
     expect(renderNewsletterSms(post())).toBe(
-      'New Tsundoku post:\nFirst photo\nhttps://www.philipithomas.com/first-photo?utm_source=sms\n\n(Reply STOP to unsubscribe.)'
+      'New Tsundoku post: First photo https://philipithomas.com/first-photo'
     )
   })
 
@@ -43,7 +43,7 @@ describe('newsletter SMS', () => {
         })
       )
     ).toBe(
-      'New Workshop post:\nAdding SMS support\nhttps://www.philipithomas.com/adding-sms-support?utm_source=sms\n\n(Reply STOP to unsubscribe.)'
+      'New Workshop post: Adding SMS support https://philipithomas.com/adding-sms-support'
     )
   })
 
@@ -60,11 +60,29 @@ describe('newsletter SMS', () => {
     })
 
     expect(renderNewsletterSms(tidbitsPost)).toBe(
-      'New tidbits post:\nSFMOMA\nhttps://www.philipithomas.com/sfmoma?utm_source=sms\n\n(Reply STOP to unsubscribe.)'
+      'New tidbits post: SFMOMA https://philipithomas.com/sfmoma'
     )
     expect(newsletterSmsMediaUrl(tidbitsPost)).toBe(
       'https://www.philipithomas.com/api/phone/newsletter-cover/sfmoma?v=%2Fimages%2Fcovers%2Ftidbits%2Fsfmoma.jpg'
     )
+  })
+
+  it('collapses title whitespace without adding a footer', () => {
+    const body = renderNewsletterSms(
+      post({
+        frontmatter: {
+          ...post().frontmatter,
+          title: 'Across\n two\tlines',
+        },
+      })
+    )
+
+    expect(body).toBe(
+      'New Tsundoku post: Across two lines https://philipithomas.com/first-photo'
+    )
+    expect(body).not.toContain('\n')
+    expect(body).not.toContain('utm_')
+    expect(body).not.toContain('STOP')
   })
 
   it('attaches a versioned normalized cover for photography newsletters', () => {
