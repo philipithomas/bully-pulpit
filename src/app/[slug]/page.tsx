@@ -345,7 +345,7 @@ export default async function SlugPage({ params }: Props) {
         >
           {/* Header */}
           {isTidbitsPost ? (
-            <header className="mt-5 mb-12 grid gap-3 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <header className="mt-5 mb-12 grid gap-3 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline">
               <div className="min-w-0">
                 <h1 className="font-sans font-semibold text-2xl text-gray-950 leading-tight tracking-tight text-pretty sm:text-3xl">
                   {item.frontmatter.title}
