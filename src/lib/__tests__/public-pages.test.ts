@@ -9,30 +9,43 @@ import {
   publicAppPages,
 } from '@/lib/public-pages'
 
-const NON_REGISTRY_TOP_LEVEL_PAGES = new Set([
-  '[slug]',
-  'account',
-  'printing-press',
-  'unsubscribe',
-])
+const NON_REGISTRY_PAGE_PREFIXES = [
+  '/[slug]',
+  '/account',
+  '/printing-press',
+  '/unsubscribe',
+]
 
-function publicTopLevelAppPaths(): string[] {
+function publicAppRouterPaths(): string[] {
   const appDir = path.join(process.cwd(), 'src/app')
-  const paths = fs
-    .readdirSync(appDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .filter((entry) => !NON_REGISTRY_TOP_LEVEL_PAGES.has(entry.name))
-    .filter((entry) => fs.existsSync(path.join(appDir, entry.name, 'page.tsx')))
-    .map((entry) => `/${entry.name}`)
+  const paths: string[] = []
 
-  if (fs.existsSync(path.join(appDir, 'page.tsx'))) paths.push('/')
+  function visit(directory: string) {
+    if (fs.existsSync(path.join(directory, 'page.tsx'))) {
+      const relative = path.relative(appDir, directory)
+      const pagePath = relative ? `/${relative}` : '/'
+      if (
+        !NON_REGISTRY_PAGE_PREFIXES.some(
+          (prefix) => pagePath === prefix || pagePath.startsWith(`${prefix}/`)
+        )
+      ) {
+        paths.push(pagePath)
+      }
+    }
+
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory()) visit(path.join(directory, entry.name))
+    }
+  }
+
+  visit(appDir)
   return paths.sort()
 }
 
 describe('public app page registry', () => {
-  it('covers every indexable top-level App Router page', () => {
+  it('covers every indexable App Router page', () => {
     expect(publicAppPages.map((page) => page.path).sort()).toEqual(
-      publicTopLevelAppPaths()
+      publicAppRouterPaths()
     )
     expect(publicAppPages.map((page) => page.path)).toEqual(
       PUBLIC_APP_PAGE_PATHS

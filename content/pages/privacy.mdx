@@ -3,7 +3,7 @@ title: "Privacy policy"
 description: "Privacy policy for philipithomas.com."
 ---
 
-Last updated: 2026-07-13.
+Last updated: 2026-07-20.
 
 ## Data collection
 
@@ -19,6 +19,16 @@ This site collects minimal data:
 ## Analytics
 
 This site uses Vercel Web Analytics and Speed Insights to measure traffic, feature use, and performance in aggregate. These tools are cookieless and do not track you across sites. Custom events use broad categories. They do not include email addresses, phone numbers, IP addresses, search text, Bell message text, or conversation identifiers. Private account, authentication, unsubscribe, and Printing press pages are excluded from both services.
+
+## Public MCP server
+
+This site provides a public, read-only Model Context Protocol (MCP) server so compatible AI clients can search, list, and fetch public posts and pages. The application receives the MCP request and the tool arguments selected by your AI host: a search query, a public content ID, or listing filters. A content ID identifies a public page or post, not a person. Vercel also receives the standard HTTP request metadata needed to deliver and protect the endpoint.
+
+The MCP server does not require a site account or authentication, use site authentication cookies, or write its requests and responses to the site's application database. The application does not retain MCP tool arguments or results after completing the request. It logs an error category, but not the query or content ID, if an unexpected request failure occurs. Vercel and the AI processors described below may retain operational metadata under their own service settings and policies. Raw MCP search queries and content IDs are not sent to Vercel Web Analytics.
+
+Semantic MCP searches send the search query through Vercel AI Gateway to Google's Gemini Embedding 2 service to create a query embedding. When semantic search is unavailable, the server can fall back to the site's local keyword index. The `fetch` and `list_posts` tools read public site content without calling an AI model provider.
+
+The AI host you choose, such as Anthropic Claude or OpenAI ChatGPT, processes your prompt and the tool results under its own privacy and retention settings. The site generally receives the resulting tool arguments rather than your complete conversation. To stop using the server, remove or disable the connection in that AI host. There is no site account, authorization grant, or access token to revoke. Search rate limits and other abuse controls apply to the public endpoint.
 
 ## What we do not track
 
@@ -53,7 +63,8 @@ Your email address is stored as long as you remain subscribed. Upon unsubscribin
 ## Third-party services
 
 - **Vercel**: Vercel hosts and serves this site, including Vercel Web Analytics and Speed Insights.
-- **AI model providers**: AI features route through the Vercel AI Gateway to third-party model providers, currently OpenAI for Bell and Google for search embeddings when embedding search is enabled. These providers process Bell messages and search queries to generate responses or search results. Under the terms of their APIs, they do not use this content to train models.
+- **AI model providers**: AI features route through the Vercel AI Gateway to third-party model providers, currently OpenAI for Bell and Google for search embeddings when embedding search is enabled, including semantic MCP search. These providers process Bell messages and search queries to generate responses or search results. Under the terms of their APIs, they do not use this content to train models.
+- **Connected AI hosts**: The AI service you choose to connect to the public MCP server processes your prompts and the public tool results under its own terms, privacy policy, and account settings.
 - **AWS SES**: Amazon Simple Email Service delivers all email.
 - **Neon**: Neon hosts the subscriber database.
 - **Twilio**: Twilio carries phone calls and text messages.
