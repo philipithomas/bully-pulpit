@@ -5,7 +5,8 @@ import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { siteConfig } from '@/lib/config'
-import type { Post } from '@/lib/content/types'
+import { photoMetadataItems } from '@/lib/content/photo-metadata'
+import type { PhotoMetadata, Post } from '@/lib/content/types'
 import { escapeHtml } from '@/lib/email/escape'
 
 const SANS_STACK = `'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`
@@ -152,14 +153,15 @@ export function renderEmailHeaderHtml(
   coverImage?: string | null,
   coverImageAlt?: string | null,
   publishedAt?: string | null,
-  location?: { name: string; url: string } | null
+  location?: { name: string; url: string } | null,
+  photo?: PhotoMetadata | null
 ): string {
   const postUrl = `${siteUrl}/${slug}`
 
   let html = ''
 
   if (publishedAt || location) {
-    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0; color: #7E7A73; text-align: center; margin: 0 0 12px;">`
+    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0; color: #7E7A73; text-align: center; margin: 0 0 ${photo ? '4px' : '12px'};">`
     if (publishedAt) {
       html += escapeHtml(publishedAt)
     }
@@ -170,6 +172,19 @@ export function renderEmailHeaderHtml(
       html += `<a href="${escapeHtml(location.url)}" style="color: #7E7A73; text-decoration: underline; text-decoration-color: #B1ADA6;">${escapeHtml(location.name)}</a>`
     }
     html += `</p>`
+  }
+
+  const photoItems = photoMetadataItems(photo)
+  if (photoItems.length > 0) {
+    const values = photoItems
+      .map((item) => {
+        const value = escapeHtml(item.value)
+        return item.estimated
+          ? `<span title="Estimated aperture" aria-label="${value}, estimated">${value}</span>`
+          : value
+      })
+      .join(' <span aria-hidden="true">·</span> ')
+    html += `<p style="font-family: ${SANS_STACK}; font-size: 11px; font-weight: 400; color: #7E7A73; line-height: 1.5; text-align: center; margin: 0 0 12px;">${values}</p>`
   }
 
   html += `<h1 style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; text-align: center; margin: 0 0 4px;"><a href="${postUrl}" style="text-decoration: none; color: #111110;">${escapeHtml(title)}</a></h1>`

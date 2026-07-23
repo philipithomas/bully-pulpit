@@ -20,8 +20,10 @@ import {
   useRef,
   useState,
 } from 'react'
+import { PhotoMetadata } from '@/components/posts/photo-metadata'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { preloadZoomGalleryNeighbors } from '@/components/ui/image-zoom-preload'
+import type { PhotoMetadata as PhotoMetadataValue } from '@/lib/content/types'
 
 export interface ZoomCaption {
   href?: string | null
@@ -30,6 +32,7 @@ export interface ZoomCaption {
   date?: string | null
   locationName?: string | null
   locationUrl?: string | null
+  photo?: PhotoMetadataValue | null
   presentation?: 'rail' | 'immersive'
   collection?: 'tsundoku' | 'tidbits'
   footer?: ZoomCaptionFooter | null
@@ -537,7 +540,9 @@ export function ImageZoomOverlay({
     : hasCaption
       ? 'max-h-[58vh] max-w-[calc(100vw-1rem)] object-contain sm:max-h-[62vh] landscape:max-h-screen landscape:max-w-full md:max-h-screen md:max-w-full'
       : 'max-h-[90vh] max-w-[90vw] object-contain'
-  const hasCaptionMetadata = Boolean(caption?.date || caption?.locationName)
+  const hasDateLocationMetadata = Boolean(
+    caption?.date || caption?.locationName
+  )
   const collection =
     caption?.collection === 'tidbits'
       ? {
@@ -958,7 +963,7 @@ export function ImageZoomOverlay({
                 </button>
               </div>
               <div className="min-w-0 pt-3 landscape:pt-6 md:pt-8">
-                {hasCaptionMetadata ? (
+                {hasDateLocationMetadata ? (
                   <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-sans text-[11px] leading-5 text-white/65">
                     {caption.date ? <time>{caption.date}</time> : null}
                     {caption.date && caption.locationName ? (
@@ -981,6 +986,11 @@ export function ImageZoomOverlay({
                     ) : null}
                   </div>
                 ) : null}
+                <PhotoMetadata
+                  photo={caption.photo}
+                  tone="dark"
+                  className="mb-3"
+                />
                 <h2 className="break-words font-serif text-lg font-normal leading-snug text-white sm:text-xl">
                   {caption.title}
                 </h2>
@@ -1027,7 +1037,7 @@ export function ImageZoomOverlay({
             <div className="flex h-full max-h-[42vh] flex-col landscape:max-h-none md:max-h-none">
               <div className="flex shrink-0 items-start justify-between gap-4 px-5 pt-5 pb-2 md:px-7 md:pt-7">
                 <div className="min-w-0">
-                  {hasCaptionMetadata ? (
+                  {hasDateLocationMetadata ? (
                     <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] leading-5 text-gray-500">
                       {caption.date ? <time>{caption.date}</time> : null}
                       {caption.date && caption.locationName ? (
@@ -1050,6 +1060,7 @@ export function ImageZoomOverlay({
                       ) : null}
                     </div>
                   ) : null}
+                  <PhotoMetadata photo={caption.photo} className="mb-3" />
                   <h2 className="break-words font-sans text-xl font-semibold leading-snug text-gray-950 md:text-2xl">
                     {caption.title}
                   </h2>

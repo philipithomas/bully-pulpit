@@ -70,6 +70,37 @@ describe('renderPostContentHtml', () => {
     expect(html).not.toContain('style=')
     expect(html).not.toContain('%%bp-youtube-embed')
   })
+
+  it('renders photo metadata and marks estimated aperture without visible copy', async () => {
+    const post = makePost('A photo note.')
+    post.newsletter = 'tidbits'
+    post.frontmatter.coverImage = '/images/covers/tidbits/sfmoma.jpg'
+    post.frontmatter.coverImageAlt = 'Artworks at SFMOMA'
+    post.frontmatter.photo = {
+      camera: 'Leica M11-P',
+      lens: 'Leica Summicron-M 35 f/2 ASPH.',
+      focalLength: '35 mm',
+      aperture: 'f/5.6',
+      apertureEstimated: true,
+      exposureTime: '1/250 s',
+      iso: 2000,
+    }
+
+    const html = await renderPostContentHtml(post)
+
+    expect(html).toContain(
+      `src="${siteConfig.url}/images/covers/tidbits/sfmoma.jpg"`
+    )
+    expect(html).toContain('Leica M11-P')
+    expect(html).toContain('Leica Summicron-M 35 f/2 ASPH.')
+    expect(html).toContain('35 mm')
+    expect(html).toContain('f/5.6')
+    expect(html).toContain('1/250 s')
+    expect(html).toContain('ISO 2000')
+    expect(html).toContain('title="Estimated aperture"')
+    expect(html).toContain('aria-label="f/5.6, estimated"')
+    expect(html).not.toMatch(/>\s*Estimated(?: aperture)?\s*</)
+  })
 })
 
 describe('truncateAtSentenceBoundary', () => {

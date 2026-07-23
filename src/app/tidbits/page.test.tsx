@@ -80,7 +80,11 @@ afterEach(() => {
 describe('TidbitsPage viewer contract', () => {
   it('emits immersive parser data for the description-free SFMOMA photo', () => {
     const html = renderToStaticMarkup(<TidbitsPage />)
+    const sfmomaLink = html.match(
+      /<a[^>]*data-zoom-caption-href="\/sfmoma"[^>]*>/
+    )?.[0]
 
+    expect(sfmomaLink).toBeDefined()
     expect(html).toContain('data-zoom-caption-presentation="immersive"')
     expect(html).toContain('data-zoom-caption-collection="tidbits"')
     expect(html).toContain('data-zoom-group="tidbits"')
@@ -100,6 +104,12 @@ describe('TidbitsPage viewer contract', () => {
     expect(html).toContain('aria-haspopup="dialog"')
     expect(html).not.toContain('<figcaption')
     expect(html).not.toContain('<time')
+    expect(sfmomaLink).toContain('data-zoom-caption-photo="')
+    expect(sfmomaLink).toContain('&quot;camera&quot;:&quot;Leica M11-P&quot;')
+    expect(sfmomaLink).toContain(
+      '&quot;lens&quot;:&quot;Leica Summicron-M 35 f/2 ASPH.&quot;'
+    )
+    expect(sfmomaLink).toContain('&quot;apertureEstimated&quot;:true')
   })
 
   it('uses the approved copy and offers SMS as a secondary signup path', () => {

@@ -26,6 +26,7 @@ export async function GET(
     preview_text: previewText,
     cover_image: post.frontmatter.coverImage || null,
     cover_image_alt: post.frontmatter.coverImageAlt || null,
+    photo: post.frontmatter.photo || null,
     email_html: html,
     related_posts: relatedPosts.map((p) => ({
       slug: p.slug,

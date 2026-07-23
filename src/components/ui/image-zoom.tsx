@@ -10,6 +10,7 @@ import type {
   ZoomGalleryItem,
 } from '@/components/ui/image-zoom-overlay'
 import { preloadZoomItemSources } from '@/components/ui/image-zoom-preload'
+import type { PhotoMetadata } from '@/lib/content/types'
 import { zoomImageSources } from '@/lib/content/zoom-image'
 
 // Keeps the overlay out of the shared first-load bundle;
@@ -113,6 +114,67 @@ function positiveIntegerFromDataset(value: string | undefined): number | null {
   return parsed > 0 ? parsed : null
 }
 
+const PHOTO_METADATA_STRING_KEYS = [
+  'camera',
+  'lens',
+  'focalLength',
+  'aperture',
+  'exposureTime',
+] as const
+const PHOTO_METADATA_KEYS = new Set([
+  ...PHOTO_METADATA_STRING_KEYS,
+  'apertureEstimated',
+  'iso',
+])
+
+function photoMetadataFromDataset(
+  value: string | undefined
+): PhotoMetadata | null {
+  if (!value) return null
+  try {
+    const parsed = JSON.parse(value)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null
+    }
+
+    const record = parsed as Record<string, unknown>
+    if (Object.keys(record).some((key) => !PHOTO_METADATA_KEYS.has(key))) {
+      return null
+    }
+    for (const key of PHOTO_METADATA_STRING_KEYS) {
+      const field = record[key]
+      if (
+        field !== undefined &&
+        (typeof field !== 'string' || field.trim() === '')
+      ) {
+        return null
+      }
+    }
+    if (
+      record.iso !== undefined &&
+      (typeof record.iso !== 'number' ||
+        !Number.isInteger(record.iso) ||
+        record.iso <= 0)
+    ) {
+      return null
+    }
+    if (
+      record.apertureEstimated !== undefined &&
+      typeof record.apertureEstimated !== 'boolean'
+    ) {
+      return null
+    }
+    if (record.apertureEstimated === true && !record.aperture) return null
+
+    const hasDisplayValue =
+      PHOTO_METADATA_STRING_KEYS.some((key) => Boolean(record[key])) ||
+      typeof record.iso === 'number'
+    return hasDisplayValue ? (record as PhotoMetadata) : null
+  } catch {
+    return null
+  }
+}
+
 function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
   const img =
     element instanceof HTMLImageElement ? element : element.querySelector('img')
@@ -151,6 +213,9 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
     img.dataset.zoomCaptionLocationUrl ??
     element.dataset.zoomCaptionLocationHref ??
     img.dataset.zoomCaptionLocationHref
+  const photo = photoMetadataFromDataset(
+    element.dataset.zoomCaptionPhoto ?? img.dataset.zoomCaptionPhoto
+  )
   const presentationValue =
     element.dataset.zoomCaptionPresentation ??
     img.dataset.zoomCaptionPresentation
@@ -195,7 +260,7 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
     width,
     height,
     caption:
-      title || href || footerLinks.length > 0
+      title || href || photo || footerLinks.length > 0
         ? {
             href: href ?? null,
             title: title ?? img.alt ?? '',
@@ -203,6 +268,7 @@ function zoomItemFromElement(element: HTMLElement): ZoomGalleryItem | null {
             date,
             locationName,
             locationUrl,
+            photo,
             presentation,
             collection,
             footer:

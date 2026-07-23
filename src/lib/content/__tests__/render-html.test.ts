@@ -171,6 +171,38 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('Naka Bridge</a>')
   })
 
+  it('renders photo metadata while labeling an aperture estimate non-visually', () => {
+    const html = renderEmailHeaderHtml(
+      'My Post',
+      siteUrl,
+      'my-post',
+      null,
+      null,
+      null,
+      '2026-07-11',
+      null,
+      {
+        camera: 'Leica M11-P',
+        lens: 'Leica Summicron-M 35 f/2 ASPH.',
+        focalLength: '35 mm',
+        aperture: 'f/5.6',
+        apertureEstimated: true,
+        exposureTime: '1/250 s',
+        iso: 2000,
+      }
+    )
+
+    expect(html).toContain('Leica M11-P')
+    expect(html).toContain('Leica Summicron-M 35 f/2 ASPH.')
+    expect(html).toContain('35 mm')
+    expect(html).toContain('f/5.6')
+    expect(html).toContain('1/250 s')
+    expect(html).toContain('ISO 2000')
+    expect(html).toContain('title="Estimated aperture"')
+    expect(html).toContain('aria-label="f/5.6, estimated"')
+    expect(html).not.toMatch(/>\s*Estimated(?: aperture)?\s*</)
+  })
+
   it('omits date when publishedAt is null', () => {
     const html = renderEmailHeaderHtml(
       'My Post',

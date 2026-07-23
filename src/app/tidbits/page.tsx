@@ -91,6 +91,9 @@ function viewerData(post: Post) {
     'data-zoom-caption-date': post.frontmatter.publishedAt,
     'data-zoom-caption-location': location?.name,
     'data-zoom-caption-location-href': location?.url,
+    'data-zoom-caption-photo': post.frontmatter.photo
+      ? JSON.stringify(post.frontmatter.photo)
+      : undefined,
     ...zoomImageDataAttrs({
       src: post.frontmatter.coverImage!,
       dimensions: post.coverDimensions,

@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       coverImageAlt: p.frontmatter.coverImageAlt,
       coverDimensions: p.coverDimensions,
       location: p.frontmatter.location,
+      photo: p.frontmatter.photo,
       sequence: p.frontmatter.sequence,
       excerpt: p.excerpt,
     })),

@@ -13,6 +13,7 @@ import {
   mdxComponents,
 } from '@/components/posts/mdx-components'
 import { accentHoverText } from '@/components/posts/newsletter-accent'
+import { PhotoMetadata } from '@/components/posts/photo-metadata'
 import { PostNavigation } from '@/components/posts/post-navigation'
 import { PostSubscribeCta } from '@/components/posts/post-subscribe-cta'
 import { RelatedPosts } from '@/components/posts/related-posts'
@@ -242,10 +243,11 @@ export default async function SlugPage({ params }: Props) {
   }
   const bg = post?.newsletter ? bgMap[post.newsletter] : undefined
   const location = post?.frontmatter.location ?? null
+  const photo = post?.frontmatter.photo ?? null
   const locationHoverText = post ? accentHoverText[post.newsletter] : ''
   const postDate =
     post && post.newsletter !== 'postcard' ? post.frontmatter.publishedAt : null
-  const showPostMetadata = Boolean(postDate || location)
+  const showPostMetadata = Boolean(postDate || location || photo)
   const isPhotoPost = Boolean(post && isPhotoNewsletter(post.newsletter))
   const isTidbitsPost = post?.newsletter === 'tidbits'
   const coverZoomCaption =
@@ -257,6 +259,7 @@ export default async function SlugPage({ params }: Props) {
           'data-zoom-caption-date': post.frontmatter.publishedAt,
           'data-zoom-caption-location-name': location?.name,
           'data-zoom-caption-location-url': location?.url,
+          'data-zoom-caption-photo': photo ? JSON.stringify(photo) : undefined,
           'data-zoom-caption-presentation': isTidbitsPost
             ? 'immersive'
             : 'rail',
@@ -265,23 +268,38 @@ export default async function SlugPage({ params }: Props) {
       : {}
   const postMetadata = showPostMetadata ? (
     <div
-      className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 ${
-        isTidbitsPost
-          ? 'justify-start font-sans sm:justify-end'
-          : 'justify-center font-mono'
+      className={`flex flex-col gap-1 ${
+        isTidbitsPost ? 'items-start sm:items-end' : 'items-center text-center'
       }`}
     >
-      {postDate ? <time>{postDate}</time> : null}
-      {postDate && location ? <span aria-hidden="true">@</span> : null}
-      {location ? (
-        <a
-          href={location.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`underline decoration-gray-300 underline-offset-2 ${locationHoverText} transition-colors duration-300`}
+      {postDate || location ? (
+        <div
+          className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 ${
+            isTidbitsPost
+              ? 'justify-start font-sans sm:justify-end'
+              : 'justify-center font-mono'
+          }`}
         >
-          {location.name}
-        </a>
+          {postDate ? <time>{postDate}</time> : null}
+          {postDate && location ? <span aria-hidden="true">@</span> : null}
+          {location ? (
+            <a
+              href={location.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`underline decoration-gray-300 underline-offset-2 ${locationHoverText} transition-colors duration-300`}
+            >
+              {location.name}
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+      {photo ? (
+        <PhotoMetadata
+          photo={photo}
+          align={isTidbitsPost ? 'start' : 'center'}
+          className={isTidbitsPost ? 'sm:justify-end' : undefined}
+        />
       ) : null}
     </div>
   ) : null
