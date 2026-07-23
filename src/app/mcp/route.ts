@@ -85,6 +85,36 @@ function containsSearchCall(value: unknown): boolean {
   return request.method === 'tools/call' && request.params?.name === 'search'
 }
 
+function withDefaultListPostsArguments(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value
+
+  const request = value as {
+    method?: unknown
+    params?: unknown
+  }
+  if (
+    request.method !== 'tools/call' ||
+    !request.params ||
+    typeof request.params !== 'object' ||
+    Array.isArray(request.params)
+  ) {
+    return value
+  }
+
+  const params = request.params as Record<string, unknown>
+  if (params.name !== 'list_posts' || Object.hasOwn(params, 'arguments')) {
+    return value
+  }
+
+  return {
+    ...request,
+    params: {
+      ...params,
+      arguments: {},
+    },
+  }
+}
+
 function callerIp(request: Request): string {
   return (
     request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim() ??
@@ -139,7 +169,13 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     await server.connect(transport)
-    const response = await transport.handleRequest(request)
+    const normalizedBody = withDefaultListPostsArguments(body)
+    const response =
+      normalizedBody === body
+        ? await transport.handleRequest(request)
+        : await transport.handleRequest(request, {
+            parsedBody: normalizedBody,
+          })
     return withResponseHeaders(request, response)
   } catch (error) {
     console.error(

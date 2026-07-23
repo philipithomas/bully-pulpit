@@ -77,13 +77,13 @@ function toolsListRequest(id: number) {
 function toolCallRequest(
   id: number,
   name: 'search' | 'fetch' | 'list_posts',
-  args: Record<string, unknown>
+  args?: Record<string, unknown>
 ) {
   return {
     jsonrpc: '2.0',
     id,
     method: 'tools/call',
-    params: { name, arguments: args },
+    params: args === undefined ? { name } : { name, arguments: args },
   }
 }
 
@@ -238,6 +238,16 @@ describe('POST /mcp', () => {
     expect(posts.every((post) => post.newsletter === 'workshop')).toBe(true)
     expect(posts.every((post) => post.url.startsWith('https://'))).toBe(true)
     expect(structured.pagination).toMatchObject({ offset: 0, limit: 2 })
+    expect(mockedCheckRateLimitStatus).not.toHaveBeenCalled()
+  })
+
+  it('lists the latest posts when arguments are omitted', async () => {
+    const { payload } = await postJson(toolCallRequest(6, 'list_posts'))
+    const structured = expectStructuredTextResult(resultObject(payload))
+    const posts = structured.posts as Array<{ id: string }>
+
+    expect(posts).toHaveLength(5)
+    expect(structured.pagination).toMatchObject({ offset: 0, limit: 5 })
     expect(mockedCheckRateLimitStatus).not.toHaveBeenCalled()
   })
 
