@@ -16,7 +16,7 @@ interface ExifPhotoFields {
 }
 
 const OFFICIAL_LENS_NAMES: Record<string, string> = {
-  'Summicron-M 1:2/35 ASPH.': 'Leica Summicron-M 35 f/2 ASPH.',
+  'Summicron-M 1:2/35 ASPH.': 'Summicron-M 35 f/2 ASPH.',
 }
 
 function displayNumber(value: number): string {

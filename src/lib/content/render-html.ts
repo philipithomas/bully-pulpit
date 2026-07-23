@@ -184,7 +184,7 @@ export function renderEmailHeaderHtml(
           : value
       })
       .join(' <span aria-hidden="true">·</span> ')
-    html += `<p style="font-family: ${SANS_STACK}; font-size: 11px; font-weight: 400; color: #7E7A73; line-height: 1.5; text-align: center; margin: 0 0 12px;">${values}</p>`
+    html += `<p style="font-family: ${MONO_STACK}; font-size: 11px; font-weight: 400; color: #7E7A73; line-height: 1.5; text-align: center; margin: 0 0 12px;">${values}</p>`
   }
 
   html += `<h1 style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; text-align: center; margin: 0 0 4px;"><a href="${postUrl}" style="text-decoration: none; color: #111110;">${escapeHtml(title)}</a></h1>`

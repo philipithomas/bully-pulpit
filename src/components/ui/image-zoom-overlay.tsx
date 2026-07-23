@@ -962,7 +962,7 @@ export function ImageZoomOverlay({
                   <X aria-hidden="true" className="h-4 w-4" />
                 </button>
               </div>
-              <div className="min-w-0 pt-3 landscape:pt-6 md:pt-8">
+              <div className="flex min-w-0 flex-col pt-3 landscape:min-h-0 landscape:flex-1 landscape:pt-6 md:min-h-0 md:flex-1 md:pt-8">
                 {hasDateLocationMetadata ? (
                   <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-sans text-[11px] leading-5 text-white/65">
                     {caption.date ? <time>{caption.date}</time> : null}
@@ -986,11 +986,6 @@ export function ImageZoomOverlay({
                     ) : null}
                   </div>
                 ) : null}
-                <PhotoMetadata
-                  photo={caption.photo}
-                  tone="dark"
-                  className="mb-3"
-                />
                 <h2 className="break-words font-serif text-lg font-normal leading-snug text-white sm:text-xl">
                   {caption.title}
                 </h2>
@@ -999,8 +994,13 @@ export function ImageZoomOverlay({
                     {caption.description}
                   </p>
                 ) : null}
+                <PhotoMetadata
+                  photo={caption.photo}
+                  tone="dark"
+                  className="mt-4 shrink-0 landscape:mt-auto landscape:pt-8 md:mt-auto md:pt-8"
+                />
               </div>
-              <footer className="mt-6 flex shrink-0 flex-wrap items-end justify-between gap-x-5 gap-y-3 landscape:mt-auto md:mt-auto">
+              <footer className="mt-6 flex shrink-0 flex-wrap items-end justify-between gap-x-5 gap-y-3">
                 <Link
                   href={collection.href}
                   aria-label={collection.label}
@@ -1060,10 +1060,10 @@ export function ImageZoomOverlay({
                       ) : null}
                     </div>
                   ) : null}
-                  <PhotoMetadata photo={caption.photo} className="mb-3" />
                   <h2 className="break-words font-sans text-xl font-semibold leading-snug text-gray-950 md:text-2xl">
                     {caption.title}
                   </h2>
+                  <PhotoMetadata photo={caption.photo} className="mt-3" />
                 </div>
                 <button
                   type="button"

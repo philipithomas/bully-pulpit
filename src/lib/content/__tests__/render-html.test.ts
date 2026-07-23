@@ -183,7 +183,7 @@ describe('renderEmailHeaderHtml', () => {
       null,
       {
         camera: 'Leica M11-P',
-        lens: 'Leica Summicron-M 35 f/2 ASPH.',
+        lens: 'Summicron-M 35 f/2 ASPH.',
         focalLength: '35 mm',
         aperture: 'f/5.6',
         apertureEstimated: true,
@@ -193,7 +193,10 @@ describe('renderEmailHeaderHtml', () => {
     )
 
     expect(html).toContain('Leica M11-P')
-    expect(html).toContain('Leica Summicron-M 35 f/2 ASPH.')
+    expect(html).toContain('Summicron-M 35 f/2 ASPH.')
+    expect(html).toContain(
+      "font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace"
+    )
     expect(html).toContain('35 mm')
     expect(html).toContain('f/5.6')
     expect(html).toContain('1/250 s')

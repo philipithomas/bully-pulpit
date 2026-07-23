@@ -35,7 +35,7 @@ describe('read photo metadata', () => {
 
     expect(photo).toEqual({
       camera: 'Leica M11-P',
-      lens: 'Leica Summicron-M 35 f/2 ASPH.',
+      lens: 'Summicron-M 35 f/2 ASPH.',
       focalLength: '35 mm',
       aperture: 'f/5.6',
       apertureEstimated: true,
@@ -46,7 +46,7 @@ describe('read photo metadata', () => {
       [
         'photo:',
         '  camera: "Leica M11-P"',
-        '  lens: "Leica Summicron-M 35 f/2 ASPH."',
+        '  lens: "Summicron-M 35 f/2 ASPH."',
         '  focalLength: "35 mm"',
         '  aperture: "f/5.6"',
         '  apertureEstimated: true',

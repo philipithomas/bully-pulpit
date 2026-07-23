@@ -107,7 +107,7 @@ describe('TidbitsPage viewer contract', () => {
     expect(sfmomaLink).toContain('data-zoom-caption-photo="')
     expect(sfmomaLink).toContain('&quot;camera&quot;:&quot;Leica M11-P&quot;')
     expect(sfmomaLink).toContain(
-      '&quot;lens&quot;:&quot;Leica Summicron-M 35 f/2 ASPH.&quot;'
+      '&quot;lens&quot;:&quot;Summicron-M 35 f/2 ASPH.&quot;'
     )
     expect(sfmomaLink).toContain('&quot;apertureEstimated&quot;:true')
   })

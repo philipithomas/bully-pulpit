@@ -266,46 +266,36 @@ export default async function SlugPage({ params }: Props) {
           'data-zoom-caption-collection': post.newsletter,
         }
       : {}
+  const postDateline =
+    postDate || location ? (
+      <div
+        className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 ${
+          isTidbitsPost ? 'font-sans' : 'font-mono'
+        }`}
+      >
+        {postDate ? <time>{postDate}</time> : null}
+        {postDate && location ? <span aria-hidden="true">@</span> : null}
+        {location ? (
+          <a
+            href={location.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`underline decoration-gray-300 underline-offset-2 ${locationHoverText} transition-colors duration-300`}
+          >
+            {location.name}
+          </a>
+        ) : null}
+      </div>
+    ) : null
   const postMetadata = showPostMetadata ? (
-    <div
-      className={`flex flex-col gap-1 ${
-        isTidbitsPost ? 'items-start sm:items-end' : 'items-center text-center'
-      }`}
-    >
-      {postDate || location ? (
-        <div
-          className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 ${
-            isTidbitsPost
-              ? 'justify-start font-sans sm:justify-end'
-              : 'justify-center font-mono'
-          }`}
-        >
-          {postDate ? <time>{postDate}</time> : null}
-          {postDate && location ? <span aria-hidden="true">@</span> : null}
-          {location ? (
-            <a
-              href={location.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`underline decoration-gray-300 underline-offset-2 ${locationHoverText} transition-colors duration-300`}
-            >
-              {location.name}
-            </a>
-          ) : null}
-        </div>
-      ) : null}
-      {photo ? (
-        <PhotoMetadata
-          photo={photo}
-          align={isTidbitsPost ? 'start' : 'center'}
-          className={isTidbitsPost ? 'sm:justify-end' : undefined}
-        />
-      ) : null}
+    <div className="flex flex-col items-center gap-1 text-center">
+      {postDateline}
+      {photo ? <PhotoMetadata photo={photo} align="center" /> : null}
     </div>
   ) : null
   const coverImage = item.frontmatter.coverImage ? (
     <div
-      className={`image-loading-surface w-full ${
+      className={`w-full ${
         isTidbitsPost ? 'mb-0' : isPhotoPost ? 'mb-8' : 'mb-10'
       }`}
     >
@@ -323,14 +313,14 @@ export default async function SlugPage({ params }: Props) {
               : undefined,
         })}
         {...coverZoomCaption}
-        className="group relative z-10 block w-full cursor-zoom-in overflow-hidden text-left"
+        className="image-loading-surface group relative block w-full cursor-zoom-in overflow-hidden text-left"
       >
         <Image
           src={item.frontmatter.coverImage}
           alt={item.frontmatter.coverImageAlt ?? item.frontmatter.title}
           width={post?.coverDimensions?.width ?? 1280}
           height={post?.coverDimensions?.height ?? 640}
-          className="block w-full transition-transform duration-700 group-hover:scale-[1.002]"
+          className="relative z-10 block w-full transition-transform duration-700 group-hover:scale-[1.002]"
           priority
           sizes={POST_COVER_SIZES}
         />
@@ -363,18 +353,21 @@ export default async function SlugPage({ params }: Props) {
         >
           {/* Header */}
           {isTidbitsPost ? (
-            <header className="mt-5 mb-12 grid gap-3 text-left sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline">
-              <div className="min-w-0">
+            <header className="mt-6 mb-12 text-left">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
                 <h1 className="font-sans font-semibold text-2xl text-gray-950 leading-tight tracking-tight text-pretty sm:text-3xl">
                   {item.frontmatter.title}
                 </h1>
-                {item.frontmatter.description ? (
-                  <p className="mt-2 max-w-prose font-serif text-base text-gray-600 leading-relaxed sm:text-lg">
-                    {item.frontmatter.description}
-                  </p>
-                ) : null}
+                {postDateline}
               </div>
-              {postMetadata}
+              {item.frontmatter.description ? (
+                <p className="mt-2 max-w-prose font-serif text-base text-gray-600 leading-relaxed sm:text-lg">
+                  {item.frontmatter.description}
+                </p>
+              ) : null}
+              {photo ? (
+                <PhotoMetadata photo={photo} className="mt-4 text-xs" />
+              ) : null}
             </header>
           ) : (
             <header

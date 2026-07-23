@@ -8,7 +8,7 @@ import { frontmatterSchema, photoMetadataSchema } from '@/lib/content/types'
 
 const PHOTO = {
   camera: 'Leica M11-P',
-  lens: 'Leica Summicron-M 35 f/2 ASPH.',
+  lens: 'Summicron-M 35 f/2 ASPH.',
   focalLength: '35 mm',
   aperture: 'f/5.6',
   apertureEstimated: true,
@@ -23,7 +23,7 @@ describe('photo metadata', () => {
       {
         key: 'lens',
         label: 'Lens',
-        value: 'Leica Summicron-M 35 f/2 ASPH.',
+        value: 'Summicron-M 35 f/2 ASPH.',
       },
       { key: 'focalLength', label: 'Focal length', value: '35 mm' },
       {
@@ -36,10 +36,10 @@ describe('photo metadata', () => {
       { key: 'iso', label: 'ISO', value: 'ISO 2000' },
     ])
     expect(photoMetadataText(PHOTO)).toBe(
-      'Leica M11-P · Leica Summicron-M 35 f/2 ASPH. · 35 mm · f/5.6 (estimated) · 1/250 s · ISO 2000'
+      'Leica M11-P · Summicron-M 35 f/2 ASPH. · 35 mm · f/5.6 (estimated) · 1/250 s · ISO 2000'
     )
     expect(photoMetadataLabeledText(PHOTO)).toBe(
-      'Camera: Leica M11-P; Lens: Leica Summicron-M 35 f/2 ASPH.; Focal length: 35 mm; Aperture: f/5.6 (estimated); Exposure time: 1/250 s; ISO: 2000'
+      'Camera: Leica M11-P; Lens: Summicron-M 35 f/2 ASPH.; Focal length: 35 mm; Aperture: f/5.6 (estimated); Exposure time: 1/250 s; ISO: 2000'
     )
   })
 
