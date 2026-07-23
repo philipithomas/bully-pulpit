@@ -156,7 +156,7 @@ describe('formatBellSmsBody', () => {
       '{"query":"hello"}\n## **Read** [the post](/hello). “Useful”—brief…'
     )
     expect(body).toBe(
-      '[Bell AI] Read the post (https://www.philipithomas.com/hello). "Useful"-brief...'
+      '[Bell AI] Read the post (https://philipithomas.com/hello). "Useful"-brief...'
     )
     expect(body).not.toContain('**')
     expect(body).not.toContain('](')
@@ -180,8 +180,18 @@ describe('formatBellSmsBody', () => {
       formatBellSmsBody(
         'See <https://www.philipithomas.com/contact> and ~~ignore~~ | pipes.'
       )
-    ).toBe(
-      '[Bell AI] See https://www.philipithomas.com/contact and ignore pipes.'
+    ).toBe('[Bell AI] See https://philipithomas.com/contact and ignore pipes.')
+  })
+
+  it('does not shorten a lookalike hostname', () => {
+    expect(
+      formatBellSmsBody('See https://www.philipithomas.com.evil.test/contact')
+    ).toBe('[Bell AI] See https://www.philipithomas.com.evil.test/contact')
+  })
+
+  it('shortens a quoted first-party root URL', () => {
+    expect(formatBellSmsBody('See "https://www.philipithomas.com".')).toBe(
+      '[Bell AI] See "https://philipithomas.com".'
     )
   })
 

@@ -530,11 +530,9 @@ describe('sendNewsletterWorkflow', () => {
     expect(smsRow.sentAt).not.toBeNull()
     expect(smsRow.sendError).toBeNull()
     expect(smsRow.twilioSid).toBe('SM_test')
-    expect(smsRow.body).toContain('New Contraption post:\nHello world')
-    expect(smsRow.body).toContain(
-      'https://www.philipithomas.com/hello-world?utm_source=sms'
+    expect(smsRow.body).toBe(
+      'New Contraption post: Hello world https://philipithomas.com/hello-world'
     )
-    expect(smsRow.body).toContain('(Reply STOP to unsubscribe.)')
 
     const outboundTexts = await db.select().from(textMessages)
     expect(outboundTexts).toHaveLength(1)

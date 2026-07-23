@@ -23,7 +23,7 @@ describe('SMS subscription copy', () => {
 
   it('keeps a direct contact-card link for MMS failures', () => {
     expect(SMS_BELL_CONTACT_FALLBACK).toContain(
-      'https://www.philipithomas.com/bell.vcf'
+      'https://philipithomas.com/bell.vcf'
     )
     expect(SMS_BELL_CONTACT_FALLBACK).toContain('Create New Contact')
     expect(SMS_BELL_CONTACT_FALLBACK).not.toContain('Reply STOP')

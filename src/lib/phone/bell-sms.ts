@@ -13,7 +13,6 @@ import {
 import { smsIdentityHash } from '@/lib/chat/bell-identity'
 import { scrubLeakedToolJson } from '@/lib/chat/scrub-leaked-tool-json'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
-import { siteConfig } from '@/lib/config'
 import { markdownToPlaintext } from '@/lib/content/render-html'
 import {
   completeBellGeneration,
@@ -32,6 +31,7 @@ import {
 } from '@/lib/db/queries/text-messages'
 import type { TextMessage } from '@/lib/db/schema'
 import { BELL_SMS_PREFIX } from '@/lib/phone/bell-sms-copy'
+import { normalizeSmsSiteUrls, smsSiteOrigin } from '@/lib/phone/sms-url'
 import { type SentSms, sendSms } from '@/lib/phone/twilio'
 
 export type BellSmsInput = {
@@ -185,7 +185,7 @@ function truncateToSmsBudget(value: string, suffix = ''): string {
 }
 
 function normalizeSmsTypography(value: string): string {
-  return value
+  return normalizeSmsSiteUrls(value)
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
     .replace(/[–—]/g, '-')
@@ -195,7 +195,7 @@ function normalizeSmsTypography(value: string): string {
     .replace(
       /(^|[\s(])\/([a-zA-Z0-9][a-zA-Z0-9/_-]*(?:#[a-zA-Z0-9_-]+)?)(?=$|[\s),.!?])/g,
       (_match, before: string, path: string) =>
-        `${before}${siteConfig.url}/${path}`
+        `${before}${smsSiteOrigin()}/${path}`
     )
     .replace(/\s+/g, ' ')
     .trim()
