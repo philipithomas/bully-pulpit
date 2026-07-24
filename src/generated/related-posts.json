@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-07-24T20:14:45.409Z",
+  "generatedAt": "2026-07-24T20:31:09.974Z",
   "posts": {
     "open-sourcing-booklet": {
       "related": [
         {
           "slug": "launching-booklet",
-          "score": 0.088816
+          "score": 0.0972987
         },
         {
           "slug": "booklet-architecture",
-          "score": 0.1136841
+          "score": 0.1217735
         },
         {
           "slug": "community-media-companies",
-          "score": 0.1239193
+          "score": 0.130496
         }
       ]
     },
@@ -1880,12 +1880,12 @@
           "score": 0.1221747
         },
         {
-          "slug": "open-sourcing-booklet",
-          "score": 0.1355758
-        },
-        {
           "slug": "launching-booklet",
           "score": 0.1449494
+        },
+        {
+          "slug": "open-sourcing-booklet",
+          "score": 0.1487732
         }
       ]
     },
@@ -2089,7 +2089,7 @@
         },
         {
           "slug": "open-sourcing-booklet",
-          "score": 0.1239193
+          "score": 0.130496
         },
         {
           "slug": "how-i-build-multiple-products",
@@ -2104,12 +2104,12 @@
           "score": 0.1129018
         },
         {
-          "slug": "open-sourcing-booklet",
-          "score": 0.1136841
-        },
-        {
           "slug": "how-to-host-web-apps-on-a-mac-mini",
           "score": 0.1196111
+        },
+        {
+          "slug": "open-sourcing-booklet",
+          "score": 0.1217735
         }
       ]
     },
@@ -2200,12 +2200,12 @@
           "score": 0.0749519
         },
         {
-          "slug": "open-sourcing-booklet",
-          "score": 0.088816
-        },
-        {
           "slug": "community-media-companies",
           "score": 0.0965843
+        },
+        {
+          "slug": "open-sourcing-booklet",
+          "score": 0.0972987
         }
       ]
     },
