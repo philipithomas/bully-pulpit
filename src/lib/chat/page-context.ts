@@ -48,6 +48,9 @@ export function toPlaintext(mdx: string): string {
   return mdx
     .replace(/^(import|export)\s[^\n]*$/gm, '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[((?:\\.|[^\]\\])*)\]\(#[^)]*\)/g, (_match, text: string) =>
+      text.replace(/\\([[\]])/g, '$1')
+    )
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/<[^>]+>/g, '')
     .replace(/^#{1,6}\s+/gm, '')

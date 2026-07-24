@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-07-23T21:14:55.143Z",
+  "generatedAt": "2026-07-24T20:44:56.459Z",
   "posts": {
+    "open-sourcing-booklet": {
+      "related": [
+        {
+          "slug": "launching-booklet",
+          "score": 0.0976662
+        },
+        {
+          "slug": "booklet-architecture",
+          "score": 0.1208899
+        },
+        {
+          "slug": "community-media-companies",
+          "score": 0.1302512
+        }
+      ]
+    },
     "swing": {
       "related": [
         {
@@ -1868,8 +1884,8 @@
           "score": 0.1449494
         },
         {
-          "slug": "code-as-content-and-digital-proprioception",
-          "score": 0.154492
+          "slug": "open-sourcing-booklet",
+          "score": 0.149827
         }
       ]
     },
@@ -2072,12 +2088,12 @@
           "score": 0.0965843
         },
         {
-          "slug": "how-i-build-multiple-products",
-          "score": 0.1360839
+          "slug": "open-sourcing-booklet",
+          "score": 0.1302512
         },
         {
-          "slug": "how-to-replace-social-media-with-a-personal-newsletter",
-          "score": 0.1417652
+          "slug": "how-i-build-multiple-products",
+          "score": 0.1360839
         }
       ]
     },
@@ -2092,8 +2108,8 @@
           "score": 0.1196111
         },
         {
-          "slug": "code-a-booklet-ai-feature",
-          "score": 0.1221747
+          "slug": "open-sourcing-booklet",
+          "score": 0.1208899
         }
       ]
     },
@@ -2188,8 +2204,8 @@
           "score": 0.0965843
         },
         {
-          "slug": "how-i-build-multiple-products",
-          "score": 0.1091308
+          "slug": "open-sourcing-booklet",
+          "score": 0.0976662
         }
       ]
     },
