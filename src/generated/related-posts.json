@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-07-23T14:43:44.992Z",
+  "generatedAt": "2026-07-23T21:14:55.143Z",
   "posts": {
+    "swing": {
+      "related": [
+        {
+          "slug": "cable-car",
+          "score": 0.3449094
+        },
+        {
+          "slug": "introducing-tidbits-ongoing-photo-journal",
+          "score": 0.3494507
+        },
+        {
+          "slug": "workshop-welcome",
+          "score": 0.3536621
+        }
+      ]
+    },
     "introducing-tidbits-ongoing-photo-journal": {
       "related": [
         {
