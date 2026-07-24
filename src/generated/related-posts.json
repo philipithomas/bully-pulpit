@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-07-24T20:31:09.974Z",
+  "generatedAt": "2026-07-24T20:38:55.578Z",
   "posts": {
     "open-sourcing-booklet": {
       "related": [
         {
           "slug": "launching-booklet",
-          "score": 0.0972987
+          "score": 0.0976703
         },
         {
           "slug": "booklet-architecture",
-          "score": 0.1217735
+          "score": 0.121055
         },
         {
           "slug": "community-media-companies",
-          "score": 0.130496
+          "score": 0.1304486
         }
       ]
     },
@@ -1885,7 +1885,7 @@
         },
         {
           "slug": "open-sourcing-booklet",
-          "score": 0.1487732
+          "score": 0.1500833
         }
       ]
     },
@@ -2089,7 +2089,7 @@
         },
         {
           "slug": "open-sourcing-booklet",
-          "score": 0.130496
+          "score": 0.1304486
         },
         {
           "slug": "how-i-build-multiple-products",
@@ -2109,7 +2109,7 @@
         },
         {
           "slug": "open-sourcing-booklet",
-          "score": 0.1217735
+          "score": 0.121055
         }
       ]
     },
@@ -2205,7 +2205,7 @@
         },
         {
           "slug": "open-sourcing-booklet",
-          "score": 0.0972987
+          "score": 0.0976703
         }
       ]
     },

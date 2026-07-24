@@ -121,3 +121,9 @@ describe('getPageContextContent', () => {
     }
   })
 })
+
+describe('toPlaintext', () => {
+  it('unwraps escaped footnote links', () => {
+    expect(toPlaintext('Great[\\[1\\]](#fn1)!')).toBe('Great[1]!')
+  })
+})
