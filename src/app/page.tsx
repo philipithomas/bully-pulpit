@@ -26,6 +26,12 @@ const HOMEPAGE_NEWSLETTER_ORDER = [
   'tidbits',
 ] as const satisfies readonly Newsletter[]
 
+const HOMEPAGE_NEWSLETTER_LOGO_HEIGHTS: Partial<Record<Newsletter, number>> = {
+  // The solid geometric letterforms carry more visual weight than the other
+  // wordmarks at their nominal height.
+  tidbits: 12,
+}
+
 async function buildTimeSubscriberCount(): Promise<number | null> {
   try {
     return await countActive()
@@ -183,7 +189,12 @@ export default async function HomePage() {
                       alt={nl.name}
                       width={nl.logo.intrinsicWidth}
                       height={nl.logo.intrinsicHeight}
-                      style={{ height: nl.logo.height, width: 'auto' }}
+                      style={{
+                        height:
+                          HOMEPAGE_NEWSLETTER_LOGO_HEIGHTS[nl.slug] ??
+                          nl.logo.height,
+                        width: 'auto',
+                      }}
                       className="w-auto shrink-0"
                     />
                   </span>
