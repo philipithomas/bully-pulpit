@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-07-23T21:14:55.143Z",
+  "generatedAt": "2026-07-24T20:14:45.409Z",
   "posts": {
+    "open-sourcing-booklet": {
+      "related": [
+        {
+          "slug": "launching-booklet",
+          "score": 0.088816
+        },
+        {
+          "slug": "booklet-architecture",
+          "score": 0.1136841
+        },
+        {
+          "slug": "community-media-companies",
+          "score": 0.1239193
+        }
+      ]
+    },
     "swing": {
       "related": [
         {
@@ -1864,12 +1880,12 @@
           "score": 0.1221747
         },
         {
-          "slug": "launching-booklet",
-          "score": 0.1449494
+          "slug": "open-sourcing-booklet",
+          "score": 0.1355758
         },
         {
-          "slug": "code-as-content-and-digital-proprioception",
-          "score": 0.154492
+          "slug": "launching-booklet",
+          "score": 0.1449494
         }
       ]
     },
@@ -2072,12 +2088,12 @@
           "score": 0.0965843
         },
         {
-          "slug": "how-i-build-multiple-products",
-          "score": 0.1360839
+          "slug": "open-sourcing-booklet",
+          "score": 0.1239193
         },
         {
-          "slug": "how-to-replace-social-media-with-a-personal-newsletter",
-          "score": 0.1417652
+          "slug": "how-i-build-multiple-products",
+          "score": 0.1360839
         }
       ]
     },
@@ -2088,12 +2104,12 @@
           "score": 0.1129018
         },
         {
-          "slug": "how-to-host-web-apps-on-a-mac-mini",
-          "score": 0.1196111
+          "slug": "open-sourcing-booklet",
+          "score": 0.1136841
         },
         {
-          "slug": "code-a-booklet-ai-feature",
-          "score": 0.1221747
+          "slug": "how-to-host-web-apps-on-a-mac-mini",
+          "score": 0.1196111
         }
       ]
     },
@@ -2184,12 +2200,12 @@
           "score": 0.0749519
         },
         {
-          "slug": "community-media-companies",
-          "score": 0.0965843
+          "slug": "open-sourcing-booklet",
+          "score": 0.088816
         },
         {
-          "slug": "how-i-build-multiple-products",
-          "score": 0.1091308
+          "slug": "community-media-companies",
+          "score": 0.0965843
         }
       ]
     },
