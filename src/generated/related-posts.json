@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-07-24T20:44:56.459Z",
+  "generatedAt": "2026-07-24T20:57:01.945Z",
   "posts": {
+    "borscht": {
+      "related": [
+        {
+          "slug": "2023-08",
+          "score": 0.3522956
+        },
+        {
+          "slug": "2023-07",
+          "score": 0.382968
+        },
+        {
+          "slug": "avant-garde-coffee",
+          "score": 0.389489
+        }
+      ]
+    },
     "open-sourcing-booklet": {
       "related": [
         {
