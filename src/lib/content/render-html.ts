@@ -157,11 +157,12 @@ export function renderEmailHeaderHtml(
   photo?: PhotoMetadata | null
 ): string {
   const postUrl = `${siteUrl}/${slug}`
+  const photoItems = photoMetadataItems(photo)
 
   let html = ''
 
   if (publishedAt || location) {
-    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0; color: #7E7A73; text-align: center; margin: 0 0 ${photo ? '4px' : '12px'};">`
+    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0; color: #7E7A73; text-align: center; margin: 0 0 12px;">`
     if (publishedAt) {
       html += escapeHtml(publishedAt)
     }
@@ -172,19 +173,6 @@ export function renderEmailHeaderHtml(
       html += `<a href="${escapeHtml(location.url)}" style="color: #7E7A73; text-decoration: underline; text-decoration-color: #B1ADA6;">${escapeHtml(location.name)}</a>`
     }
     html += `</p>`
-  }
-
-  const photoItems = photoMetadataItems(photo)
-  if (photoItems.length > 0) {
-    const values = photoItems
-      .map((item) => {
-        const value = escapeHtml(item.value)
-        return item.estimated
-          ? `<span title="Estimated aperture" aria-label="${value}, estimated">${value}</span>`
-          : value
-      })
-      .join(' <span aria-hidden="true">·</span> ')
-    html += `<p style="font-family: ${MONO_STACK}; font-size: 11px; font-weight: 400; color: #7E7A73; line-height: 1.5; text-align: center; margin: 0 0 12px;">${values}</p>`
   }
 
   html += `<h1 style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; text-align: center; margin: 0 0 4px;"><a href="${postUrl}" style="text-decoration: none; color: #111110;">${escapeHtml(title)}</a></h1>`
@@ -200,7 +188,19 @@ export function renderEmailHeaderHtml(
       ? coverImage
       : toVercelImageUrl(siteUrl, coverImage, EMAIL_IMAGE_WIDTH)
     const alt = escapeHtml(coverImageAlt ?? title)
-    html += `<a href="${postUrl}" style="display: block; text-decoration: none; margin: 0 0 24px;"><img src="${escapeHtml(emailPath)}" alt="${alt}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;"></a>`
+    html += `<a href="${postUrl}" style="display: block; text-decoration: none; margin: 0 0 ${photoItems.length > 0 ? '8px' : '24px'};"><img src="${escapeHtml(emailPath)}" alt="${alt}" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;"></a>`
+  }
+
+  if (photoItems.length > 0) {
+    const values = photoItems
+      .map((item) => {
+        const value = escapeHtml(item.value)
+        return item.estimated
+          ? `<span title="Estimated aperture" aria-label="${value}, estimated">${value}</span>`
+          : value
+      })
+      .join(' <span aria-hidden="true">·</span> ')
+    html += `<p style="font-family: ${MONO_STACK}; font-size: 11px; font-weight: 400; color: #7E7A73; line-height: 1.5; text-align: center; margin: 0;">${values}</p>`
   }
 
   html += `<div style="font-size: 1px; line-height: 24px; height: 24px;">&nbsp;</div>`

@@ -177,8 +177,8 @@ describe('renderEmailHeaderHtml', () => {
       siteUrl,
       'my-post',
       null,
-      null,
-      null,
+      '/images/covers/photo.jpg',
+      'Photo',
       '2026-07-11',
       null,
       {
@@ -204,6 +204,7 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('title="Estimated aperture"')
     expect(html).toContain('aria-label="f/5.6, estimated"')
     expect(html).not.toMatch(/>\s*Estimated(?: aperture)?\s*</)
+    expect(html.indexOf('<img')).toBeLessThan(html.indexOf('Leica M11-P'))
   })
 
   it('omits date when publishedAt is null', () => {
