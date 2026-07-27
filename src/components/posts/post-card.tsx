@@ -20,7 +20,7 @@ export function PostCard({
   post: PostSummary
   /** Head-preload the cover (LCP candidate, first card only) */
   priority?: boolean
-  /** Load the cover eagerly at high fetch priority, without a preload */
+  /** Load the cover eagerly at low fetch priority, without a preload */
   eager?: boolean
 }) {
   return (
@@ -38,9 +38,10 @@ export function PostCard({
               fill
               priority={priority}
               loading={!priority && eager ? 'eager' : undefined}
-              // Next 16 priority only preloads; the high fetch priority for
-              // above-the-fold cards must be set explicitly
-              fetchPriority={priority || eager ? 'high' : undefined}
+              // React hoists eager images unless they explicitly have low
+              // fetch priority, which would make them compete with the LCP
+              // card's preload.
+              fetchPriority={priority ? 'high' : eager ? 'low' : undefined}
               className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />

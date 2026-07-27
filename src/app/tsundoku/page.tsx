@@ -113,7 +113,8 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
           fill
           sizes={tileSizes(ratio)}
           className="z-10 object-cover transition-transform duration-700 group-hover:scale-[1.01]"
-          priority={index < 3}
+          priority={index === 0}
+          fetchPriority={index === 0 ? 'high' : undefined}
         />
       </button>
       <figcaption className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-gray-500">
