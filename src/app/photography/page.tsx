@@ -1,4 +1,3 @@
-import type { Metadata } from 'next'
 import Image from 'next/image'
 import { PhotographyImageSearch } from '@/app/photography/image-search'
 import { getAllPosts } from '@/lib/content/loader'
@@ -7,17 +6,16 @@ import {
   CAPTIONED_ZOOM_IMAGE_SIZES,
   zoomImageDataAttrs,
 } from '@/lib/content/zoom-image'
-import { feedDiscovery } from '@/lib/feeds/discovery'
 import { publicAppPage } from '@/lib/public-pages'
+import { createPublicPageMetadata } from '@/lib/seo/metadata'
 
 const photographyPage = publicAppPage('/photography')
 
-export const metadata: Metadata = {
+export const metadata = createPublicPageMetadata({
+  path: '/photography',
   title: photographyPage.title,
   description: photographyPage.description,
-  // Page-level alternates replace the root layout's, so restate the feeds.
-  alternates: { canonical: '/photography', types: feedDiscovery() },
-}
+})
 
 /**
  * Target row height for the justified layout. Must match the --row-h

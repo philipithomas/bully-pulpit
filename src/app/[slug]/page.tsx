@@ -24,9 +24,9 @@ import { siteConfig } from '@/lib/config'
 import { POST_COVER_SIZES } from '@/lib/content/cover-preload'
 import { codeThemeName, getHighlighter } from '@/lib/content/highlighter'
 import {
-  extractExcerpt,
   getAdjacentPosts,
   getAllPosts,
+  getImageDimensions,
   getPageBySlug,
   getPages,
   getPostBySlug,
@@ -42,6 +42,7 @@ import {
 import { feedDiscovery } from '@/lib/feeds/discovery'
 import { isPhotoNewsletter } from '@/lib/newsletters'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
+import { contentDescription } from '@/lib/seo/content-description'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -80,9 +81,9 @@ function toVercelImagePath(
 function getScaledSocialDimensions(dimensions?: {
   width: number
   height: number
-}): { width: number; height?: number } {
+}): { width?: number; height?: number } {
   if (!dimensions || dimensions.width <= 0 || dimensions.height <= 0) {
-    return { width: SOCIAL_IMAGE_WIDTH }
+    return {}
   }
 
   return {
@@ -144,15 +145,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!item) return {}
 
-  const excerpt = extractExcerpt(item.content, 160).trim()
-  const description =
-    item.frontmatter.description ??
-    (excerpt || item.frontmatter.coverImageAlt || item.frontmatter.title)
+  const description = contentDescription(item)
   const socialImage = getSocialImage({
     title: item.frontmatter.title,
     coverImage: item.frontmatter.coverImage,
     coverImageAlt: item.frontmatter.coverImageAlt,
-    coverDimensions: post?.coverDimensions,
+    coverDimensions:
+      post?.coverDimensions ?? getImageDimensions(page?.frontmatter.coverImage),
   })
 
   return {
@@ -168,8 +167,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: item.frontmatter.title,
       description,
       // Page-level openGraph replaces the root layout's, so restate the
-      // canonical url and site name here.
+      // canonical url, locale, and site name here.
       url: `/${item.slug}`,
+      locale: 'en_US',
       siteName: siteConfig.title,
       ...(post
         ? {
@@ -197,7 +197,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                 type: 'image/svg+xml',
               },
             ],
-            apple: siteConfig.newsletters[post.newsletter].icon,
+            apple: '/apple-touch-icon.png',
           },
         }
       : {}),

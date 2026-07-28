@@ -1,18 +1,16 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getAllPosts, getPages } from '@/lib/content/loader'
 import type { Newsletter } from '@/lib/content/types'
-import { feedDiscovery } from '@/lib/feeds/discovery'
 import { publicAppPage, publicAppPages } from '@/lib/public-pages'
+import { createPublicPageMetadata } from '@/lib/seo/metadata'
 
 const sitemapPage = publicAppPage('/sitemap')
 
-export const metadata: Metadata = {
+export const metadata = createPublicPageMetadata({
+  path: '/sitemap',
   title: sitemapPage.title,
   description: sitemapPage.description,
-  // Page-level alternates replace the root layout's, so restate the feeds.
-  alternates: { canonical: '/sitemap', types: feedDiscovery() },
-}
+})
 
 const newsletterLabel: Record<Newsletter, string> = {
   contraption: 'Contraption',

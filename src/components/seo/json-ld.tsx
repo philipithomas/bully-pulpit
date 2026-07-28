@@ -1,5 +1,6 @@
 import { siteConfig } from '@/lib/config'
 import type { Page, Post } from '@/lib/content/types'
+import { contentDescription } from '@/lib/seo/content-description'
 
 interface JsonLdProps {
   type: 'website' | 'article' | 'webpage'
@@ -49,7 +50,7 @@ export function JsonLd({ type, post, page }: JsonLdProps) {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       name: item.frontmatter.title,
-      description: item.frontmatter.description ?? siteConfig.description,
+      description: contentDescription(item),
       url: `${siteConfig.url}/${item.slug}`,
       author: {
         '@type': 'Person',
@@ -70,7 +71,7 @@ export function JsonLd({ type, post, page }: JsonLdProps) {
       '@context': 'https://schema.org',
       '@type': 'Article',
       headline: item.frontmatter.title,
-      description: item.frontmatter.description ?? siteConfig.description,
+      description: contentDescription(item),
       ...(item.frontmatter.publishedAt && {
         datePublished: item.frontmatter.publishedAt,
         // Frontmatter has no updated-date field, so the publish date is the

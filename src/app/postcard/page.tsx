@@ -1,28 +1,19 @@
-import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { PostcardLatestLink } from '@/components/postcard/latest-link'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
-import { feedDiscovery } from '@/lib/feeds/discovery'
 import { publicAppPage } from '@/lib/public-pages'
+import { createPublicPageMetadata } from '@/lib/seo/metadata'
 
 const postcardPage = publicAppPage('/postcard')
 
-export const metadata: Metadata = {
+export const metadata = createPublicPageMetadata({
+  path: '/postcard',
   title: postcardPage.title,
   description: postcardPage.description,
-  alternates: {
-    canonical: '/postcard',
-    types: feedDiscovery('postcard'),
-  },
-  icons: {
-    icon: [
-      { url: siteConfig.newsletters.postcard.icon, type: 'image/svg+xml' },
-    ],
-    apple: siteConfig.newsletters.postcard.icon,
-  },
-}
+  newsletter: 'postcard',
+})
 
 const MONTH_LABELS = [
   'Jan',
