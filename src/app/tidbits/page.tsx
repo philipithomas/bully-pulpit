@@ -126,6 +126,7 @@ function LeadPhoto({ post }: { post: Post }) {
           sizes={LEAD_IMAGE_SIZES}
           className="z-10 object-contain transition-transform duration-700 group-hover:scale-[1.005]"
           priority
+          fetchPriority="high"
         />
       </a>
     </figure>

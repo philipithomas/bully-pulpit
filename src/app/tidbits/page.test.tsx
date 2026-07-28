@@ -66,6 +66,7 @@ vi.mock('@/lib/phone/config', () => ({
 }))
 
 import TidbitsPage, { metadata } from '@/app/tidbits/page'
+import { getPostsByNewsletter } from '@/lib/content/loader'
 
 const SEO_DESCRIPTION =
   'An ongoing photo journal of city life, travel, food, and the details that linger.'
@@ -188,5 +189,26 @@ describe('TidbitsPage viewer contract', () => {
 
     expect(resolvedHtml).not.toContain('Also available via')
     expect(resolvedHtml).not.toContain('>SMS</span>')
+  })
+
+  it('gives only the lead photo an LCP preload', () => {
+    const html = renderToStaticMarkup(<TidbitsPage />)
+    const covers = getPostsByNewsletter('tidbits')
+      .slice(0, 3)
+      .map((post) => post.frontmatter.coverImage)
+      .filter((cover): cover is string => Boolean(cover))
+    const preloadTags = html.match(/<link\b[^>]*rel="preload"[^>]*>/g) ?? []
+    const leadPreload = preloadTags.find((tag) =>
+      tag.includes(encodeURIComponent(covers[0]))
+    )
+
+    expect(covers).toHaveLength(3)
+    expect(leadPreload).toContain('fetchPriority="high"')
+
+    for (const cover of covers.slice(1)) {
+      expect(
+        preloadTags.some((tag) => tag.includes(encodeURIComponent(cover)))
+      ).toBe(false)
+    }
   })
 })

@@ -39,7 +39,11 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@vercel/oidc'],
   images: {
     formats: ['image/avif', 'image/webp'],
-    qualities: [100],
+    // Ordinary next/image renders request the framework default (75), which
+    // Next 16 coerces to the closest allowlisted value. Serve page images at
+    // 80 while retaining 100 for the explicit zoom, email, social, and MMS
+    // image URLs.
+    qualities: [80, 100],
     minimumCacheTTL: 2678400,
     // Shared with the zoom viewer source sets. The larger widths let photo
     // overlays and their preloads climb through optimized variants while the
