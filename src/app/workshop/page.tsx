@@ -1,27 +1,18 @@
-import type { Metadata } from 'next'
 import Image from 'next/image'
 import { InfinitePostGrid } from '@/components/posts/infinite-post-grid'
 import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
-import { feedDiscovery } from '@/lib/feeds/discovery'
 import { publicAppPage } from '@/lib/public-pages'
+import { createPublicPageMetadata } from '@/lib/seo/metadata'
 
 const workshopPage = publicAppPage('/workshop')
 
-export const metadata: Metadata = {
+export const metadata = createPublicPageMetadata({
+  path: '/workshop',
   title: workshopPage.title,
   description: workshopPage.description,
-  alternates: {
-    canonical: '/workshop',
-    types: feedDiscovery('workshop'),
-  },
-  icons: {
-    icon: [
-      { url: siteConfig.newsletters.workshop.icon, type: 'image/svg+xml' },
-    ],
-    apple: siteConfig.newsletters.workshop.icon,
-  },
-}
+  newsletter: 'workshop',
+})
 
 export default function WorkshopPage() {
   // Slim DTO for the client component — keeps the raw MDX `content` out of

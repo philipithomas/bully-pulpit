@@ -1,4 +1,3 @@
-import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
@@ -8,40 +7,18 @@ import { getPostsByNewsletter } from '@/lib/content/loader'
 import { markdownToPlaintext } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
 import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
-import { feedDiscovery } from '@/lib/feeds/discovery'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 import { publicAppPage } from '@/lib/public-pages'
+import { createPublicPageMetadata } from '@/lib/seo/metadata'
 
 const tidbitsPage = publicAppPage('/tidbits')
-const tidbitsSocialTitle = `${tidbitsPage.title} | ${siteConfig.title}`
 
-export const metadata: Metadata = {
+export const metadata = createPublicPageMetadata({
+  path: '/tidbits',
   title: tidbitsPage.title,
   description: tidbitsPage.description,
-  alternates: {
-    canonical: '/tidbits',
-    types: feedDiscovery('tidbits'),
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: '/tidbits',
-    siteName: siteConfig.title,
-    title: tidbitsSocialTitle,
-    description: tidbitsPage.description,
-    images: [{ url: siteConfig.image, width: 1200, height: 630 }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: tidbitsSocialTitle,
-    description: tidbitsPage.description,
-    images: [{ url: siteConfig.image, width: 1200, height: 630 }],
-  },
-  icons: {
-    icon: [{ url: siteConfig.newsletters.tidbits.icon, type: 'image/svg+xml' }],
-    apple: siteConfig.newsletters.tidbits.icon,
-  },
-}
+  newsletter: 'tidbits',
+})
 
 const ROW_HEIGHT = 280
 const MAX_ROW_WIDTH = 1216

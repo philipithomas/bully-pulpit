@@ -1,9 +1,7 @@
-import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
-import { siteConfig } from '@/lib/config'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import { markdownToPlaintext } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
@@ -11,26 +9,18 @@ import {
   CAPTIONED_ZOOM_IMAGE_SIZES,
   zoomImageDataAttrs,
 } from '@/lib/content/zoom-image'
-import { feedDiscovery } from '@/lib/feeds/discovery'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 import { publicAppPage } from '@/lib/public-pages'
+import { createPublicPageMetadata } from '@/lib/seo/metadata'
 
 const tsundokuPage = publicAppPage('/tsundoku')
 
-export const metadata: Metadata = {
+export const metadata = createPublicPageMetadata({
+  path: '/tsundoku',
   title: tsundokuPage.title,
   description: tsundokuPage.description,
-  alternates: {
-    canonical: '/tsundoku',
-    types: feedDiscovery('tsundoku'),
-  },
-  icons: {
-    icon: [
-      { url: siteConfig.newsletters.tsundoku.icon, type: 'image/svg+xml' },
-    ],
-    apple: siteConfig.newsletters.tsundoku.icon,
-  },
-}
+  newsletter: 'tsundoku',
+})
 
 const ROW_HEIGHT = 260
 const MAX_ROW_WIDTH = 1216

@@ -1,4 +1,3 @@
-import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { InfinitePostGrid } from '@/components/posts/infinite-post-grid'
@@ -7,25 +6,17 @@ import { siteConfig } from '@/lib/config'
 import { coverPreloadAttrs } from '@/lib/content/cover-preload'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
-import { feedDiscovery } from '@/lib/feeds/discovery'
 import { publicAppPage } from '@/lib/public-pages'
+import { createPublicPageMetadata } from '@/lib/seo/metadata'
 
 const contraptionPage = publicAppPage('/contraption')
 
-export const metadata: Metadata = {
+export const metadata = createPublicPageMetadata({
+  path: '/contraption',
   title: contraptionPage.title,
   description: contraptionPage.description,
-  alternates: {
-    canonical: '/contraption',
-    types: feedDiscovery('contraption'),
-  },
-  icons: {
-    icon: [
-      { url: siteConfig.newsletters.contraption.icon, type: 'image/svg+xml' },
-    ],
-    apple: siteConfig.newsletters.contraption.icon,
-  },
-}
+  newsletter: 'contraption',
+})
 
 function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
   return (

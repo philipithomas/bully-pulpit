@@ -1,19 +1,19 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
-import { feedDiscovery } from '@/lib/feeds/discovery'
+import { publicAppPage } from '@/lib/public-pages'
+import { createPublicPageMetadata } from '@/lib/seo/metadata'
 import { siteIdentity } from '@/lib/site-identity'
 
 const endpoint = `${siteIdentity.productionUrl}/mcp`
+const mcpPage = publicAppPage('/mcp/setup')
 
 const linkClassName =
   'underline decoration-gray-300 underline-offset-4 transition-colors duration-300 hover:text-gray-950 hover:decoration-gray-950'
 
-export const metadata: Metadata = {
-  title: 'MCP server',
-  description:
-    "Connect an AI client to search, list, and read Philip Ilic Thomas's public writing.",
-  alternates: { canonical: '/mcp/setup', types: feedDiscovery() },
-}
+export const metadata = createPublicPageMetadata({
+  path: '/mcp/setup',
+  title: mcpPage.title,
+  description: mcpPage.description,
+})
 
 function CodeBlock({ children }: { children: string }) {
   return (
