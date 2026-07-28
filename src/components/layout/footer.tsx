@@ -30,6 +30,22 @@ export function Footer() {
             >
               Contact
             </Link>
+            <a
+              href="https://github.com/philipithomas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              GitHub
+            </a>
+            <a
+              href="https://linkedin.com/in/philipithomas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              LinkedIn
+            </a>
             <Link href="/terms" className="hover:text-white transition-colors">
               Terms
             </Link>
