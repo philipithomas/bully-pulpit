@@ -183,7 +183,7 @@ export default async function HomePage() {
                   href={`/${nl.slug}`}
                   className="flex items-center gap-3 group"
                 >
-                  <span className="w-[100px] shrink-0 flex items-center">
+                  <span className="w-[76px] shrink-0 flex items-center">
                     <Image
                       src={nl.logo.src}
                       alt={nl.name}
@@ -204,7 +204,7 @@ export default async function HomePage() {
                 </Link>
               ))}
             </div>
-            <p className="font-serif text-sm text-gray-500 mt-3">
+            <p className="font-serif text-sm text-gray-500 mt-6">
               Also available via{' '}
               <Link
                 href="/feed/rss.xml"
