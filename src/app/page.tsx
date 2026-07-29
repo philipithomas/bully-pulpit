@@ -113,11 +113,12 @@ export default async function HomePage() {
               coffee, and photography.
             </p>
             <p className="mb-4">
+              I{' '}
               <Link
                 href="/how-to-replace-social-media-with-a-personal-newsletter"
                 className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
               >
-                I do not use social media
+                do not use social media
               </Link>
               , so this website contains my writing and media.
             </p>
