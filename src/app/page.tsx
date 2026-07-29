@@ -121,27 +121,6 @@ export default async function HomePage() {
               </Link>
               , so this website contains my writing and media.
             </p>
-            <p>
-              Connect with me on{' '}
-              <a
-                href="https://github.com/philipithomas"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
-              >
-                GitHub
-              </a>{' '}
-              and{' '}
-              <a
-                href="https://linkedin.com/in/philipithomas"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
-              >
-                LinkedIn
-              </a>
-              .
-            </p>
           </div>
 
           {/* Horizontal portrait (mobile only) */}

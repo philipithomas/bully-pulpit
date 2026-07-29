@@ -6,7 +6,7 @@ export function Footer() {
   return (
     <footer className="bg-gray-950 text-gray-400 mt-16">
       <div className="container py-12 md:py-16">
-        <div className="grid gap-y-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-baseline md:gap-x-8">
+        <div className="grid gap-y-3 md:grid-cols-[minmax(10rem,1fr)_minmax(0,auto)] md:items-baseline md:gap-x-8">
           <Link
             href="/"
             className="text-white font-semibold text-sm tracking-[0.04em] uppercase hover:text-gray-300 transition-colors"
@@ -30,6 +30,22 @@ export function Footer() {
             >
               Contact
             </Link>
+            <a
+              href="https://github.com/philipithomas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              GitHub
+            </a>
+            <a
+              href="https://linkedin.com/in/philipithomas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              LinkedIn
+            </a>
             <Link href="/terms" className="hover:text-white transition-colors">
               Terms
             </Link>
