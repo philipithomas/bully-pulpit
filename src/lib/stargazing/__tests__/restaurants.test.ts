@@ -23,6 +23,7 @@ describe('stargazing restaurant data', () => {
       'Quintonil',
       'Osteria Francescana',
       'Le Bernardin',
+      'Silo',
     ])
   })
 
