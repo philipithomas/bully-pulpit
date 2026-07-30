@@ -292,6 +292,7 @@ export const stargazingFavorites = [
   'Quintonil',
   'Osteria Francescana',
   'Le Bernardin',
+  'Silo',
 ] as const
 
 export function michelinRecognition(restaurant: StargazingRestaurant): string {
