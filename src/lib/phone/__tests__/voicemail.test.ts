@@ -127,7 +127,8 @@ describe('processVoicemail', () => {
     const formData = transcriptionBody as FormData
     expect(formData.get('model')).toBe(OPENAI_TRANSCRIPTION_MODEL)
     expect(formData.get('model')).toBe('gpt-transcribe')
-    expect(formData.get('language')).toBe('en')
+    expect(formData.getAll('languages[]')).toEqual(['en'])
+    expect(formData.has('language')).toBe(false)
     expect(formData.get('prompt')).toContain('Philip Ilic Thomas')
     expect(formData.getAll('keywords[]')).toContain('Bell AI')
     expect(formData.getAll('keywords[]')).toContain('philipithomas.com')

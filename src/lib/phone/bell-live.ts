@@ -4,7 +4,6 @@ import { siteIdentity } from '@/lib/site-identity'
 
 export const PHONE_BELL_REALTIME_DEFAULT_MODEL_ID = 'gpt-realtime-2.1'
 export const PHONE_BELL_REALTIME_MINI_MODEL_ID = 'gpt-realtime-2.1-mini'
-export const PHONE_BELL_TRANSCRIPTION_MODEL_ID = 'gpt-live-transcribe'
 export const PHONE_BELL_REALTIME_VOICE = 'marin'
 export const PHONE_BELL_REALTIME_VOICE_SPEED = 1.08
 export const PHONE_BELL_MAX_CALL_SECONDS = 300
@@ -203,22 +202,9 @@ export function phoneBellRealtimeSession() {
     reasoning: { effort: 'low' as const },
     audio: {
       input: {
+        // Realtime consumes SIP audio natively. Keep auxiliary transcription
+        // off until the application has a sideband transcript consumer.
         noise_reduction: { type: 'near_field' as const },
-        transcription: {
-          model: PHONE_BELL_TRANSCRIPTION_MODEL_ID,
-          language: 'en',
-          keywords: [
-            'Bell AI',
-            'Philip Ilic Thomas',
-            'philipithomas.com',
-            'Contraption',
-            'Postcard',
-            'Tsundoku',
-            'tidbits',
-          ],
-          prompt:
-            'A telephone conversation with Bell AI about Philip Ilic Thomas and his public website and writing.',
-        },
         turn_detection: {
           type: 'semantic_vad' as const,
           eagerness: 'high' as const,
