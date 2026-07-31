@@ -7,6 +7,7 @@ interface FakeWebSocketOptions {
 
 /** Minimal Node `ws`-style socket used by Bell Live route and unit tests. */
 export class FakeOpenAiRealtimeWebSocket {
+  static afterContinuationEvents: Array<Record<string, unknown>> = []
   static afterGreetingEvents: Array<Record<string, unknown>> = []
   static autoCloseAfterGreeting = false
   static connections: Array<{
@@ -72,6 +73,17 @@ export class FakeOpenAiRealtimeWebSocket {
     }
     const event = JSON.parse(value) as unknown
     FakeOpenAiRealtimeWebSocket.sentEvents.push(event)
+    const purpose = (
+      event as { response?: { metadata?: { purpose?: unknown } } }
+    ).response?.metadata?.purpose
+    if (purpose !== 'bell_initial_greeting') {
+      if (purpose === 'bell_tool_continuation') {
+        for (const serverEvent of FakeOpenAiRealtimeWebSocket.afterContinuationEvents) {
+          this.emit('message', JSON.stringify(serverEvent))
+        }
+      }
+      return
+    }
     const emitGreeting = () => {
       this.emit(
         'message',
@@ -156,6 +168,10 @@ export class FakeOpenAiRealtimeWebSocket {
     if (this.closed) return
     this.closed = true
     this.emit('close', code)
+  }
+
+  emitServerEvent(event: Record<string, unknown>): void {
+    this.emit('message', JSON.stringify(event))
   }
 
   private emit(type: string, ...args: unknown[]): void {
