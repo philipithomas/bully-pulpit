@@ -85,7 +85,7 @@ function LeadPhoto({ post }: { post: Post }) {
   const ratio = post.coverDimensions.width / post.coverDimensions.height
 
   return (
-    <figure className="w-full" style={{ maxWidth: `${ratio * 80}svh` }}>
+    <figure className="mx-auto w-full" style={{ maxWidth: `${ratio * 80}svh` }}>
       <a
         href={postPath(post.slug)}
         aria-label={coverImageAlt ?? title}

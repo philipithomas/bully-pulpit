@@ -1,8 +1,28 @@
 {
-  "generatedAt": "2026-07-31T21:48:21.590Z",
+  "generatedAt": "2026-07-31T22:29:43.858Z",
   "posts": {
+    "jackknife": {
+      "related": [
+        {
+          "slug": "swivel",
+          "score": 0.1572503
+        },
+        {
+          "slug": "maintenance",
+          "score": 0.2462928
+        },
+        {
+          "slug": "code-as-content-and-digital-proprioception",
+          "score": 0.2464839
+        }
+      ]
+    },
     "swivel": {
       "related": [
+        {
+          "slug": "jackknife",
+          "score": 0.1572503
+        },
         {
           "slug": "code-as-content-and-digital-proprioception",
           "score": 0.3037357
@@ -10,10 +30,6 @@
         {
           "slug": "maintenance",
           "score": 0.3075322
-        },
-        {
-          "slug": "farewell",
-          "score": 0.315779
         }
       ]
     },
@@ -92,8 +108,8 @@
           "score": 0.3198735
         },
         {
-          "slug": "carrera",
-          "score": 0.3407392
+          "slug": "jackknife",
+          "score": 0.3328368
         }
       ]
     },

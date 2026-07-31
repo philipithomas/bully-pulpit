@@ -250,6 +250,11 @@ export default async function SlugPage({ params }: Props) {
   const showPostMetadata = Boolean(postDate || location || photo)
   const isPhotoPost = Boolean(post && isPhotoNewsletter(post.newsletter))
   const isTidbitsPost = post?.newsletter === 'tidbits'
+  const isPortraitTidbitsCover = Boolean(
+    isTidbitsPost &&
+      post?.coverDimensions &&
+      post.coverDimensions.width < post.coverDimensions.height
+  )
   const coverZoomCaption =
     isPhotoPost && post
       ? {
@@ -296,8 +301,23 @@ export default async function SlugPage({ params }: Props) {
   const coverImage = item.frontmatter.coverImage ? (
     <div
       className={`w-full ${
-        isTidbitsPost ? 'mb-0' : isPhotoPost ? 'mb-8' : 'mb-10'
+        isPortraitTidbitsCover
+          ? 'mx-auto mb-0'
+          : isTidbitsPost
+            ? 'mb-0'
+            : isPhotoPost
+              ? 'mb-8'
+              : 'mb-10'
       }`}
+      style={
+        isPortraitTidbitsCover && post?.coverDimensions
+          ? {
+              maxWidth: `${
+                (post.coverDimensions.width / post.coverDimensions.height) * 80
+              }svh`,
+            }
+          : undefined
+      }
     >
       <button
         type="button"

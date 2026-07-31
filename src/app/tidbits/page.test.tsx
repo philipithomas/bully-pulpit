@@ -84,10 +84,14 @@ describe('TidbitsPage viewer contract', () => {
     const swivelLink = html.match(
       /<a[^>]*data-zoom-caption-href="\/swivel"[^>]*>/
     )?.[0]
+    const jackknifeLink = html.match(
+      /<a[^>]*data-zoom-caption-href="\/jackknife"[^>]*>/
+    )?.[0]
     const sfmomaLink = html.match(
       /<a[^>]*data-zoom-caption-href="\/sfmoma"[^>]*>/
     )?.[0]
 
+    expect(jackknifeLink).toBeDefined()
     expect(swivelLink).toBeDefined()
     expect(sfmomaLink).toBeDefined()
     expect(html).toContain('data-zoom-caption-presentation="immersive"')
@@ -106,6 +110,12 @@ describe('TidbitsPage viewer contract', () => {
     expect(html).toContain('data-full-sizes="100vw"')
     expect(swivelLink).toContain(
       'data-zoom-caption-description="I went to The Flats in Cleveland'
+    )
+    expect(jackknifeLink).toContain(
+      'data-zoom-caption-description="I’m fascinated by this abandoned railroad bridge'
+    )
+    expect(html).toContain(
+      '<figure class="mx-auto w-full" style="max-width:52.5svh">'
     )
     expect(sfmomaLink).not.toContain('data-zoom-caption-description=')
     expect(html).toContain('href="/sfmoma"')
