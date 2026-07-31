@@ -102,8 +102,10 @@ describe('buildEmailBodyHtml newsletter-specific blocks', () => {
   })
 
   it('keeps a description-free Tidbits issue useful in previews and plaintext', async () => {
-    const post = getPostsByNewsletter('tidbits')[0]
-    expect(post).toBeDefined()
+    const post = getPostsByNewsletter('tidbits').find(
+      (candidate) => candidate.content.trim().length === 0
+    )
+    if (!post) throw new Error('Expected an empty-body Tidbits fixture')
 
     const body = await buildEmailBodyHtml(post)
 
@@ -114,5 +116,18 @@ describe('buildEmailBodyHtml newsletter-specific blocks', () => {
     expect(body.bodyText).toContain(
       `https://www.philipithomas.com/${post.slug}`
     )
+  })
+
+  it('uses Tidbits body copy in the email preview and plaintext', async () => {
+    const post = getPostsByNewsletter('tidbits').find(
+      (candidate) => candidate.slug === 'swivel'
+    )
+    if (!post) throw new Error('Expected the Swivel Tidbits post')
+
+    const body = await buildEmailBodyHtml(post)
+
+    expect(body.previewText).toContain('I went to The Flats in Cleveland')
+    expect(body.bodyText).toContain('I went to The Flats in Cleveland')
+    expect(body.html).toContain('I went to The Flats in Cleveland')
   })
 })
