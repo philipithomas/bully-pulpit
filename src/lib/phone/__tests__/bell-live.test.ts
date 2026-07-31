@@ -26,6 +26,7 @@ vi.mock('openai/realtime/ws', async () => {
 
 const NOW = new Date('2026-07-31T12:00:00Z')
 const CALL_SID = 'CA1234567890abcdef1234567890abcdef'
+const ORIGINAL_OPENAI_BASE_URL = process.env.OPENAI_BASE_URL
 
 function headersFromSipUri(uri: string) {
   const query = new URLSearchParams(uri.slice(uri.indexOf('?') + 1))
@@ -33,6 +34,7 @@ function headersFromSipUri(uri: string) {
 }
 
 beforeEach(() => {
+  delete process.env.OPENAI_BASE_URL
   FakeOpenAiRealtimeWebSocket.connections = []
   FakeOpenAiRealtimeWebSocket.emitAudioCleared = false
   FakeOpenAiRealtimeWebSocket.emitAudioStarted = true
@@ -53,6 +55,11 @@ afterEach(() => {
   delete process.env.OPENAI_WEBHOOK_SECRET
   delete process.env.OPENAI_PHONE_REALTIME_MODEL
   delete process.env.TWILIO_SECRET
+  if (ORIGINAL_OPENAI_BASE_URL) {
+    process.env.OPENAI_BASE_URL = ORIGINAL_OPENAI_BASE_URL
+  } else {
+    delete process.env.OPENAI_BASE_URL
+  }
   vi.unstubAllGlobals()
 })
 
