@@ -17,8 +17,8 @@ export type BellMessageStatus =
   | 'error'
   | 'redacted'
 
-export const MAX_BELL_MESSAGE_CHARACTERS = 16_000
-export const MAX_BELL_PARTS_JSON_BYTES = 64_000
+export const MAX_BELL_MESSAGE_CHARACTERS = 160_000
+export const MAX_BELL_PARTS_JSON_BYTES = 512_000
 
 export function boundedBellContent(value: string): string {
   return value.trim().slice(0, MAX_BELL_MESSAGE_CHARACTERS)

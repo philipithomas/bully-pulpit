@@ -7,11 +7,11 @@ vi.mock('@/lib/chat/bell-generation', () => ({
     costUsd: null,
   })),
   bellModel: 'test-model',
-  bellStopWhen: 'stop-condition',
+  bellSmsStopWhen: 'stop-condition',
   bellTools: { searchPosts: {} },
   getBellReasoning: vi.fn(() => 'xhigh'),
   getBellProviderOptions: vi.fn(() => ({ gateway: {} })),
-  prepareBellStep: vi.fn(),
+  prepareBellSmsStep: vi.fn(),
 }))
 vi.mock('@/lib/chat/bell-identity', () => ({
   smsIdentityHash: vi.fn(() => 'sms-hash'),

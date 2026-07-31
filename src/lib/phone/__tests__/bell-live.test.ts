@@ -36,10 +36,14 @@ function headersFromSipUri(uri: string) {
 beforeEach(() => {
   delete process.env.OPENAI_BASE_URL
   FakeOpenAiRealtimeWebSocket.connections = []
+  FakeOpenAiRealtimeWebSocket.sockets = []
+  FakeOpenAiRealtimeWebSocket.afterGreetingEvents = []
+  FakeOpenAiRealtimeWebSocket.autoCloseAfterGreeting = false
   FakeOpenAiRealtimeWebSocket.emitAudioCleared = false
   FakeOpenAiRealtimeWebSocket.emitAudioStarted = true
   FakeOpenAiRealtimeWebSocket.emitAudioStopped = true
   FakeOpenAiRealtimeWebSocket.finalStatus = 'completed'
+  FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 0
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = null
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses = []
   FakeOpenAiRealtimeWebSocket.sentEvents = []
@@ -51,6 +55,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   delete process.env.OPENAI_API_KEY
   delete process.env.OPENAI_PROJECT_ID
   delete process.env.OPENAI_WEBHOOK_SECRET
@@ -145,7 +150,7 @@ describe('Bell Live Realtime session', () => {
       type: 'realtime',
       model: PHONE_BELL_REALTIME_DEFAULT_MODEL_ID,
       output_modalities: ['audio'],
-      max_output_tokens: 512,
+      max_output_tokens: 'inf',
       parallel_tool_calls: false,
       reasoning: { effort: 'low' },
       audio: {
@@ -168,11 +173,31 @@ describe('Bell Live Realtime session', () => {
       ],
       tracing: null,
     })
-    expect(session.instructions).toContain('You are Bell')
+    expect(PHONE_BELL_INITIAL_GREETING).toBe(
+      'Hi, this is Bell AI. What can I help with?'
+    )
+    expect(session.instructions).toContain('You are Bell AI')
     expect(session.instructions).toContain(PHONE_BELL_INITIAL_GREETING)
+    expect(session.instructions).toContain('say "Bell AI," never "Bell" alone')
+    expect(session.instructions).toContain('long, complete answers are allowed')
+    expect(session.instructions).toContain(
+      'Never stop at a tool call, omit the answer, or end mid-thought'
+    )
+    expect(session.instructions).toContain(
+      'The phone call has a hard five-minute total limit'
+    )
+    expect(session.instructions).toContain(
+      'do not begin a readback you cannot finish'
+    )
+    expect(session.instructions).not.toContain('one to three short sentences')
     expect(PHONE_BELL_MAX_CALL_SECONDS).toBe(300)
     expect(session).not.toHaveProperty('service_tier')
-    expect(session.audio.input).not.toHaveProperty('transcription')
+    expect(session.audio.input.transcription).toMatchObject({
+      model: 'gpt-live-transcribe',
+      languages: ['en'],
+      keywords: expect.arrayContaining(['Bell AI', 'Philip Ilic Thomas']),
+    })
+    expect(session.audio.input.transcription).not.toHaveProperty('language')
     expect(session.tools[0]).not.toHaveProperty('server_description')
     expect(session.tools[0]).not.toHaveProperty('allowed_callers')
   })
@@ -281,14 +306,14 @@ describe('Bell Live Realtime session', () => {
   })
 
   it('starts Bell with a proactive sideband greeting', async () => {
-    await expect(
-      startBellLiveGreeting('rtc_call_greeting')
-    ).resolves.toMatchObject({
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    expect(greeting).toMatchObject({
       audioStarted: true,
       durationMs: expect.any(Number),
       responseCheckpointed: true,
       responseCreated: true,
     })
+    expect(FakeOpenAiRealtimeWebSocket.sockets[0]?.closed).toBe(false)
     expect(FakeOpenAiRealtimeWebSocket.sentEvents).toEqual([
       {
         type: 'response.create',
@@ -300,6 +325,25 @@ describe('Bell Live Realtime session', () => {
         },
       },
     ])
+
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await expect(greeting.conversation).resolves.toMatchObject({
+      observerCompleted: true,
+      turns: [],
+    })
+  })
+
+  it('allows normal model and playback latency beyond four seconds', async () => {
+    vi.useFakeTimers()
+    FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 5_000
+
+    const pendingGreeting = startBellLiveGreeting('rtc_call_greeting')
+    await vi.advanceTimersByTimeAsync(5_000)
+    const greeting = await pendingGreeting
+
+    expect(greeting.audioStarted).toBe(true)
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await greeting.conversation
   })
 
   it('authenticates the Node sideband socket with API and project headers', async () => {
@@ -332,6 +376,25 @@ describe('Bell Live Realtime session', () => {
       audioStarted: true,
       responseCheckpointed: true,
       responseCreated: true,
+    })
+  })
+
+  it('keeps observing when the caller interrupts the opening response', async () => {
+    FakeOpenAiRealtimeWebSocket.emitAudioCleared = true
+    FakeOpenAiRealtimeWebSocket.emitAudioStopped = false
+    FakeOpenAiRealtimeWebSocket.finalStatus = 'cancelled'
+
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    expect(greeting).toMatchObject({
+      audioStarted: true,
+      responseCheckpointed: true,
+      responseCreated: true,
+    })
+    expect(FakeOpenAiRealtimeWebSocket.sockets[0]?.closed).toBe(false)
+
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await expect(greeting.conversation).resolves.toMatchObject({
+      observerCompleted: true,
     })
   })
 

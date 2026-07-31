@@ -17,11 +17,11 @@ import {
 import {
   bellGatewayCost,
   bellModel,
-  bellStopWhen,
   bellTools,
+  bellWebStopWhen,
   getBellProviderOptions,
   getBellReasoning,
-  prepareBellStep,
+  prepareBellWebStep,
 } from '@/lib/chat/bell-generation'
 import {
   canAppendToWebBellConversation,
@@ -50,7 +50,13 @@ import {
 import { readJsonBody } from '@/lib/http/json-body'
 import { checkRateLimitStatus } from '@/lib/rate-limit'
 
-export const CHAT_BODY_MAX_BYTES = 256 * 1024
+// The browser sends at most 192k characters of sanitized prose, but JSON and
+// UTF-8 escaping can use several bytes per character. Leave comfortable room
+// for long Bell AI analyses while retaining a hard pre-parse request bound.
+export const CHAT_BODY_MAX_BYTES = 2 * 1024 * 1024
+// Deep web research can make many sequential model/tool round trips. The
+// project's paid Fluid Compute runtime supports Vercel's 800-second ceiling.
+export const maxDuration = 800
 
 const chatBodySchema = z.strictObject({
   id: z.string().max(200),
@@ -237,7 +243,9 @@ export async function POST(request: Request) {
           ? `network:${networkIdentity.hash}`
           : null,
     }),
-    maxOutputTokens: 2048,
+    // A final answer may reproduce a complete post or synthesize many tool
+    // results. Reasoning and visible prose share this per-step budget.
+    maxOutputTokens: 32_768,
     // Stop upstream generation when the visitor hits Stop or disconnects.
     abortSignal: request.signal,
     runtimeContext: { path: path ?? 'unknown' },
@@ -253,8 +261,8 @@ export async function POST(request: Request) {
     system,
     messages,
     tools: bellTools,
-    stopWhen: bellStopWhen,
-    prepareStep: prepareBellStep,
+    stopWhen: bellWebStopWhen,
+    prepareStep: prepareBellWebStep,
     onEnd: async (event) => {
       // AI SDK reports provider failures through onError. Do not let the
       // terminal onEnd callback overwrite that authoritative error outcome.

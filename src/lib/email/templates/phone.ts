@@ -40,7 +40,7 @@ function renderPhoneNotification(input: {
     .map(
       (section) =>
         `<h2 style="margin: 24px 0 8px; font-family: 'Sohne', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 16px; font-weight: 600; color: #111110;">${escapeHtml(section.title)}</h2>
-            <p style="margin: 0 0 16px; font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.6; color: #3B3834;">${escapeHtml(section.body)}</p>`
+            <p style="margin: 0 0 16px; white-space: pre-wrap; font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.6; color: #3B3834;">${escapeHtml(section.body)}</p>`
     )
     .join('\n            ')
   const footnote = input.footnote
@@ -179,6 +179,47 @@ export function renderVoicemailEmail(input: VoicemailEmailInput): string {
 
 export function renderVoicemailText(input: VoicemailEmailInput): string {
   return renderPhoneNotificationText(voicemailContent(input))
+}
+
+// --- Bell AI live conversation ---
+
+export type BellLiveTranscriptEmailInput = {
+  callSid: string
+  durationSeconds: string
+  finishedAt: Date
+  partial: boolean
+  transcript: string
+}
+
+function bellLiveTranscriptContent(input: BellLiveTranscriptEmailInput) {
+  return {
+    heading: 'Bell AI phone conversation',
+    details: [
+      ['Call SID', input.callSid],
+      ['Duration', `${input.durationSeconds} seconds`],
+      ['Transcript', input.partial ? 'Partial' : 'Complete'],
+      ['Finished', formatTimestamp(input.finishedAt)],
+    ] as Array<[string, string]>,
+    sections: [{ title: 'Conversation', body: input.transcript }],
+    footnote: input.partial
+      ? 'This live transcript may be incomplete because a turn could not be fully transcribed or the observer disconnected. No call audio was recorded.'
+      : 'This transcript was generated live from the call and may contain speech-recognition errors. No call audio was recorded.',
+  }
+}
+
+export function renderBellLiveTranscriptEmail(
+  input: BellLiveTranscriptEmailInput
+): string {
+  return renderPhoneNotification({
+    title: 'Bell AI phone conversation transcript',
+    ...bellLiveTranscriptContent(input),
+  })
+}
+
+export function renderBellLiveTranscriptText(
+  input: BellLiveTranscriptEmailInput
+): string {
+  return renderPhoneNotificationText(bellLiveTranscriptContent(input))
 }
 
 // --- Missed call ---

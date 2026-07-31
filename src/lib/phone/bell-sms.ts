@@ -4,11 +4,11 @@ import { trackServerEvent } from '@/lib/analytics/server'
 import {
   bellGatewayCost,
   bellModel,
-  bellStopWhen,
+  bellSmsStopWhen,
   bellTools,
   getBellProviderOptions,
   getBellReasoning,
-  prepareBellStep,
+  prepareBellSmsStep,
 } from '@/lib/chat/bell-generation'
 import { smsIdentityHash } from '@/lib/chat/bell-identity'
 import { scrubLeakedToolJson } from '@/lib/chat/scrub-leaked-tool-json'
@@ -292,8 +292,8 @@ export async function generateBellSmsBody(
       system: getSystemPrompt({ surface: 'sms' }),
       prompt: buildBellSmsPrompt(history),
       tools: bellTools,
-      stopWhen: bellStopWhen,
-      prepareStep: prepareBellStep,
+      stopWhen: bellSmsStopWhen,
+      prepareStep: prepareBellSmsStep,
     })
     const body = formatBellSmsBody(generated.text)
     const assistant = await createBellMessage({

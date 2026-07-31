@@ -7,6 +7,8 @@ interface FakeWebSocketOptions {
 
 /** Minimal Node `ws`-style socket used by Bell Live route and unit tests. */
 export class FakeOpenAiRealtimeWebSocket {
+  static afterGreetingEvents: Array<Record<string, unknown>> = []
+  static autoCloseAfterGreeting = false
   static connections: Array<{
     options: FakeWebSocketOptions
     url: string
@@ -14,14 +16,17 @@ export class FakeOpenAiRealtimeWebSocket {
   static emitAudioCleared = false
   static emitAudioStarted = true
   static emitAudioStopped = true
-  static finalStatus: 'completed' | 'failed' = 'completed'
+  static finalStatus: 'cancelled' | 'completed' | 'failed' = 'completed'
+  static greetingEventDelayMs = 0
   static handshakeHttpStatus: number | null = null
   static handshakeHttpStatuses: Array<number | null> = []
   static sentEvents: unknown[] = []
+  static sockets: FakeOpenAiRealtimeWebSocket[] = []
   static throwOnSend = false
 
   readonly options: FakeWebSocketOptions
   readonly url: string
+  closed = false
   private readonly listeners = new Map<string, WebSocketListener[]>()
 
   constructor(url: string | URL, options: FakeWebSocketOptions = {}) {
@@ -31,6 +36,7 @@ export class FakeOpenAiRealtimeWebSocket {
       options,
       url: this.url,
     })
+    FakeOpenAiRealtimeWebSocket.sockets.push(this)
     queueMicrotask(() => {
       const handshakeHttpStatus =
         FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses.length > 0
@@ -66,7 +72,7 @@ export class FakeOpenAiRealtimeWebSocket {
     }
     const event = JSON.parse(value) as unknown
     FakeOpenAiRealtimeWebSocket.sentEvents.push(event)
-    queueMicrotask(() => {
+    const emitGreeting = () => {
       this.emit(
         'message',
         JSON.stringify({
@@ -132,7 +138,24 @@ export class FakeOpenAiRealtimeWebSocket {
           })
         )
       }
-    })
+      for (const serverEvent of FakeOpenAiRealtimeWebSocket.afterGreetingEvents) {
+        this.emit('message', JSON.stringify(serverEvent))
+      }
+      if (FakeOpenAiRealtimeWebSocket.autoCloseAfterGreeting) {
+        this.closeFromServer()
+      }
+    }
+    if (FakeOpenAiRealtimeWebSocket.greetingEventDelayMs > 0) {
+      setTimeout(emitGreeting, FakeOpenAiRealtimeWebSocket.greetingEventDelayMs)
+    } else {
+      queueMicrotask(emitGreeting)
+    }
+  }
+
+  closeFromServer(code = 1_000): void {
+    if (this.closed) return
+    this.closed = true
+    this.emit('close', code)
   }
 
   private emit(type: string, ...args: unknown[]): void {

@@ -36,11 +36,19 @@ const webhookEvents = vi.hoisted(() => ({
   markSideEffectObserved: vi.fn(),
 }))
 
+const transcriptNotifications = vi.hoisted(() => ({
+  send: vi.fn(async () => undefined),
+}))
+
 vi.mock('@/lib/db/queries/phone-webhook-events', () => ({
   claimPhoneWebhookEventAttempt: webhookEvents.claimAttempt,
   findOrCreatePhoneWebhookEvent: webhookEvents.findOrCreate,
   markPhoneWebhookEventProcessed: webhookEvents.markProcessed,
   markPhoneWebhookEventSideEffectObserved: webhookEvents.markSideEffectObserved,
+}))
+
+vi.mock('@/lib/phone/notifications', () => ({
+  sendBellLiveTranscriptNotification: transcriptNotifications.send,
 }))
 
 const WEBHOOK_SECRET_BYTES = Buffer.from('test-openai-webhook-secret')
@@ -115,6 +123,9 @@ beforeEach(() => {
   afterTasks.length = 0
   afterControl.throwOnSchedule = false
   FakeOpenAiRealtimeWebSocket.connections = []
+  FakeOpenAiRealtimeWebSocket.sockets = []
+  FakeOpenAiRealtimeWebSocket.afterGreetingEvents = []
+  FakeOpenAiRealtimeWebSocket.autoCloseAfterGreeting = true
   FakeOpenAiRealtimeWebSocket.emitAudioCleared = false
   FakeOpenAiRealtimeWebSocket.emitAudioStarted = true
   FakeOpenAiRealtimeWebSocket.emitAudioStopped = true
@@ -123,6 +134,7 @@ beforeEach(() => {
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses = []
   FakeOpenAiRealtimeWebSocket.sentEvents = []
   FakeOpenAiRealtimeWebSocket.throwOnSend = false
+  transcriptNotifications.send.mockClear()
   const createdAt = new Date()
   webhookEvents.findOrCreate.mockReset()
   webhookEvents.findOrCreate.mockResolvedValue({
@@ -194,7 +206,9 @@ describe('POST /api/openai/realtime-call', () => {
       audio: { input: Record<string, unknown> }
     }
     expect(body.model).toBe('gpt-realtime-2.1')
-    expect(body.audio.input).not.toHaveProperty('transcription')
+    expect(body.audio.input).toMatchObject({
+      transcription: { model: 'gpt-live-transcribe' },
+    })
     expect(afterTasks).toHaveLength(1)
     expect(webhookEvents.findOrCreate).not.toHaveBeenCalled()
     expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(0)
@@ -212,6 +226,92 @@ describe('POST /api/openai/realtime-call', () => {
         httpStatus: 200,
         openAiRequestId: 'req_accept_123',
         outcome: 'handled',
+      })
+    )
+  })
+
+  it('emails a complete, ordered transcript when the SIP sideband closes', async () => {
+    FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [
+      {
+        type: 'conversation.item.added',
+        event_id: 'evt_caller_added',
+        previous_item_id: null,
+        item: {
+          id: 'item_caller',
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_audio' }],
+        },
+      },
+      {
+        type: 'conversation.item.added',
+        event_id: 'evt_tool_added',
+        previous_item_id: 'item_caller',
+        item: { id: 'item_tool', type: 'mcp_call' },
+      },
+      {
+        type: 'conversation.item.added',
+        event_id: 'evt_bell_added',
+        previous_item_id: 'item_tool',
+        item: {
+          id: 'item_bell',
+          type: 'message',
+          role: 'assistant',
+          content: [{ type: 'output_audio' }],
+        },
+      },
+      {
+        type: 'response.output_audio_transcript.done',
+        event_id: 'evt_bell_transcript',
+        response_id: 'response_bell',
+        item_id: 'item_bell',
+        output_index: 0,
+        content_index: 0,
+        transcript: 'Here is the complete answer.',
+      },
+      {
+        type: 'conversation.item.input_audio_transcription.completed',
+        event_id: 'evt_caller_transcript',
+        item_id: 'item_caller',
+        content_index: 0,
+        transcript: 'Tell me about that post.',
+        usage: { type: 'duration', seconds: 1 },
+      },
+    ]
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 200 }))
+    )
+
+    const result = await postAndFlush(signedRequest(incomingEvent()))
+
+    expect(result.status).toBe(204)
+    expect(transcriptNotifications.send).toHaveBeenCalledOnce()
+    expect(transcriptNotifications.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callSid: CALL_SID,
+        inputFailureCount: 0,
+        missingTranscriptCount: 0,
+        observerCompleted: true,
+        turns: [
+          expect.objectContaining({
+            role: 'caller',
+            text: 'Tell me about that post.',
+          }),
+          expect.objectContaining({
+            role: 'bell_ai',
+            text: 'Here is the complete answer.',
+          }),
+        ],
+      })
+    )
+    expect(console.info).toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({
+        event: 'bell_live.transcript_email',
+        outcome: 'sent',
+        transcriptCharacters: expect.any(Number),
+        transcriptTurns: 2,
       })
     )
   })

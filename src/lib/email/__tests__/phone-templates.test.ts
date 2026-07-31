@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  renderBellLiveTranscriptEmail,
+  renderBellLiveTranscriptText,
   renderIncomingSmsEmail,
   renderIncomingSmsText,
   renderMissedCallEmail,
@@ -100,6 +102,37 @@ describe('voicemail email', () => {
     expect(text).toContain(
       'Hey Philip, call me back about the <thing> & stuff.'
     )
+  })
+})
+
+describe('Bell AI live transcript email', () => {
+  const input = {
+    callSid: 'CA-live-123',
+    durationSeconds: '91',
+    finishedAt: receivedAt,
+    partial: false,
+    transcript:
+      'Caller: Read the <post> to me.\n\nBell AI: Here is the & answer.',
+  }
+
+  it('renders the complete, escaped conversation without flattening lines', () => {
+    const html = renderBellLiveTranscriptEmail(input)
+    expect(html).toContain('Bell AI phone conversation')
+    expect(html).toContain('CA-live-123')
+    expect(html).toContain('91 seconds')
+    expect(html).toContain('Complete')
+    expect(html).toContain('white-space: pre-wrap')
+    expect(html).toContain(
+      'Caller: Read the &lt;post&gt; to me.\n\nBell AI: Here is the &amp; answer.'
+    )
+    expect(html).toContain('No call audio was recorded.')
+  })
+
+  it('mirrors the whole transcript and partial status in plaintext', () => {
+    const text = renderBellLiveTranscriptText({ ...input, partial: true })
+    expect(text).toContain('Transcript: Partial')
+    expect(text).toContain(input.transcript)
+    expect(text).toContain('may be incomplete')
   })
 })
 

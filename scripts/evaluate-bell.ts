@@ -4,11 +4,13 @@ import { gateway } from '@ai-sdk/gateway'
 import { generateText } from 'ai'
 import {
   BELL_MODEL_ID,
-  bellStopWhen,
+  bellSmsStopWhen,
   bellTools,
+  bellWebStopWhen,
   getBellProviderOptions,
   getBellReasoning,
-  prepareBellStep,
+  prepareBellSmsStep,
+  prepareBellWebStep,
 } from '@/lib/chat/bell-generation'
 import { bellEvalCases } from '@/lib/chat/evals/cases'
 import { runDeterministicBellEvals } from '@/lib/chat/evals/deterministic'
@@ -172,12 +174,16 @@ async function main() {
             testCase.surface,
             testCase.id
           ),
-          maxOutputTokens: 2048,
+          maxOutputTokens: testCase.surface === 'sms' ? 2048 : 32_768,
           system,
           prompt,
           tools: bellTools,
-          stopWhen: bellStopWhen,
-          prepareStep: prepareBellStep,
+          stopWhen:
+            testCase.surface === 'sms' ? bellSmsStopWhen : bellWebStopWhen,
+          prepareStep:
+            testCase.surface === 'sms'
+              ? prepareBellSmsStep
+              : prepareBellWebStep,
         })
         const toolCalls = result.steps.flatMap((step) => step.toolCalls)
         const tools = Array.from(
