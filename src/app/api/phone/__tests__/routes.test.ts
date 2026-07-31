@@ -245,7 +245,7 @@ describe('POST /api/phone/voice', () => {
     const xml = await response.text()
     const menu = playedTexts(xml)[1]
     expect(menu).toContain('Press 2 to subscribe')
-    expect(menu).toContain('Press 3 to ask Bell a question')
+    expect(menu).toContain('Press 3 to talk to Bell AI')
   })
 
   it('offers confirmed subscribers the shorter voicemail-or-Bell menu', async () => {
@@ -264,7 +264,7 @@ describe('POST /api/phone/voice', () => {
 
     const xml = await response.text()
     expect(playedTexts(xml)[1]).toBe(
-      'Press 1 to leave a voicemail. Press 3 to ask Bell a question.'
+      'Press 1 to leave a voicemail. Press 3 to talk to Bell AI.'
     )
     expect(xml).toContain('<Gather')
   })
@@ -282,7 +282,7 @@ describe('POST /api/phone/voice', () => {
 
     const xml = await response.text()
     expect(playedTexts(xml)[1]).toBe(
-      'Press 1 to leave a voicemail. Press 3 to ask Bell a question.'
+      'Press 1 to leave a voicemail. Press 3 to talk to Bell AI.'
     )
     expect(findSmsSubscriberByPhoneNumber).not.toHaveBeenCalled()
   })
