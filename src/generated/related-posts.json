@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-07-31T22:43:04.987Z",
+  "generatedAt": "2026-07-31T22:48:44.468Z",
   "posts": {
     "jackknife": {
       "related": [
         {
           "slug": "swivel",
-          "score": 0.1839545
+          "score": 0.1881885
         },
         {
           "slug": "farewell",
-          "score": 0.2794664
+          "score": 0.2897215
         },
         {
           "slug": "maintenance",
-          "score": 0.280259
+          "score": 0.2908633
         }
       ]
     },
@@ -21,7 +21,7 @@
       "related": [
         {
           "slug": "jackknife",
-          "score": 0.1839545
+          "score": 0.1881885
         },
         {
           "slug": "code-as-content-and-digital-proprioception",
