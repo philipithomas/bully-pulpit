@@ -66,7 +66,10 @@ afterEach(() => {
 
 describe('POST /api/openai/realtime-call', () => {
   it('verifies both signatures and accepts an authorized SIP call', async () => {
-    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+    const fetchMock = vi.fn(
+      async (_input: string | URL | Request, _init?: RequestInit) =>
+        new Response(null, { status: 200 })
+    )
     vi.stubGlobal('fetch', fetchMock)
 
     const response = await POST(signedRequest(incomingEvent()))
@@ -101,7 +104,10 @@ describe('POST /api/openai/realtime-call', () => {
         ? { ...header, value: 'A'.repeat(43) }
         : header
     )
-    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+    const fetchMock = vi.fn(
+      async (_input: string | URL | Request, _init?: RequestInit) =>
+        new Response(null, { status: 200 })
+    )
     vi.stubGlobal('fetch', fetchMock)
 
     const response = await POST(signedRequest(incomingEvent(headers)))

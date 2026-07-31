@@ -147,7 +147,10 @@ describe('Bell Live Realtime session', () => {
   })
 
   it('accepts and rejects calls through the direct OpenAI call API', async () => {
-    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+    const fetchMock = vi.fn(
+      async (_input: string | URL | Request, _init?: RequestInit) =>
+        new Response(null, { status: 200 })
+    )
     vi.stubGlobal('fetch', fetchMock)
 
     await acceptBellLiveCall('rtc_call_123')
