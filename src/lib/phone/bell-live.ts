@@ -236,16 +236,16 @@ export function phoneBellRealtimeSession() {
       },
     },
     tool_choice: 'auto' as const,
+    // Keep this payload compatible with the live Realtime client-secret
+    // contract. The SIP accept endpoint can return 200 before asynchronous
+    // session setup reports unsupported MCP fields.
     tools: [
       {
         type: 'mcp' as const,
         server_label: 'philip_archive',
         server_url: `${siteIdentity.productionUrl}/mcp`,
-        server_description:
-          "Philip Ilic Thomas's public, read-only website archive.",
         allowed_tools: ['search', 'fetch', 'list_posts'],
         require_approval: 'never' as const,
-        allowed_callers: ['direct'] as const,
       },
     ],
     // Do not create platform traces containing call content. The application
@@ -554,6 +554,7 @@ export async function startBellLiveGreeting(
   const startedAt = Date.now()
   const client = new OpenAI({
     apiKey: requireOpenAiApiKey(),
+    baseURL: 'https://api.openai.com/v1',
     project: requireOpenAiProjectId(),
   })
   const connection = new OpenAIRealtimeWS(

@@ -4,6 +4,24 @@ import { POST } from '@/app/api/openai/realtime-call/route'
 import { bellLiveSipUri } from '@/lib/phone/bell-live'
 import { FakeOpenAiRealtimeWebSocket } from '@/test/fake-openai-realtime-websocket'
 
+const afterTasks = vi.hoisted(() => [] as Array<() => Promise<void>>)
+const afterControl = vi.hoisted(() => ({ throwOnSchedule: false }))
+
+vi.mock('next/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next/server')>()
+  return {
+    ...actual,
+    after: (task: (() => Promise<void>) | Promise<void>) => {
+      if (afterControl.throwOnSchedule) {
+        throw new Error('after unavailable')
+      }
+      afterTasks.push(() =>
+        Promise.resolve(typeof task === 'function' ? task() : task)
+      )
+    },
+  }
+})
+
 vi.mock('openai/realtime/ws', async () => {
   const { FakeOpenAiRealtimeWS } = await import(
     '@/test/fake-openai-realtime-websocket'
@@ -83,13 +101,26 @@ function liveIncomingEvent(headers = sipHeaders()) {
   }
 }
 
+async function flushAfterTasks(): Promise<void> {
+  await Promise.all(afterTasks.splice(0).map((task) => task()))
+}
+
+async function postAndFlush(request: Request): Promise<Response> {
+  const result = await POST(request)
+  await flushAfterTasks()
+  return result
+}
+
 beforeEach(() => {
+  afterTasks.length = 0
+  afterControl.throwOnSchedule = false
   FakeOpenAiRealtimeWebSocket.connections = []
   FakeOpenAiRealtimeWebSocket.emitAudioCleared = false
   FakeOpenAiRealtimeWebSocket.emitAudioStarted = true
   FakeOpenAiRealtimeWebSocket.emitAudioStopped = true
   FakeOpenAiRealtimeWebSocket.finalStatus = 'completed'
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = null
+  FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses = []
   FakeOpenAiRealtimeWebSocket.sentEvents = []
   FakeOpenAiRealtimeWebSocket.throwOnSend = false
   const createdAt = new Date()
@@ -164,6 +195,12 @@ describe('POST /api/openai/realtime-call', () => {
     }
     expect(body.model).toBe('gpt-realtime-2.1')
     expect(body.audio.input).not.toHaveProperty('transcription')
+    expect(afterTasks).toHaveLength(1)
+    expect(webhookEvents.findOrCreate).not.toHaveBeenCalled()
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(0)
+
+    await flushAfterTasks()
+
     expect(FakeOpenAiRealtimeWebSocket.sentEvents[0]).toMatchObject({
       type: 'response.create',
     })
@@ -186,7 +223,7 @@ describe('POST /api/openai/realtime-call', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    const response = await POST(signedRequest(liveIncomingEvent()))
+    const response = await postAndFlush(signedRequest(liveIncomingEvent()))
 
     expect(response.status).toBe(204)
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
@@ -228,14 +265,13 @@ describe('POST /api/openai/realtime-call', () => {
       .mockResolvedValueOnce(new Response(null, { status: 409 }))
     vi.stubGlobal('fetch', fetchMock)
 
-    expect(await POST(signedRequest(incomingEvent()))).toHaveProperty(
+    expect(await postAndFlush(signedRequest(incomingEvent()))).toHaveProperty(
       'status',
       204
     )
-    expect(await POST(signedRequest(liveIncomingEvent()))).toHaveProperty(
-      'status',
-      204
-    )
+    expect(
+      await postAndFlush(signedRequest(liveIncomingEvent()))
+    ).toHaveProperty('status', 204)
     expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
     expect(webhookEvents.markProcessed).toHaveBeenCalledOnce()
   })
@@ -271,14 +307,13 @@ describe('POST /api/openai/realtime-call', () => {
       .mockResolvedValueOnce(new Response(null, { status: 409 }))
     vi.stubGlobal('fetch', fetchMock)
 
-    expect(await POST(signedRequest(incomingEvent()))).toHaveProperty(
+    expect(await postAndFlush(signedRequest(incomingEvent()))).toHaveProperty(
       'status',
       204
     )
-    expect(await POST(signedRequest(liveIncomingEvent()))).toHaveProperty(
-      'status',
-      204
-    )
+    expect(
+      await postAndFlush(signedRequest(liveIncomingEvent()))
+    ).toHaveProperty('status', 204)
 
     expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
     expect(webhookEvents.markProcessed).toHaveBeenCalledTimes(2)
@@ -317,14 +352,13 @@ describe('POST /api/openai/realtime-call', () => {
         .mockResolvedValueOnce(new Response(null, { status: 409 }))
     )
 
-    expect(await POST(signedRequest(incomingEvent()))).toHaveProperty(
+    expect(await postAndFlush(signedRequest(incomingEvent()))).toHaveProperty(
       'status',
       204
     )
-    expect(await POST(signedRequest(liveIncomingEvent()))).toHaveProperty(
-      'status',
-      204
-    )
+    expect(
+      await postAndFlush(signedRequest(liveIncomingEvent()))
+    ).toHaveProperty('status', 204)
 
     expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
     expect(webhookEvents.markProcessed).toHaveBeenCalledTimes(3)
@@ -364,14 +398,13 @@ describe('POST /api/openai/realtime-call', () => {
         .mockResolvedValueOnce(new Response(null, { status: 409 }))
     )
 
-    expect(await POST(signedRequest(incomingEvent()))).toHaveProperty(
+    expect(await postAndFlush(signedRequest(incomingEvent()))).toHaveProperty(
       'status',
       204
     )
-    expect(await POST(signedRequest(liveIncomingEvent()))).toHaveProperty(
-      'status',
-      204
-    )
+    expect(
+      await postAndFlush(signedRequest(liveIncomingEvent()))
+    ).toHaveProperty('status', 204)
 
     expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
     expect(webhookEvents.markProcessed).toHaveBeenCalledTimes(3)
@@ -417,15 +450,14 @@ describe('POST /api/openai/realtime-call', () => {
     vi.stubGlobal('fetch', fetchMock)
     FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = 401
 
-    expect(await POST(signedRequest(incomingEvent()))).toHaveProperty(
+    expect(await postAndFlush(signedRequest(incomingEvent()))).toHaveProperty(
       'status',
       204
     )
     FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = null
-    expect(await POST(signedRequest(liveIncomingEvent()))).toHaveProperty(
-      'status',
-      204
-    )
+    expect(
+      await postAndFlush(signedRequest(liveIncomingEvent()))
+    ).toHaveProperty('status', 204)
     expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(0)
     expect(webhookEvents.markProcessed).toHaveBeenCalledOnce()
     expect(webhookEvents.claimAttempt).toHaveBeenCalledOnce()
@@ -439,6 +471,71 @@ describe('POST /api/openai/realtime-call', () => {
         socketHttpStatus: 401,
         terminalCheckpointed: true,
       })
+    )
+  })
+
+  it('keeps an accepted SIP call acknowledged when background scheduling fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 200 }))
+    )
+    afterControl.throwOnSchedule = true
+
+    const result = await POST(signedRequest(incomingEvent()))
+
+    expect(result.status).toBe(204)
+    expect(afterTasks).toHaveLength(0)
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(0)
+    expect(console.error).toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({
+        event: 'bell_live.openai_greeting',
+        outcome: 'schedule_error',
+      })
+    )
+  })
+
+  it('retries a sideband attach only before response.create is sent', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 200 }))
+    )
+    FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses = [503, null]
+
+    const result = await postAndFlush(signedRequest(incomingEvent()))
+
+    expect(result.status).toBe(204)
+    expect(FakeOpenAiRealtimeWebSocket.connections).toHaveLength(2)
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(webhookEvents.claimAttempt).toHaveBeenCalledOnce()
+    expect(console.info).toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({
+        event: 'bell_live.openai_greeting',
+        outcome: 'retrying_socket',
+        reason: 'socket_error',
+        socketAttempt: 1,
+      })
+    )
+  })
+
+  it('does not retry after response.create may have been sent', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 200 }))
+    )
+    FakeOpenAiRealtimeWebSocket.emitAudioStarted = false
+    FakeOpenAiRealtimeWebSocket.emitAudioStopped = false
+    FakeOpenAiRealtimeWebSocket.finalStatus = 'failed'
+
+    const result = await postAndFlush(signedRequest(incomingEvent()))
+
+    expect(result.status).toBe(204)
+    expect(FakeOpenAiRealtimeWebSocket.connections).toHaveLength(1)
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(console.info).not.toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({ outcome: 'retrying_socket' })
     )
   })
 
