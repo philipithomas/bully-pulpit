@@ -69,7 +69,6 @@ export function bellLiveTwiml(input: {
 }): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  ${play(PHONE_IVR_FALLBACK_PROMPTS.bellConnecting, 'bellConnecting')}
   <Dial action="${escapeXml(input.actionUrl)}" method="POST" answerOnBridge="true" timeout="20" timeLimit="${PHONE_BELL_MAX_CALL_SECONDS}">
     <Sip>${escapeXml(input.sipUri)}</Sip>
   </Dial>

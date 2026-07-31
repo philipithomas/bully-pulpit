@@ -76,6 +76,7 @@ function playedTexts(xml: string): string[] {
 }
 
 beforeEach(() => {
+  vi.spyOn(console, 'info').mockImplementation(() => {})
   process.env.PHONE_NUMBER = '+12123473190'
   process.env.TWILIO_SECRET = AUTH_TOKEN
   delete process.env.OPENAI_API_KEY
@@ -107,6 +108,7 @@ afterEach(() => {
   delete process.env.OPENAI_WEBHOOK_SECRET
   delete process.env.OPENAI_PHONE_REALTIME_MODEL
   vi.clearAllMocks()
+  vi.restoreAllMocks()
 })
 
 function enableBellLive() {
@@ -242,7 +244,7 @@ describe('POST /api/phone/voice', () => {
     const xml = await response.text()
     const menu = playedTexts(xml)[1]
     expect(menu).toContain('Press 2 to subscribe')
-    expect(menu).toContain('Press 3 to talk with Bell AI')
+    expect(menu).toContain('Press 3 to ask Bell a question')
   })
 
   it('offers confirmed subscribers the shorter voicemail-or-Bell menu', async () => {
@@ -261,7 +263,7 @@ describe('POST /api/phone/voice', () => {
 
     const xml = await response.text()
     expect(playedTexts(xml)[1]).toBe(
-      'Press 1 to leave a voicemail. Press 3 to talk with Bell AI.'
+      'Press 1 to leave a voicemail. Press 3 to ask Bell a question.'
     )
     expect(xml).toContain('<Gather')
   })
@@ -279,7 +281,7 @@ describe('POST /api/phone/voice', () => {
 
     const xml = await response.text()
     expect(playedTexts(xml)[1]).toBe(
-      'Press 1 to leave a voicemail. Press 3 to talk with Bell AI.'
+      'Press 1 to leave a voicemail. Press 3 to ask Bell a question.'
     )
     expect(findSmsSubscriberByPhoneNumber).not.toHaveBeenCalled()
   })
@@ -346,24 +348,83 @@ describe('POST /api/phone/bell-complete', () => {
     expect(xml).toContain('<Hangup/>')
   })
 
-  it('falls back to voicemail when the OpenAI SIP leg fails', async () => {
+  it('retries one failed OpenAI SIP leg without another announcement', async () => {
+    enableBellLive()
     const response = await bellCompletePost(
-      twilioPost('/api/phone/bell-complete', {
+      twilioPost('/api/phone/bell-complete?attempt=0', {
         From: '+15551234567',
         To: '+12123473190',
         DialCallStatus: 'failed',
-        CallSid: 'CA123',
+        DialSipResponseCode: '400',
+        DialBridged: 'false',
+        ErrorCode: '13224',
+        DialCallDuration: '0',
+        CallSid: 'CA1234567890abcdef1234567890abcdef',
+        DialCallSid: 'CAabcdef1234567890abcdef1234567890',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(playedTexts(xml)).toEqual([])
+    expect(xml).toContain('<Dial')
+    expect(xml).toContain('/api/phone/bell-complete?attempt=1')
+    expect(xml).not.toContain('<Record')
+    expect(console.info).toHaveBeenCalledWith(
+      '[phone/bell-complete]',
+      expect.objectContaining({
+        event: 'bell_live.twilio_dial_complete',
+        outcome: 'retrying',
+        retryAttempt: 0,
+        dialCallStatus: 'failed',
+        dialSipResponseCode: 400,
+        dialBridged: false,
+        errorCode: 13224,
+        dialCallDurationSeconds: 0,
+      })
+    )
+  })
+
+  it('falls back to voicemail after the retry fails', async () => {
+    enableBellLive()
+    const response = await bellCompletePost(
+      twilioPost('/api/phone/bell-complete?attempt=1', {
+        From: '+15551234567',
+        To: '+12123473190',
+        DialCallStatus: 'failed',
+        CallSid: 'CA1234567890abcdef1234567890abcdef',
       })
     )
 
     expect(response.status).toBe(200)
     const xml = await response.text()
     expect(playedTexts(xml)).toEqual([
-      'Bell AI is unavailable right now. You can leave a voicemail instead.',
+      "I couldn't reach Bell.",
       'Leave a message after the tone.',
     ])
+    expect(xml).not.toContain('<Dial')
     expect(xml).toContain('<Record maxLength="120"')
     expect(xml).toContain('/api/phone/recording-status?caller=')
+  })
+
+  it('does not retry a malformed attempt or a non-failed outcome', async () => {
+    enableBellLive()
+    for (const [attempt, status] of [
+      ['unexpected', 'failed'],
+      ['0', 'busy'],
+    ] as const) {
+      const response = await bellCompletePost(
+        twilioPost(`/api/phone/bell-complete?attempt=${attempt}`, {
+          From: '+15551234567',
+          To: '+12123473190',
+          DialCallStatus: status,
+          CallSid: 'CA1234567890abcdef1234567890abcdef',
+        })
+      )
+      const xml = await response.text()
+      expect(xml).not.toContain('<Dial')
+      expect(xml).toContain('<Record')
+    }
   })
 })
 

@@ -1,15 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   acceptBellLiveCall,
+  BellLiveGreetingError,
   bellLiveSipUri,
+  OpenAiCallActionError,
+  PHONE_BELL_INITIAL_GREETING,
   PHONE_BELL_MAX_CALL_SECONDS,
   PHONE_BELL_REALTIME_DEFAULT_MODEL_ID,
   PHONE_BELL_REALTIME_MINI_MODEL_ID,
   phoneBellLiveConfigured,
   phoneBellRealtimeSession,
   rejectBellLiveCall,
+  startBellLiveGreeting,
   verifyBellLiveSipInvitation,
 } from '@/lib/phone/bell-live'
+import { FakeOpenAiRealtimeWebSocket } from '@/test/fake-openai-realtime-websocket'
 
 const NOW = new Date('2026-07-31T12:00:00Z')
 const CALL_SID = 'CA1234567890abcdef1234567890abcdef'
@@ -20,6 +25,8 @@ function headersFromSipUri(uri: string) {
 }
 
 beforeEach(() => {
+  FakeOpenAiRealtimeWebSocket.finalStatus = 'completed'
+  FakeOpenAiRealtimeWebSocket.sentEvents = []
   process.env.OPENAI_API_KEY = 'test-openai-key'
   process.env.OPENAI_PROJECT_ID = 'proj_test123'
   process.env.OPENAI_WEBHOOK_SECRET = 'whsec_test-webhook-secret'
@@ -136,7 +143,8 @@ describe('Bell Live Realtime session', () => {
       ],
       tracing: null,
     })
-    expect(session.instructions).toContain('Bell AI')
+    expect(session.instructions).toContain('You are Bell')
+    expect(session.instructions).toContain(PHONE_BELL_INITIAL_GREETING)
     expect(PHONE_BELL_MAX_CALL_SECONDS).toBe(300)
     expect(session).not.toHaveProperty('service_tier')
     expect(session.audio.input).not.toHaveProperty('transcription')
@@ -149,8 +157,16 @@ describe('Bell Live Realtime session', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
 
-    await acceptBellLiveCall('rtc_call_123')
-    await rejectBellLiveCall('rtc_call_456')
+    await expect(acceptBellLiveCall('rtc_call_123')).resolves.toMatchObject({
+      action: 'accept',
+      outcome: 'handled',
+      status: 200,
+    })
+    await expect(rejectBellLiveCall('rtc_call_456')).resolves.toMatchObject({
+      action: 'reject',
+      outcome: 'handled',
+      status: 200,
+    })
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
@@ -160,6 +176,7 @@ describe('Bell Live Realtime session', () => {
         headers: {
           Authorization: 'Bearer test-openai-key',
           'Content-Type': 'application/json',
+          'OpenAI-Project': 'proj_test123',
         },
       })
     )
@@ -183,6 +200,89 @@ describe('Bell Live Realtime session', () => {
       'fetch',
       vi.fn(async () => new Response(null, { status: 409 }))
     )
-    await expect(acceptBellLiveCall('rtc_call_retry')).resolves.toBeUndefined()
+    await expect(acceptBellLiveCall('rtc_call_retry')).resolves.toMatchObject({
+      action: 'accept',
+      outcome: 'already_handled',
+      status: 409,
+    })
+  })
+
+  it('keeps bounded, redacted OpenAI diagnostics with the request ID', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                type: 'invalid_request_error',
+                code: 'invalid_session',
+                param: 'audio.input',
+                message:
+                  'Bearer secret-token rejected for +15551234567 at sip:test@example.com?x-bp-token=secret',
+              },
+            }),
+            {
+              status: 400,
+              headers: { 'x-request-id': 'req_test123' },
+            }
+          )
+      )
+    )
+
+    const error = await acceptBellLiveCall('rtc_call_error').catch(
+      (value: unknown) => value
+    )
+    expect(error).toBeInstanceOf(OpenAiCallActionError)
+    expect(error).toMatchObject({
+      action: 'accept',
+      reason: 'http_error',
+      requestId: 'req_test123',
+      status: 400,
+      provider: {
+        code: 'invalid_session',
+        param: 'audio.input',
+        type: 'invalid_request_error',
+      },
+    })
+    const message = (error as OpenAiCallActionError).provider.message ?? ''
+    expect(message).toContain('[REDACTED]')
+    expect(message).toContain('[REDACTED_PHONE]')
+    expect(message).not.toContain('secret-token')
+    expect(message).not.toContain('+15551234567')
+    expect(message).not.toContain('x-bp-token=secret')
+  })
+
+  it('starts Bell with a proactive sideband greeting', async () => {
+    vi.stubGlobal('WebSocket', FakeOpenAiRealtimeWebSocket)
+
+    await expect(startBellLiveGreeting('rtc_call_greeting')).resolves.toEqual({
+      durationMs: expect.any(Number),
+    })
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toEqual([
+      {
+        type: 'response.create',
+        response: {
+          instructions: `Say exactly: "${PHONE_BELL_INITIAL_GREETING}" Do not add anything else.`,
+          max_output_tokens: 32,
+          output_modalities: ['audio'],
+        },
+      },
+    ])
+  })
+
+  it('retains the sideband until the opening response finishes', async () => {
+    FakeOpenAiRealtimeWebSocket.finalStatus = 'failed'
+    vi.stubGlobal('WebSocket', FakeOpenAiRealtimeWebSocket)
+
+    await expect(startBellLiveGreeting('rtc_call_greeting')).rejects.toEqual(
+      expect.objectContaining({
+        name: BellLiveGreetingError.name,
+        providerCode: 'greeting_failed',
+        providerType: 'server_error',
+        reason: 'response_not_completed',
+        responseStatus: 'failed',
+      })
+    )
   })
 })

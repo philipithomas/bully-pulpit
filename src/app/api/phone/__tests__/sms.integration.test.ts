@@ -1029,9 +1029,9 @@ describe('POST /api/phone/voice-menu', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(playedText(xml)).toContain('Connecting you to Bell AI')
+    expect(playedText(xml)).toBe('')
     expect(xml).toContain(
-      '<Dial action="https://www.philipithomas.com/api/phone/bell-complete"'
+      '<Dial action="https://www.philipithomas.com/api/phone/bell-complete?attempt=0"'
     )
     expect(xml).toContain(
       '<Sip>sip:proj_test123@sip.api.openai.com;transport=tls?'

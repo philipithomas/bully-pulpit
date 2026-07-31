@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       return twimlResponse(
         bellLiveTwiml({
           sipUri,
-          actionUrl: `${siteConfig.url}/api/phone/bell-complete`,
+          actionUrl: `${siteConfig.url}/api/phone/bell-complete?attempt=0`,
         })
       )
     }

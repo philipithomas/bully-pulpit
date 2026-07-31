@@ -1,4 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import OpenAI from 'openai'
+import { OpenAIRealtimeWebSocket } from 'openai/realtime/websocket'
 import { twilioSecret } from '@/lib/phone/config'
 import { siteIdentity } from '@/lib/site-identity'
 
@@ -7,9 +9,14 @@ export const PHONE_BELL_REALTIME_MINI_MODEL_ID = 'gpt-realtime-2.1-mini'
 export const PHONE_BELL_REALTIME_VOICE = 'marin'
 export const PHONE_BELL_REALTIME_VOICE_SPEED = 1.08
 export const PHONE_BELL_MAX_CALL_SECONDS = 300
+export const PHONE_BELL_INITIAL_GREETING =
+  'Hi, this is Bell. What can I help with?'
 
 const OPENAI_REALTIME_CALLS_URL = 'https://api.openai.com/v1/realtime/calls'
 const OPENAI_REALTIME_REQUEST_TIMEOUT_MS = 10_000
+const OPENAI_REALTIME_GREETING_TIMEOUT_MS = 4_000
+const OPENAI_ERROR_BODY_MAX_BYTES = 4 * 1024
+const OPENAI_ERROR_TEXT_MAX_CHARS = 240
 const SIP_INVITATION_TTL_SECONDS = 5 * 60
 const SIP_INVITATION_CLOCK_SKEW_SECONDS = 30
 const SIP_INVITATION_SIGNING_CONTEXT = 'phone-bell-realtime-sip-v1'
@@ -165,10 +172,11 @@ export function isOpenAiRealtimeCallId(value: string): boolean {
 }
 
 const PHONE_BELL_INSTRUCTIONS = `
-You are Bell AI, the spoken AI assistant for Philip Ilic Thomas's personal website, philipithomas.com.
+You are Bell, the spoken AI assistant for Philip Ilic Thomas's personal website, philipithomas.com.
 
 VOICE AND CONVERSATION
-- On your first reply, identify yourself briefly as Bell AI.
+- When the application requests the opening response, say exactly: "${PHONE_BELL_INITIAL_GREETING}"
+- On later replies, identify yourself as Bell only when useful.
 - Sound warm, upbeat, articulate, and brisk but never rushed.
 - This is a telephone call. Give a direct spoken answer, normally one to three short sentences, with no Markdown.
 - Do not read long URLs aloud unless the caller explicitly asks. Refer to a source by its title and year when useful.
@@ -242,47 +250,345 @@ function requireOpenAiApiKey(): string {
   return apiKey
 }
 
+function requireOpenAiProjectId(): string {
+  const projectId = configuredProjectId()
+  if (!projectId) throw new Error('OPENAI_PROJECT_ID is not configured')
+  return projectId
+}
+
+export interface OpenAiCallActionResult {
+  action: 'accept' | 'reject'
+  durationMs: number
+  outcome: 'already_handled' | 'handled'
+  requestId: string | null
+  status: number
+}
+
+interface OpenAiProviderError {
+  code: string | null
+  message: string | null
+  param: string | null
+  truncated: boolean
+  type: string | null
+}
+
+export class OpenAiCallActionError extends Error {
+  readonly action: 'accept' | 'reject'
+  readonly durationMs: number
+  readonly provider: OpenAiProviderError
+  readonly reason: 'http_error' | 'network_error' | 'timeout'
+  readonly requestId: string | null
+  readonly status: number | null
+
+  constructor(input: {
+    action: 'accept' | 'reject'
+    durationMs: number
+    provider?: OpenAiProviderError
+    reason: 'http_error' | 'network_error' | 'timeout'
+    requestId?: string | null
+    status?: number | null
+  }) {
+    super(`OpenAI Realtime ${input.action} failed`)
+    this.name = 'OpenAiCallActionError'
+    this.action = input.action
+    this.durationMs = input.durationMs
+    this.provider = input.provider ?? {
+      code: null,
+      message: null,
+      param: null,
+      truncated: false,
+      type: null,
+    }
+    this.reason = input.reason
+    this.requestId = input.requestId ?? null
+    this.status = input.status ?? null
+  }
+}
+
+export class BellLiveGreetingError extends Error {
+  readonly durationMs: number
+  readonly providerCode: string | null
+  readonly providerType: string | null
+  readonly reason:
+    | 'closed'
+    | 'provider_error'
+    | 'response_not_completed'
+    | 'socket_error'
+    | 'timeout'
+  readonly responseStatus: string | null
+
+  constructor(input: {
+    durationMs: number
+    providerCode?: string | null
+    providerType?: string | null
+    reason:
+      | 'closed'
+      | 'provider_error'
+      | 'response_not_completed'
+      | 'socket_error'
+      | 'timeout'
+    responseStatus?: string | null
+  }) {
+    super('OpenAI Realtime greeting failed')
+    this.name = 'BellLiveGreetingError'
+    this.durationMs = input.durationMs
+    this.providerCode = input.providerCode ?? null
+    this.providerType = input.providerType ?? null
+    this.reason = input.reason
+    this.responseStatus = input.responseStatus ?? null
+  }
+}
+
+function safeOpaqueId(value: string | null): string | null {
+  if (!value || !/^[A-Za-z0-9._:-]{1,200}$/.test(value)) return null
+  return value
+}
+
+function safeProviderIdentifier(value: unknown): string | null {
+  return typeof value === 'string' && /^[A-Za-z0-9._[\]-]{1,100}$/.test(value)
+    ? value
+    : null
+}
+
+function sanitizeProviderText(value: unknown, maximum: number): string | null {
+  if (typeof value !== 'string') return null
+  const printable = Array.from(value, (character) => {
+    const codePoint = character.codePointAt(0) ?? 0
+    return codePoint < 32 || codePoint === 127 ? ' ' : character
+  }).join('')
+  const sanitized = printable
+    .replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]')
+    .replace(/\b(?:sk|whsec)_[A-Za-z0-9_-]+\b/g, '[REDACTED]')
+    .replace(/([?&]x-bp-token=)[^&\s]+/gi, '$1[REDACTED]')
+    .replace(/\+\d{7,15}\b/g, '[REDACTED_PHONE]')
+    .replace(/\b(sips?:[^\s?]+)\?[^\s]*/gi, '$1?[REDACTED]')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return sanitized ? sanitized.slice(0, maximum) : null
+}
+
+async function boundedResponseText(
+  response: Response
+): Promise<{ text: string; truncated: boolean }> {
+  if (!response.body) return { text: '', truncated: false }
+
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let received = 0
+  let truncated = false
+
+  while (received <= OPENAI_ERROR_BODY_MAX_BYTES) {
+    const result = await reader.read()
+    if (result.done) break
+    const remaining = OPENAI_ERROR_BODY_MAX_BYTES - received
+    if (result.value.byteLength > remaining) {
+      if (remaining > 0) chunks.push(result.value.slice(0, remaining))
+      truncated = true
+      await reader.cancel().catch(() => undefined)
+      break
+    }
+    chunks.push(result.value)
+    received += result.value.byteLength
+  }
+
+  const bytes = new Uint8Array(
+    chunks.reduce((total, chunk) => total + chunk.byteLength, 0)
+  )
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return { text: new TextDecoder().decode(bytes), truncated }
+}
+
+async function providerError(response: Response): Promise<OpenAiProviderError> {
+  const { text, truncated } = await boundedResponseText(response)
+  let error: Record<string, unknown> | null = null
+  try {
+    const parsed = JSON.parse(text) as { error?: unknown }
+    if (parsed.error && typeof parsed.error === 'object') {
+      error = parsed.error as Record<string, unknown>
+    }
+  } catch {
+    // A bounded non-JSON preview is still useful for provider debugging.
+  }
+
+  return {
+    code: safeProviderIdentifier(error?.code),
+    message: sanitizeProviderText(
+      error?.message ?? text,
+      OPENAI_ERROR_TEXT_MAX_CHARS
+    ),
+    param: safeProviderIdentifier(error?.param),
+    truncated,
+    type: safeProviderIdentifier(error?.type),
+  }
+}
+
 async function openAiCallAction(
   callId: string,
   action: 'accept' | 'reject',
   body: unknown
-): Promise<Response> {
+): Promise<OpenAiCallActionResult> {
   if (!isOpenAiRealtimeCallId(callId)) {
     throw new Error('Invalid OpenAI Realtime call ID')
   }
-  return fetch(
-    `${OPENAI_REALTIME_CALLS_URL}/${encodeURIComponent(callId)}/${action}`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${requireOpenAiApiKey()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(OPENAI_REALTIME_REQUEST_TIMEOUT_MS),
-    }
-  )
+  const startedAt = Date.now()
+  let response: Response
+  try {
+    response = await fetch(
+      `${OPENAI_REALTIME_CALLS_URL}/${encodeURIComponent(callId)}/${action}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${requireOpenAiApiKey()}`,
+          'Content-Type': 'application/json',
+          'OpenAI-Project': requireOpenAiProjectId(),
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(OPENAI_REALTIME_REQUEST_TIMEOUT_MS),
+      }
+    )
+  } catch (error) {
+    throw new OpenAiCallActionError({
+      action,
+      durationMs: Date.now() - startedAt,
+      reason:
+        error instanceof DOMException && error.name === 'TimeoutError'
+          ? 'timeout'
+          : 'network_error',
+    })
+  }
+
+  const result = {
+    action,
+    durationMs: Date.now() - startedAt,
+    outcome: response.status === 409 ? 'already_handled' : 'handled',
+    requestId: safeOpaqueId(response.headers.get('x-request-id')),
+    status: response.status,
+  } as const
+  if (response.ok || response.status === 409) return result
+
+  throw new OpenAiCallActionError({
+    action,
+    durationMs: result.durationMs,
+    provider: await providerError(response),
+    reason: 'http_error',
+    requestId: result.requestId,
+    status: result.status,
+  })
 }
 
-export async function acceptBellLiveCall(callId: string): Promise<void> {
-  const response = await openAiCallAction(
-    callId,
-    'accept',
-    phoneBellRealtimeSession()
-  )
-  // A webhook retry can arrive after the first request accepted the call.
-  if (response.ok || response.status === 409) return
-  throw new Error(
-    `OpenAI Realtime call acceptance failed: ${response.status} ${response.statusText}`
-  )
+export async function acceptBellLiveCall(
+  callId: string
+): Promise<OpenAiCallActionResult> {
+  return openAiCallAction(callId, 'accept', phoneBellRealtimeSession())
 }
 
-export async function rejectBellLiveCall(callId: string): Promise<void> {
-  const response = await openAiCallAction(callId, 'reject', {
+export async function rejectBellLiveCall(
+  callId: string
+): Promise<OpenAiCallActionResult> {
+  return openAiCallAction(callId, 'reject', {
     status_code: 603,
   })
-  if (response.ok || response.status === 409) return
-  throw new Error(
-    `OpenAI Realtime call rejection failed: ${response.status} ${response.statusText}`
-  )
+}
+
+/** Starts Bell's own greeting over a short-lived sideband control channel. */
+export async function startBellLiveGreeting(
+  callId: string
+): Promise<{ durationMs: number }> {
+  if (!isOpenAiRealtimeCallId(callId)) {
+    throw new Error('Invalid OpenAI Realtime call ID')
+  }
+
+  const startedAt = Date.now()
+  const client = new OpenAI({
+    apiKey: requireOpenAiApiKey(),
+    project: requireOpenAiProjectId(),
+  })
+  const connection = new OpenAIRealtimeWebSocket({ callID: callId }, client)
+
+  return new Promise((resolve, reject) => {
+    let settled = false
+    let greetingResponseId: string | null = null
+    const finish = (
+      result: { durationMs: number } | BellLiveGreetingError
+    ): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      connection.close()
+      if (result instanceof BellLiveGreetingError) reject(result)
+      else resolve(result)
+    }
+    const timeout = setTimeout(() => {
+      finish(
+        new BellLiveGreetingError({
+          durationMs: Date.now() - startedAt,
+          reason: 'timeout',
+        })
+      )
+    }, OPENAI_REALTIME_GREETING_TIMEOUT_MS)
+
+    connection.on('response.created', (event) => {
+      greetingResponseId ??= event.response.id ?? null
+    })
+    connection.on('response.done', (event) => {
+      if (
+        greetingResponseId &&
+        event.response.id &&
+        event.response.id !== greetingResponseId
+      ) {
+        return
+      }
+      if (event.response.status === 'completed') {
+        finish({ durationMs: Date.now() - startedAt })
+        return
+      }
+      finish(
+        new BellLiveGreetingError({
+          durationMs: Date.now() - startedAt,
+          providerCode: safeProviderIdentifier(
+            event.response.status_details?.error?.code
+          ),
+          providerType: safeProviderIdentifier(
+            event.response.status_details?.error?.type
+          ),
+          reason: 'response_not_completed',
+          responseStatus: event.response.status ?? 'unknown',
+        })
+      )
+    })
+    connection.on('error', (error) => {
+      const providerCode = safeProviderIdentifier(error.error?.code)
+      const providerType = safeProviderIdentifier(error.error?.type)
+      finish(
+        new BellLiveGreetingError({
+          durationMs: Date.now() - startedAt,
+          providerCode,
+          providerType,
+          reason: error.error ? 'provider_error' : 'socket_error',
+        })
+      )
+    })
+    connection.socket.addEventListener('close', () => {
+      finish(
+        new BellLiveGreetingError({
+          durationMs: Date.now() - startedAt,
+          reason: 'closed',
+        })
+      )
+    })
+    connection.socket.addEventListener('open', () => {
+      connection.send({
+        type: 'response.create',
+        response: {
+          instructions: `Say exactly: "${PHONE_BELL_INITIAL_GREETING}" Do not add anything else.`,
+          max_output_tokens: 32,
+          output_modalities: ['audio'],
+        },
+      })
+    })
+  })
 }
