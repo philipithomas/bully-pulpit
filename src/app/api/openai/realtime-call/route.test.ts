@@ -82,10 +82,10 @@ describe('POST /api/openai/realtime-call', () => {
     )
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
       model: string
-      audio: { input: { transcription: { model: string } } }
+      audio: { input: Record<string, unknown> }
     }
     expect(body.model).toBe('gpt-realtime-2.1')
-    expect(body.audio.input.transcription.model).toBe('gpt-live-transcribe')
+    expect(body.audio.input).not.toHaveProperty('transcription')
   })
 
   it('rejects a bad OpenAI webhook signature before calling the API', async () => {

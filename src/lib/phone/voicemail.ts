@@ -133,7 +133,7 @@ async function transcribeAudio(audio: Uint8Array): Promise<string | null> {
 
     const formData = new FormData()
     formData.set('model', OPENAI_TRANSCRIPTION_MODEL)
-    formData.set('language', 'en')
+    formData.append('languages[]', 'en')
     formData.set(
       'prompt',
       'A telephone voicemail for Philip Ilic Thomas. Preserve names, numbers, email addresses, and web addresses exactly.'

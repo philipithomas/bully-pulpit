@@ -5,7 +5,6 @@ import {
   PHONE_BELL_MAX_CALL_SECONDS,
   PHONE_BELL_REALTIME_DEFAULT_MODEL_ID,
   PHONE_BELL_REALTIME_MINI_MODEL_ID,
-  PHONE_BELL_TRANSCRIPTION_MODEL_ID,
   phoneBellLiveConfigured,
   phoneBellRealtimeSession,
   rejectBellLiveCall,
@@ -108,7 +107,7 @@ describe('Bell Live SIP invitation', () => {
 })
 
 describe('Bell Live Realtime session', () => {
-  it('uses full Realtime at low reasoning with live transcription and read-only archive MCP', () => {
+  it('uses full Realtime at low reasoning with native audio and read-only archive MCP', () => {
     const session = phoneBellRealtimeSession()
     expect(session).toMatchObject({
       type: 'realtime',
@@ -119,10 +118,6 @@ describe('Bell Live Realtime session', () => {
       reasoning: { effort: 'low' },
       audio: {
         input: {
-          transcription: {
-            model: PHONE_BELL_TRANSCRIPTION_MODEL_ID,
-            language: 'en',
-          },
           turn_detection: {
             type: 'semantic_vad',
             eagerness: 'high',
@@ -144,6 +139,7 @@ describe('Bell Live Realtime session', () => {
     expect(session.instructions).toContain('Bell AI')
     expect(PHONE_BELL_MAX_CALL_SECONDS).toBe(300)
     expect(session).not.toHaveProperty('service_tier')
+    expect(session.audio.input).not.toHaveProperty('transcription')
   })
 
   it('accepts and rejects calls through the direct OpenAI call API', async () => {
