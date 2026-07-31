@@ -65,7 +65,7 @@ vi.mock('@/lib/phone/config', () => ({
   sitePhoneNumber: phoneMocks.number,
 }))
 
-import TidbitsPage, { metadata } from '@/app/tidbits/page'
+import TidbitsPage, { LeadPhoto, metadata } from '@/app/tidbits/page'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 
 const SEO_DESCRIPTION =
@@ -112,10 +112,7 @@ describe('TidbitsPage viewer contract', () => {
       'data-zoom-caption-description="I went to The Flats in Cleveland'
     )
     expect(jackknifeLink).toContain(
-      'data-zoom-caption-description="I’m fascinated by this abandoned railroad bridge'
-    )
-    expect(html).toContain(
-      '<figure class="mx-auto w-full" style="max-width:52.5svh">'
+      'data-zoom-caption-description="Abandoned in its upright position'
     )
     expect(sfmomaLink).not.toContain('data-zoom-caption-description=')
     expect(html).toContain('href="/sfmoma"')
@@ -128,6 +125,24 @@ describe('TidbitsPage viewer contract', () => {
       '&quot;lens&quot;:&quot;Summicron-M 35 f/2 ASPH.&quot;'
     )
     expect(sfmomaLink).toContain('&quot;apertureEstimated&quot;:true')
+  })
+
+  it('centers portrait leads without changing landscape lead alignment', () => {
+    const posts = getPostsByNewsletter('tidbits')
+    const portrait = posts.find((post) => post.slug === 'jackknife')
+    const landscape = posts.find((post) => post.slug === 'swivel')
+
+    expect(portrait).toBeDefined()
+    expect(landscape).toBeDefined()
+
+    const portraitHtml = renderToStaticMarkup(<LeadPhoto post={portrait!} />)
+    const landscapeHtml = renderToStaticMarkup(<LeadPhoto post={landscape!} />)
+
+    expect(portraitHtml).toContain(
+      '<figure class="mx-auto w-full" style="max-width:52.5svh">'
+    )
+    expect(landscapeHtml).toContain('<figure class="w-full"')
+    expect(landscapeHtml).not.toContain('class="mx-auto w-full"')
   })
 
   it('uses the approved copy and offers SMS as a secondary signup path', () => {

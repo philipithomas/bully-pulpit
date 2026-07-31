@@ -79,13 +79,16 @@ function viewerData(post: Post) {
   }
 }
 
-function LeadPhoto({ post }: { post: Post }) {
+export function LeadPhoto({ post }: { post: Post }) {
   const { coverImage, coverImageAlt, title } = post.frontmatter
   if (!coverImage || !post.coverDimensions) return null
   const ratio = post.coverDimensions.width / post.coverDimensions.height
 
   return (
-    <figure className="mx-auto w-full" style={{ maxWidth: `${ratio * 80}svh` }}>
+    <figure
+      className={ratio < 1 ? 'mx-auto w-full' : 'w-full'}
+      style={{ maxWidth: `${ratio * 80}svh` }}
+    >
       <a
         href={postPath(post.slug)}
         aria-label={coverImageAlt ?? title}

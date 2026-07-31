@@ -21,7 +21,12 @@ import { JsonLd } from '@/components/seo/json-ld'
 import { SpotifyEmbed } from '@/components/ui/spotify-embed'
 import { YouTubeEmbed } from '@/components/ui/youtube-embed'
 import { siteConfig } from '@/lib/config'
-import { POST_COVER_SIZES } from '@/lib/content/cover-preload'
+import {
+  isPortraitTidbitsCover,
+  POST_COVER_SIZES,
+  portraitTidbitsCoverMaxWidth,
+  postCoverSizes,
+} from '@/lib/content/cover-preload'
 import { codeThemeName, getHighlighter } from '@/lib/content/highlighter'
 import {
   getAdjacentPosts,
@@ -250,11 +255,8 @@ export default async function SlugPage({ params }: Props) {
   const showPostMetadata = Boolean(postDate || location || photo)
   const isPhotoPost = Boolean(post && isPhotoNewsletter(post.newsletter))
   const isTidbitsPost = post?.newsletter === 'tidbits'
-  const isPortraitTidbitsCover = Boolean(
-    isTidbitsPost &&
-      post?.coverDimensions &&
-      post.coverDimensions.width < post.coverDimensions.height
-  )
+  const hasPortraitTidbitsCover = Boolean(post && isPortraitTidbitsCover(post))
+  const coverSizes = post ? postCoverSizes(post) : POST_COVER_SIZES
   const coverZoomCaption =
     isPhotoPost && post
       ? {
@@ -301,7 +303,7 @@ export default async function SlugPage({ params }: Props) {
   const coverImage = item.frontmatter.coverImage ? (
     <div
       className={`w-full ${
-        isPortraitTidbitsCover
+        hasPortraitTidbitsCover
           ? 'mx-auto mb-0'
           : isTidbitsPost
             ? 'mb-0'
@@ -310,12 +312,8 @@ export default async function SlugPage({ params }: Props) {
               : 'mb-10'
       }`}
       style={
-        isPortraitTidbitsCover && post?.coverDimensions
-          ? {
-              maxWidth: `${
-                (post.coverDimensions.width / post.coverDimensions.height) * 80
-              }svh`,
-            }
+        post && hasPortraitTidbitsCover
+          ? { maxWidth: portraitTidbitsCoverMaxWidth(post) }
           : undefined
       }
     >
@@ -342,7 +340,7 @@ export default async function SlugPage({ params }: Props) {
           height={post?.coverDimensions?.height ?? 640}
           className="relative z-10 block w-full transition-transform duration-700 group-hover:scale-[1.002]"
           priority
-          sizes={POST_COVER_SIZES}
+          sizes={coverSizes}
         />
       </button>
     </div>
