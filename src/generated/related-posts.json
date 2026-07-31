@@ -1,6 +1,26 @@
 {
+<<<<<<< HEAD
   "generatedAt": "2026-07-31T21:19:02.033Z",
+=======
+  "generatedAt": "2026-07-31T21:33:53.364Z",
+>>>>>>> 05af927 (Publish Swivel Tidbits photo)
   "posts": {
+    "swivel": {
+      "related": [
+        {
+          "slug": "code-as-content-and-digital-proprioception",
+          "score": 0.3037357
+        },
+        {
+          "slug": "maintenance",
+          "score": 0.3075322
+        },
+        {
+          "slug": "farewell",
+          "score": 0.315779
+        }
+      ]
+    },
     "borscht": {
       "related": [
         {
@@ -40,12 +60,12 @@
           "score": 0.3449094
         },
         {
-          "slug": "introducing-tidbits-ongoing-photo-journal",
-          "score": 0.3494507
+          "slug": "swivel",
+          "score": 0.3459971
         },
         {
-          "slug": "workshop-welcome",
-          "score": 0.3536621
+          "slug": "introducing-tidbits-ongoing-photo-journal",
+          "score": 0.3494507
         }
       ]
     },
