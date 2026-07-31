@@ -1029,7 +1029,9 @@ describe('POST /api/phone/voice-menu', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(playedText(xml)).toBe('')
+    expect(playedText(xml)).toBe(
+      'Bell AI calls are transcribed and emailed to the site administrators.'
+    )
     expect(xml).toContain(
       '<Dial action="https://www.philipithomas.com/api/phone/bell-complete"'
     )
@@ -1288,7 +1290,8 @@ describe('POST /api/phone/voice-menu', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(playedText(xml)).toContain('Leave a message after the tone.')
+    expect(playedText(xml)).toBe('Leave a message after the tone.')
+    expect(playedText(xml)).not.toContain('transcribed')
     expect(xml).toContain('<Record maxLength="120"')
     expect(await db.select().from(smsSubscribers)).toHaveLength(0)
   })
