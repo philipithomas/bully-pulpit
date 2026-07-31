@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import OpenAI from 'openai'
 import { OpenAIRealtimeWS } from 'openai/realtime/ws'
 import {
@@ -203,7 +203,7 @@ VOICE AND CONVERSATION
 - The phone call has a hard five-minute total limit. If the caller asks you to read an entire post, fetch it first. Read it in full only when it is short enough to finish within that limit. Otherwise state the five-minute limit and do not begin a readback you cannot finish; offer a summary or the post title instead.
 - Do not read long URLs aloud unless the caller explicitly asks. Refer to a source by its title and year when useful.
 - Let the caller interrupt. If their audio is unclear, say what you missed and ask one short follow-up instead of guessing.
-- Before the first archive tool call in every caller turn, immediately say one short natural sentence such as "I'll look that up now," then call the tool. Do not repeat the lookup preamble between additional tool calls in the same turn. Describe the action, never hidden reasoning, and never ask the caller to wait.
+- Before the first archive tool call in every caller turn, make exactly one brief nonverbal thinking sound: "Mm." Then call the tool immediately. Do not say any words about thinking, searching, checking, waiting, looking something up, or using a tool. Do not repeat the sound between additional tool calls in the same turn.
 - Avoid other filler about your process. Never narrate hidden reasoning.
 
 SCOPE AND TOOLS
@@ -612,13 +612,14 @@ export type BellLiveLifecycleEvent =
         | 'unknown'
       outputKind: 'audio' | 'empty' | 'mixed' | 'tool_without_final_audio'
       purpose: 'normal' | 'tool_continuation'
+      recoveryQueued: boolean
       recoveryRequested: boolean
       toolCallCount: number
     }
   | {
       event: 'bell_live.tool_continuation'
       hop: number
-      outcome: 'failed' | 'requested'
+      outcome: 'abandoned' | 'failed' | 'requested' | 'superseded'
       toolsAllowed: boolean
     }
   | {
@@ -643,6 +644,7 @@ interface BellLiveResponseProfile {
 
 interface BellLiveMcpCallState {
   createdAt: number
+  outputReady: boolean
   responseId: string | null
   startedAt: number | null
   terminal: boolean
@@ -651,6 +653,14 @@ interface BellLiveMcpCallState {
 
 interface BellLiveToolContinuationState {
   hop: number
+  toolResultReadyAtRequest: boolean
+  toolsAllowed: boolean
+}
+
+interface BellLivePendingToolContinuation {
+  expectedToolCallCount: number
+  nextHop: number
+  toolItemIds: Set<string>
   toolsAllowed: boolean
 }
 
@@ -671,6 +681,31 @@ function bellLiveMcpTool(value: unknown): BellLiveMcpTool {
   return value === 'fetch' || value === 'list_posts' || value === 'search'
     ? value
     : 'unknown'
+}
+
+function bellLiveMcpCallItems(
+  output: unknown
+): Array<{ id: string; tool: BellLiveMcpTool }> {
+  if (!Array.isArray(output)) return []
+  return output.flatMap((item) => {
+    if (
+      !item ||
+      typeof item !== 'object' ||
+      !('type' in item) ||
+      item.type !== 'mcp_call' ||
+      !('id' in item) ||
+      typeof item.id !== 'string' ||
+      !item.id
+    ) {
+      return []
+    }
+    return [
+      {
+        id: item.id,
+        tool: bellLiveMcpTool('name' in item ? item.name : null),
+      },
+    ]
+  })
 }
 
 function isAssistantAudioItem(value: unknown): boolean {
@@ -764,6 +799,7 @@ export async function startBellLiveGreeting(
   return new Promise((resolve, reject) => {
     const transcript = new BellLiveTranscriptCollector()
     const responseStartedAt = new Map<string, number>()
+    const responseCallerSpeechGenerations = new Map<string, number>()
     const responsePurposes = new Map<string, 'normal' | 'tool_continuation'>()
     const responseToolContinuations = new Map<
       string,
@@ -777,10 +813,15 @@ export async function startBellLiveGreeting(
       { startedAt: number; terminal: boolean }
     >()
     const mcpCalls = new Map<string, BellLiveMcpCallState>()
+    const pendingToolContinuations = new Map<
+      string,
+      BellLivePendingToolContinuation
+    >()
     let settled = false
     let conversationSettled = false
     let observerHadError = false
     let observerErrorGeneration = 0
+    let callerSpeechGeneration = 0
     let audioStarted = false
     let audioBufferFinished = false
     let greetingResponseId: string | null = null
@@ -804,28 +845,124 @@ export async function startBellLiveGreeting(
         // Observability must never affect the live call.
       }
     }
+    const requestToolContinuation = (
+      pending: BellLivePendingToolContinuation
+    ): boolean => {
+      const observerErrorGenerationBeforeSend = observerErrorGeneration
+      try {
+        connection.send({
+          event_id: `evt_bell_tool_${randomUUID()}`,
+          type: 'response.create',
+          response: {
+            instructions: pending.toolsAllowed
+              ? `${PHONE_BELL_INSTRUCTIONS}\n\nTOOL CONTINUATION\nThis continues the same caller turn after its archive tool result is ready. The brief thinking sound already happened; do not make it again or narrate the lookup. Review the completed archive results already in the conversation and do not repeat a completed lookup. Call another archive tool only if it is needed to answer correctly. When the available results are sufficient, give the caller the complete spoken answer. Never mention tool mechanics or stop before answering.`
+              : `${PHONE_BELL_INSTRUCTIONS}\n\nFINAL TOOL ANSWER\nThis continues the same caller turn after its archive tool result is ready. The brief thinking sound already happened; do not make it again or narrate the lookup. Do not call another tool. Give the caller the best complete spoken answer supported by the accumulated archive results. If they are insufficient, briefly state what you could not verify. Never mention tool mechanics or stop before answering.`,
+            max_output_tokens: 'inf',
+            metadata: {
+              purpose: pending.toolsAllowed
+                ? PHONE_BELL_TOOL_CONTINUATION_PURPOSE
+                : PHONE_BELL_TOOL_FINAL_ANSWER_PURPOSE,
+              tool_continuation_hop: String(pending.nextHop),
+              tool_result_ready: 'true',
+            },
+            output_modalities: ['audio'],
+            ...(pending.toolsAllowed
+              ? { tool_choice: 'auto' as const }
+              : { tool_choice: 'none' as const, tools: [] }),
+          },
+        })
+        if (observerErrorGeneration !== observerErrorGenerationBeforeSend) {
+          emitLifecycle({
+            event: 'bell_live.tool_continuation',
+            hop: pending.nextHop,
+            outcome: 'failed',
+            toolsAllowed: pending.toolsAllowed,
+          })
+          return false
+        }
+        emitLifecycle({
+          event: 'bell_live.tool_continuation',
+          hop: pending.nextHop,
+          outcome: 'requested',
+          toolsAllowed: pending.toolsAllowed,
+        })
+        return true
+      } catch {
+        emitLifecycle({
+          event: 'bell_live.tool_continuation',
+          hop: pending.nextHop,
+          outcome: 'failed',
+          toolsAllowed: pending.toolsAllowed,
+        })
+        return false
+      }
+    }
+    const finishPendingToolContinuation = (
+      responseId: string,
+      outcome: 'abandoned' | 'superseded'
+    ): void => {
+      const pending = pendingToolContinuations.get(responseId)
+      if (!pending) return
+      pendingToolContinuations.delete(responseId)
+      emitLifecycle({
+        event: 'bell_live.tool_continuation',
+        hop: pending.nextHop,
+        outcome,
+        toolsAllowed: pending.toolsAllowed,
+      })
+    }
+    const maybeRequestToolContinuation = (
+      responseId: string
+    ): 'failed' | 'missing' | 'requested' | 'superseded' | 'waiting' => {
+      const pending = pendingToolContinuations.get(responseId)
+      if (!pending) return 'missing'
+      const newerResponseActive = Array.from(responseStartedAt.keys()).some(
+        (activeResponseId) => activeResponseId !== responseId
+      )
+      if (newerResponseActive) {
+        finishPendingToolContinuation(responseId, 'superseded')
+        return 'superseded'
+      }
+      const outputReady =
+        pending.toolItemIds.size > 0 &&
+        pending.toolItemIds.size === pending.expectedToolCallCount &&
+        Array.from(pending.toolItemIds).every(
+          (itemId) => mcpCalls.get(itemId)?.outputReady === true
+        )
+      if (!outputReady) return 'waiting'
+      pendingToolContinuations.delete(responseId)
+      return requestToolContinuation(pending) ? 'requested' : 'failed'
+    }
     const finishMcpCall = (
       itemId: string,
-      outcome: 'completed' | 'failed'
+      outcome: 'completed' | 'failed',
+      outputReady: boolean
     ): void => {
       const now = Date.now()
       const existing = mcpCalls.get(itemId)
       const call = existing ?? {
         createdAt: now,
+        outputReady: false,
         responseId: null,
         startedAt: null,
         terminal: false,
         tool: 'unknown',
       }
-      if (call.terminal) return
+      const wasTerminal = call.terminal
       call.terminal = true
+      call.outputReady ||= outputReady
       mcpCalls.set(itemId, call)
-      emitLifecycle({
-        durationMs: now - (call.startedAt ?? call.createdAt),
-        event: 'bell_live.mcp_call',
-        outcome,
-        tool: call.tool,
-      })
+      if (!wasTerminal) {
+        emitLifecycle({
+          durationMs: now - (call.startedAt ?? call.createdAt),
+          event: 'bell_live.mcp_call',
+          outcome,
+          tool: call.tool,
+        })
+      }
+      if (call.responseId && call.outputReady) {
+        maybeRequestToolContinuation(call.responseId)
+      }
     }
     const finishConversation = (observerCompleted: boolean): void => {
       if (conversationSettled) return
@@ -851,6 +988,9 @@ export async function startBellLiveGreeting(
           tool: call.tool,
         })
       }
+      for (const responseId of pendingToolContinuations.keys()) {
+        finishPendingToolContinuation(responseId, 'abandoned')
+      }
       for (const [responseId, responseStart] of responseStartedAt) {
         const toolCallCount = Array.from(mcpCalls.values()).filter(
           (call) => call.responseId === responseId
@@ -870,13 +1010,16 @@ export async function startBellLiveGreeting(
                 ? 'audio'
                 : 'empty',
           purpose: responsePurposes.get(responseId) ?? 'normal',
+          recoveryQueued: false,
           recoveryRequested: false,
           toolCallCount,
         })
       }
       responseStartedAt.clear()
+      responseCallerSpeechGenerations.clear()
       responsePurposes.clear()
       responseToolContinuations.clear()
+      pendingToolContinuations.clear()
       const snapshot = transcript.snapshot()
       resolveConversation({
         durationMs: Date.now() - startedAt,
@@ -1031,6 +1174,12 @@ export async function startBellLiveGreeting(
     connection.on('output_audio_buffer.cleared', (event) => {
       transcript.interruptBellResponse(event.response_id)
     })
+    connection.on('input_audio_buffer.speech_started', () => {
+      callerSpeechGeneration += 1
+      for (const responseId of pendingToolContinuations.keys()) {
+        finishPendingToolContinuation(responseId, 'superseded')
+      }
+    })
 
     connection.on('mcp_list_tools.in_progress', (event) => {
       mcpDiscoveries.set(event.item_id, {
@@ -1068,17 +1217,22 @@ export async function startBellLiveGreeting(
       const existing = mcpCalls.get(event.item.id)
       mcpCalls.set(event.item.id, {
         createdAt: existing?.createdAt ?? Date.now(),
+        outputReady: existing?.outputReady ?? false,
         responseId: existing?.responseId ?? event.response_id,
         startedAt: existing?.startedAt ?? null,
         terminal: existing?.terminal ?? false,
         tool: bellLiveMcpTool(event.item.name),
       })
+      pendingToolContinuations
+        .get(event.response_id)
+        ?.toolItemIds.add(event.item.id)
     })
     connection.on('response.mcp_call.in_progress', (event) => {
       const now = Date.now()
       const existing = mcpCalls.get(event.item_id)
       const call = existing ?? {
         createdAt: now,
+        outputReady: false,
         responseId: null,
         startedAt: null,
         terminal: false,
@@ -1095,29 +1249,49 @@ export async function startBellLiveGreeting(
       })
     })
     connection.on('response.mcp_call.completed', (event) => {
-      finishMcpCall(event.item_id, 'completed')
+      finishMcpCall(event.item_id, 'completed', false)
     })
     connection.on('response.mcp_call.failed', (event) => {
-      finishMcpCall(event.item_id, 'failed')
+      finishMcpCall(event.item_id, 'failed', false)
     })
     connection.on('response.output_item.done', (event) => {
       if (event.item.type !== 'mcp_call' || !event.item.id) return
+      const outputReady =
+        'output' in event.item ||
+        (event.item.error !== undefined && event.item.error !== null)
       const existing = mcpCalls.get(event.item.id)
       mcpCalls.set(event.item.id, {
         createdAt: existing?.createdAt ?? Date.now(),
+        outputReady: existing?.outputReady === true || outputReady,
         responseId: existing?.responseId ?? event.response_id,
         startedAt: existing?.startedAt ?? null,
         terminal: existing?.terminal ?? false,
         tool: bellLiveMcpTool(event.item.name),
       })
-      finishMcpCall(event.item.id, event.item.error ? 'failed' : 'completed')
+      pendingToolContinuations
+        .get(event.response_id)
+        ?.toolItemIds.add(event.item.id)
+      finishMcpCall(
+        event.item.id,
+        event.item.error ? 'failed' : 'completed',
+        outputReady
+      )
     })
 
     connection.on('response.created', (event) => {
       const purpose = event.response.metadata?.purpose
       if (purpose !== PHONE_BELL_GREETING_PURPOSE) {
         if (event.response.id) {
+          for (const pendingResponseId of pendingToolContinuations.keys()) {
+            if (pendingResponseId !== event.response.id) {
+              finishPendingToolContinuation(pendingResponseId, 'superseded')
+            }
+          }
           responseStartedAt.set(event.response.id, Date.now())
+          responseCallerSpeechGenerations.set(
+            event.response.id,
+            callerSpeechGeneration
+          )
           responsePurposes.set(
             event.response.id,
             isBellToolContinuationPurpose(purpose)
@@ -1130,6 +1304,8 @@ export async function startBellLiveGreeting(
             )
             responseToolContinuations.set(event.response.id, {
               hop: hop ?? PHONE_BELL_MAX_TOOL_CONTINUATION_HOPS + 1,
+              toolResultReadyAtRequest:
+                event.response.metadata?.tool_result_ready === 'true',
               toolsAllowed:
                 purpose === PHONE_BELL_TOOL_CONTINUATION_PURPOSE &&
                 hop !== null &&
@@ -1145,6 +1321,7 @@ export async function startBellLiveGreeting(
           purpose: isBellToolContinuationPurpose(purpose)
             ? 'tool_continuation'
             : 'normal',
+          recoveryQueued: false,
           recoveryRequested: false,
           toolCallCount: 0,
         })
@@ -1156,10 +1333,13 @@ export async function startBellLiveGreeting(
     connection.on('output_audio_buffer.started', (event) => {
       const responsePurpose = responsePurposes.get(event.response_id)
       if (responsePurpose) {
-        const toolCompletedBeforeStart = Array.from(mcpCalls.values()).some(
-          (call) =>
-            call.responseId === event.response_id && call.terminal === true
-        )
+        const toolCompletedBeforeStart =
+          responseToolContinuations.get(event.response_id)
+            ?.toolResultReadyAtRequest === true ||
+          Array.from(mcpCalls.values()).some(
+            (call) =>
+              call.responseId === event.response_id && call.outputReady === true
+          )
         responsesWithAudio.add(event.response_id)
         if (toolCompletedBeforeStart) {
           responsesWithPostToolAudio.add(event.response_id)
@@ -1216,11 +1396,12 @@ export async function startBellLiveGreeting(
         const isToolContinuation =
           purpose === PHONE_BELL_TOOL_CONTINUATION_PURPOSE ||
           trackedContinuation?.toolsAllowed === true
+        let recoveryQueued = false
         let recoveryRequested = false
         // A normal remote-MCP response should end with an assistant item after
-        // its final tool item. Production can instead end each MCP call as a
-        // tool-only response, so continue with inherited session tools for a
-        // bounded chain before forcing one final no-tool spoken answer.
+        // its final tool item. Production can emit response.done before the
+        // result-bearing response.output_item.done event, so queue recovery
+        // until every tool output is actually available in the conversation.
         if (
           event.response.status === 'completed' &&
           !isFinalToolAnswer &&
@@ -1243,50 +1424,38 @@ export async function startBellLiveGreeting(
           const nextHop = toolsAllowed
             ? currentHop + 1
             : PHONE_BELL_MAX_TOOL_CONTINUATION_HOPS + 1
-          const observerErrorGenerationBeforeSend = observerErrorGeneration
-          try {
-            connection.send({
-              type: 'response.create',
-              response: {
-                instructions: toolsAllowed
-                  ? `${PHONE_BELL_INSTRUCTIONS}\n\nTOOL CONTINUATION\nThis continues the same caller turn. Do not repeat the greeting or the lookup preamble. Review the completed archive results already in the conversation and do not repeat a completed lookup. Call another archive tool only if it is needed to answer correctly. When the available results are sufficient, give the caller the complete spoken answer. Never mention tool mechanics or stop before answering.`
-                  : `${PHONE_BELL_INSTRUCTIONS}\n\nFINAL TOOL ANSWER\nThis continues the same caller turn. Do not repeat the greeting or lookup preamble. Do not call another tool. Give the caller the best complete spoken answer supported by the accumulated archive results. If they are insufficient, briefly state what you could not verify. Never mention tool mechanics or stop before answering.`,
-                max_output_tokens: 'inf',
-                metadata: {
-                  purpose: toolsAllowed
-                    ? PHONE_BELL_TOOL_CONTINUATION_PURPOSE
-                    : PHONE_BELL_TOOL_FINAL_ANSWER_PURPOSE,
-                  tool_continuation_hop: String(nextHop),
-                },
-                output_modalities: ['audio'],
-                ...(toolsAllowed
-                  ? { tool_choice: 'auto' as const }
-                  : { tool_choice: 'none' as const, tools: [] }),
-              },
+          const supersededByCaller =
+            (responseCallerSpeechGenerations.get(responseId) ??
+              callerSpeechGeneration) < callerSpeechGeneration
+          const toolItems = bellLiveMcpCallItems(event.response.output)
+          for (const item of toolItems) {
+            const existing = mcpCalls.get(item.id)
+            mcpCalls.set(item.id, {
+              createdAt: existing?.createdAt ?? Date.now(),
+              outputReady: existing?.outputReady ?? false,
+              responseId: existing?.responseId ?? responseId,
+              startedAt: existing?.startedAt ?? null,
+              terminal: existing?.terminal ?? false,
+              tool: existing?.tool ?? item.tool,
             })
-            if (observerErrorGeneration !== observerErrorGenerationBeforeSend) {
-              emitLifecycle({
-                event: 'bell_live.tool_continuation',
-                hop: nextHop,
-                outcome: 'failed',
-                toolsAllowed,
-              })
-            } else {
-              recoveryRequested = true
-              emitLifecycle({
-                event: 'bell_live.tool_continuation',
-                hop: nextHop,
-                outcome: 'requested',
-                toolsAllowed,
-              })
-            }
-          } catch {
+          }
+          if (supersededByCaller) {
             emitLifecycle({
               event: 'bell_live.tool_continuation',
               hop: nextHop,
-              outcome: 'failed',
+              outcome: 'superseded',
               toolsAllowed,
             })
+          } else {
+            pendingToolContinuations.set(responseId, {
+              expectedToolCallCount: profile.toolCallCount,
+              nextHop,
+              toolItemIds: new Set(toolItems.map((item) => item.id)),
+              toolsAllowed,
+            })
+            const continuation = maybeRequestToolContinuation(responseId)
+            recoveryQueued = continuation === 'waiting'
+            recoveryRequested = continuation === 'requested'
           }
         }
         const status = event.response.status
@@ -1309,11 +1478,13 @@ export async function startBellLiveGreeting(
             isBellToolContinuationPurpose(purpose) || trackedContinuation
               ? 'tool_continuation'
               : 'normal',
+          recoveryQueued,
           recoveryRequested,
           toolCallCount: profile.toolCallCount,
         })
         if (responseId) {
           responseStartedAt.delete(responseId)
+          responseCallerSpeechGenerations.delete(responseId)
           responsePurposes.delete(responseId)
           responsesWithAudio.delete(responseId)
           responsesWithPostToolAudio.delete(responseId)

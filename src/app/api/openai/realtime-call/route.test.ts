@@ -340,8 +340,31 @@ describe('POST /api/openai/realtime-call', () => {
         },
       },
       {
+        type: 'response.done',
+        event_id: 'evt_private_response_done',
+        response: {
+          id: 'resp_private_response',
+          status: 'completed',
+          output: [
+            {
+              id: 'item_private_tool',
+              type: 'mcp_call',
+              name: 'fetch',
+              server_label: 'PRIVATE_SERVER',
+              arguments: '{"id":"PRIVATE_ARGUMENT"}',
+            },
+          ],
+        },
+      },
+      {
         type: 'response.mcp_call.in_progress',
         event_id: 'evt_private_started',
+        item_id: 'item_private_tool',
+        output_index: 0,
+      },
+      {
+        type: 'response.mcp_call.completed',
+        event_id: 'evt_private_completed',
         item_id: 'item_private_tool',
         output_index: 0,
       },
@@ -359,24 +382,6 @@ describe('POST /api/openai/realtime-call', () => {
           output: 'PRIVATE_OUTPUT',
         },
       },
-      {
-        type: 'response.done',
-        event_id: 'evt_private_response_done',
-        response: {
-          id: 'resp_private_response',
-          status: 'completed',
-          output: [
-            {
-              id: 'item_private_tool',
-              type: 'mcp_call',
-              name: 'fetch',
-              server_label: 'PRIVATE_SERVER',
-              arguments: '{"id":"PRIVATE_ARGUMENT"}',
-              output: 'PRIVATE_OUTPUT',
-            },
-          ],
-        },
-      },
     ]
     vi.stubGlobal(
       'fetch',
@@ -392,6 +397,7 @@ describe('POST /api/openai/realtime-call', () => {
         metadata: {
           purpose: 'bell_tool_continuation',
           tool_continuation_hop: '1',
+          tool_result_ready: 'true',
         },
         tool_choice: 'auto',
       },
@@ -410,7 +416,8 @@ describe('POST /api/openai/realtime-call', () => {
         event: 'bell_live.realtime_response',
         outputKind: 'tool_without_final_audio',
         purpose: 'normal',
-        recoveryRequested: true,
+        recoveryQueued: true,
+        recoveryRequested: false,
       })
     )
     expect(console.info).toHaveBeenCalledWith(
