@@ -249,7 +249,7 @@ describe('POST /api/phone/voice', () => {
     const menu = playedTexts(xml)[1]
     expect(menu).toContain('Press 2 to subscribe')
     expect(menu).toContain('Press 3 to talk to Bell AI')
-    expect(menu).toContain(
+    expect(menu).not.toContain(
       'Bell AI calls are transcribed and emailed to the site administrators.'
     )
   })
@@ -270,6 +270,7 @@ describe('POST /api/phone/voice', () => {
 
     const xml = await response.text()
     expect(playedTexts(xml)[1]).toBe(PHONE_IVR_FALLBACK_PROMPTS.bellMenu)
+    expect(playedTexts(xml)[1]).not.toContain('transcribed')
     expect(xml).toContain('<Gather')
   })
 
