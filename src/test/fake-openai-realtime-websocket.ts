@@ -16,6 +16,7 @@ export class FakeOpenAiRealtimeWebSocket {
   static emitAudioStopped = true
   static finalStatus: 'completed' | 'failed' = 'completed'
   static handshakeHttpStatus: number | null = null
+  static handshakeHttpStatuses: Array<number | null> = []
   static sentEvents: unknown[] = []
   static throwOnSend = false
 
@@ -31,13 +32,17 @@ export class FakeOpenAiRealtimeWebSocket {
       url: this.url,
     })
     queueMicrotask(() => {
-      if (FakeOpenAiRealtimeWebSocket.handshakeHttpStatus !== null) {
+      const handshakeHttpStatus =
+        FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses.length > 0
+          ? FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses.shift()
+          : FakeOpenAiRealtimeWebSocket.handshakeHttpStatus
+      if (handshakeHttpStatus !== null) {
         this.emit(
           'unexpected-response',
           {},
           {
             resume: () => undefined,
-            statusCode: FakeOpenAiRealtimeWebSocket.handshakeHttpStatus,
+            statusCode: handshakeHttpStatus,
           }
         )
         return

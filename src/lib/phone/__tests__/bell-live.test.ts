@@ -41,6 +41,7 @@ beforeEach(() => {
   FakeOpenAiRealtimeWebSocket.emitAudioStopped = true
   FakeOpenAiRealtimeWebSocket.finalStatus = 'completed'
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = null
+  FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses = []
   FakeOpenAiRealtimeWebSocket.sentEvents = []
   FakeOpenAiRealtimeWebSocket.throwOnSend = false
   process.env.OPENAI_API_KEY = 'test-openai-key'
@@ -172,6 +173,8 @@ describe('Bell Live Realtime session', () => {
     expect(PHONE_BELL_MAX_CALL_SECONDS).toBe(300)
     expect(session).not.toHaveProperty('service_tier')
     expect(session.audio.input).not.toHaveProperty('transcription')
+    expect(session.tools[0]).not.toHaveProperty('server_description')
+    expect(session.tools[0]).not.toHaveProperty('allowed_callers')
   })
 
   it('accepts and rejects calls through the direct OpenAI call API', async () => {
@@ -300,6 +303,7 @@ describe('Bell Live Realtime session', () => {
   })
 
   it('authenticates the Node sideband socket with API and project headers', async () => {
+    process.env.OPENAI_BASE_URL = 'https://example.invalid/v1'
     await startBellLiveGreeting('rtc_call_greeting')
 
     expect(FakeOpenAiRealtimeWebSocket.connections).toEqual([
