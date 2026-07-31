@@ -4,6 +4,7 @@ import {
   verifyPhoneIvrAudioToken,
 } from '@/lib/phone/ivr-audio'
 import {
+  bellLiveTwiml,
   connectCallTwiml,
   emptyTwiml,
   escapeXml,
@@ -113,6 +114,40 @@ describe('voiceMenuTwiml', () => {
     ])
     expect(xml).not.toContain('<Say')
     expect(xml).toContain('<Record maxLength="120"')
+  })
+
+  it('can offer Bell to subscribers without repeating the SMS choice', () => {
+    const subscriberMenu = voiceMenuTwiml({
+      greeting: 'Hello.',
+      menuPrompt: 'bellMenu',
+      menuActionUrl: 'https://philipithomas.com/api/phone/voice-menu',
+      recordingStatusUrl: 'https://philipithomas.com/recording-status',
+      recordingCompleteUrl: 'https://philipithomas.com/recording-complete',
+    })
+    expect(playedTexts(subscriberMenu)[1]).toBe(
+      'Press 1 to leave a voicemail. Press 3 to talk with Bell AI.'
+    )
+  })
+})
+
+describe('bellLiveTwiml', () => {
+  it('plays a Bell transition and dials the escaped TLS SIP leg with a hard cap', () => {
+    const xml = bellLiveTwiml({
+      sipUri:
+        'sip:proj_test@sip.api.openai.com;transport=tls?x-bp-call-sid=CA123&x-bp-token=abc',
+      actionUrl: 'https://philipithomas.com/api/phone/bell-complete',
+    })
+
+    expect(playedTexts(xml)).toEqual([
+      'Connecting you to Bell AI. Ask your question after the connection opens.',
+    ])
+    expect(xml).toContain(
+      '<Dial action="https://philipithomas.com/api/phone/bell-complete" method="POST" answerOnBridge="true" timeout="20" timeLimit="300">'
+    )
+    expect(xml).toContain(
+      '<Sip>sip:proj_test@sip.api.openai.com;transport=tls?x-bp-call-sid=CA123&amp;x-bp-token=abc</Sip>'
+    )
+    expect(xml).not.toContain('&x-bp-token')
   })
 })
 

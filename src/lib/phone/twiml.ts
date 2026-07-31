@@ -3,6 +3,7 @@
 // Rails version interpolated raw strings), and spoken prompts use signed
 // <Play> URLs backed by Vercel AI Gateway speech generation.
 
+import { PHONE_BELL_MAX_CALL_SECONDS } from '@/lib/phone/bell-live'
 import {
   PHONE_IVR_FALLBACK_PROMPTS,
   type PhoneIvrFallbackKey,
@@ -26,11 +27,12 @@ function play(text: string, fallback: PhoneIvrFallbackKey): string {
 /** Optionally greets the caller, then records a voicemail with callbacks. */
 export function voicemailTwiml(input: {
   greeting?: string
+  greetingFallback?: PhoneIvrFallbackKey
   recordingStatusUrl: string
   recordingCompleteUrl: string
 }): string {
   const greeting = input.greeting
-    ? `  ${play(input.greeting, 'greeting')}\n`
+    ? `  ${play(input.greeting, input.greetingFallback ?? 'greeting')}\n`
     : ''
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -43,18 +45,34 @@ ${greeting}  ${play(PHONE_IVR_FALLBACK_PROMPTS.voicemail, 'voicemail')}
 /** Greets the caller and asks whether to leave voicemail or subscribe by SMS. */
 export function voiceMenuTwiml(input: {
   greeting: string
+  menuPrompt?: 'bellMenu' | 'menu' | 'menuWithBell'
   menuActionUrl: string
   recordingStatusUrl: string
   recordingCompleteUrl: string
 }): string {
+  const menuPrompt = input.menuPrompt ?? 'menu'
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   ${play(input.greeting, 'greeting')}
   <Gather action="${escapeXml(input.menuActionUrl)}" method="POST" input="dtmf" numDigits="1" timeout="6">
-    ${play(PHONE_IVR_FALLBACK_PROMPTS.menu, 'menu')}
+    ${play(PHONE_IVR_FALLBACK_PROMPTS[menuPrompt], menuPrompt)}
   </Gather>
   ${play(PHONE_IVR_FALLBACK_PROMPTS.voicemail, 'voicemail')}
   <Record maxLength="120" recordingStatusCallback="${escapeXml(input.recordingStatusUrl)}" recordingStatusCallbackMethod="POST" action="${escapeXml(input.recordingCompleteUrl)}" method="POST" />
+</Response>`
+}
+
+/** Transfers one call leg to Bell AI over OpenAI's TLS SIP endpoint. */
+export function bellLiveTwiml(input: {
+  sipUri: string
+  actionUrl: string
+}): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${play(PHONE_IVR_FALLBACK_PROMPTS.bellConnecting, 'bellConnecting')}
+  <Dial action="${escapeXml(input.actionUrl)}" method="POST" answerOnBridge="true" timeout="20" timeLimit="${PHONE_BELL_MAX_CALL_SECONDS}">
+    <Sip>${escapeXml(input.sipUri)}</Sip>
+  </Dial>
 </Response>`
 }
 

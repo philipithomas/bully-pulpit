@@ -7,6 +7,7 @@ vi.mock('@/lib/email/ses', () => ({
 import { sendEmailWithAttachment } from '@/lib/email/ses'
 import {
   MAX_RECORDING_BYTES,
+  OPENAI_TRANSCRIPTION_MODEL,
   processVoicemail,
   twilioRecordingMp3Url,
 } from '@/lib/phone/voicemail'
@@ -121,6 +122,15 @@ describe('processVoicemail', () => {
         body: expect.any(FormData),
       })
     )
+    const transcriptionBody = transcriptionCall?.[1]?.body
+    expect(transcriptionBody).toBeInstanceOf(FormData)
+    const formData = transcriptionBody as FormData
+    expect(formData.get('model')).toBe(OPENAI_TRANSCRIPTION_MODEL)
+    expect(formData.get('model')).toBe('gpt-transcribe')
+    expect(formData.get('language')).toBe('en')
+    expect(formData.get('prompt')).toContain('Philip Ilic Thomas')
+    expect(formData.getAll('keywords[]')).toContain('Bell AI')
+    expect(formData.getAll('keywords[]')).toContain('philipithomas.com')
     expect(mockedSend).toHaveBeenCalledTimes(1)
     const sent = mockedSend.mock.calls[0][0]
     expect(sent.to).toEqual(['one@example.com', 'two@example.com'])

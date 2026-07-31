@@ -2,6 +2,7 @@ import { after, NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
 import { findSmsSubscriberByPhoneNumber } from '@/lib/db/queries/sms-subscribers'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
+import { phoneBellLiveConfigured } from '@/lib/phone/bell-live'
 import { isE164, sitePhoneNumber } from '@/lib/phone/config'
 import { generateGreeting } from '@/lib/phone/greeting'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
@@ -33,7 +34,9 @@ async function hasConfirmedSmsSubscription(
  * into the recording-status and recording-complete routes. The caller, called
  * number, and initial caller metadata ride along on the status callback URL
  * because Twilio's recording callbacks do not include them. Confirmed SMS
- * subscribers bypass the signup menu and proceed directly to voicemail.
+ * subscribers bypass the signup menu unless Bell Live is configured; in that
+ * case they get the shorter voicemail-or-Bell menu without a redundant signup
+ * choice.
  */
 export async function POST(request: Request) {
   const form = await validatedPhoneWebhookForm(request)
@@ -64,14 +67,21 @@ export async function POST(request: Request) {
   })
 
   const callbackUrls = voicemailCallbackUrls({ from, to, metadata })
+  const bellLiveAvailable = phoneBellLiveConfigured()
 
-  if (!publicPhoneNumber || alreadySubscribed) {
+  if (!bellLiveAvailable && (!publicPhoneNumber || alreadySubscribed)) {
     return twimlResponse(voicemailTwiml({ greeting, ...callbackUrls }))
   }
 
   return twimlResponse(
     voiceMenuTwiml({
       greeting,
+      menuPrompt:
+        bellLiveAvailable && publicPhoneNumber && !alreadySubscribed
+          ? 'menuWithBell'
+          : bellLiveAvailable
+            ? 'bellMenu'
+            : 'menu',
       menuActionUrl: `${siteConfig.url}/api/phone/voice-menu`,
       ...callbackUrls,
     })

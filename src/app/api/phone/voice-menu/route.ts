@@ -1,5 +1,6 @@
 import { after, NextResponse } from 'next/server'
 import { start } from 'workflow/api'
+import { siteConfig } from '@/lib/config'
 import {
   claimPhoneWebhookEvent,
   findOrCreatePhoneWebhookEvent,
@@ -11,9 +12,11 @@ import {
   subscribeSmsNumber,
 } from '@/lib/db/queries/sms-subscribers'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
+import { bellLiveSipUri } from '@/lib/phone/bell-live'
 import { isE164, numberLabel, sitePhoneNumber } from '@/lib/phone/config'
 import { sendSmsSignupNotification } from '@/lib/phone/notifications'
 import {
+  bellLiveTwiml,
   playAndHangupTwiml,
   twimlResponse,
   voicemailTwiml,
@@ -24,7 +27,8 @@ import { smsSignupOnboardingWorkflow } from '@/workflows/sms-signup-onboarding'
 
 /**
  * Handles the DTMF choice from /api/phone/voice. 1 or timeout goes to voicemail;
- * 2 subscribes a caller ID to the all-newsletters SMS list.
+ * 2 subscribes a caller ID to the all-newsletters SMS list; 3 transfers the
+ * caller to Bell AI over OpenAI Realtime SIP.
  */
 export async function POST(request: Request) {
   const form = await validatedPhoneWebhookForm(request)
@@ -38,6 +42,18 @@ export async function POST(request: Request) {
   const callSid = form.get('CallSid') ? String(form.get('CallSid')) : ''
   const metadata = twilioWebhookMetadataFromForm(form, from)
   const confirmationFrom = sitePhoneNumber()
+
+  if (digits === '3') {
+    const sipUri = bellLiveSipUri(callSid)
+    if (sipUri) {
+      return twimlResponse(
+        bellLiveTwiml({
+          sipUri,
+          actionUrl: `${siteConfig.url}/api/phone/bell-complete`,
+        })
+      )
+    }
+  }
 
   if (digits === '2' && confirmationFrom) {
     if (!isE164(from)) {

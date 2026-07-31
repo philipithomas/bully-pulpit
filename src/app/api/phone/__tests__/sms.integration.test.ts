@@ -147,6 +147,10 @@ afterEach(async () => {
   delete process.env.PHONE_NUMBER
   delete process.env.TWILIO_SECRET
   delete process.env.ADMIN_EMAILS
+  delete process.env.OPENAI_API_KEY
+  delete process.env.OPENAI_PROJECT_ID
+  delete process.env.OPENAI_WEBHOOK_SECRET
+  delete process.env.OPENAI_PHONE_REALTIME_MODEL
   vi.clearAllMocks()
 })
 
@@ -1009,6 +1013,35 @@ describe('POST /api/phone/sms', () => {
 })
 
 describe('POST /api/phone/voice-menu', () => {
+  it('transfers digit 3 to a signed OpenAI Realtime SIP leg', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key'
+    process.env.OPENAI_PROJECT_ID = 'proj_test123'
+    process.env.OPENAI_WEBHOOK_SECRET = 'whsec_test'
+
+    const response = await voiceMenuPost(
+      voiceMenuRequest({
+        From: '+14155551234',
+        To: '+12123473190',
+        Digits: '3',
+        CallSid: 'CA1234567890abcdef1234567890abcdef',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(playedText(xml)).toContain('Connecting you to Bell AI')
+    expect(xml).toContain(
+      '<Dial action="https://www.philipithomas.com/api/phone/bell-complete"'
+    )
+    expect(xml).toContain(
+      '<Sip>sip:proj_test123@sip.api.openai.com;transport=tls?'
+    )
+    expect(xml).toContain('x-bp-call-sid=CA1234567890abcdef1234567890abcdef')
+    expect(xml).toContain('&amp;x-bp-token=')
+    expect(xml).not.toContain('test-webhook-secret')
+    expect(await db.select().from(smsSubscribers)).toHaveLength(0)
+  })
+
   it('subscribes a caller that presses 2', async () => {
     const response = await voiceMenuPost(
       voiceMenuRequest({

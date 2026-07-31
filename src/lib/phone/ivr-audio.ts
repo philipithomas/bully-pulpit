@@ -10,9 +10,16 @@ export const PHONE_IVR_SPEECH_SPEED = 1.35
 const PHONE_IVR_SPOKEN_NAME = siteIdentity.name.replace('Ilic', 'Eelitch')
 export const PHONE_IVR_FALLBACK_PROMPTS = {
   alreadyHandled: 'This phone menu request was already handled. Goodbye.',
+  bellConnecting:
+    'Connecting you to Bell AI. Ask your question after the connection opens.',
+  bellMenu: 'Press 1 to leave a voicemail. Press 3 to talk with Bell AI.',
+  bellUnavailable:
+    'Bell AI is unavailable right now. You can leave a voicemail instead.',
   goodbye: 'Thank you. Goodbye.',
   greeting: `You have reached the Contraption Company and ${PHONE_IVR_SPOKEN_NAME}.`,
   menu: 'Press 1 to leave a voicemail. Press 2 to subscribe to recurring new-post texts from philipithomas.com. A new or reactivated subscription includes one Bell contact-card multimedia message. Frequency varies. Message and data rates may apply. Text STOP to unsubscribe or HELP for help.',
+  menuWithBell:
+    'Press 1 to leave a voicemail. Press 2 to subscribe to recurring new-post texts from philipithomas.com. Press 3 to talk with Bell AI. A new or reactivated text subscription includes one Bell contact-card multimedia message. Frequency varies. Message and data rates may apply. Text STOP to unsubscribe or HELP for help.',
   subscribeFailed:
     'We could not subscribe this caller ID. Please text SUBSCRIBE to the number you called.',
   subscribed:

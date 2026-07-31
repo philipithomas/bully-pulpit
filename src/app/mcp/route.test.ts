@@ -278,6 +278,17 @@ describe('POST /mcp', () => {
     })
   })
 
+  it('allows the OpenAI API origin used by Realtime remote MCP', async () => {
+    const { response } = await postJson(toolsListRequest(13), {
+      headers: { Origin: 'https://api.openai.com' },
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('access-control-allow-origin')).toBe(
+      'https://api.openai.com'
+    )
+  })
+
   it('rejects JSON-RPC batches before making a search quota decision', async () => {
     const { response, payload } = await postJson([
       toolCallRequest(14, 'search', { query: 'coffee' }),
