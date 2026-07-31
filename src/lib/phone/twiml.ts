@@ -62,14 +62,13 @@ export function voiceMenuTwiml(input: {
 </Response>`
 }
 
-/** Discloses live transcription, then transfers to OpenAI's TLS SIP endpoint. */
+/** Transfers directly to OpenAI's TLS SIP endpoint. */
 export function bellLiveTwiml(input: {
   sipUri: string
   actionUrl: string
 }): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  ${play(PHONE_IVR_FALLBACK_PROMPTS.bellDisclosure, 'bellDisclosure')}
   <Dial action="${escapeXml(input.actionUrl)}" method="POST" answerOnBridge="true" timeout="20" timeLimit="${PHONE_BELL_MAX_CALL_SECONDS}">
     <Sip>${escapeXml(input.sipUri)}</Sip>
   </Dial>
