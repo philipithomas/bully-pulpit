@@ -5,7 +5,10 @@ vi.mock('@/lib/email/ses', () => ({
 }))
 
 import { sendSimpleEmail } from '@/lib/email/ses'
-import { sendIncomingSmsNotification } from '@/lib/phone/notifications'
+import {
+  sendBellLiveTranscriptNotification,
+  sendIncomingSmsNotification,
+} from '@/lib/phone/notifications'
 
 describe('phone notifications', () => {
   beforeEach(() => {
@@ -40,5 +43,55 @@ describe('phone notifications', () => {
     expect(email.text).toContain('Bell reply:')
     expect(email.text).toContain('[Bell AI] A new Postcard.')
     expect(email.text).toContain('2026-07-13 20:30 UTC')
+  })
+
+  it('emails the complete live transcript to every phone administrator', async () => {
+    await sendBellLiveTranscriptNotification({
+      callSid: 'CA-live-123',
+      durationMs: 91_400,
+      inputFailureCount: 0,
+      missingTranscriptCount: 0,
+      observerCompleted: true,
+      turns: [
+        {
+          complete: true,
+          interrupted: false,
+          itemId: 'caller-1',
+          role: 'caller',
+          text: 'Read that post.',
+        },
+        {
+          complete: true,
+          interrupted: false,
+          itemId: 'bell-1',
+          role: 'bell_ai',
+          text: 'Here it is.',
+        },
+      ],
+    })
+
+    const email = vi.mocked(sendSimpleEmail).mock.calls[0]?.[0]
+    expect(email?.to).toEqual(['one@example.com', 'two@example.com'])
+    expect(email?.subject).toBe('Bell AI phone conversation transcript')
+    expect(email?.html).toContain('Transcript:</p>')
+    expect(email?.html).toContain('Complete')
+    expect(email?.text).toContain('Caller: Read that post.')
+    expect(email?.text).toContain('Bell AI: Here it is.')
+    expect(email?.text).toContain('No call audio was recorded.')
+  })
+
+  it('labels a missing live transcript as partial', async () => {
+    await sendBellLiveTranscriptNotification({
+      callSid: 'CA-live-empty',
+      durationMs: 2_000,
+      inputFailureCount: 0,
+      missingTranscriptCount: 1,
+      observerCompleted: true,
+      turns: [],
+    })
+
+    const email = vi.mocked(sendSimpleEmail).mock.calls[0]?.[0]
+    expect(email?.text).toContain('Transcript: Partial')
+    expect(email?.text).toContain('No spoken transcript was available.')
   })
 })

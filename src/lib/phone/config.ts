@@ -50,8 +50,9 @@ export function twilioSecret(): string | null {
 }
 
 /**
- * Recipients for voicemail, missed call, and SMS notifications. Defaults to
- * the ADMIN_EMAILS allowlist so the people who run the site get the heads-up.
+ * Recipients for voicemail, live-call transcript, missed call, and SMS
+ * notifications. Defaults to the ADMIN_EMAILS allowlist so the people who run
+ * the site get the heads-up.
  * If the allowlist is somehow empty (ADMIN_EMAILS explicitly blanked), falls
  * back to a single static address so a phone notification is never dropped on
  * the floor.

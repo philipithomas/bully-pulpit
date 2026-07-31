@@ -19,11 +19,11 @@ vi.mock('@/lib/auth/jwt', async (importOriginal) => {
 vi.mock('@/lib/chat/bell-generation', () => ({
   bellGatewayCost: vi.fn(),
   bellModel: {},
-  bellStopWhen: [],
+  bellWebStopWhen: [],
   bellTools: {},
   getBellReasoning: vi.fn(() => 'none'),
   getBellProviderOptions: vi.fn(() => ({})),
-  prepareBellStep: vi.fn(),
+  prepareBellWebStep: vi.fn(),
 }))
 vi.mock('@/lib/db/queries/bell-conversations', () => ({
   createWebBellTurn: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock('@/lib/db/queries/bell-messages', () => ({
   textFromBellParts: vi.fn(() => 'Hello'),
 }))
 
-import { CHAT_BODY_MAX_BYTES, POST } from '@/app/api/chat/route'
+import { CHAT_BODY_MAX_BYTES, maxDuration, POST } from '@/app/api/chat/route'
 import {
   getVerifiedSession,
   SessionLookupUnavailableError,
@@ -113,6 +113,10 @@ describe('POST /api/chat request bounds', () => {
     } as never)
   })
 
+  it('allows the full Fluid Compute window for deep research', () => {
+    expect(maxDuration).toBe(800)
+  })
+
   it('rejects malformed JSON before security, database, or model calls', async () => {
     const response = await POST(chatRequest('{'))
 
@@ -146,6 +150,38 @@ describe('POST /api/chat request bounds', () => {
     expect(verifiedSession).not.toHaveBeenCalled()
     expect(getConversation).not.toHaveBeenCalled()
     expect(model).not.toHaveBeenCalled()
+  })
+
+  it('accepts a long multi-turn history beyond the former 256 KiB cap', async () => {
+    rateLimit.mockResolvedValue('limited')
+    const body = JSON.stringify({
+      ...validBody,
+      messageId: 'u2',
+      messages: [
+        {
+          id: 'u1',
+          role: 'user',
+          parts: [{ type: 'text', text: 'x'.repeat(160_000) }],
+        },
+        {
+          id: 'a1',
+          role: 'assistant',
+          parts: [{ type: 'text', text: 'y'.repeat(160_000) }],
+        },
+        {
+          id: 'u2',
+          role: 'user',
+          parts: [{ type: 'text', text: 'Continue the analysis.' }],
+        },
+      ],
+    })
+    expect(Buffer.byteLength(body)).toBeGreaterThan(256 * 1024)
+    expect(Buffer.byteLength(body)).toBeLessThan(CHAT_BODY_MAX_BYTES)
+
+    const response = await POST(chatRequest(body))
+
+    expect(response.status).toBe(429)
+    expect(rateLimit).toHaveBeenCalledOnce()
   })
 
   it('rejects a non-JSON media type before downstream work', async () => {
@@ -265,6 +301,13 @@ describe('POST /api/chat request bounds', () => {
 
     expect(response.status).toBe(200)
     expect(reasoning).toHaveBeenCalledWith('web', 1)
+    expect(model).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxOutputTokens: 32_768,
+        stopWhen: [],
+        prepareStep: expect.any(Function),
+      })
+    )
     const options = toUIMessageStreamResponse.mock.calls[0]?.[0] as
       | {
           sendReasoning?: boolean
@@ -304,7 +347,7 @@ describe('POST /api/chat request bounds', () => {
     ).toBeUndefined()
   })
 
-  it('raises reasoning after the first web user turn', async () => {
+  it('passes the later web turn count to shared reasoning settings', async () => {
     model.mockReturnValue({
       toUIMessageStreamResponse: vi.fn(() => new Response('stream')),
     } as never)

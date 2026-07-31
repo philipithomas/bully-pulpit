@@ -47,7 +47,10 @@ import {
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
 import { findSmsSubscriberByPhoneNumber } from '@/lib/db/queries/sms-subscribers'
-import { verifyPhoneIvrAudioToken } from '@/lib/phone/ivr-audio'
+import {
+  PHONE_IVR_FALLBACK_PROMPTS,
+  verifyPhoneIvrAudioToken,
+} from '@/lib/phone/ivr-audio'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 import { twilioPostRequest } from '@/test/twilio'
 
@@ -246,6 +249,9 @@ describe('POST /api/phone/voice', () => {
     const menu = playedTexts(xml)[1]
     expect(menu).toContain('Press 2 to subscribe')
     expect(menu).toContain('Press 3 to talk to Bell AI')
+    expect(menu).toContain(
+      'Bell AI calls are transcribed and emailed to the site administrators.'
+    )
   })
 
   it('offers confirmed subscribers the shorter voicemail-or-Bell menu', async () => {
@@ -263,9 +269,7 @@ describe('POST /api/phone/voice', () => {
     )
 
     const xml = await response.text()
-    expect(playedTexts(xml)[1]).toBe(
-      'Press 1 to leave a voicemail. Press 3 to talk to Bell AI.'
-    )
+    expect(playedTexts(xml)[1]).toBe(PHONE_IVR_FALLBACK_PROMPTS.bellMenu)
     expect(xml).toContain('<Gather')
   })
 
@@ -281,9 +285,7 @@ describe('POST /api/phone/voice', () => {
     )
 
     const xml = await response.text()
-    expect(playedTexts(xml)[1]).toBe(
-      'Press 1 to leave a voicemail. Press 3 to talk to Bell AI.'
-    )
+    expect(playedTexts(xml)[1]).toBe(PHONE_IVR_FALLBACK_PROMPTS.bellMenu)
     expect(findSmsSubscriberByPhoneNumber).not.toHaveBeenCalled()
   })
 

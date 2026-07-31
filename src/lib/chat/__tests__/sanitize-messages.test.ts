@@ -8,12 +8,13 @@ import {
   MAX_CHAT_PARTS_PER_MESSAGE,
   MAX_CHAT_TEXT_PART_CHARACTERS,
   sanitizeChatMessages,
+  textOnlyChatMessages,
 } from '@/lib/chat/sanitize-messages'
 
 const userMessage = (text: string, id = 'u1') => ({
   id,
-  role: 'user',
-  parts: [{ type: 'text', text }],
+  role: 'user' as const,
+  parts: [{ type: 'text' as const, text }],
 })
 
 describe('sanitizeChatMessages', () => {
@@ -113,13 +114,13 @@ describe('sanitizeChatMessages', () => {
         role: 'assistant',
         parts: Array.from({ length: 3 }, () => ({
           type: 'text',
-          text: 'x'.repeat(10_000),
+          text: 'x'.repeat(MAX_CHAT_TEXT_PART_CHARACTERS + 100),
         })),
       },
     ])
 
     expect(result[0]?.id).toHaveLength(MAX_CHAT_IDENTIFIER_CHARACTERS)
-    expect(result[0]?.parts).toHaveLength(2)
+    expect(result[0]?.parts).toHaveLength(1)
     expect(result[0]?.parts[0]).toMatchObject({
       type: 'text',
       text: 'x'.repeat(MAX_CHAT_TEXT_PART_CHARACTERS),
@@ -188,7 +189,9 @@ describe('sanitizeChatMessages', () => {
 
     expect(result.length).toBeLessThanOrEqual(MAX_CHAT_MESSAGES)
     expect(totalCharacters).toBe(MAX_CHAT_CONTEXT_CHARACTERS)
-    expect(result[0]?.id).toBe('m39')
+    expect(result[0]?.id).toBe(
+      `m${45 - Math.ceil(MAX_CHAT_CONTEXT_CHARACTERS / 10_000)}`
+    )
     expect(result.at(-1)?.id).toBe('m44')
   })
 
@@ -215,7 +218,7 @@ describe('sanitizeChatMessages', () => {
         userMessage('Search for the colophon.'),
         {
           id: 'a1',
-          role: 'assistant',
+          role: 'assistant' as const,
           parts: [
             {
               type: 'tool-searchPosts',
@@ -234,5 +237,61 @@ describe('sanitizeChatMessages', () => {
       false
     )
     expect(modelMessages.some((message) => message.role === 'tool')).toBe(false)
+  })
+
+  it('drops rendered tool payloads before a browser follow-up request', () => {
+    expect(
+      textOnlyChatMessages([
+        userMessage('Research this.'),
+        {
+          id: 'a1',
+          role: 'assistant',
+          parts: [
+            {
+              type: 'tool-fetchPost',
+              toolCallId: 'call-1',
+              state: 'output-available',
+              input: { slug: 'some-post' },
+              output: 'x'.repeat(100_000),
+            },
+            { type: 'text', text: 'The complete answer.' },
+          ],
+        },
+      ])
+    ).toEqual([
+      userMessage('Research this.'),
+      {
+        id: 'a1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'The complete answer.' }],
+      },
+    ])
+  })
+
+  it('defensively bounds long or malformed persisted browser history', () => {
+    const result = textOnlyChatMessages([
+      null,
+      { id: 'broken', role: 'assistant', parts: null },
+      userMessage('x'.repeat(160_000), 'u1'),
+      {
+        id: 'a1',
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'y'.repeat(160_000) }],
+      },
+      userMessage('Latest question.', 'u2'),
+    ] as never)
+    const totalCharacters = result.reduce(
+      (messageTotal, message) =>
+        messageTotal +
+        message.parts.reduce(
+          (partTotal, part) =>
+            part.type === 'text' ? partTotal + part.text.length : partTotal,
+          0
+        ),
+      0
+    )
+
+    expect(totalCharacters).toBe(MAX_CHAT_CONTEXT_CHARACTERS)
+    expect(result.at(-1)).toEqual(userMessage('Latest question.', 'u2'))
   })
 })

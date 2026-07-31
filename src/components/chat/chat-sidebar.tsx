@@ -24,6 +24,7 @@ import {
 import { createBellChat } from '@/lib/chat/bell-chat'
 import { chatErrorMessage } from '@/lib/chat/chat-error-message'
 import { BELL_DISCOVERY_OPENED_KEY } from '@/lib/chat/discovery'
+import { textOnlyChatMessages } from '@/lib/chat/sanitize-messages'
 import {
   type BellStarterQuestion,
   bellStarterQuestions,
@@ -89,10 +90,12 @@ function WelcomeScreen({
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <Image src="/images/bell.svg" alt="Bell" width={48} height={48} />
+      <Image src="/images/bell.svg" alt="Bell AI" width={48} height={48} />
       <div>
         <p className="font-sans text-sm font-semibold text-gray-950">
-          {userName ? `Hey ${userName}, this is Bell.` : 'Hey, this is Bell.'}
+          {userName
+            ? `Hey ${userName}, this is Bell AI.`
+            : 'Hey, this is Bell AI.'}
         </p>
         <p className="mt-1 font-serif text-sm text-gray-500">
           I can search Philip&apos;s archive. Ask me about his writing,
@@ -154,7 +157,7 @@ export function ChatSidebar() {
           body: {
             ...body,
             id,
-            messages: requestMessages,
+            messages: textOnlyChatMessages(requestMessages),
             trigger,
             messageId,
             // One generation attempt per transport request. The server uses
@@ -194,7 +197,13 @@ export function ChatSidebar() {
             return
           }
           const text = messageText(message)
-          if (text) setAnnouncement(text)
+          if (text) {
+            setAnnouncement(
+              text.length <= 2_000
+                ? text
+                : 'Bell AI finished the requested response.'
+            )
+          }
         },
       }),
     [chatId, saveMessages, transport]

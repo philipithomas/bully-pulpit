@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import {
+  PHONE_IVR_FALLBACK_PROMPTS,
   phoneIvrFallbackAudioPath,
   verifyPhoneIvrAudioToken,
 } from '@/lib/phone/ivr-audio'
@@ -125,7 +126,7 @@ describe('voiceMenuTwiml', () => {
       recordingCompleteUrl: 'https://philipithomas.com/recording-complete',
     })
     expect(playedTexts(subscriberMenu)[1]).toBe(
-      'Press 1 to leave a voicemail. Press 3 to talk to Bell AI.'
+      PHONE_IVR_FALLBACK_PROMPTS.bellMenu
     )
   })
 })

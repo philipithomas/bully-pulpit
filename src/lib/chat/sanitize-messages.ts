@@ -4,15 +4,24 @@ export const MAX_CHAT_MESSAGES = 40
 export const MAX_CHAT_PARTS_PER_MESSAGE = 16
 export const MAX_CHAT_REQUEST_MESSAGES = 100
 export const MAX_CHAT_REQUEST_PARTS_PER_MESSAGE = 100
-export const MAX_CHAT_TEXT_PART_CHARACTERS = 8_000
-export const MAX_CHAT_MESSAGE_CHARACTERS = 16_000
-export const MAX_CHAT_CONTEXT_CHARACTERS = 48_000
+export const MAX_CHAT_TEXT_PART_CHARACTERS = 160_000
+export const MAX_CHAT_MESSAGE_CHARACTERS = 160_000
+export const MAX_CHAT_CONTEXT_CHARACTERS = 192_000
 export const MAX_CHAT_IDENTIFIER_CHARACTERS = 200
 
 type SanitizedPart = UIMessage['parts'][number]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+/**
+ * The browser needs tool results for rendering, but the server rebuilds model
+ * history from prose only. Drop bulky tool payloads before the next request so
+ * deep research runs do not exhaust the raw HTTP body budget.
+ */
+export function textOnlyChatMessages(messages: UIMessage[]): UIMessage[] {
+  return sanitizeChatMessages(messages)
 }
 
 /**

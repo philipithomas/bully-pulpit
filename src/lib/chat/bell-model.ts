@@ -11,13 +11,13 @@ export const phoneGreetingModel = gateway(PHONE_GREETING_MODEL_ID)
 export type BellGenerationSurface = 'web' | 'sms'
 type GenerationSurface = BellGenerationSurface | 'phone'
 
-/** SMS is maximally deliberate; web starts fast and deepens on follow-ups. */
+/** Bell AI is deliberate on every turn, including an intensive first request. */
 export function getBellReasoning(
   surface: BellGenerationSurface,
-  turnNumber = 1
+  _turnNumber = 1
 ) {
   if (surface === 'sms') return 'xhigh' as const
-  return turnNumber > 1 ? ('high' as const) : ('none' as const)
+  return 'high' as const
 }
 
 function bellEnvironment(): 'production' | 'preview' | 'development' {

@@ -1,5 +1,7 @@
 import { sendSimpleEmail } from '@/lib/email/ses'
 import {
+  renderBellLiveTranscriptEmail,
+  renderBellLiveTranscriptText,
   renderIncomingSmsEmail,
   renderIncomingSmsText,
   renderMissedCallEmail,
@@ -7,8 +9,42 @@ import {
   renderSmsSignupEmail,
   renderSmsSignupText,
 } from '@/lib/email/templates/phone'
+import {
+  type BellLiveTranscriptTurn,
+  formatBellLiveTranscript,
+} from '@/lib/phone/bell-live-transcript'
 import { numberLabel, phoneNotificationRecipients } from '@/lib/phone/config'
 import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
+
+/** Emails the spoken transcript after a Bell AI SIP conversation ends. */
+export async function sendBellLiveTranscriptNotification(input: {
+  callSid: string
+  durationMs: number
+  inputFailureCount: number
+  missingTranscriptCount: number
+  observerCompleted: boolean
+  turns: BellLiveTranscriptTurn[]
+}): Promise<void> {
+  const partial =
+    !input.observerCompleted ||
+    input.inputFailureCount > 0 ||
+    input.missingTranscriptCount > 0 ||
+    input.turns.length === 0 ||
+    input.turns.some((turn) => turn.interrupted || !turn.complete)
+  const payload = {
+    callSid: input.callSid,
+    durationSeconds: String(Math.max(0, Math.round(input.durationMs / 1_000))),
+    finishedAt: new Date(),
+    partial,
+    transcript: formatBellLiveTranscript(input.turns),
+  }
+  await sendSimpleEmail({
+    to: phoneNotificationRecipients(),
+    subject: 'Bell AI phone conversation transcript',
+    html: renderBellLiveTranscriptEmail(payload),
+    text: renderBellLiveTranscriptText(payload),
+  })
+}
 
 /** Emails a heads-up that a call is ringing through to voicemail. */
 export async function sendMissedCallNotification(input: {

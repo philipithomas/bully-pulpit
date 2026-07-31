@@ -18,10 +18,13 @@ import {
   startBellLiveGreeting,
   verifiedBellLiveSipCallSid,
 } from '@/lib/phone/bell-live'
+import { sendBellLiveTranscriptNotification } from '@/lib/phone/notifications'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-export const maxDuration = 20
+// The sideband stays attached for Twilio's five-minute Bell AI leg, with
+// enough headroom to format and deliver the transcript email after hangup.
+export const maxDuration = 360
 
 const MAX_WEBHOOK_BYTES = 64 * 1024
 const GREETING_DEADLINE_MS = 15_000
@@ -330,16 +333,55 @@ async function runBellLiveGreeting(input: {
         outcome: 'checkpoint_error',
         ...logContext,
       })
-      return
+    } else {
+      console.info('[openai/realtime-call]', {
+        event: 'bell_live.openai_greeting',
+        durationMs: greeting.durationMs,
+        attemptNumber,
+        audioStarted: greeting.audioStarted,
+        outcome: 'completed',
+        ...logContext,
+      })
     }
-    console.info('[openai/realtime-call]', {
-      event: 'bell_live.openai_greeting',
-      durationMs: greeting.durationMs,
-      attemptNumber,
-      audioStarted: greeting.audioStarted,
-      outcome: 'completed',
-      ...logContext,
-    })
+
+    const conversation = await greeting.conversation
+    const transcriptCharacters = conversation.turns.reduce(
+      (total, turn) => total + turn.text.length,
+      0
+    )
+    try {
+      await sendBellLiveTranscriptNotification({
+        callSid: twilioCallSid,
+        durationMs: conversation.durationMs,
+        inputFailureCount: conversation.inputFailureCount,
+        missingTranscriptCount: conversation.missingTranscriptCount,
+        observerCompleted: conversation.observerCompleted,
+        turns: conversation.turns,
+      })
+      console.info('[openai/realtime-call]', {
+        event: 'bell_live.transcript_email',
+        durationMs: conversation.durationMs,
+        inputFailureCount: conversation.inputFailureCount,
+        missingTranscriptCount: conversation.missingTranscriptCount,
+        observerCompleted: conversation.observerCompleted,
+        outcome: 'sent',
+        transcriptCharacters,
+        transcriptTurns: conversation.turns.length,
+        ...logContext,
+      })
+    } catch {
+      console.error('[openai/realtime-call]', {
+        event: 'bell_live.transcript_email',
+        durationMs: conversation.durationMs,
+        inputFailureCount: conversation.inputFailureCount,
+        missingTranscriptCount: conversation.missingTranscriptCount,
+        observerCompleted: conversation.observerCompleted,
+        outcome: 'error',
+        transcriptCharacters,
+        transcriptTurns: conversation.turns.length,
+        ...logContext,
+      })
+    }
   } catch (error) {
     const audioStarted =
       error instanceof BellLiveGreetingError && error.audioStarted

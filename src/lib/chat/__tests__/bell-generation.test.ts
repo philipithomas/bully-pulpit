@@ -2,11 +2,17 @@ import { gateway } from '@ai-sdk/gateway'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   BELL_MODEL_ID,
+  BELL_SMS_MAX_STEPS,
+  BELL_WEB_MAX_STEPS,
   bellGatewayCost,
+  bellSmsStopWhen,
   bellTools,
+  bellWebStopWhen,
   gatewayGenerationIdFromMetadata,
   getBellProviderOptions,
   getBellReasoning,
+  prepareBellSmsStep,
+  prepareBellWebStep,
 } from '@/lib/chat/bell-generation'
 
 afterEach(() => {
@@ -17,7 +23,7 @@ afterEach(() => {
 describe('Bell Gateway metadata', () => {
   it('uses GPT-5.6 Sol with surface-specific reasoning', () => {
     expect(BELL_MODEL_ID).toBe('openai/gpt-5.6-sol')
-    expect(getBellReasoning('web')).toBe('none')
+    expect(getBellReasoning('web')).toBe('high')
     expect(getBellReasoning('web', 2)).toBe('high')
     expect(getBellReasoning('web', 8)).toBe('high')
     expect(getBellReasoning('sms')).toBe('xhigh')
@@ -31,6 +37,24 @@ describe('Bell Gateway metadata', () => {
       'fetchPage',
       'fetchPublicUrl',
     ])
+  })
+
+  it('allows deep web research while reserving each final step for prose', () => {
+    expect(BELL_WEB_MAX_STEPS).toBe(20)
+    expect(
+      bellWebStopWhen({ steps: Array.from({ length: 19 }) as never })
+    ).toBe(false)
+    expect(
+      bellWebStopWhen({ steps: Array.from({ length: 20 }) as never })
+    ).toBe(true)
+    expect(prepareBellWebStep({ stepNumber: 18 })).toBeUndefined()
+    expect(prepareBellWebStep({ stepNumber: 19 })).toEqual({ activeTools: [] })
+
+    expect(BELL_SMS_MAX_STEPS).toBe(7)
+    expect(bellSmsStopWhen({ steps: Array.from({ length: 7 }) as never })).toBe(
+      true
+    )
+    expect(prepareBellSmsStep({ stepNumber: 6 })).toEqual({ activeTools: [] })
   })
 
   it('enables zero-data retention and uses only low-cardinality tags', () => {

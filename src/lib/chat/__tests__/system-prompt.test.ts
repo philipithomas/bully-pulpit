@@ -181,6 +181,26 @@ describe('getSystemPrompt chronology routing', () => {
 })
 
 describe('getSystemPrompt research scope', () => {
+  it('identifies as Bell AI and supports complete posts and intensive analysis', () => {
+    const prompt = getSystemPrompt()
+
+    expect(prompt).toContain('You are Bell AI')
+    expect(prompt).toContain('use "Bell AI," never "Bell" alone')
+    expect(prompt).not.toContain('You are Bell.')
+    expect(prompt).toContain(
+      'reproduce it verbatim in order. Preserve the original wording, headings, links, punctuation, and formatting'
+    )
+    expect(prompt).toContain(
+      'The Style rules below do not apply inside the reproduced post body'
+    )
+    expect(prompt).toContain(
+      'use as many materially useful tool steps and sources as needed'
+    )
+    expect(prompt).toContain(
+      'Do not stop merely because you have read 2-3 posts'
+    )
+  })
+
   it('treats general subject questions as cross-post synthesis on web', () => {
     const prompt = getSystemPrompt()
 
@@ -218,6 +238,10 @@ describe('getSystemPrompt research scope', () => {
       'For cross-post synthesis, read the 1-2 most useful sources that add distinct evidence'
     )
     expect(prompt).not.toContain('For cross-post synthesis, fetch every result')
+    expect(prompt).not.toContain('reproduce its complete text in order')
+    expect(prompt).not.toContain(
+      'use as many materially useful tool steps and sources as needed'
+    )
   })
 })
 

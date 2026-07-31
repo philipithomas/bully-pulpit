@@ -1,5 +1,5 @@
 import { gateway } from '@ai-sdk/gateway'
-import { stepCountIs } from 'ai'
+import { isStepCount } from 'ai'
 import { fetchPage } from '@/lib/chat/fetch-page-tool'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
 import { fetchPublicUrl } from '@/lib/chat/fetch-public-url-tool'
@@ -113,9 +113,21 @@ export const bellTools = {
   fetchPublicUrl,
 }
 
-export const bellStopWhen = stepCountIs(7)
+export const BELL_SMS_MAX_STEPS = 7
+export const BELL_WEB_MAX_STEPS = 20
 
-/** The final step cannot call tools, so every Bell run ends in prose. */
-export function prepareBellStep({ stepNumber }: { stepNumber: number }) {
-  return stepNumber >= 6 ? { activeTools: [] } : undefined
+export const bellSmsStopWhen = isStepCount(BELL_SMS_MAX_STEPS)
+export const bellWebStopWhen = isStepCount(BELL_WEB_MAX_STEPS)
+
+/** Each surface reserves its final step for prose instead of another tool. */
+function prepareBellStep(stepNumber: number, maximumSteps: number) {
+  return stepNumber >= maximumSteps - 1 ? { activeTools: [] } : undefined
+}
+
+export function prepareBellSmsStep({ stepNumber }: { stepNumber: number }) {
+  return prepareBellStep(stepNumber, BELL_SMS_MAX_STEPS)
+}
+
+export function prepareBellWebStep({ stepNumber }: { stepNumber: number }) {
+  return prepareBellStep(stepNumber, BELL_WEB_MAX_STEPS)
 }

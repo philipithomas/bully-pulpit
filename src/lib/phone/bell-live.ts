@@ -1,6 +1,10 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import OpenAI from 'openai'
 import { OpenAIRealtimeWS } from 'openai/realtime/ws'
+import {
+  BellLiveTranscriptCollector,
+  type BellLiveTranscriptTurn,
+} from '@/lib/phone/bell-live-transcript'
 import { twilioSecret } from '@/lib/phone/config'
 import { siteIdentity } from '@/lib/site-identity'
 
@@ -8,14 +12,17 @@ export const PHONE_BELL_REALTIME_DEFAULT_MODEL_ID = 'gpt-realtime-2.1'
 export const PHONE_BELL_REALTIME_MINI_MODEL_ID = 'gpt-realtime-2.1-mini'
 export const PHONE_BELL_REALTIME_VOICE = 'marin'
 export const PHONE_BELL_REALTIME_VOICE_SPEED = 1.08
+export const PHONE_BELL_LIVE_TRANSCRIPTION_MODEL_ID = 'gpt-live-transcribe'
 export const PHONE_BELL_MAX_CALL_SECONDS = 300
 export const PHONE_BELL_INITIAL_GREETING =
-  'Hi, this is Bell. What can I help with?'
+  'Hi, this is Bell AI. What can I help with?'
 const PHONE_BELL_GREETING_PURPOSE = 'bell_initial_greeting'
 
 const OPENAI_REALTIME_CALLS_URL = 'https://api.openai.com/v1/realtime/calls'
 const OPENAI_REALTIME_REQUEST_TIMEOUT_MS = 10_000
-const OPENAI_REALTIME_GREETING_TIMEOUT_MS = 4_000
+const OPENAI_REALTIME_GREETING_TIMEOUT_MS = 10_000
+const OPENAI_REALTIME_CALL_OBSERVER_TIMEOUT_MS =
+  (PHONE_BELL_MAX_CALL_SECONDS + 15) * 1_000
 const OPENAI_ERROR_BODY_MAX_BYTES = 4 * 1024
 const OPENAI_ERROR_TEXT_MAX_CHARS = 240
 const SIP_INVITATION_TTL_SECONDS = 5 * 60
@@ -182,13 +189,15 @@ export function isOpenAiRealtimeCallId(value: string): boolean {
 }
 
 const PHONE_BELL_INSTRUCTIONS = `
-You are Bell, the spoken AI assistant for Philip Ilic Thomas's personal website, philipithomas.com.
+You are Bell AI, the spoken AI assistant for Philip Ilic Thomas's personal website, philipithomas.com.
 
 VOICE AND CONVERSATION
 - When the application requests the opening response, say exactly: "${PHONE_BELL_INITIAL_GREETING}"
-- On later replies, identify yourself as Bell only when useful.
+- Every time you identify or refer to yourself by name, say "Bell AI," never "Bell" alone.
 - Sound warm, upbeat, articulate, and brisk but never rushed.
-- This is a telephone call. Give a direct spoken answer, normally one to three short sentences, with no Markdown.
+- This is a telephone call. Give a direct spoken answer with no Markdown. Match its length to the caller's question; long, complete answers are allowed.
+- After using tools, synthesize their results into a complete spoken answer. Never stop at a tool call, omit the answer, or end mid-thought to stay brief.
+- The phone call has a hard five-minute total limit. If the caller asks you to read an entire post, fetch it first. Read it in full only when it is short enough to finish within that limit. Otherwise state the five-minute limit and do not begin a readback you cannot finish; offer a summary or the post title instead.
 - Do not read long URLs aloud unless the caller explicitly asks. Refer to a source by its title and year when useful.
 - Let the caller interrupt. If their audio is unclear, say what you missed and ask one short follow-up instead of guessing.
 - Avoid filler about your process. Never narrate hidden reasoning.
@@ -215,13 +224,33 @@ export function phoneBellRealtimeSession() {
     model,
     output_modalities: ['audio'] as const,
     instructions: PHONE_BELL_INSTRUCTIONS,
-    max_output_tokens: 512,
+    // OpenAI counts tool calls inside this per-response budget. Let the model
+    // use its full available output so a tool call cannot consume the spoken
+    // answer's remaining tokens.
+    max_output_tokens: 'inf' as const,
     parallel_tool_calls: false,
     reasoning: { effort: 'low' as const },
     audio: {
       input: {
-        // Realtime consumes SIP audio natively. Keep auxiliary transcription
-        // off until the application has a sideband transcript consumer.
+        // The Realtime model still consumes SIP audio directly. This separate
+        // live transcript exists only for the post-call admin email.
+        transcription: {
+          model: PHONE_BELL_LIVE_TRANSCRIPTION_MODEL_ID,
+          languages: ['en'],
+          prompt:
+            'A telephone conversation with Bell AI about Philip Ilic Thomas, pronounced Eelitch, philipithomas.com, Postcard, Contraption, Workshop, tidbits, and Tsundoku.',
+          keywords: [
+            'Bell AI',
+            'Philip Ilic Thomas',
+            'Eelitch',
+            'philipithomas.com',
+            'Postcard',
+            'Contraption',
+            'Workshop',
+            'tidbits',
+            'Tsundoku',
+          ],
+        },
         noise_reduction: { type: 'near_field' as const },
         turn_detection: {
           type: 'semantic_vad' as const,
@@ -249,7 +278,7 @@ export function phoneBellRealtimeSession() {
       },
     ],
     // Do not create platform traces containing call content. The application
-    // also does not record or persist the Bell Live audio/transcript.
+    // does not record the audio or persist the live email transcript.
     tracing: null,
   }
 }
@@ -535,18 +564,32 @@ export async function rejectBellLiveCall(
   })
 }
 
-/** Starts Bell's own greeting over a short-lived sideband control channel. */
+export interface BellLiveConversationResult {
+  durationMs: number
+  inputFailureCount: number
+  missingTranscriptCount: number
+  observerCompleted: boolean
+  turns: BellLiveTranscriptTurn[]
+}
+
+export interface BellLiveGreetingResult {
+  audioStarted: boolean
+  conversation: Promise<BellLiveConversationResult>
+  durationMs: number
+  responseCheckpointed: boolean
+  responseCreated: boolean
+}
+
+/**
+ * Starts Bell AI's greeting, then retains the same sideband for the full SIP
+ * call so every completed spoken turn can be included in the transcript email.
+ */
 export async function startBellLiveGreeting(
   callId: string,
   options: {
     onAudioStarted?: () => Promise<boolean>
   } = {}
-): Promise<{
-  audioStarted: boolean
-  durationMs: number
-  responseCheckpointed: boolean
-  responseCreated: boolean
-}> {
+): Promise<BellLiveGreetingResult> {
   if (!isOpenAiRealtimeCallId(callId)) {
     throw new Error('Invalid OpenAI Realtime call ID')
   }
@@ -568,7 +611,10 @@ export async function startBellLiveGreeting(
   )
 
   return new Promise((resolve, reject) => {
+    const transcript = new BellLiveTranscriptCollector()
     let settled = false
+    let conversationSettled = false
+    let observerHadError = false
     let audioStarted = false
     let audioBufferFinished = false
     let greetingResponseId: string | null = null
@@ -578,22 +624,40 @@ export async function startBellLiveGreeting(
     let responseRequested = false
     let checkpointPromise: Promise<void> | null = null
     let completing = false
+    let greetingTimeout: ReturnType<typeof setTimeout> | null = null
+    let observerTimeout: ReturnType<typeof setTimeout> | null = null
+    let resolveConversation: (result: BellLiveConversationResult) => void =
+      () => undefined
+    const conversation = new Promise<BellLiveConversationResult>((resolve) => {
+      resolveConversation = resolve
+    })
+    const finishConversation = (observerCompleted: boolean): void => {
+      if (conversationSettled) return
+      conversationSettled = true
+      if (observerTimeout) clearTimeout(observerTimeout)
+      const snapshot = transcript.snapshot()
+      resolveConversation({
+        durationMs: Date.now() - startedAt,
+        inputFailureCount: snapshot.inputFailureCount,
+        missingTranscriptCount: snapshot.missingTranscriptCount,
+        observerCompleted,
+        turns: snapshot.turns,
+      })
+    }
     const finish = (
-      result:
-        | {
-            audioStarted: boolean
-            durationMs: number
-            responseCheckpointed: boolean
-            responseCreated: boolean
-          }
-        | BellLiveGreetingError
+      result: BellLiveGreetingResult | BellLiveGreetingError
     ): void => {
       if (settled) return
       settled = true
-      clearTimeout(timeout)
-      connection.close()
-      if (result instanceof BellLiveGreetingError) reject(result)
-      else resolve(result)
+      if (greetingTimeout) clearTimeout(greetingTimeout)
+      if (result instanceof BellLiveGreetingError) {
+        observerHadError = true
+        connection.close()
+        finishConversation(false)
+        reject(result)
+      } else {
+        resolve(result)
+      }
     }
     const finishCompletedIfReady = (): void => {
       if (!responseCompleted || !audioBufferFinished || completing) return
@@ -615,13 +679,14 @@ export async function startBellLiveGreeting(
         }
         finish({
           audioStarted,
+          conversation,
           durationMs: Date.now() - startedAt,
           responseCheckpointed,
           responseCreated,
         })
       })()
     }
-    const timeout = setTimeout(() => {
+    greetingTimeout = setTimeout(() => {
       finish(
         new BellLiveGreetingError({
           audioStarted,
@@ -632,6 +697,98 @@ export async function startBellLiveGreeting(
         })
       )
     }, OPENAI_REALTIME_GREETING_TIMEOUT_MS)
+    observerTimeout = setTimeout(() => {
+      observerHadError = true
+      finishConversation(false)
+      connection.close()
+    }, OPENAI_REALTIME_CALL_OBSERVER_TIMEOUT_MS)
+    observerTimeout.unref?.()
+
+    const noteConversationItem = (event: {
+      item: {
+        content?: Array<{ transcript?: string; type?: string }>
+        id?: string
+        role?: string
+        type?: string
+      }
+      previous_item_id?: string | null
+    }): void => {
+      const itemId = event.item.id
+      if (!itemId) return
+      transcript.noteItem(itemId, event.previous_item_id)
+      if (event.item.type !== 'message' || !Array.isArray(event.item.content)) {
+        return
+      }
+      for (const [contentIndex, content] of event.item.content.entries()) {
+        if (event.item.role === 'user' && content.type === 'input_audio') {
+          transcript.expectTurn('caller', itemId, contentIndex)
+          if (content.transcript) {
+            transcript.completeCaller(itemId, contentIndex, content.transcript)
+          }
+        }
+        if (
+          event.item.role === 'assistant' &&
+          content.type === 'output_audio'
+        ) {
+          transcript.expectTurn('bell_ai', itemId, contentIndex)
+          if (content.transcript) {
+            transcript.completeBellItem(
+              itemId,
+              contentIndex,
+              content.transcript
+            )
+          }
+        }
+      }
+    }
+    connection.on('conversation.item.added', noteConversationItem)
+    connection.on('conversation.item.created', noteConversationItem)
+    connection.on('conversation.item.done', noteConversationItem)
+    connection.on(
+      'conversation.item.input_audio_transcription.delta',
+      (event) => {
+        transcript.addCallerDelta(
+          event.item_id,
+          event.content_index ?? 0,
+          event.delta ?? ''
+        )
+      }
+    )
+    connection.on(
+      'conversation.item.input_audio_transcription.completed',
+      (event) => {
+        transcript.completeCaller(
+          event.item_id,
+          event.content_index,
+          event.transcript
+        )
+      }
+    )
+    connection.on(
+      'conversation.item.input_audio_transcription.failed',
+      (event) => {
+        transcript.failCaller(event.item_id)
+      }
+    )
+    connection.on('response.output_audio_transcript.delta', (event) => {
+      transcript.addBellDelta(
+        event.response_id,
+        event.item_id,
+        event.content_index,
+        event.delta
+      )
+    })
+    connection.on('response.output_audio_transcript.done', (event) => {
+      transcript.completeBell(
+        event.response_id,
+        event.item_id,
+        event.content_index,
+        event.transcript
+      )
+    })
+    connection.on('output_audio_buffer.cleared', (event) => {
+      transcript.interruptBellResponse(event.response_id)
+    })
 
     connection.on('response.created', (event) => {
       if (event.response.metadata?.purpose !== PHONE_BELL_GREETING_PURPOSE) {
@@ -666,6 +823,9 @@ export async function startBellLiveGreeting(
     connection.on('output_audio_buffer.stopped', markAudioBufferFinished)
     connection.on('output_audio_buffer.cleared', markAudioBufferFinished)
     connection.on('response.done', (event) => {
+      if (event.response.status !== 'completed' && event.response.id) {
+        transcript.markBellResponseIncomplete(event.response.id)
+      }
       if (event.response.metadata?.purpose !== PHONE_BELL_GREETING_PURPOSE) {
         return
       }
@@ -677,6 +837,15 @@ export async function startBellLiveGreeting(
         return
       }
       if (event.response.status === 'completed') {
+        responseCompleted = true
+        finishCompletedIfReady()
+        return
+      }
+      // A caller may naturally barge in while the opener is playing. OpenAI
+      // cancels that response and clears its audio buffer; once some audio was
+      // heard, the greeting is terminal enough to retain the observer for the
+      // actual conversation instead of tearing the sideband down.
+      if (event.response.status === 'cancelled' && audioStarted) {
         responseCompleted = true
         finishCompletedIfReady()
         return
@@ -702,6 +871,7 @@ export async function startBellLiveGreeting(
       })()
     })
     connection.on('error', (error) => {
+      observerHadError = true
       const providerCode = safeProviderIdentifier(error.error?.code)
       const providerType = safeProviderIdentifier(error.error?.type)
       const socketHttpStatus = safeSocketHttpStatus(
@@ -726,6 +896,7 @@ export async function startBellLiveGreeting(
         _request: unknown,
         response: { resume: () => void; statusCode?: number }
       ) => {
+        observerHadError = true
         const socketHttpStatus = safeSocketHttpStatus(response.statusCode)
         response.resume()
         finish(
@@ -741,6 +912,17 @@ export async function startBellLiveGreeting(
       }
     )
     connection.socket.on('close', (code: number) => {
+      const closeCode = safeSocketCloseCode(code)
+      finishConversation(
+        !observerHadError &&
+          (closeCode === null || closeCode === 1_000 || closeCode === 1_001)
+      )
+      // A very short call can close while the successful greeting checkpoint
+      // is still settling. Let that already-complete opener resolve normally.
+      if (completing || (responseCompleted && audioBufferFinished)) {
+        finishCompletedIfReady()
+        return
+      }
       finish(
         new BellLiveGreetingError({
           audioStarted,
@@ -748,7 +930,7 @@ export async function startBellLiveGreeting(
           reason: 'closed',
           responseCreated,
           responseRequested,
-          socketCloseCode: safeSocketCloseCode(code),
+          socketCloseCode: closeCode,
         })
       )
     })
