@@ -23,6 +23,16 @@ export async function findOrCreatePhoneWebhookEvent(input: {
 
 const CLAIM_LEASE_MS = 2 * 60 * 1000
 
+export type PhoneWebhookEventAttemptClaim =
+  | {
+      attemptNumber: number
+      outcome: 'claimed'
+      processingAt: Date
+    }
+  | {
+      outcome: 'active' | 'completed' | 'exhausted'
+    }
+
 /** Atomically acquires or renews an expired lease for one webhook. */
 export async function claimPhoneWebhookEvent(
   id: number,
@@ -45,6 +55,59 @@ export async function claimPhoneWebhookEvent(
     )
     .returning({ id: phoneWebhookEvents.id })
   return rows.length > 0 ? processingAt : null
+}
+
+/**
+ * Atomically claims one bounded side-effect attempt. The returned attempt
+ * number belongs to the lease winner, independent of which request inserted
+ * the dedupe row.
+ */
+export async function claimPhoneWebhookEventAttempt(
+  id: number,
+  input: { leaseMs: number; maxAttempts: number }
+): Promise<PhoneWebhookEventAttemptClaim> {
+  const staleBefore = new Date(Date.now() - input.leaseMs)
+  const processingAt = new Date()
+  const rows = await getDb()
+    .update(phoneWebhookEvents)
+    .set({
+      attemptCount: sql`${phoneWebhookEvents.attemptCount} + 1`,
+      processingAt,
+    })
+    .where(
+      and(
+        eq(phoneWebhookEvents.id, id),
+        isNull(phoneWebhookEvents.processedAt),
+        lt(phoneWebhookEvents.attemptCount, input.maxAttempts),
+        or(
+          isNull(phoneWebhookEvents.processingAt),
+          lt(phoneWebhookEvents.processingAt, staleBefore)
+        )
+      )
+    )
+    .returning({ attemptNumber: phoneWebhookEvents.attemptCount })
+  if (rows[0]) {
+    return {
+      attemptNumber: rows[0].attemptNumber,
+      outcome: 'claimed',
+      processingAt,
+    }
+  }
+
+  const [current] = await getDb()
+    .select({
+      attemptCount: phoneWebhookEvents.attemptCount,
+      processedAt: phoneWebhookEvents.processedAt,
+      processingAt: phoneWebhookEvents.processingAt,
+    })
+    .from(phoneWebhookEvents)
+    .where(eq(phoneWebhookEvents.id, id))
+    .limit(1)
+  if (current?.processedAt) return { outcome: 'completed' }
+  if ((current?.attemptCount ?? input.maxAttempts) >= input.maxAttempts) {
+    return { outcome: 'exhausted' }
+  }
+  return { outcome: 'active' }
 }
 
 /**

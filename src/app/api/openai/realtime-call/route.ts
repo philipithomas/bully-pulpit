@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
 import {
-  claimPhoneWebhookEvent,
+  claimPhoneWebhookEventAttempt,
   findOrCreatePhoneWebhookEvent,
   markPhoneWebhookEventProcessed,
   releasePhoneWebhookEvent,
@@ -24,7 +24,9 @@ export const maxDuration = 20
 
 const MAX_WEBHOOK_BYTES = 64 * 1024
 const GREETING_DEADLINE_MS = 15_000
-const GREETING_LEASE_MS = GREETING_DEADLINE_MS
+const GREETING_LEASE_MS = 6_000
+const GREETING_MAX_ATTEMPTS = 2
+const GREETING_CHECKPOINT_ATTEMPTS = 3
 
 interface IncomingCallEvent {
   callId: string
@@ -38,6 +40,30 @@ function response(status: number): Response {
     status,
     headers: { 'Cache-Control': 'private, no-store' },
   })
+}
+
+async function checkpointBellLiveGreeting(
+  eventId: number,
+  processingAt: Date,
+  processedStepId: string
+): Promise<boolean> {
+  for (let attempt = 0; attempt < GREETING_CHECKPOINT_ATTEMPTS; attempt += 1) {
+    try {
+      if (
+        await markPhoneWebhookEventProcessed(
+          eventId,
+          processingAt,
+          processedStepId
+        )
+      ) {
+        return true
+      }
+    } catch {
+      // Retry with the same step ID so a committed write whose acknowledgement
+      // was lost is recognized as success rather than replaying SIP audio.
+    }
+  }
+  return false
 }
 
 function isSipHeader(value: unknown): value is OpenAiSipHeader {
@@ -251,51 +277,75 @@ export async function POST(request: Request): Promise<Response> {
     return response(204)
   }
 
-  let lease: Date | null
+  let greetingClaim: Awaited<ReturnType<typeof claimPhoneWebhookEventAttempt>>
   try {
-    lease = await claimPhoneWebhookEvent(
+    greetingClaim = await claimPhoneWebhookEventAttempt(
       greetingEvent.event.id,
-      GREETING_LEASE_MS
+      {
+        leaseMs: GREETING_LEASE_MS,
+        maxAttempts: GREETING_MAX_ATTEMPTS,
+      }
     )
   } catch {
     return response(503)
   }
-  if (!lease) return response(503)
+  if (greetingClaim.outcome !== 'claimed') {
+    return response(greetingClaim.outcome === 'active' ? 503 : 204)
+  }
+
+  const { attemptNumber, processingAt: lease } = greetingClaim
+  const processedStepId = `bell-live-greeting:${twilioCallSid}`
+  const checkpointGreeting = () =>
+    checkpointBellLiveGreeting(greetingEvent.event.id, lease, processedStepId)
 
   try {
     const greeting = await startBellLiveGreeting(incoming.callId, {
-      onResponseCreated: () =>
-        markPhoneWebhookEventProcessed(greetingEvent.event.id, lease),
+      onAudioStarted: checkpointGreeting,
     })
+    if (!greeting.responseCheckpointed) {
+      console.error('[openai/realtime-call]', {
+        event: 'bell_live.openai_greeting',
+        durationMs: greeting.durationMs,
+        attemptNumber,
+        audioStarted: greeting.audioStarted,
+        outcome: 'checkpoint_error',
+        ...actionLogContext(request, incoming),
+      })
+      // Audio already reached the SIP caller. A non-2xx response would ask
+      // OpenAI to redeliver this webhook and could replay Bell's greeting.
+      return response(204)
+    }
     console.info('[openai/realtime-call]', {
       event: 'bell_live.openai_greeting',
       durationMs: greeting.durationMs,
-      outcome: greeting.responseCheckpointed
-        ? 'completed'
-        : 'completed_uncheckpointed',
+      attemptNumber,
+      audioStarted: greeting.audioStarted,
+      outcome: 'completed',
       ...actionLogContext(request, incoming),
     })
   } catch (error) {
-    const responseRequested =
-      error instanceof BellLiveGreetingError && error.responseRequested
-    const retryable = !responseRequested && greetingEvent.inserted
+    const audioStarted =
+      error instanceof BellLiveGreetingError && error.audioStarted
+    const retryable = !audioStarted && attemptNumber < GREETING_MAX_ATTEMPTS
     if (retryable) {
       await releasePhoneWebhookEvent(greetingEvent.event.id, lease).catch(
         () => undefined
       )
-    } else {
-      await markPhoneWebhookEventProcessed(greetingEvent.event.id, lease).catch(
-        () => false
-      )
     }
+    const terminalCheckpointed = retryable ? false : await checkpointGreeting()
     console.error('[openai/realtime-call]', {
       event: 'bell_live.openai_greeting',
+      attemptNumber,
+      audioStarted,
       durationMs:
         error instanceof BellLiveGreetingError ? error.durationMs : null,
       outcome: 'error',
       responseCreated:
         error instanceof BellLiveGreetingError ? error.responseCreated : false,
-      responseRequested,
+      responseRequested:
+        error instanceof BellLiveGreetingError
+          ? error.responseRequested
+          : false,
       retryable,
       providerErrorCode:
         error instanceof BellLiveGreetingError ? error.providerCode : null,
@@ -307,6 +357,7 @@ export async function POST(request: Request): Promise<Response> {
         error instanceof BellLiveGreetingError
           ? error.reason
           : 'internal_error',
+      terminalCheckpointed,
       ...actionLogContext(request, incoming),
     })
     return response(retryable ? 502 : 204)

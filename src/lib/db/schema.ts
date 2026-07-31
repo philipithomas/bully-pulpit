@@ -218,6 +218,7 @@ export const phoneWebhookEvents = pgTable(
     id: bigserial('id', { mode: 'number' }).primaryKey(),
     eventKey: text('event_key').notNull().unique(),
     eventType: text('event_type').notNull(),
+    attemptCount: integer('attempt_count').notNull().default(0),
     processingAt: timestamp('processing_at', { withTimezone: true }),
     processedAt: timestamp('processed_at', { withTimezone: true }),
     processedStepId: text('processed_step_id'),
