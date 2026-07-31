@@ -1029,9 +1029,8 @@ describe('POST /api/phone/voice-menu', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(playedText(xml)).toBe(
-      'Bell AI calls are transcribed and emailed to the site administrators.'
-    )
+    expect(xml).not.toContain('<Play>')
+    expect(xml).not.toContain('transcrib')
     expect(xml).toContain(
       '<Dial action="https://www.philipithomas.com/api/phone/bell-complete"'
     )

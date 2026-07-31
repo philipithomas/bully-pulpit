@@ -7,6 +7,8 @@ interface FakeWebSocketOptions {
 
 /** Minimal Node `ws`-style socket used by Bell Live route and unit tests. */
 export class FakeOpenAiRealtimeWebSocket {
+  static afterContinuationEventBatches: Array<Array<Record<string, unknown>>> =
+    []
   static afterContinuationEvents: Array<Record<string, unknown>> = []
   static afterGreetingEvents: Array<Record<string, unknown>> = []
   static autoCloseAfterGreeting = false
@@ -23,6 +25,7 @@ export class FakeOpenAiRealtimeWebSocket {
   static handshakeHttpStatuses: Array<number | null> = []
   static sentEvents: unknown[] = []
   static sockets: FakeOpenAiRealtimeWebSocket[] = []
+  static throwOnContinuationSend = false
   static throwOnSend = false
 
   readonly options: FakeWebSocketOptions
@@ -68,19 +71,32 @@ export class FakeOpenAiRealtimeWebSocket {
   close(): void {}
 
   send(value: string): void {
-    if (FakeOpenAiRealtimeWebSocket.throwOnSend) {
-      throw new Error('WebSocket send failed')
-    }
     const event = JSON.parse(value) as unknown
-    FakeOpenAiRealtimeWebSocket.sentEvents.push(event)
     const purpose = (
       event as { response?: { metadata?: { purpose?: unknown } } }
     ).response?.metadata?.purpose
+    if (
+      FakeOpenAiRealtimeWebSocket.throwOnSend ||
+      (FakeOpenAiRealtimeWebSocket.throwOnContinuationSend &&
+        (purpose === 'bell_tool_continuation' ||
+          purpose === 'bell_tool_final_answer'))
+    ) {
+      throw new Error('WebSocket send failed')
+    }
+    FakeOpenAiRealtimeWebSocket.sentEvents.push(event)
     if (purpose !== 'bell_initial_greeting') {
-      if (purpose === 'bell_tool_continuation') {
-        for (const serverEvent of FakeOpenAiRealtimeWebSocket.afterContinuationEvents) {
-          this.emit('message', JSON.stringify(serverEvent))
-        }
+      if (
+        purpose === 'bell_tool_continuation' ||
+        purpose === 'bell_tool_final_answer'
+      ) {
+        const serverEvents =
+          FakeOpenAiRealtimeWebSocket.afterContinuationEventBatches.shift() ??
+          FakeOpenAiRealtimeWebSocket.afterContinuationEvents
+        queueMicrotask(() => {
+          for (const serverEvent of serverEvents) {
+            this.emit('message', JSON.stringify(serverEvent))
+          }
+        })
       }
       return
     }

@@ -10,8 +10,6 @@ export const PHONE_IVR_SPEECH_SPEED = 1.35
 const PHONE_IVR_SPOKEN_NAME = siteIdentity.name.replace('Ilic', 'Eelitch')
 export const PHONE_IVR_FALLBACK_PROMPTS = {
   alreadyHandled: 'This phone menu request was already handled. Goodbye.',
-  bellDisclosure:
-    'Bell AI calls are transcribed and emailed to the site administrators.',
   bellMenu: 'Press 1 to leave a voicemail. Press 3 to talk to Bell AI.',
   bellUnavailable: "I couldn't reach Bell.",
   goodbye: 'Thank you. Goodbye.',

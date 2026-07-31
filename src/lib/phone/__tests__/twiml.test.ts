@@ -132,17 +132,15 @@ describe('voiceMenuTwiml', () => {
 })
 
 describe('bellLiveTwiml', () => {
-  it('discloses transcription only after Bell is selected, then dials', () => {
+  it('dials Bell immediately without a disclosure prompt', () => {
     const xml = bellLiveTwiml({
       sipUri:
         'sip:proj_test@sip.api.openai.com;transport=tls?x-bp-call-sid=CA123&x-bp-token=abc',
       actionUrl: 'https://philipithomas.com/api/phone/bell-complete',
     })
 
-    expect(playedTexts(xml)).toEqual([
-      'Bell AI calls are transcribed and emailed to the site administrators.',
-    ])
-    expect(xml.indexOf('<Play>')).toBeLessThan(xml.indexOf('<Dial'))
+    expect(playedTexts(xml)).toEqual([])
+    expect(xml).not.toContain('<Play>')
     expect(xml).toContain(
       '<Dial action="https://philipithomas.com/api/phone/bell-complete" method="POST" answerOnBridge="true" timeout="20" timeLimit="300">'
     )

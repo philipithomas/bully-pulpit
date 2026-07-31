@@ -128,6 +128,9 @@ describe('POST /mcp', () => {
       },
     })
     expect(result.instructions).toContain('Use search')
+    expect(result.instructions).toContain(
+      'Use list_posts only when the user explicitly asks to list or browse'
+    )
   })
 
   it('lists strict read-only tools with no-auth metadata', async () => {
@@ -135,6 +138,7 @@ describe('POST /mcp', () => {
     const result = resultObject(payload)
     const tools = result.tools as Array<{
       name: string
+      description: string
       inputSchema: Record<string, unknown>
       outputSchema: Record<string, unknown>
       annotations: Record<string, unknown>
@@ -148,6 +152,12 @@ describe('POST /mcp', () => {
       'fetch',
       'list_posts',
     ])
+    expect(tools.find((tool) => tool.name === 'search')?.description).toContain(
+      'relevance'
+    )
+    expect(
+      tools.find((tool) => tool.name === 'list_posts')?.description
+    ).toContain('use search whenever topical relevance matters')
     for (const tool of tools) {
       expect(tool.inputSchema).toMatchObject({
         type: 'object',

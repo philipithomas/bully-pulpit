@@ -249,9 +249,7 @@ describe('POST /api/phone/voice', () => {
     const menu = playedTexts(xml)[1]
     expect(menu).toContain('Press 2 to subscribe')
     expect(menu).toContain('Press 3 to talk to Bell AI')
-    expect(menu).not.toContain(
-      'Bell AI calls are transcribed and emailed to the site administrators.'
-    )
+    expect(menu).not.toContain('transcribed')
   })
 
   it('offers confirmed subscribers the shorter voicemail-or-Bell menu', async () => {

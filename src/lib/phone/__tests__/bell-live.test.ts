@@ -36,6 +36,7 @@ function headersFromSipUri(uri: string) {
 
 beforeEach(() => {
   delete process.env.OPENAI_BASE_URL
+  FakeOpenAiRealtimeWebSocket.afterContinuationEventBatches = []
   FakeOpenAiRealtimeWebSocket.afterContinuationEvents = []
   FakeOpenAiRealtimeWebSocket.connections = []
   FakeOpenAiRealtimeWebSocket.sockets = []
@@ -49,6 +50,7 @@ beforeEach(() => {
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = null
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses = []
   FakeOpenAiRealtimeWebSocket.sentEvents = []
+  FakeOpenAiRealtimeWebSocket.throwOnContinuationSend = false
   FakeOpenAiRealtimeWebSocket.throwOnSend = false
   process.env.OPENAI_API_KEY = 'test-openai-key'
   process.env.OPENAI_PROJECT_ID = 'proj_test123'
@@ -195,6 +197,12 @@ describe('Bell Live Realtime session', () => {
     expect(session.instructions).toContain(
       'do not begin a readback you cannot finish'
     )
+    expect(session.instructions).toContain(
+      'Topical questions always start with search'
+    )
+    expect(session.instructions).toContain(
+      'Use list_posts only when the caller explicitly asks to list or browse'
+    )
     expect(session.instructions).not.toContain('one to three short sentences')
     expect(PHONE_BELL_MAX_CALL_SECONDS).toBe(300)
     expect(session).not.toHaveProperty('service_tier')
@@ -339,7 +347,7 @@ describe('Bell Live Realtime session', () => {
     })
   })
 
-  it('recovers a completed tool turn that never produced a spoken answer', async () => {
+  it('continues a completed tool turn that never produced a spoken answer', async () => {
     const lifecycle: BellLiveLifecycleEvent[] = []
     FakeOpenAiRealtimeWebSocket.afterContinuationEvents = [
       {
@@ -492,12 +500,18 @@ describe('Bell Live Realtime session', () => {
       response: {
         instructions: expect.stringContaining('You are Bell AI'),
         max_output_tokens: 'inf',
-        metadata: { purpose: 'bell_tool_continuation' },
+        metadata: {
+          purpose: 'bell_tool_continuation',
+          tool_continuation_hop: '1',
+        },
         output_modalities: ['audio'],
-        tool_choice: 'none',
-        tools: [],
+        tool_choice: 'auto',
       },
     })
+    expect(
+      (FakeOpenAiRealtimeWebSocket.sentEvents[1] as { response: object })
+        .response
+    ).not.toHaveProperty('tools')
     expect(lifecycle).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -509,10 +523,12 @@ describe('Bell Live Realtime session', () => {
           outcome: 'completed',
           tool: 'search',
         }),
-        {
+        expect.objectContaining({
           event: 'bell_live.tool_continuation',
+          hop: 1,
           outcome: 'requested',
-        },
+          toolsAllowed: true,
+        }),
         expect.objectContaining({
           event: 'bell_live.realtime_response',
           outcome: 'completed',
@@ -562,6 +578,379 @@ describe('Bell Live Realtime session', () => {
         }),
       ],
     })
+  })
+
+  it('allows a bounded multi-tool chain before forcing a spoken answer', async () => {
+    const lifecycle: BellLiveLifecycleEvent[] = []
+    FakeOpenAiRealtimeWebSocket.afterContinuationEventBatches = [
+      [
+        {
+          type: 'response.created',
+          event_id: 'evt_continuation_one_created',
+          response: {
+            id: 'resp_continuation_one',
+            status: 'in_progress',
+            metadata: {
+              purpose: 'bell_tool_continuation',
+              tool_continuation_hop: '1',
+            },
+          },
+        },
+        {
+          type: 'response.done',
+          event_id: 'evt_continuation_one_done',
+          response: {
+            id: 'resp_continuation_one',
+            status: 'completed',
+            metadata: {
+              purpose: 'bell_tool_continuation',
+              tool_continuation_hop: '1',
+            },
+            output: [
+              {
+                id: 'item_search',
+                type: 'mcp_call',
+                name: 'search',
+                output: 'search result',
+              },
+            ],
+          },
+        },
+      ],
+      [
+        {
+          type: 'response.created',
+          event_id: 'evt_continuation_two_created',
+          response: {
+            id: 'resp_continuation_two',
+            status: 'in_progress',
+            metadata: {
+              purpose: 'bell_tool_continuation',
+              tool_continuation_hop: '2',
+            },
+          },
+        },
+        {
+          type: 'response.done',
+          event_id: 'evt_continuation_two_done',
+          response: {
+            id: 'resp_continuation_two',
+            status: 'completed',
+            output: [
+              {
+                id: 'item_fetch',
+                type: 'mcp_call',
+                name: 'fetch',
+                output: 'full post',
+              },
+            ],
+          },
+        },
+      ],
+      [
+        {
+          type: 'response.created',
+          event_id: 'evt_final_created',
+          response: {
+            id: 'resp_final',
+            status: 'in_progress',
+            metadata: {
+              purpose: 'bell_tool_final_answer',
+              tool_continuation_hop: '3',
+            },
+          },
+        },
+        {
+          type: 'output_audio_buffer.started',
+          event_id: 'evt_final_audio',
+          response_id: 'resp_final',
+        },
+        {
+          type: 'response.done',
+          event_id: 'evt_final_done',
+          response: {
+            id: 'resp_final',
+            status: 'completed',
+            metadata: {
+              purpose: 'bell_tool_final_answer',
+              tool_continuation_hop: '3',
+            },
+            output: [
+              {
+                id: 'item_final_answer',
+                type: 'message',
+                role: 'assistant',
+                content: [
+                  {
+                    type: 'output_audio',
+                    transcript: 'Here is the complete answer.',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    ]
+    FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [
+      {
+        type: 'response.created',
+        event_id: 'evt_initial_tool_created',
+        response: { id: 'resp_initial_tool', status: 'in_progress' },
+      },
+      {
+        type: 'response.done',
+        event_id: 'evt_initial_tool_done',
+        response: {
+          id: 'resp_initial_tool',
+          status: 'completed',
+          output: [
+            {
+              id: 'item_list_posts',
+              type: 'mcp_call',
+              name: 'list_posts',
+              output: 'post list',
+            },
+          ],
+        },
+      },
+    ]
+
+    const greeting = await startBellLiveGreeting('rtc_call_greeting', {
+      onLifecycleEvent: (event) => lifecycle.push(event),
+    })
+
+    await vi.waitFor(() => {
+      expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(4)
+    })
+    const continuationResponses = FakeOpenAiRealtimeWebSocket.sentEvents.slice(
+      1
+    ) as Array<{ response: Record<string, unknown> }>
+    expect(
+      continuationResponses.map(({ response }) => response.metadata)
+    ).toEqual([
+      {
+        purpose: 'bell_tool_continuation',
+        tool_continuation_hop: '1',
+      },
+      {
+        purpose: 'bell_tool_continuation',
+        tool_continuation_hop: '2',
+      },
+      {
+        purpose: 'bell_tool_final_answer',
+        tool_continuation_hop: '3',
+      },
+    ])
+    expect(continuationResponses[0]?.response).toMatchObject({
+      tool_choice: 'auto',
+    })
+    expect(continuationResponses[0]?.response).not.toHaveProperty('tools')
+    expect(continuationResponses[1]?.response).toMatchObject({
+      tool_choice: 'auto',
+    })
+    expect(continuationResponses[1]?.response).not.toHaveProperty('tools')
+    expect(continuationResponses[2]?.response).toMatchObject({
+      tool_choice: 'none',
+      tools: [],
+    })
+    expect(
+      lifecycle.filter((event) => event.event === 'bell_live.tool_continuation')
+    ).toEqual([
+      {
+        event: 'bell_live.tool_continuation',
+        hop: 1,
+        outcome: 'requested',
+        toolsAllowed: true,
+      },
+      {
+        event: 'bell_live.tool_continuation',
+        hop: 2,
+        outcome: 'requested',
+        toolsAllowed: true,
+      },
+      {
+        event: 'bell_live.tool_continuation',
+        hop: 3,
+        outcome: 'requested',
+        toolsAllowed: false,
+      },
+    ])
+
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('does not duplicate a continuation for a repeated response.done event', async () => {
+    const toolDone = {
+      type: 'response.done',
+      event_id: 'evt_tool_done',
+      response: {
+        id: 'resp_tool',
+        status: 'completed',
+        output: [
+          {
+            id: 'item_tool',
+            type: 'mcp_call',
+            name: 'search',
+            output: 'result',
+          },
+        ],
+      },
+    }
+    FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [toolDone, toolDone]
+
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('fails malformed continuation metadata closed into a final answer', async () => {
+    FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [
+      {
+        type: 'response.done',
+        event_id: 'evt_tool_done',
+        response: {
+          id: 'resp_tool',
+          status: 'completed',
+          metadata: { purpose: 'bell_tool_continuation' },
+          output: [
+            {
+              id: 'item_tool',
+              type: 'mcp_call',
+              name: 'fetch',
+              output: 'result',
+            },
+          ],
+        },
+      },
+    ]
+
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents[1]).toMatchObject({
+      response: {
+        metadata: {
+          purpose: 'bell_tool_final_answer',
+          tool_continuation_hop: '3',
+        },
+        tool_choice: 'none',
+        tools: [],
+      },
+    })
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('logs a continuation send failure emitted by the Realtime SDK', async () => {
+    const lifecycle: BellLiveLifecycleEvent[] = []
+    const greeting = await startBellLiveGreeting('rtc_call_greeting', {
+      onLifecycleEvent: (event) => lifecycle.push(event),
+    })
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    FakeOpenAiRealtimeWebSocket.throwOnContinuationSend = true
+    socket?.emitServerEvent({
+      type: 'response.created',
+      event_id: 'evt_tool_created',
+      response: { id: 'resp_tool', status: 'in_progress' },
+    })
+    socket?.emitServerEvent({
+      type: 'response.done',
+      event_id: 'evt_tool_done',
+      response: {
+        id: 'resp_tool',
+        status: 'completed',
+        output: [
+          {
+            id: 'item_tool',
+            type: 'mcp_call',
+            name: 'search',
+            output: 'result',
+          },
+        ],
+      },
+    })
+
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(lifecycle).toContainEqual({
+      event: 'bell_live.tool_continuation',
+      hop: 1,
+      outcome: 'failed',
+      toolsAllowed: true,
+    })
+    expect(lifecycle).toContainEqual(
+      expect.objectContaining({
+        event: 'bell_live.realtime_response',
+        recoveryRequested: false,
+      })
+    )
+    expect(lifecycle).toContainEqual(
+      expect.objectContaining({
+        event: 'bell_live.observer',
+        outcome: 'failed',
+        reason: 'socket_error',
+      })
+    )
+
+    socket?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('logs a successful continuation after an earlier observer error', async () => {
+    const lifecycle: BellLiveLifecycleEvent[] = []
+    const greeting = await startBellLiveGreeting('rtc_call_greeting', {
+      onLifecycleEvent: (event) => lifecycle.push(event),
+    })
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket?.emitServerEvent({
+      type: 'error',
+      event_id: 'evt_prior_error',
+      error: {
+        code: 'prior_error',
+        message: 'A nonfatal error happened before the next caller turn.',
+        type: 'server_error',
+      },
+    })
+    socket?.emitServerEvent({
+      type: 'response.created',
+      event_id: 'evt_tool_created',
+      response: { id: 'resp_tool', status: 'in_progress' },
+    })
+    socket?.emitServerEvent({
+      type: 'response.done',
+      event_id: 'evt_tool_done',
+      response: {
+        id: 'resp_tool',
+        status: 'completed',
+        output: [
+          {
+            id: 'item_tool',
+            type: 'mcp_call',
+            name: 'search',
+            output: 'result',
+          },
+        ],
+      },
+    })
+
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
+    expect(lifecycle).toContainEqual({
+      event: 'bell_live.tool_continuation',
+      hop: 1,
+      outcome: 'requested',
+      toolsAllowed: true,
+    })
+    expect(lifecycle).toContainEqual(
+      expect.objectContaining({
+        event: 'bell_live.realtime_response',
+        recoveryRequested: true,
+      })
+    )
+
+    socket?.closeFromServer()
+    await greeting.conversation
   })
 
   it('does not duplicate a complete spoken answer after a tool result', async () => {
@@ -704,7 +1093,7 @@ describe('Bell Live Realtime session', () => {
     ['cancelled', undefined],
     ['failed', undefined],
     ['incomplete', undefined],
-    ['completed', 'bell_tool_continuation'],
+    ['completed', 'bell_tool_final_answer'],
   ])('does not recover a %s tool response with purpose %s', async (status, purpose) => {
     FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [
       {

@@ -53,7 +53,7 @@ export function createSiteMcpServer(
     },
     {
       instructions:
-        "Use search to find Philip Ilic Thomas's public writing and pages by subject, then fetch a returned ID for complete text and a citation URL. Use list_posts for latest, recent, chronological, or newsletter-specific requests. All tools are public, read-only, and require no authentication.",
+        "Use search to find Philip Ilic Thomas's public writing and pages by subject, person, place, project, phrase, title, or relevance, then fetch a returned ID for complete text and a citation URL. Use list_posts only when the user explicitly asks to list or browse the latest, recent, chronological, or newsletter-filtered archive. All tools are public, read-only, and require no authentication.",
     }
   )
 
@@ -62,7 +62,7 @@ export function createSiteMcpServer(
     {
       title: 'Search public writing',
       description:
-        "Use this when a user wants to find Philip Ilic Thomas's public writing or site pages by topic. Returns up to ten citable matches; call fetch with a returned ID for complete text.",
+        "Use this when a user wants to find Philip Ilic Thomas's public writing or site pages by subject, person, place, project, phrase, title, topic, or relevance. Returns up to ten citable matches; call fetch with a returned ID for complete text.",
       inputSchema: searchInputSchema,
       outputSchema: searchOutputSchema,
       annotations: readOnlyAnnotations,
@@ -108,7 +108,7 @@ export function createSiteMcpServer(
     {
       title: 'List published posts',
       description:
-        "Use this when a user asks for Philip Ilic Thomas's latest, recent, chronological, or newsletter-specific posts. Returns published posts newest first; use search when topical relevance matters.",
+        "Use this only when a user explicitly asks to list or browse Philip Ilic Thomas's latest, recent, chronological, or newsletter-filtered archive. Returns published posts newest first; use search whenever topical relevance matters.",
       inputSchema: listPostsInputSchema,
       outputSchema: listPostsOutputSchema,
       annotations: readOnlyAnnotations,

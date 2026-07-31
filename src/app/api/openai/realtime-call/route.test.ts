@@ -122,6 +122,7 @@ async function postAndFlush(request: Request): Promise<Response> {
 beforeEach(() => {
   afterTasks.length = 0
   afterControl.throwOnSchedule = false
+  FakeOpenAiRealtimeWebSocket.afterContinuationEventBatches = []
   FakeOpenAiRealtimeWebSocket.afterContinuationEvents = []
   FakeOpenAiRealtimeWebSocket.connections = []
   FakeOpenAiRealtimeWebSocket.sockets = []
@@ -134,6 +135,7 @@ beforeEach(() => {
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = null
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses = []
   FakeOpenAiRealtimeWebSocket.sentEvents = []
+  FakeOpenAiRealtimeWebSocket.throwOnContinuationSend = false
   FakeOpenAiRealtimeWebSocket.throwOnSend = false
   transcriptNotifications.send.mockClear()
   const createdAt = new Date()
@@ -387,8 +389,11 @@ describe('POST /api/openai/realtime-call', () => {
     expect(FakeOpenAiRealtimeWebSocket.sentEvents[1]).toMatchObject({
       type: 'response.create',
       response: {
-        metadata: { purpose: 'bell_tool_continuation' },
-        tool_choice: 'none',
+        metadata: {
+          purpose: 'bell_tool_continuation',
+          tool_continuation_hop: '1',
+        },
+        tool_choice: 'auto',
       },
     })
     expect(console.info).toHaveBeenCalledWith(
