@@ -7,6 +7,7 @@ import {
   claimPhoneWebhookEventAttempt,
   findOrCreatePhoneWebhookEvent,
   markPhoneWebhookEventProcessed,
+  markPhoneWebhookEventSideEffectObserved,
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
 import { phoneWebhookEvents } from '@/lib/db/schema'
@@ -96,5 +97,78 @@ describe('phone webhook event completion', () => {
       })
     ).resolves.toEqual({ outcome: 'exhausted' })
     vi.useRealTimers()
+  })
+
+  it('terminalizes an observed side effect before a stale lease can be reclaimed', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-31T12:00:00Z'))
+    await resetDb()
+    const { event } = await findOrCreatePhoneWebhookEvent({
+      eventKey: 'bell-live-greeting:CA456',
+      eventType: 'bell-live-greeting',
+    })
+    const first = await claimPhoneWebhookEventAttempt(event.id, {
+      leaseMs: 6_000,
+      maxAttempts: 2,
+    })
+    expect(first).toMatchObject({ outcome: 'claimed', attemptNumber: 1 })
+
+    await expect(
+      markPhoneWebhookEventSideEffectObserved(
+        event.id,
+        'bell-live-greeting:CA456'
+      )
+    ).resolves.toBe(true)
+
+    vi.advanceTimersByTime(7_000)
+    await expect(
+      claimPhoneWebhookEventAttempt(event.id, {
+        leaseMs: 6_000,
+        maxAttempts: 2,
+      })
+    ).resolves.toEqual({ outcome: 'completed' })
+
+    const [stored] = await db.select().from(phoneWebhookEvents)
+    expect(stored).toMatchObject({
+      attemptCount: 1,
+      processingAt: null,
+      processedStepId: 'bell-live-greeting:CA456',
+    })
+    expect(stored.processedAt).toBeInstanceOf(Date)
+    vi.useRealTimers()
+  })
+
+  it('recovers a lost side-effect acknowledgement without admitting a distinct terminalizer', async () => {
+    await resetDb()
+    const { event } = await findOrCreatePhoneWebhookEvent({
+      eventKey: 'bell-live-greeting:CA789',
+      eventType: 'bell-live-greeting',
+    })
+    const first = await claimPhoneWebhookEventAttempt(event.id, {
+      leaseMs: 6_000,
+      maxAttempts: 2,
+    })
+    expect(first).toMatchObject({ outcome: 'claimed', attemptNumber: 1 })
+
+    expect(
+      await markPhoneWebhookEventSideEffectObserved(
+        event.id,
+        'bell-live-greeting:CA789'
+      )
+    ).toBe(true)
+    // A retry with the stable ID recovers a committed write whose result was
+    // lost, while a different logical terminalizer remains a loser.
+    expect(
+      await markPhoneWebhookEventSideEffectObserved(
+        event.id,
+        'bell-live-greeting:CA789'
+      )
+    ).toBe(true)
+    expect(
+      await markPhoneWebhookEventSideEffectObserved(
+        event.id,
+        'bell-live-greeting:other-call'
+      )
+    ).toBe(false)
   })
 })

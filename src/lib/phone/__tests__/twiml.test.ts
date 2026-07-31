@@ -125,7 +125,7 @@ describe('voiceMenuTwiml', () => {
       recordingCompleteUrl: 'https://philipithomas.com/recording-complete',
     })
     expect(playedTexts(subscriberMenu)[1]).toBe(
-      'Press 1 to leave a voicemail. Press 3 to ask Bell a question.'
+      'Press 1 to leave a voicemail. Press 3 to talk to Bell AI.'
     )
   })
 })

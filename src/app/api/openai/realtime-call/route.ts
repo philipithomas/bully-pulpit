@@ -3,7 +3,7 @@ import {
   claimPhoneWebhookEventAttempt,
   findOrCreatePhoneWebhookEvent,
   markPhoneWebhookEventProcessed,
-  releasePhoneWebhookEvent,
+  markPhoneWebhookEventSideEffectObserved,
 } from '@/lib/db/queries/phone-webhook-events'
 import {
   acceptBellLiveCall,
@@ -25,7 +25,9 @@ export const maxDuration = 20
 const MAX_WEBHOOK_BYTES = 64 * 1024
 const GREETING_DEADLINE_MS = 15_000
 const GREETING_LEASE_MS = 6_000
-const GREETING_MAX_ATTEMPTS = 2
+// Once OpenAI accepts the SIP call, the opener is best-effort. Never reclaim
+// it: a late replay is worse than letting the caller begin the conversation.
+const GREETING_MAX_ATTEMPTS = 1
 const GREETING_CHECKPOINT_ATTEMPTS = 3
 
 interface IncomingCallEvent {
@@ -61,6 +63,35 @@ async function checkpointBellLiveGreeting(
     } catch {
       // Retry with the same step ID so a committed write whose acknowledgement
       // was lost is recognized as success rather than replaying SIP audio.
+    }
+  }
+  return false
+}
+
+async function terminalizeObservedBellLiveGreeting(
+  eventId: number,
+  processingAt: Date,
+  processedStepId: string
+): Promise<boolean> {
+  if (
+    await checkpointBellLiveGreeting(eventId, processingAt, processedStepId)
+  ) {
+    return true
+  }
+
+  // Once OpenAI confirms that this response's audio reached the SIP caller,
+  // the irreversible side effect must remain terminal even if its short lease
+  // expired while the provider was speaking or a database acknowledgement was
+  // lost. This unfenced fallback is deliberately never used before audio.
+  for (let attempt = 0; attempt < GREETING_CHECKPOINT_ATTEMPTS; attempt += 1) {
+    try {
+      if (
+        await markPhoneWebhookEventSideEffectObserved(eventId, processedStepId)
+      ) {
+        return true
+      }
+    } catch {
+      // Retry with the same stable step ID so the fallback is idempotent.
     }
   }
   return false
@@ -259,7 +290,9 @@ export async function POST(request: Request): Promise<Response> {
       outcome: 'claim_error',
       ...actionLogContext(request, incoming),
     })
-    return response(503)
+    // The SIP leg has already been accepted. The optional opener must never
+    // turn that successful call into a failed webhook delivery.
+    return response(204)
   }
 
   if (greetingEvent.event.processedAt) {
@@ -287,16 +320,25 @@ export async function POST(request: Request): Promise<Response> {
       }
     )
   } catch {
-    return response(503)
+    console.error('[openai/realtime-call]', {
+      event: 'bell_live.openai_greeting',
+      outcome: 'claim_error',
+      ...actionLogContext(request, incoming),
+    })
+    return response(204)
   }
   if (greetingClaim.outcome !== 'claimed') {
-    return response(greetingClaim.outcome === 'active' ? 503 : 204)
+    return response(204)
   }
 
   const { attemptNumber, processingAt: lease } = greetingClaim
   const processedStepId = `bell-live-greeting:${twilioCallSid}`
   const checkpointGreeting = () =>
-    checkpointBellLiveGreeting(greetingEvent.event.id, lease, processedStepId)
+    terminalizeObservedBellLiveGreeting(
+      greetingEvent.event.id,
+      lease,
+      processedStepId
+    )
 
   try {
     const greeting = await startBellLiveGreeting(incoming.callId, {
@@ -326,13 +368,13 @@ export async function POST(request: Request): Promise<Response> {
   } catch (error) {
     const audioStarted =
       error instanceof BellLiveGreetingError && error.audioStarted
-    const retryable = !audioStarted && attemptNumber < GREETING_MAX_ATTEMPTS
-    if (retryable) {
-      await releasePhoneWebhookEvent(greetingEvent.event.id, lease).catch(
-        () => undefined
-      )
-    }
-    const terminalCheckpointed = retryable ? false : await checkpointGreeting()
+    const terminalCheckpointed = audioStarted
+      ? await checkpointGreeting()
+      : await checkpointBellLiveGreeting(
+          greetingEvent.event.id,
+          lease,
+          processedStepId
+        )
     console.error('[openai/realtime-call]', {
       event: 'bell_live.openai_greeting',
       attemptNumber,
@@ -346,13 +388,17 @@ export async function POST(request: Request): Promise<Response> {
         error instanceof BellLiveGreetingError
           ? error.responseRequested
           : false,
-      retryable,
+      retryable: false,
       providerErrorCode:
         error instanceof BellLiveGreetingError ? error.providerCode : null,
       providerErrorType:
         error instanceof BellLiveGreetingError ? error.providerType : null,
       responseStatus:
         error instanceof BellLiveGreetingError ? error.responseStatus : null,
+      socketCloseCode:
+        error instanceof BellLiveGreetingError ? error.socketCloseCode : null,
+      socketHttpStatus:
+        error instanceof BellLiveGreetingError ? error.socketHttpStatus : null,
       reason:
         error instanceof BellLiveGreetingError
           ? error.reason
@@ -360,7 +406,10 @@ export async function POST(request: Request): Promise<Response> {
       terminalCheckpointed,
       ...actionLogContext(request, incoming),
     })
-    return response(retryable ? 502 : 204)
+    // OpenAI's SIP handler has already accepted the call. A sideband opener
+    // failure should degrade to a caller-led conversation, not fail the SIP
+    // leg or ask the webhook provider to replay response.create later.
+    return response(204)
   }
   return response(204)
 }

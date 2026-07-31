@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import OpenAI from 'openai'
-import { OpenAIRealtimeWebSocket } from 'openai/realtime/websocket'
+import { OpenAIRealtimeWS } from 'openai/realtime/ws'
 import { twilioSecret } from '@/lib/phone/config'
 import { siteIdentity } from '@/lib/site-identity'
 
@@ -330,6 +330,8 @@ export class BellLiveGreetingError extends Error {
     | 'socket_error'
     | 'timeout'
   readonly responseStatus: string | null
+  readonly socketCloseCode: number | null
+  readonly socketHttpStatus: number | null
 
   constructor(input: {
     audioStarted?: boolean
@@ -346,6 +348,8 @@ export class BellLiveGreetingError extends Error {
       | 'socket_error'
       | 'timeout'
     responseStatus?: string | null
+    socketCloseCode?: number | null
+    socketHttpStatus?: number | null
   }) {
     super('OpenAI Realtime greeting failed')
     this.name = 'BellLiveGreetingError'
@@ -357,12 +361,28 @@ export class BellLiveGreetingError extends Error {
     this.responseRequested = input.responseRequested ?? false
     this.reason = input.reason
     this.responseStatus = input.responseStatus ?? null
+    this.socketCloseCode = input.socketCloseCode ?? null
+    this.socketHttpStatus = input.socketHttpStatus ?? null
   }
 }
 
 function safeOpaqueId(value: string | null): string | null {
   if (!value || !/^[A-Za-z0-9._:-]{1,200}$/.test(value)) return null
   return value
+}
+
+function safeSocketCloseCode(value: unknown): number | null {
+  return Number.isInteger(value) &&
+    Number(value) >= 1_000 &&
+    Number(value) <= 4_999
+    ? Number(value)
+    : null
+}
+
+function safeSocketHttpStatus(value: unknown): number | null {
+  return Number.isInteger(value) && Number(value) >= 100 && Number(value) <= 599
+    ? Number(value)
+    : null
 }
 
 function safeProviderIdentifier(value: unknown): string | null {
@@ -536,12 +556,20 @@ export async function startBellLiveGreeting(
     apiKey: requireOpenAiApiKey(),
     project: requireOpenAiProjectId(),
   })
-  const connection = new OpenAIRealtimeWebSocket({ callID: callId }, client)
+  const connection = new OpenAIRealtimeWS(
+    {
+      callID: callId,
+      options: {
+        headers: { 'OpenAI-Project': requireOpenAiProjectId() },
+      },
+    },
+    client
+  )
 
   return new Promise((resolve, reject) => {
     let settled = false
     let audioStarted = false
-    let audioStopped = false
+    let audioBufferFinished = false
     let greetingResponseId: string | null = null
     let responseCheckpointed = !options.onAudioStarted
     let responseCompleted = false
@@ -567,7 +595,7 @@ export async function startBellLiveGreeting(
       else resolve(result)
     }
     const finishCompletedIfReady = (): void => {
-      if (!responseCompleted || !audioStopped || completing) return
+      if (!responseCompleted || !audioBufferFinished || completing) return
       completing = true
       void (async () => {
         await checkpointPromise
@@ -627,13 +655,15 @@ export async function startBellLiveGreeting(
           })
       }
     })
-    connection.on('output_audio_buffer.stopped', (event) => {
+    const markAudioBufferFinished = (event: { response_id: string }): void => {
       if (!greetingResponseId || event.response_id !== greetingResponseId) {
         return
       }
-      audioStopped = true
+      audioBufferFinished = true
       finishCompletedIfReady()
-    })
+    }
+    connection.on('output_audio_buffer.stopped', markAudioBufferFinished)
+    connection.on('output_audio_buffer.cleared', markAudioBufferFinished)
     connection.on('response.done', (event) => {
       if (event.response.metadata?.purpose !== PHONE_BELL_GREETING_PURPOSE) {
         return
@@ -673,6 +703,9 @@ export async function startBellLiveGreeting(
     connection.on('error', (error) => {
       const providerCode = safeProviderIdentifier(error.error?.code)
       const providerType = safeProviderIdentifier(error.error?.type)
+      const socketHttpStatus = safeSocketHttpStatus(
+        (error as { cause?: { statusCode?: unknown } }).cause?.statusCode
+      )
       finish(
         new BellLiveGreetingError({
           audioStarted,
@@ -682,10 +715,31 @@ export async function startBellLiveGreeting(
           reason: error.error ? 'provider_error' : 'socket_error',
           responseCreated,
           responseRequested,
+          socketHttpStatus,
         })
       )
     })
-    connection.socket.addEventListener('close', () => {
+    connection.socket.on(
+      'unexpected-response',
+      (
+        _request: unknown,
+        response: { resume: () => void; statusCode?: number }
+      ) => {
+        const socketHttpStatus = safeSocketHttpStatus(response.statusCode)
+        response.resume()
+        finish(
+          new BellLiveGreetingError({
+            audioStarted,
+            durationMs: Date.now() - startedAt,
+            reason: 'socket_error',
+            responseCreated,
+            responseRequested,
+            socketHttpStatus,
+          })
+        )
+      }
+    )
+    connection.socket.on('close', (code: number) => {
       finish(
         new BellLiveGreetingError({
           audioStarted,
@@ -693,10 +747,11 @@ export async function startBellLiveGreeting(
           reason: 'closed',
           responseCreated,
           responseRequested,
+          socketCloseCode: safeSocketCloseCode(code),
         })
       )
     })
-    connection.socket.addEventListener('open', () => {
+    connection.socket.on('open', () => {
       try {
         connection.send({
           type: 'response.create',

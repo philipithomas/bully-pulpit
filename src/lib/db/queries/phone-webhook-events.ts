@@ -152,6 +152,43 @@ export async function markPhoneWebhookEventProcessed(
   return completedByThisStep.length > 0
 }
 
+/**
+ * Terminalizes a webhook after its irreversible side effect was observed.
+ * Unlike the normal completion path, this deliberately does not require the
+ * original lease: the side effect itself is the fence, so a stale delivery
+ * must not become eligible to repeat it. Callers must never use this before
+ * the side effect is known to have happened.
+ */
+export async function markPhoneWebhookEventSideEffectObserved(
+  id: number,
+  processedStepId: string
+): Promise<boolean> {
+  const rows = await getDb()
+    .update(phoneWebhookEvents)
+    .set({
+      processingAt: null,
+      processedAt: sql`NOW()`,
+      processedStepId,
+    })
+    .where(
+      and(eq(phoneWebhookEvents.id, id), isNull(phoneWebhookEvents.processedAt))
+    )
+    .returning({ id: phoneWebhookEvents.id })
+  if (rows.length > 0) return true
+
+  const completedByThisStep = await getDb()
+    .select({ id: phoneWebhookEvents.id })
+    .from(phoneWebhookEvents)
+    .where(
+      and(
+        eq(phoneWebhookEvents.id, id),
+        eq(phoneWebhookEvents.processedStepId, processedStepId)
+      )
+    )
+    .limit(1)
+  return completedByThisStep.length > 0
+}
+
 /** Releases the current lease when notification or workflow enqueue fails. */
 export async function releasePhoneWebhookEvent(
   id: number,

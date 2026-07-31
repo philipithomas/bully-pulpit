@@ -17,6 +17,13 @@ import {
 } from '@/lib/phone/bell-live'
 import { FakeOpenAiRealtimeWebSocket } from '@/test/fake-openai-realtime-websocket'
 
+vi.mock('openai/realtime/ws', async () => {
+  const { FakeOpenAiRealtimeWS } = await import(
+    '@/test/fake-openai-realtime-websocket'
+  )
+  return { OpenAIRealtimeWS: FakeOpenAiRealtimeWS }
+})
+
 const NOW = new Date('2026-07-31T12:00:00Z')
 const CALL_SID = 'CA1234567890abcdef1234567890abcdef'
 
@@ -26,9 +33,12 @@ function headersFromSipUri(uri: string) {
 }
 
 beforeEach(() => {
+  FakeOpenAiRealtimeWebSocket.connections = []
+  FakeOpenAiRealtimeWebSocket.emitAudioCleared = false
   FakeOpenAiRealtimeWebSocket.emitAudioStarted = true
   FakeOpenAiRealtimeWebSocket.emitAudioStopped = true
   FakeOpenAiRealtimeWebSocket.finalStatus = 'completed'
+  FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = null
   FakeOpenAiRealtimeWebSocket.sentEvents = []
   FakeOpenAiRealtimeWebSocket.throwOnSend = false
   process.env.OPENAI_API_KEY = 'test-openai-key'
@@ -261,8 +271,6 @@ describe('Bell Live Realtime session', () => {
   })
 
   it('starts Bell with a proactive sideband greeting', async () => {
-    vi.stubGlobal('WebSocket', FakeOpenAiRealtimeWebSocket)
-
     await expect(
       startBellLiveGreeting('rtc_call_greeting')
     ).resolves.toMatchObject({
@@ -284,9 +292,53 @@ describe('Bell Live Realtime session', () => {
     ])
   })
 
+  it('authenticates the Node sideband socket with API and project headers', async () => {
+    await startBellLiveGreeting('rtc_call_greeting')
+
+    expect(FakeOpenAiRealtimeWebSocket.connections).toEqual([
+      {
+        url: 'wss://api.openai.com/v1/realtime?call_id=rtc_call_greeting',
+        options: {
+          headers: {
+            Authorization: 'Bearer test-openai-key',
+            'OpenAI-Project': 'proj_test123',
+          },
+        },
+      },
+    ])
+    expect(
+      JSON.stringify(FakeOpenAiRealtimeWebSocket.connections)
+    ).not.toContain('openai-insecure-api-key')
+  })
+
+  it('treats an interrupted completed greeting buffer as finished', async () => {
+    FakeOpenAiRealtimeWebSocket.emitAudioCleared = true
+    FakeOpenAiRealtimeWebSocket.emitAudioStopped = false
+
+    await expect(
+      startBellLiveGreeting('rtc_call_greeting')
+    ).resolves.toMatchObject({
+      audioStarted: true,
+      responseCheckpointed: true,
+      responseCreated: true,
+    })
+  })
+
+  it('reports only the bounded HTTP status for a failed socket handshake', async () => {
+    FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = 401
+
+    await expect(startBellLiveGreeting('rtc_call_greeting')).rejects.toEqual(
+      expect.objectContaining({
+        name: BellLiveGreetingError.name,
+        reason: 'socket_error',
+        socketCloseCode: null,
+        socketHttpStatus: 401,
+      })
+    )
+  })
+
   it('retains the sideband until the opening response finishes', async () => {
     FakeOpenAiRealtimeWebSocket.finalStatus = 'failed'
-    vi.stubGlobal('WebSocket', FakeOpenAiRealtimeWebSocket)
 
     await expect(startBellLiveGreeting('rtc_call_greeting')).rejects.toEqual(
       expect.objectContaining({
@@ -304,7 +356,6 @@ describe('Bell Live Realtime session', () => {
     FakeOpenAiRealtimeWebSocket.emitAudioStarted = false
     FakeOpenAiRealtimeWebSocket.emitAudioStopped = false
     FakeOpenAiRealtimeWebSocket.finalStatus = 'failed'
-    vi.stubGlobal('WebSocket', FakeOpenAiRealtimeWebSocket)
 
     await expect(startBellLiveGreeting('rtc_call_greeting')).rejects.toEqual(
       expect.objectContaining({
