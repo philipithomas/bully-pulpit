@@ -26,6 +26,8 @@ function headersFromSipUri(uri: string) {
 }
 
 beforeEach(() => {
+  FakeOpenAiRealtimeWebSocket.emitAudioStarted = true
+  FakeOpenAiRealtimeWebSocket.emitAudioStopped = true
   FakeOpenAiRealtimeWebSocket.finalStatus = 'completed'
   FakeOpenAiRealtimeWebSocket.sentEvents = []
   FakeOpenAiRealtimeWebSocket.throwOnSend = false
@@ -264,6 +266,7 @@ describe('Bell Live Realtime session', () => {
     await expect(
       startBellLiveGreeting('rtc_call_greeting')
     ).resolves.toMatchObject({
+      audioStarted: true,
       durationMs: expect.any(Number),
       responseCheckpointed: true,
       responseCreated: true,
@@ -288,10 +291,27 @@ describe('Bell Live Realtime session', () => {
     await expect(startBellLiveGreeting('rtc_call_greeting')).rejects.toEqual(
       expect.objectContaining({
         name: BellLiveGreetingError.name,
+        audioStarted: true,
         providerCode: 'greeting_failed',
         providerType: 'server_error',
         reason: 'response_not_completed',
         responseStatus: 'failed',
+      })
+    )
+  })
+
+  it('reports a failed response before SIP audio begins as retryable state', async () => {
+    FakeOpenAiRealtimeWebSocket.emitAudioStarted = false
+    FakeOpenAiRealtimeWebSocket.emitAudioStopped = false
+    FakeOpenAiRealtimeWebSocket.finalStatus = 'failed'
+    vi.stubGlobal('WebSocket', FakeOpenAiRealtimeWebSocket)
+
+    await expect(startBellLiveGreeting('rtc_call_greeting')).rejects.toEqual(
+      expect.objectContaining({
+        name: BellLiveGreetingError.name,
+        audioStarted: false,
+        responseCreated: true,
+        responseRequested: true,
       })
     )
   })

@@ -1,0 +1,1 @@
+ALTER TABLE "phone_webhook_events" ADD COLUMN "attempt_count" integer DEFAULT 0 NOT NULL;

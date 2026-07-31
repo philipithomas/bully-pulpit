@@ -316,12 +316,14 @@ export class OpenAiCallActionError extends Error {
 }
 
 export class BellLiveGreetingError extends Error {
+  readonly audioStarted: boolean
   readonly durationMs: number
   readonly providerCode: string | null
   readonly providerType: string | null
   readonly responseCreated: boolean
   readonly responseRequested: boolean
   readonly reason:
+    | 'audio_not_started'
     | 'closed'
     | 'provider_error'
     | 'response_not_completed'
@@ -330,12 +332,14 @@ export class BellLiveGreetingError extends Error {
   readonly responseStatus: string | null
 
   constructor(input: {
+    audioStarted?: boolean
     durationMs: number
     providerCode?: string | null
     providerType?: string | null
     responseCreated?: boolean
     responseRequested?: boolean
     reason:
+      | 'audio_not_started'
       | 'closed'
       | 'provider_error'
       | 'response_not_completed'
@@ -345,6 +349,7 @@ export class BellLiveGreetingError extends Error {
   }) {
     super('OpenAI Realtime greeting failed')
     this.name = 'BellLiveGreetingError'
+    this.audioStarted = input.audioStarted ?? false
     this.durationMs = input.durationMs
     this.providerCode = input.providerCode ?? null
     this.providerType = input.providerType ?? null
@@ -514,9 +519,10 @@ export async function rejectBellLiveCall(
 export async function startBellLiveGreeting(
   callId: string,
   options: {
-    onResponseCreated?: () => Promise<boolean>
+    onAudioStarted?: () => Promise<boolean>
   } = {}
 ): Promise<{
+  audioStarted: boolean
   durationMs: number
   responseCheckpointed: boolean
   responseCreated: boolean
@@ -534,14 +540,19 @@ export async function startBellLiveGreeting(
 
   return new Promise((resolve, reject) => {
     let settled = false
+    let audioStarted = false
+    let audioStopped = false
     let greetingResponseId: string | null = null
-    let responseCheckpointed = !options.onResponseCreated
+    let responseCheckpointed = !options.onAudioStarted
+    let responseCompleted = false
     let responseCreated = false
     let responseRequested = false
     let checkpointPromise: Promise<void> | null = null
+    let completing = false
     const finish = (
       result:
         | {
+            audioStarted: boolean
             durationMs: number
             responseCheckpointed: boolean
             responseCreated: boolean
@@ -555,9 +566,36 @@ export async function startBellLiveGreeting(
       if (result instanceof BellLiveGreetingError) reject(result)
       else resolve(result)
     }
+    const finishCompletedIfReady = (): void => {
+      if (!responseCompleted || !audioStopped || completing) return
+      completing = true
+      void (async () => {
+        await checkpointPromise
+        if (!audioStarted) {
+          finish(
+            new BellLiveGreetingError({
+              audioStarted,
+              durationMs: Date.now() - startedAt,
+              reason: 'audio_not_started',
+              responseCreated,
+              responseRequested,
+              responseStatus: 'completed',
+            })
+          )
+          return
+        }
+        finish({
+          audioStarted,
+          durationMs: Date.now() - startedAt,
+          responseCheckpointed,
+          responseCreated,
+        })
+      })()
+    }
     const timeout = setTimeout(() => {
       finish(
         new BellLiveGreetingError({
+          audioStarted,
           durationMs: Date.now() - startedAt,
           reason: 'timeout',
           responseCreated,
@@ -572,9 +610,15 @@ export async function startBellLiveGreeting(
       }
       responseCreated = true
       greetingResponseId ??= event.response.id ?? null
-      if (!checkpointPromise && options.onResponseCreated) {
+    })
+    connection.on('output_audio_buffer.started', (event) => {
+      if (!greetingResponseId || event.response_id !== greetingResponseId) {
+        return
+      }
+      audioStarted = true
+      if (!checkpointPromise && options.onAudioStarted) {
         checkpointPromise = options
-          .onResponseCreated()
+          .onAudioStarted()
           .then((checkpointed) => {
             responseCheckpointed = checkpointed
           })
@@ -582,6 +626,13 @@ export async function startBellLiveGreeting(
             responseCheckpointed = false
           })
       }
+    })
+    connection.on('output_audio_buffer.stopped', (event) => {
+      if (!greetingResponseId || event.response_id !== greetingResponseId) {
+        return
+      }
+      audioStopped = true
+      finishCompletedIfReady()
     })
     connection.on('response.done', (event) => {
       if (event.response.metadata?.purpose !== PHONE_BELL_GREETING_PURPOSE) {
@@ -594,18 +645,16 @@ export async function startBellLiveGreeting(
       ) {
         return
       }
+      if (event.response.status === 'completed') {
+        responseCompleted = true
+        finishCompletedIfReady()
+        return
+      }
       void (async () => {
         await checkpointPromise
-        if (event.response.status === 'completed') {
-          finish({
-            durationMs: Date.now() - startedAt,
-            responseCheckpointed,
-            responseCreated,
-          })
-          return
-        }
         finish(
           new BellLiveGreetingError({
+            audioStarted,
             durationMs: Date.now() - startedAt,
             providerCode: safeProviderIdentifier(
               event.response.status_details?.error?.code
@@ -626,6 +675,7 @@ export async function startBellLiveGreeting(
       const providerType = safeProviderIdentifier(error.error?.type)
       finish(
         new BellLiveGreetingError({
+          audioStarted,
           durationMs: Date.now() - startedAt,
           providerCode,
           providerType,
@@ -638,6 +688,7 @@ export async function startBellLiveGreeting(
     connection.socket.addEventListener('close', () => {
       finish(
         new BellLiveGreetingError({
+          audioStarted,
           durationMs: Date.now() - startedAt,
           reason: 'closed',
           responseCreated,
@@ -660,6 +711,7 @@ export async function startBellLiveGreeting(
       } catch {
         finish(
           new BellLiveGreetingError({
+            audioStarted,
             durationMs: Date.now() - startedAt,
             reason: 'socket_error',
             responseCreated,

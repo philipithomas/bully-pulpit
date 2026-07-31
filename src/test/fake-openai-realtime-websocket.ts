@@ -2,6 +2,8 @@ type WebSocketListener = (event: { data?: string; message?: string }) => void
 
 /** Minimal successful WebSocket used by Bell Live route and unit tests. */
 export class FakeOpenAiRealtimeWebSocket {
+  static emitAudioStarted = true
+  static emitAudioStopped = true
   static finalStatus: 'completed' | 'failed' = 'completed'
   static sentEvents: unknown[] = []
   static throwOnSend = false
@@ -42,6 +44,15 @@ export class FakeOpenAiRealtimeWebSocket {
           },
         }),
       })
+      if (FakeOpenAiRealtimeWebSocket.emitAudioStarted) {
+        this.emit('message', {
+          data: JSON.stringify({
+            type: 'output_audio_buffer.started',
+            event_id: 'evt_greeting_audio_started',
+            response_id: 'resp_greeting',
+          }),
+        })
+      }
       this.emit('message', {
         data: JSON.stringify({
           type: 'response.done',
@@ -64,6 +75,15 @@ export class FakeOpenAiRealtimeWebSocket {
           },
         }),
       })
+      if (FakeOpenAiRealtimeWebSocket.emitAudioStopped) {
+        this.emit('message', {
+          data: JSON.stringify({
+            type: 'output_audio_buffer.stopped',
+            event_id: 'evt_greeting_audio_stopped',
+            response_id: 'resp_greeting',
+          }),
+        })
+      }
     })
   }
 
