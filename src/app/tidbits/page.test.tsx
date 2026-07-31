@@ -79,12 +79,16 @@ afterEach(() => {
 })
 
 describe('TidbitsPage viewer contract', () => {
-  it('emits immersive parser data for the description-free SFMOMA photo', () => {
+  it('emits immersive parser data for described and description-free photos', () => {
     const html = renderToStaticMarkup(<TidbitsPage />)
+    const swivelLink = html.match(
+      /<a[^>]*data-zoom-caption-href="\/swivel"[^>]*>/
+    )?.[0]
     const sfmomaLink = html.match(
       /<a[^>]*data-zoom-caption-href="\/sfmoma"[^>]*>/
     )?.[0]
 
+    expect(swivelLink).toBeDefined()
     expect(sfmomaLink).toBeDefined()
     expect(html).toContain('data-zoom-caption-presentation="immersive"')
     expect(html).toContain('data-zoom-caption-collection="tidbits"')
@@ -100,7 +104,10 @@ describe('TidbitsPage viewer contract', () => {
       'data-zoom-caption-location-href="https://maps.app.goo.gl/YHxezDBcwdY6quHX9"'
     )
     expect(html).toContain('data-full-sizes="100vw"')
-    expect(html).not.toContain('data-zoom-caption-description=')
+    expect(swivelLink).toContain(
+      'data-zoom-caption-description="I went to The Flats in Cleveland'
+    )
+    expect(sfmomaLink).not.toContain('data-zoom-caption-description=')
     expect(html).toContain('href="/sfmoma"')
     expect(html).toContain('aria-haspopup="dialog"')
     expect(html).not.toContain('<figcaption')
