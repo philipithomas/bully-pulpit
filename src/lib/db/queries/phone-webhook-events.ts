@@ -24,8 +24,11 @@ export async function findOrCreatePhoneWebhookEvent(input: {
 const CLAIM_LEASE_MS = 2 * 60 * 1000
 
 /** Atomically acquires or renews an expired lease for one webhook. */
-export async function claimPhoneWebhookEvent(id: number): Promise<Date | null> {
-  const staleBefore = new Date(Date.now() - CLAIM_LEASE_MS)
+export async function claimPhoneWebhookEvent(
+  id: number,
+  leaseMs = CLAIM_LEASE_MS
+): Promise<Date | null> {
+  const staleBefore = new Date(Date.now() - leaseMs)
   const processingAt = new Date()
   const rows = await getDb()
     .update(phoneWebhookEvents)
