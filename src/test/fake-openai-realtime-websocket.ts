@@ -4,6 +4,7 @@ type WebSocketListener = (event: { data?: string; message?: string }) => void
 export class FakeOpenAiRealtimeWebSocket {
   static finalStatus: 'completed' | 'failed' = 'completed'
   static sentEvents: unknown[] = []
+  static throwOnSend = false
 
   readonly protocols: string[]
   readonly url: string
@@ -24,6 +25,9 @@ export class FakeOpenAiRealtimeWebSocket {
   close(): void {}
 
   send(value: string): void {
+    if (FakeOpenAiRealtimeWebSocket.throwOnSend) {
+      throw new Error('WebSocket send failed')
+    }
     const event = JSON.parse(value) as unknown
     FakeOpenAiRealtimeWebSocket.sentEvents.push(event)
     queueMicrotask(() => {
@@ -31,7 +35,11 @@ export class FakeOpenAiRealtimeWebSocket {
         data: JSON.stringify({
           type: 'response.created',
           event_id: 'evt_greeting_started',
-          response: { id: 'resp_greeting', status: 'in_progress' },
+          response: {
+            id: 'resp_greeting',
+            status: 'in_progress',
+            metadata: { purpose: 'bell_initial_greeting' },
+          },
         }),
       })
       this.emit('message', {
@@ -41,6 +49,7 @@ export class FakeOpenAiRealtimeWebSocket {
           response: {
             id: 'resp_greeting',
             status: FakeOpenAiRealtimeWebSocket.finalStatus,
+            metadata: { purpose: 'bell_initial_greeting' },
             ...(FakeOpenAiRealtimeWebSocket.finalStatus === 'failed'
               ? {
                   status_details: {

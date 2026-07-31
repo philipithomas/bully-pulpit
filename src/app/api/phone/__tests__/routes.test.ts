@@ -348,10 +348,9 @@ describe('POST /api/phone/bell-complete', () => {
     expect(xml).toContain('<Hangup/>')
   })
 
-  it('retries one failed OpenAI SIP leg without another announcement', async () => {
-    enableBellLive()
+  it('returns a failed OpenAI SIP leg directly to voicemail', async () => {
     const response = await bellCompletePost(
-      twilioPost('/api/phone/bell-complete?attempt=0', {
+      twilioPost('/api/phone/bell-complete', {
         From: '+15551234567',
         To: '+12123473190',
         DialCallStatus: 'failed',
@@ -366,16 +365,17 @@ describe('POST /api/phone/bell-complete', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(playedTexts(xml)).toEqual([])
-    expect(xml).toContain('<Dial')
-    expect(xml).toContain('/api/phone/bell-complete?attempt=1')
-    expect(xml).not.toContain('<Record')
+    expect(playedTexts(xml)).toEqual([
+      "I couldn't reach Bell.",
+      'Leave a message after the tone.',
+    ])
+    expect(xml).not.toContain('<Dial')
+    expect(xml).toContain('<Record maxLength="120"')
     expect(console.info).toHaveBeenCalledWith(
       '[phone/bell-complete]',
       expect.objectContaining({
         event: 'bell_live.twilio_dial_complete',
-        outcome: 'retrying',
-        retryAttempt: 0,
+        outcome: 'voicemail',
         dialCallStatus: 'failed',
         dialSipResponseCode: 400,
         dialBridged: false,
@@ -383,48 +383,6 @@ describe('POST /api/phone/bell-complete', () => {
         dialCallDurationSeconds: 0,
       })
     )
-  })
-
-  it('falls back to voicemail after the retry fails', async () => {
-    enableBellLive()
-    const response = await bellCompletePost(
-      twilioPost('/api/phone/bell-complete?attempt=1', {
-        From: '+15551234567',
-        To: '+12123473190',
-        DialCallStatus: 'failed',
-        CallSid: 'CA1234567890abcdef1234567890abcdef',
-      })
-    )
-
-    expect(response.status).toBe(200)
-    const xml = await response.text()
-    expect(playedTexts(xml)).toEqual([
-      "I couldn't reach Bell.",
-      'Leave a message after the tone.',
-    ])
-    expect(xml).not.toContain('<Dial')
-    expect(xml).toContain('<Record maxLength="120"')
-    expect(xml).toContain('/api/phone/recording-status?caller=')
-  })
-
-  it('does not retry a malformed attempt or a non-failed outcome', async () => {
-    enableBellLive()
-    for (const [attempt, status] of [
-      ['unexpected', 'failed'],
-      ['0', 'busy'],
-    ] as const) {
-      const response = await bellCompletePost(
-        twilioPost(`/api/phone/bell-complete?attempt=${attempt}`, {
-          From: '+15551234567',
-          To: '+12123473190',
-          DialCallStatus: status,
-          CallSid: 'CA1234567890abcdef1234567890abcdef',
-        })
-      )
-      const xml = await response.text()
-      expect(xml).not.toContain('<Dial')
-      expect(xml).toContain('<Record')
-    }
   })
 })
 

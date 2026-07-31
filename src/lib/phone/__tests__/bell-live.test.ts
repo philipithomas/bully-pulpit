@@ -12,6 +12,7 @@ import {
   phoneBellRealtimeSession,
   rejectBellLiveCall,
   startBellLiveGreeting,
+  verifiedBellLiveSipCallSid,
   verifyBellLiveSipInvitation,
 } from '@/lib/phone/bell-live'
 import { FakeOpenAiRealtimeWebSocket } from '@/test/fake-openai-realtime-websocket'
@@ -27,6 +28,7 @@ function headersFromSipUri(uri: string) {
 beforeEach(() => {
   FakeOpenAiRealtimeWebSocket.finalStatus = 'completed'
   FakeOpenAiRealtimeWebSocket.sentEvents = []
+  FakeOpenAiRealtimeWebSocket.throwOnSend = false
   process.env.OPENAI_API_KEY = 'test-openai-key'
   process.env.OPENAI_PROJECT_ID = 'proj_test123'
   process.env.OPENAI_WEBHOOK_SECRET = 'whsec_test-webhook-secret'
@@ -77,6 +79,9 @@ describe('Bell Live SIP invitation', () => {
     expect(uri).not.toContain('test-twilio-secret')
     expect(verifyBellLiveSipInvitation(headersFromSipUri(uri ?? ''), NOW)).toBe(
       true
+    )
+    expect(verifiedBellLiveSipCallSid(headersFromSipUri(uri ?? ''), NOW)).toBe(
+      CALL_SID
     )
   })
 
@@ -256,15 +261,20 @@ describe('Bell Live Realtime session', () => {
   it('starts Bell with a proactive sideband greeting', async () => {
     vi.stubGlobal('WebSocket', FakeOpenAiRealtimeWebSocket)
 
-    await expect(startBellLiveGreeting('rtc_call_greeting')).resolves.toEqual({
+    await expect(
+      startBellLiveGreeting('rtc_call_greeting')
+    ).resolves.toMatchObject({
       durationMs: expect.any(Number),
+      responseCheckpointed: true,
+      responseCreated: true,
     })
     expect(FakeOpenAiRealtimeWebSocket.sentEvents).toEqual([
       {
         type: 'response.create',
         response: {
           instructions: `Say exactly: "${PHONE_BELL_INITIAL_GREETING}" Do not add anything else.`,
-          max_output_tokens: 32,
+          max_output_tokens: 512,
+          metadata: { purpose: 'bell_initial_greeting' },
           output_modalities: ['audio'],
         },
       },

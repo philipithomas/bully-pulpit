@@ -1,5 +1,11 @@
 import OpenAI from 'openai'
 import {
+  claimPhoneWebhookEvent,
+  findOrCreatePhoneWebhookEvent,
+  markPhoneWebhookEventProcessed,
+  releasePhoneWebhookEvent,
+} from '@/lib/db/queries/phone-webhook-events'
+import {
   acceptBellLiveCall,
   BellLiveGreetingError,
   isOpenAiRealtimeCallId,
@@ -9,7 +15,7 @@ import {
   phoneBellLiveConfigured,
   rejectBellLiveCall,
   startBellLiveGreeting,
-  verifyBellLiveSipInvitation,
+  verifiedBellLiveSipCallSid,
 } from '@/lib/phone/bell-live'
 
 export const dynamic = 'force-dynamic'
@@ -17,6 +23,8 @@ export const runtime = 'nodejs'
 export const maxDuration = 20
 
 const MAX_WEBHOOK_BYTES = 64 * 1024
+const GREETING_DEADLINE_MS = 15_000
+const GREETING_LEASE_MS = GREETING_DEADLINE_MS
 
 interface IncomingCallEvent {
   callId: string
@@ -176,7 +184,8 @@ export async function POST(request: Request): Promise<Response> {
   if (!incoming) {
     return response(400)
   }
-  if (!verifyBellLiveSipInvitation(incoming.sipHeaders)) {
+  const twilioCallSid = verifiedBellLiveSipCallSid(incoming.sipHeaders)
+  if (!twilioCallSid) {
     try {
       const result = await rejectBellLiveCall(incoming.callId)
       console.info('[openai/realtime-call]', {
@@ -212,34 +221,95 @@ export async function POST(request: Request): Promise<Response> {
     return response(502)
   }
 
-  if (result.outcome === 'handled') {
-    try {
-      const greeting = await startBellLiveGreeting(incoming.callId)
-      console.info('[openai/realtime-call]', {
-        event: 'bell_live.openai_greeting',
-        durationMs: greeting.durationMs,
-        outcome: 'started',
-        ...actionLogContext(request, incoming),
-      })
-    } catch (error) {
-      console.error('[openai/realtime-call]', {
-        event: 'bell_live.openai_greeting',
-        durationMs:
-          error instanceof BellLiveGreetingError ? error.durationMs : null,
-        outcome: 'error',
-        providerErrorCode:
-          error instanceof BellLiveGreetingError ? error.providerCode : null,
-        providerErrorType:
-          error instanceof BellLiveGreetingError ? error.providerType : null,
-        responseStatus:
-          error instanceof BellLiveGreetingError ? error.responseStatus : null,
-        reason:
-          error instanceof BellLiveGreetingError
-            ? error.reason
-            : 'internal_error',
-        ...actionLogContext(request, incoming),
-      })
+  let greetingEvent: Awaited<ReturnType<typeof findOrCreatePhoneWebhookEvent>>
+  try {
+    greetingEvent = await findOrCreatePhoneWebhookEvent({
+      eventKey: `bell-live-greeting:${twilioCallSid}`,
+      eventType: 'bell-live-greeting',
+    })
+  } catch {
+    console.error('[openai/realtime-call]', {
+      event: 'bell_live.openai_greeting',
+      outcome: 'claim_error',
+      ...actionLogContext(request, incoming),
+    })
+    return response(503)
+  }
+
+  if (greetingEvent.event.processedAt) {
+    return response(204)
+  }
+  if (
+    Date.now() - greetingEvent.event.createdAt.getTime() >
+    GREETING_DEADLINE_MS
+  ) {
+    console.info('[openai/realtime-call]', {
+      event: 'bell_live.openai_greeting',
+      outcome: 'expired',
+      ...actionLogContext(request, incoming),
+    })
+    return response(204)
+  }
+
+  let lease: Date | null
+  try {
+    lease = await claimPhoneWebhookEvent(
+      greetingEvent.event.id,
+      GREETING_LEASE_MS
+    )
+  } catch {
+    return response(503)
+  }
+  if (!lease) return response(503)
+
+  try {
+    const greeting = await startBellLiveGreeting(incoming.callId, {
+      onResponseCreated: () =>
+        markPhoneWebhookEventProcessed(greetingEvent.event.id, lease),
+    })
+    console.info('[openai/realtime-call]', {
+      event: 'bell_live.openai_greeting',
+      durationMs: greeting.durationMs,
+      outcome: greeting.responseCheckpointed
+        ? 'completed'
+        : 'completed_uncheckpointed',
+      ...actionLogContext(request, incoming),
+    })
+  } catch (error) {
+    const responseRequested =
+      error instanceof BellLiveGreetingError && error.responseRequested
+    const retryable = !responseRequested && greetingEvent.inserted
+    if (retryable) {
+      await releasePhoneWebhookEvent(greetingEvent.event.id, lease).catch(
+        () => undefined
+      )
+    } else {
+      await markPhoneWebhookEventProcessed(greetingEvent.event.id, lease).catch(
+        () => false
+      )
     }
+    console.error('[openai/realtime-call]', {
+      event: 'bell_live.openai_greeting',
+      durationMs:
+        error instanceof BellLiveGreetingError ? error.durationMs : null,
+      outcome: 'error',
+      responseCreated:
+        error instanceof BellLiveGreetingError ? error.responseCreated : false,
+      responseRequested,
+      retryable,
+      providerErrorCode:
+        error instanceof BellLiveGreetingError ? error.providerCode : null,
+      providerErrorType:
+        error instanceof BellLiveGreetingError ? error.providerType : null,
+      responseStatus:
+        error instanceof BellLiveGreetingError ? error.responseStatus : null,
+      reason:
+        error instanceof BellLiveGreetingError
+          ? error.reason
+          : 'internal_error',
+      ...actionLogContext(request, incoming),
+    })
+    return response(retryable ? 502 : 204)
   }
   return response(204)
 }

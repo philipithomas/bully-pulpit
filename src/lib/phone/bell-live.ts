@@ -11,6 +11,7 @@ export const PHONE_BELL_REALTIME_VOICE_SPEED = 1.08
 export const PHONE_BELL_MAX_CALL_SECONDS = 300
 export const PHONE_BELL_INITIAL_GREETING =
   'Hi, this is Bell. What can I help with?'
+const PHONE_BELL_GREETING_PURPOSE = 'bell_initial_greeting'
 
 const OPENAI_REALTIME_CALLS_URL = 'https://api.openai.com/v1/realtime/calls'
 const OPENAI_REALTIME_REQUEST_TIMEOUT_MS = 10_000
@@ -127,14 +128,14 @@ function uniqueSipHeaders(
   return result
 }
 
-/** Verifies that an incoming OpenAI SIP leg was minted by our Twilio menu. */
-export function verifyBellLiveSipInvitation(
+/** Returns the signed Twilio call SID when an OpenAI SIP invitation is valid. */
+export function verifiedBellLiveSipCallSid(
   headers: readonly OpenAiSipHeader[],
   now = new Date()
-): boolean {
+): string | null {
   const secret = twilioSecret()
   const normalized = uniqueSipHeaders(headers)
-  if (!secret || !normalized) return false
+  if (!secret || !normalized) return null
 
   const callSid = normalized.get(SIP_HEADER_CALL_SID) ?? ''
   const rawExpiresAt = normalized.get(SIP_HEADER_EXPIRES_AT) ?? ''
@@ -144,7 +145,7 @@ export function verifyBellLiveSipInvitation(
     !/^\d{10}$/.test(rawExpiresAt) ||
     !/^[A-Za-z0-9_-]{43}$/.test(suppliedToken)
   ) {
-    return false
+    return null
   }
 
   const expiresAt = Number(rawExpiresAt)
@@ -157,14 +158,23 @@ export function verifyBellLiveSipInvitation(
         SIP_INVITATION_TTL_SECONDS +
         SIP_INVITATION_CLOCK_SKEW_SECONDS
   ) {
-    return false
+    return null
   }
 
   const supplied = Buffer.from(suppliedToken, 'base64url')
   const expected = invitationSignature(callSid, expiresAt, secret)
-  return (
-    supplied.length === expected.length && timingSafeEqual(supplied, expected)
-  )
+  return supplied.length === expected.length &&
+    timingSafeEqual(supplied, expected)
+    ? callSid
+    : null
+}
+
+/** Verifies that an incoming OpenAI SIP leg was minted by our Twilio menu. */
+export function verifyBellLiveSipInvitation(
+  headers: readonly OpenAiSipHeader[],
+  now = new Date()
+): boolean {
+  return verifiedBellLiveSipCallSid(headers, now) !== null
 }
 
 export function isOpenAiRealtimeCallId(value: string): boolean {
@@ -309,6 +319,8 @@ export class BellLiveGreetingError extends Error {
   readonly durationMs: number
   readonly providerCode: string | null
   readonly providerType: string | null
+  readonly responseCreated: boolean
+  readonly responseRequested: boolean
   readonly reason:
     | 'closed'
     | 'provider_error'
@@ -321,6 +333,8 @@ export class BellLiveGreetingError extends Error {
     durationMs: number
     providerCode?: string | null
     providerType?: string | null
+    responseCreated?: boolean
+    responseRequested?: boolean
     reason:
       | 'closed'
       | 'provider_error'
@@ -334,6 +348,8 @@ export class BellLiveGreetingError extends Error {
     this.durationMs = input.durationMs
     this.providerCode = input.providerCode ?? null
     this.providerType = input.providerType ?? null
+    this.responseCreated = input.responseCreated ?? false
+    this.responseRequested = input.responseRequested ?? false
     this.reason = input.reason
     this.responseStatus = input.responseStatus ?? null
   }
@@ -496,8 +512,15 @@ export async function rejectBellLiveCall(
 
 /** Starts Bell's own greeting over a short-lived sideband control channel. */
 export async function startBellLiveGreeting(
-  callId: string
-): Promise<{ durationMs: number }> {
+  callId: string,
+  options: {
+    onResponseCreated?: () => Promise<boolean>
+  } = {}
+): Promise<{
+  durationMs: number
+  responseCheckpointed: boolean
+  responseCreated: boolean
+}> {
   if (!isOpenAiRealtimeCallId(callId)) {
     throw new Error('Invalid OpenAI Realtime call ID')
   }
@@ -512,8 +535,18 @@ export async function startBellLiveGreeting(
   return new Promise((resolve, reject) => {
     let settled = false
     let greetingResponseId: string | null = null
+    let responseCheckpointed = !options.onResponseCreated
+    let responseCreated = false
+    let responseRequested = false
+    let checkpointPromise: Promise<void> | null = null
     const finish = (
-      result: { durationMs: number } | BellLiveGreetingError
+      result:
+        | {
+            durationMs: number
+            responseCheckpointed: boolean
+            responseCreated: boolean
+          }
+        | BellLiveGreetingError
     ): void => {
       if (settled) return
       settled = true
@@ -527,14 +560,33 @@ export async function startBellLiveGreeting(
         new BellLiveGreetingError({
           durationMs: Date.now() - startedAt,
           reason: 'timeout',
+          responseCreated,
+          responseRequested,
         })
       )
     }, OPENAI_REALTIME_GREETING_TIMEOUT_MS)
 
     connection.on('response.created', (event) => {
+      if (event.response.metadata?.purpose !== PHONE_BELL_GREETING_PURPOSE) {
+        return
+      }
+      responseCreated = true
       greetingResponseId ??= event.response.id ?? null
+      if (!checkpointPromise && options.onResponseCreated) {
+        checkpointPromise = options
+          .onResponseCreated()
+          .then((checkpointed) => {
+            responseCheckpointed = checkpointed
+          })
+          .catch(() => {
+            responseCheckpointed = false
+          })
+      }
     })
     connection.on('response.done', (event) => {
+      if (event.response.metadata?.purpose !== PHONE_BELL_GREETING_PURPOSE) {
+        return
+      }
       if (
         greetingResponseId &&
         event.response.id &&
@@ -542,23 +594,32 @@ export async function startBellLiveGreeting(
       ) {
         return
       }
-      if (event.response.status === 'completed') {
-        finish({ durationMs: Date.now() - startedAt })
-        return
-      }
-      finish(
-        new BellLiveGreetingError({
-          durationMs: Date.now() - startedAt,
-          providerCode: safeProviderIdentifier(
-            event.response.status_details?.error?.code
-          ),
-          providerType: safeProviderIdentifier(
-            event.response.status_details?.error?.type
-          ),
-          reason: 'response_not_completed',
-          responseStatus: event.response.status ?? 'unknown',
-        })
-      )
+      void (async () => {
+        await checkpointPromise
+        if (event.response.status === 'completed') {
+          finish({
+            durationMs: Date.now() - startedAt,
+            responseCheckpointed,
+            responseCreated,
+          })
+          return
+        }
+        finish(
+          new BellLiveGreetingError({
+            durationMs: Date.now() - startedAt,
+            providerCode: safeProviderIdentifier(
+              event.response.status_details?.error?.code
+            ),
+            providerType: safeProviderIdentifier(
+              event.response.status_details?.error?.type
+            ),
+            reason: 'response_not_completed',
+            responseCreated,
+            responseRequested,
+            responseStatus: event.response.status ?? 'unknown',
+          })
+        )
+      })()
     })
     connection.on('error', (error) => {
       const providerCode = safeProviderIdentifier(error.error?.code)
@@ -569,6 +630,8 @@ export async function startBellLiveGreeting(
           providerCode,
           providerType,
           reason: error.error ? 'provider_error' : 'socket_error',
+          responseCreated,
+          responseRequested,
         })
       )
     })
@@ -577,18 +640,33 @@ export async function startBellLiveGreeting(
         new BellLiveGreetingError({
           durationMs: Date.now() - startedAt,
           reason: 'closed',
+          responseCreated,
+          responseRequested,
         })
       )
     })
     connection.socket.addEventListener('open', () => {
-      connection.send({
-        type: 'response.create',
-        response: {
-          instructions: `Say exactly: "${PHONE_BELL_INITIAL_GREETING}" Do not add anything else.`,
-          max_output_tokens: 32,
-          output_modalities: ['audio'],
-        },
-      })
+      try {
+        connection.send({
+          type: 'response.create',
+          response: {
+            instructions: `Say exactly: "${PHONE_BELL_INITIAL_GREETING}" Do not add anything else.`,
+            max_output_tokens: 512,
+            metadata: { purpose: PHONE_BELL_GREETING_PURPOSE },
+            output_modalities: ['audio'],
+          },
+        })
+        responseRequested = true
+      } catch {
+        finish(
+          new BellLiveGreetingError({
+            durationMs: Date.now() - startedAt,
+            reason: 'socket_error',
+            responseCreated,
+            responseRequested,
+          })
+        )
+      }
     })
   })
 }

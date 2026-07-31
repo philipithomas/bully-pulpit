@@ -135,13 +135,13 @@ describe('bellLiveTwiml', () => {
     const xml = bellLiveTwiml({
       sipUri:
         'sip:proj_test@sip.api.openai.com;transport=tls?x-bp-call-sid=CA123&x-bp-token=abc',
-      actionUrl: 'https://philipithomas.com/api/phone/bell-complete?attempt=0',
+      actionUrl: 'https://philipithomas.com/api/phone/bell-complete',
     })
 
     expect(playedTexts(xml)).toEqual([])
     expect(xml).not.toContain('<Play>')
     expect(xml).toContain(
-      '<Dial action="https://philipithomas.com/api/phone/bell-complete?attempt=0" method="POST" answerOnBridge="true" timeout="20" timeLimit="300">'
+      '<Dial action="https://philipithomas.com/api/phone/bell-complete" method="POST" answerOnBridge="true" timeout="20" timeLimit="300">'
     )
     expect(xml).toContain(
       '<Sip>sip:proj_test@sip.api.openai.com;transport=tls?x-bp-call-sid=CA123&amp;x-bp-token=abc</Sip>'

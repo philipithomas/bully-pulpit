@@ -4,6 +4,20 @@ import { POST } from '@/app/api/openai/realtime-call/route'
 import { bellLiveSipUri } from '@/lib/phone/bell-live'
 import { FakeOpenAiRealtimeWebSocket } from '@/test/fake-openai-realtime-websocket'
 
+const webhookEvents = vi.hoisted(() => ({
+  claim: vi.fn(),
+  findOrCreate: vi.fn(),
+  markProcessed: vi.fn(),
+  release: vi.fn(),
+}))
+
+vi.mock('@/lib/db/queries/phone-webhook-events', () => ({
+  claimPhoneWebhookEvent: webhookEvents.claim,
+  findOrCreatePhoneWebhookEvent: webhookEvents.findOrCreate,
+  markPhoneWebhookEventProcessed: webhookEvents.markProcessed,
+  releasePhoneWebhookEvent: webhookEvents.release,
+}))
+
 const WEBHOOK_SECRET_BYTES = Buffer.from('test-openai-webhook-secret')
 const WEBHOOK_SECRET = `whsec_${WEBHOOK_SECRET_BYTES.toString('base64')}`
 const CALL_SID = 'CA1234567890abcdef1234567890abcdef'
@@ -65,6 +79,27 @@ function liveIncomingEvent(headers = sipHeaders()) {
 beforeEach(() => {
   FakeOpenAiRealtimeWebSocket.finalStatus = 'completed'
   FakeOpenAiRealtimeWebSocket.sentEvents = []
+  FakeOpenAiRealtimeWebSocket.throwOnSend = false
+  const createdAt = new Date()
+  webhookEvents.findOrCreate.mockReset()
+  webhookEvents.findOrCreate.mockResolvedValue({
+    event: {
+      id: 1,
+      eventKey: `bell-live-greeting:${CALL_SID}`,
+      eventType: 'bell-live-greeting',
+      processingAt: null,
+      processedAt: null,
+      processedStepId: null,
+      createdAt,
+    },
+    inserted: true,
+  })
+  webhookEvents.claim.mockReset()
+  webhookEvents.claim.mockResolvedValue(new Date())
+  webhookEvents.markProcessed.mockReset()
+  webhookEvents.markProcessed.mockResolvedValue(true)
+  webhookEvents.release.mockReset()
+  webhookEvents.release.mockResolvedValue(undefined)
   vi.stubGlobal('WebSocket', FakeOpenAiRealtimeWebSocket)
   vi.spyOn(console, 'info').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -149,6 +184,79 @@ describe('POST /api/openai/realtime-call', () => {
         outcome: 'handled',
       })
     )
+  })
+
+  it('coalesces Realtime and Live webhook deliveries into one greeting', async () => {
+    let processedAt: Date | null = null
+    let calls = 0
+    webhookEvents.findOrCreate.mockImplementation(async () => ({
+      event: {
+        id: 1,
+        eventKey: `bell-live-greeting:${CALL_SID}`,
+        eventType: 'bell-live-greeting',
+        processingAt: null,
+        processedAt,
+        processedStepId: null,
+        createdAt: new Date(),
+      },
+      inserted: calls++ === 0,
+    }))
+    webhookEvents.markProcessed.mockImplementation(async () => {
+      processedAt = new Date()
+      return true
+    })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 409 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await POST(signedRequest(incomingEvent()))).toHaveProperty(
+      'status',
+      204
+    )
+    expect(await POST(signedRequest(liveIncomingEvent()))).toHaveProperty(
+      'status',
+      204
+    )
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(webhookEvents.markProcessed).toHaveBeenCalledOnce()
+  })
+
+  it('retries one greeting that fails before response.create is sent', async () => {
+    let calls = 0
+    webhookEvents.findOrCreate.mockImplementation(async () => ({
+      event: {
+        id: 1,
+        eventKey: `bell-live-greeting:${CALL_SID}`,
+        eventType: 'bell-live-greeting',
+        processingAt: null,
+        processedAt: null,
+        processedStepId: null,
+        createdAt: new Date(),
+      },
+      inserted: calls++ === 0,
+    }))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 409 }))
+    vi.stubGlobal('fetch', fetchMock)
+    FakeOpenAiRealtimeWebSocket.throwOnSend = true
+
+    expect(await POST(signedRequest(incomingEvent()))).toHaveProperty(
+      'status',
+      502
+    )
+    expect(webhookEvents.release).toHaveBeenCalledOnce()
+
+    FakeOpenAiRealtimeWebSocket.throwOnSend = false
+    expect(await POST(signedRequest(liveIncomingEvent()))).toHaveProperty(
+      'status',
+      204
+    )
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(webhookEvents.markProcessed).toHaveBeenCalledOnce()
   })
 
   it('rejects a bad OpenAI webhook signature before calling the API', async () => {

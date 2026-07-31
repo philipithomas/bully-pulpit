@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server'
-import { siteConfig } from '@/lib/config'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
-import { bellLiveSipUri } from '@/lib/phone/bell-live'
 import { PHONE_IVR_FALLBACK_PROMPTS } from '@/lib/phone/ivr-audio'
 import {
-  bellLiveTwiml,
   playAndHangupTwiml,
   twimlResponse,
   voicemailTwiml,
@@ -19,12 +16,6 @@ const DIAL_STATUSES = new Set([
   'failed',
   'no-answer',
 ])
-
-function retryAttempt(request: Request): 0 | 1 | null {
-  const value = new URL(request.url).searchParams.get('attempt')
-  if (value === null || value === '0') return 0
-  return value === '1' ? 1 : null
-}
 
 function boundedInteger(
   value: FormDataEntryValue | null,
@@ -53,23 +44,11 @@ export async function POST(request: Request): Promise<Response> {
 
   const rawStatus = String(form.get('DialCallStatus') ?? '')
   const dialCallStatus = DIAL_STATUSES.has(rawStatus) ? rawStatus : 'unknown'
-  const attempt = retryAttempt(request)
-  const callSid = String(form.get('CallSid') ?? '')
-  const retrySipUri =
-    dialCallStatus === 'failed' && attempt === 0
-      ? bellLiveSipUri(callSid)
-      : null
-  const outcome =
-    dialCallStatus === 'completed'
-      ? 'completed'
-      : retrySipUri
-        ? 'retrying'
-        : 'voicemail'
+  const outcome = dialCallStatus === 'completed' ? 'completed' : 'voicemail'
 
   console.info('[phone/bell-complete]', {
     event: 'bell_live.twilio_dial_complete',
     outcome,
-    retryAttempt: attempt,
     dialCallStatus,
     dialSipResponseCode: boundedInteger(
       form.get('DialSipResponseCode'),
@@ -94,15 +73,6 @@ export async function POST(request: Request): Promise<Response> {
 
   if (dialCallStatus === 'completed') {
     return twimlResponse(playAndHangupTwiml('goodbye'))
-  }
-
-  if (retrySipUri) {
-    return twimlResponse(
-      bellLiveTwiml({
-        sipUri: retrySipUri,
-        actionUrl: `${siteConfig.url}/api/phone/bell-complete?attempt=1`,
-      })
-    )
   }
 
   const from = String(form.get('From') ?? 'Unknown')
