@@ -141,8 +141,14 @@ describe('TidbitsPage viewer contract', () => {
     expect(portraitHtml).toContain(
       '<figure class="mx-auto w-full" style="max-width:52.5svh">'
     )
+    expect(portraitHtml).toContain(
+      'sizes="(max-width: 640px) calc(100vw - 2rem), min(calc(100vw - 4rem), 52.5svh)"'
+    )
     expect(landscapeHtml).toContain('<figure class="w-full"')
     expect(landscapeHtml).not.toContain('class="mx-auto w-full"')
+    expect(landscapeHtml).toContain(
+      'sizes="(max-width: 640px) 100vw, (max-width: 1280px) calc(100vw - 4rem), 1216px"'
+    )
   })
 
   it('uses the approved copy and offers SMS as a secondary signup path', () => {
