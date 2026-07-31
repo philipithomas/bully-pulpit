@@ -7,6 +7,7 @@ export const runtime = 'nodejs'
 export const maxDuration = 30
 
 const ALLOWED_REMOTE_ORIGINS = new Set([
+  'https://api.openai.com',
   'https://chatgpt.com',
   'https://platform.openai.com',
   'https://claude.ai',

@@ -29,7 +29,16 @@ const RECORDING_DOWNLOAD_TIMEOUT_MS = 10_000
 const TWILIO_RECORDING_HOSTS = new Set(['api.twilio.com'])
 const OPENAI_TRANSCRIPTIONS_URL =
   'https://api.openai.com/v1/audio/transcriptions'
-const OPENAI_TRANSCRIPTION_MODEL = 'gpt-4o-mini-transcribe'
+export const OPENAI_TRANSCRIPTION_MODEL = 'gpt-transcribe'
+const OPENAI_TRANSCRIPTION_KEYWORDS = [
+  'Philip Ilic Thomas',
+  'Bell AI',
+  'philipithomas.com',
+  'Contraption',
+  'Postcard',
+  'Tsundoku',
+  'tidbits',
+]
 
 export function twilioRecordingMp3Url(
   recordingUrl: string,
@@ -124,6 +133,14 @@ async function transcribeAudio(audio: Uint8Array): Promise<string | null> {
 
     const formData = new FormData()
     formData.set('model', OPENAI_TRANSCRIPTION_MODEL)
+    formData.set('language', 'en')
+    formData.set(
+      'prompt',
+      'A telephone voicemail for Philip Ilic Thomas. Preserve names, numbers, email addresses, and web addresses exactly.'
+    )
+    for (const keyword of OPENAI_TRANSCRIPTION_KEYWORDS) {
+      formData.append('keywords[]', keyword)
+    }
     formData.set(
       'file',
       new Blob([audioBuffer], { type: 'audio/mpeg' }),

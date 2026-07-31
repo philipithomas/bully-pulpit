@@ -36,6 +36,7 @@ vi.mock('@/lib/phone/notifications', () => ({
 // The SMS webhook writes to Postgres, so it is covered by the colocated
 // sms.integration.test.ts instead of this unit file.
 import { start } from 'workflow/api'
+import { POST as bellCompletePost } from '@/app/api/phone/bell-complete/route'
 import { POST as recordingCompletePost } from '@/app/api/phone/recording-complete/route'
 import { POST as recordingStatusPost } from '@/app/api/phone/recording-status/route'
 import { POST as voicePost } from '@/app/api/phone/voice/route'
@@ -77,6 +78,10 @@ function playedTexts(xml: string): string[] {
 beforeEach(() => {
   process.env.PHONE_NUMBER = '+12123473190'
   process.env.TWILIO_SECRET = AUTH_TOKEN
+  delete process.env.OPENAI_API_KEY
+  delete process.env.OPENAI_PROJECT_ID
+  delete process.env.OPENAI_WEBHOOK_SECRET
+  delete process.env.OPENAI_PHONE_REALTIME_MODEL
   vi.mocked(findOrCreatePhoneWebhookEvent).mockResolvedValue({
     event: {
       id: 1,
@@ -97,8 +102,18 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.PHONE_NUMBER
   delete process.env.TWILIO_SECRET
+  delete process.env.OPENAI_API_KEY
+  delete process.env.OPENAI_PROJECT_ID
+  delete process.env.OPENAI_WEBHOOK_SECRET
+  delete process.env.OPENAI_PHONE_REALTIME_MODEL
   vi.clearAllMocks()
 })
+
+function enableBellLive() {
+  process.env.OPENAI_API_KEY = 'test-openai-key'
+  process.env.OPENAI_PROJECT_ID = 'proj_test123'
+  process.env.OPENAI_WEBHOOK_SECRET = 'whsec_test'
+}
 
 describe('POST /api/phone/voice', () => {
   it('rejects an invalid signature', async () => {
@@ -214,6 +229,61 @@ describe('POST /api/phone/voice', () => {
     expect(xml).not.toContain('/api/phone/voice-menu')
   })
 
+  it('offers Bell to new callers when Realtime is fully configured', async () => {
+    enableBellLive()
+    const response = await voicePost(
+      twilioPost('/api/phone/voice', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    const menu = playedTexts(xml)[1]
+    expect(menu).toContain('Press 2 to subscribe')
+    expect(menu).toContain('Press 3 to talk with Bell AI')
+  })
+
+  it('offers confirmed subscribers the shorter voicemail-or-Bell menu', async () => {
+    enableBellLive()
+    vi.mocked(findSmsSubscriberByPhoneNumber).mockResolvedValueOnce({
+      confirmedAt: new Date('2026-07-21T00:00:00Z'),
+      // biome-ignore lint/suspicious/noExplicitAny: the route only reads confirmedAt
+    } as any)
+
+    const response = await voicePost(
+      twilioPost('/api/phone/voice', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    const xml = await response.text()
+    expect(playedTexts(xml)[1]).toBe(
+      'Press 1 to leave a voicemail. Press 3 to talk with Bell AI.'
+    )
+    expect(xml).toContain('<Gather')
+  })
+
+  it('can offer Bell when SMS signup is unavailable', async () => {
+    enableBellLive()
+    delete process.env.PHONE_NUMBER
+
+    const response = await voicePost(
+      twilioPost('/api/phone/voice', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    const xml = await response.text()
+    expect(playedTexts(xml)[1]).toBe(
+      'Press 1 to leave a voicemail. Press 3 to talk with Bell AI.'
+    )
+    expect(findSmsSubscriberByPhoneNumber).not.toHaveBeenCalled()
+  })
+
   it('keeps the signup menu available when subscriber lookup fails', async () => {
     vi.mocked(findSmsSubscriberByPhoneNumber).mockRejectedValueOnce(
       new Error('database unavailable')
@@ -257,6 +327,43 @@ describe('POST /api/phone/voice', () => {
     expect(xml).not.toContain('<Gather')
     expect(xml).not.toContain('/api/phone/voice-menu')
     expect(findSmsSubscriberByPhoneNumber).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/phone/bell-complete', () => {
+  it('thanks the caller and hangs up after a completed Bell call', async () => {
+    const response = await bellCompletePost(
+      twilioPost('/api/phone/bell-complete', {
+        From: '+15551234567',
+        To: '+12123473190',
+        DialCallStatus: 'completed',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(playedTexts(xml)).toEqual(['Thank you. Goodbye.'])
+    expect(xml).toContain('<Hangup/>')
+  })
+
+  it('falls back to voicemail when the OpenAI SIP leg fails', async () => {
+    const response = await bellCompletePost(
+      twilioPost('/api/phone/bell-complete', {
+        From: '+15551234567',
+        To: '+12123473190',
+        DialCallStatus: 'failed',
+        CallSid: 'CA123',
+      })
+    )
+
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(playedTexts(xml)).toEqual([
+      'Bell AI is unavailable right now. You can leave a voicemail instead.',
+      'Leave a message after the tone.',
+    ])
+    expect(xml).toContain('<Record maxLength="120"')
+    expect(xml).toContain('/api/phone/recording-status?caller=')
   })
 })
 
