@@ -9,6 +9,7 @@ import {
 import {
   acceptBellLiveCall,
   BellLiveGreetingError,
+  type BellLiveLifecycleEvent,
   isOpenAiRealtimeCallId,
   OpenAiCallActionError,
   type OpenAiCallActionResult,
@@ -120,6 +121,7 @@ async function startBellLiveGreetingWithRetry(input: {
   callId: string
   logContext: Record<string, unknown>
   onAudioStarted: () => Promise<boolean>
+  onLifecycleEvent: (event: BellLiveLifecycleEvent) => void
 }): Promise<Awaited<ReturnType<typeof startBellLiveGreeting>>> {
   for (
     let socketAttempt = 1;
@@ -129,6 +131,7 @@ async function startBellLiveGreetingWithRetry(input: {
     try {
       return await startBellLiveGreeting(input.callId, {
         onAudioStarted: input.onAudioStarted,
+        onLifecycleEvent: input.onLifecycleEvent,
       })
     } catch (error) {
       if (
@@ -256,12 +259,24 @@ function logActionFailure(
   })
 }
 
+function logBellLiveLifecycle(
+  event: BellLiveLifecycleEvent,
+  context: Record<string, unknown>
+): void {
+  if (event.outcome === 'failed') {
+    console.error('[openai/realtime-call]', { ...event, ...context })
+    return
+  }
+  console.info('[openai/realtime-call]', { ...event, ...context })
+}
+
 async function runBellLiveGreeting(input: {
   callId: string
   logContext: Record<string, unknown>
   twilioCallSid: string
 }): Promise<void> {
-  const { callId, logContext, twilioCallSid } = input
+  const { callId, logContext: baseLogContext, twilioCallSid } = input
+  const logContext = { ...baseLogContext, callSid: twilioCallSid }
   let greetingEvent: Awaited<ReturnType<typeof findOrCreatePhoneWebhookEvent>>
   try {
     greetingEvent = await findOrCreatePhoneWebhookEvent({
@@ -323,6 +338,7 @@ async function runBellLiveGreeting(input: {
       callId,
       logContext,
       onAudioStarted: checkpointGreeting,
+      onLifecycleEvent: (event) => logBellLiveLifecycle(event, logContext),
     })
     if (!greeting.responseCheckpointed) {
       console.error('[openai/realtime-call]', {

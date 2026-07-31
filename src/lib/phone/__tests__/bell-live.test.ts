@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   acceptBellLiveCall,
   BellLiveGreetingError,
+  type BellLiveLifecycleEvent,
   bellLiveSipUri,
   OpenAiCallActionError,
   PHONE_BELL_INITIAL_GREETING,
@@ -35,6 +36,7 @@ function headersFromSipUri(uri: string) {
 
 beforeEach(() => {
   delete process.env.OPENAI_BASE_URL
+  FakeOpenAiRealtimeWebSocket.afterContinuationEvents = []
   FakeOpenAiRealtimeWebSocket.connections = []
   FakeOpenAiRealtimeWebSocket.sockets = []
   FakeOpenAiRealtimeWebSocket.afterGreetingEvents = []
@@ -184,6 +186,10 @@ describe('Bell Live Realtime session', () => {
       'Never stop at a tool call, omit the answer, or end mid-thought'
     )
     expect(session.instructions).toContain(
+      'Before the first archive tool call in every caller turn'
+    )
+    expect(session.instructions).toContain("I'll look that up now")
+    expect(session.instructions).toContain(
       'The phone call has a hard five-minute total limit'
     )
     expect(session.instructions).toContain(
@@ -331,6 +337,433 @@ describe('Bell Live Realtime session', () => {
       observerCompleted: true,
       turns: [],
     })
+  })
+
+  it('recovers a completed tool turn that never produced a spoken answer', async () => {
+    const lifecycle: BellLiveLifecycleEvent[] = []
+    FakeOpenAiRealtimeWebSocket.afterContinuationEvents = [
+      {
+        type: 'response.created',
+        event_id: 'evt_continuation_created',
+        response: {
+          id: 'resp_continuation',
+          status: 'in_progress',
+          metadata: { purpose: 'bell_tool_continuation' },
+        },
+      },
+      {
+        type: 'conversation.item.added',
+        event_id: 'evt_continuation_item',
+        previous_item_id: 'item_private_tool',
+        item: {
+          id: 'item_continuation_answer',
+          type: 'message',
+          role: 'assistant',
+          content: [{ type: 'output_audio' }],
+        },
+      },
+      {
+        type: 'output_audio_buffer.started',
+        event_id: 'evt_continuation_audio',
+        response_id: 'resp_continuation',
+      },
+      {
+        type: 'response.output_audio_transcript.done',
+        event_id: 'evt_continuation_transcript',
+        response_id: 'resp_continuation',
+        item_id: 'item_continuation_answer',
+        output_index: 0,
+        content_index: 0,
+        transcript: 'Here is the recovered complete answer.',
+      },
+      {
+        type: 'response.done',
+        event_id: 'evt_continuation_done',
+        response: {
+          id: 'resp_continuation',
+          status: 'completed',
+          metadata: { purpose: 'bell_tool_continuation' },
+          output: [
+            {
+              id: 'item_continuation_answer',
+              type: 'message',
+              role: 'assistant',
+              content: [
+                {
+                  type: 'output_audio',
+                  transcript: 'Here is the recovered complete answer.',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    ]
+    FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [
+      {
+        type: 'mcp_list_tools.in_progress',
+        event_id: 'evt_discovery_started',
+        item_id: 'item_private_discovery',
+      },
+      {
+        type: 'mcp_list_tools.completed',
+        event_id: 'evt_discovery_done',
+        item_id: 'item_private_discovery',
+      },
+      {
+        type: 'response.created',
+        event_id: 'evt_lookup_created',
+        response: { id: 'resp_private_lookup', status: 'in_progress' },
+      },
+      {
+        type: 'response.output_item.added',
+        event_id: 'evt_tool_added',
+        response_id: 'resp_private_lookup',
+        output_index: 1,
+        item: {
+          id: 'item_private_tool',
+          type: 'mcp_call',
+          name: 'search',
+          server_label: 'philip_archive',
+          arguments: '{"query":"PRIVATE_QUERY"}',
+        },
+      },
+      {
+        type: 'response.mcp_call.in_progress',
+        event_id: 'evt_tool_started',
+        item_id: 'item_private_tool',
+        output_index: 1,
+      },
+      {
+        type: 'response.output_item.done',
+        event_id: 'evt_tool_done',
+        response_id: 'resp_private_lookup',
+        output_index: 1,
+        item: {
+          id: 'item_private_tool',
+          type: 'mcp_call',
+          name: 'search',
+          server_label: 'philip_archive',
+          arguments: '{"query":"PRIVATE_QUERY"}',
+          output: 'PRIVATE_TOOL_OUTPUT',
+        },
+      },
+      {
+        type: 'response.mcp_call.completed',
+        event_id: 'evt_tool_completed',
+        item_id: 'item_private_tool',
+        output_index: 1,
+      },
+      {
+        type: 'response.done',
+        event_id: 'evt_lookup_done',
+        response: {
+          id: 'resp_private_lookup',
+          status: 'completed',
+          output: [
+            {
+              id: 'item_private_preamble',
+              type: 'message',
+              role: 'assistant',
+              content: [
+                { type: 'output_audio', transcript: "I'll look that up now." },
+              ],
+            },
+            {
+              id: 'item_private_tool',
+              type: 'mcp_call',
+              name: 'search',
+              server_label: 'philip_archive',
+              arguments: '{"query":"PRIVATE_QUERY"}',
+              output: 'PRIVATE_TOOL_OUTPUT',
+            },
+          ],
+        },
+      },
+    ]
+
+    const greeting = await startBellLiveGreeting('rtc_call_greeting', {
+      onLifecycleEvent: (event) => lifecycle.push(event),
+    })
+
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents[1]).toMatchObject({
+      type: 'response.create',
+      response: {
+        instructions: expect.stringContaining('You are Bell AI'),
+        max_output_tokens: 'inf',
+        metadata: { purpose: 'bell_tool_continuation' },
+        output_modalities: ['audio'],
+        tool_choice: 'none',
+        tools: [],
+      },
+    })
+    expect(lifecycle).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event: 'bell_live.mcp_discovery',
+          outcome: 'completed',
+        }),
+        expect.objectContaining({
+          event: 'bell_live.mcp_call',
+          outcome: 'completed',
+          tool: 'search',
+        }),
+        {
+          event: 'bell_live.tool_continuation',
+          outcome: 'requested',
+        },
+        expect.objectContaining({
+          event: 'bell_live.realtime_response',
+          outcome: 'completed',
+          outputKind: 'tool_without_final_audio',
+          purpose: 'normal',
+          recoveryRequested: true,
+          toolCallCount: 1,
+        }),
+      ])
+    )
+    const serializedLifecycle = JSON.stringify(lifecycle)
+    expect(serializedLifecycle).not.toContain('PRIVATE_QUERY')
+    expect(serializedLifecycle).not.toContain('PRIVATE_TOOL_OUTPUT')
+    expect(serializedLifecycle).not.toContain('resp_private_lookup')
+    expect(serializedLifecycle).not.toContain('item_private_tool')
+    expect(serializedLifecycle).not.toContain('item_private_discovery')
+    expect(
+      lifecycle.filter(
+        (event) =>
+          event.event === 'bell_live.mcp_call' && event.outcome === 'completed'
+      )
+    ).toHaveLength(1)
+    expect(lifecycle).toContainEqual(
+      expect.objectContaining({
+        event: 'bell_live.audio_output',
+        outcome: 'started',
+        purpose: 'tool_continuation',
+        toolCompletedBeforeStart: false,
+      })
+    )
+    expect(lifecycle).toContainEqual(
+      expect.objectContaining({
+        event: 'bell_live.realtime_response',
+        outcome: 'completed',
+        outputKind: 'audio',
+        purpose: 'tool_continuation',
+        recoveryRequested: false,
+      })
+    )
+
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await expect(greeting.conversation).resolves.toMatchObject({
+      turns: [
+        expect.objectContaining({
+          role: 'bell_ai',
+          text: 'Here is the recovered complete answer.',
+        }),
+      ],
+    })
+  })
+
+  it('does not duplicate a complete spoken answer after a tool result', async () => {
+    const lifecycle: BellLiveLifecycleEvent[] = []
+    FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [
+      {
+        type: 'response.created',
+        event_id: 'evt_lookup_created',
+        response: { id: 'resp_lookup', status: 'in_progress' },
+      },
+      {
+        type: 'response.done',
+        event_id: 'evt_lookup_done',
+        response: {
+          id: 'resp_lookup',
+          status: 'completed',
+          output: [
+            {
+              id: 'item_preamble',
+              type: 'message',
+              role: 'assistant',
+              content: [
+                { type: 'output_audio', transcript: "I'll look that up now." },
+              ],
+            },
+            {
+              id: 'item_tool',
+              type: 'mcp_call',
+              name: 'fetch',
+              server_label: 'philip_archive',
+              arguments: '{}',
+              output: 'result',
+            },
+            {
+              id: 'item_answer',
+              type: 'message',
+              role: 'assistant',
+              content: [
+                { type: 'output_audio', transcript: 'Here is the answer.' },
+              ],
+            },
+          ],
+        },
+      },
+    ]
+
+    const greeting = await startBellLiveGreeting('rtc_call_greeting', {
+      onLifecycleEvent: (event) => lifecycle.push(event),
+    })
+
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(lifecycle).toContainEqual(
+      expect.objectContaining({
+        event: 'bell_live.realtime_response',
+        outputKind: 'mixed',
+        purpose: 'normal',
+        recoveryRequested: false,
+        toolCallCount: 1,
+      })
+    )
+
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('logs an abandoned response when the caller hangs up after a tool', async () => {
+    const lifecycle: BellLiveLifecycleEvent[] = []
+    FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [
+      {
+        type: 'response.created',
+        event_id: 'evt_lookup_created',
+        response: { id: 'resp_lookup', status: 'in_progress' },
+      },
+      {
+        type: 'output_audio_buffer.started',
+        event_id: 'evt_preamble_audio',
+        response_id: 'resp_lookup',
+      },
+      {
+        type: 'response.output_item.added',
+        event_id: 'evt_tool_added',
+        response_id: 'resp_lookup',
+        output_index: 1,
+        item: {
+          id: 'item_tool',
+          type: 'mcp_call',
+          name: 'list_posts',
+          server_label: 'philip_archive',
+          arguments: '{"cursor":"PRIVATE_ARGUMENT"}',
+        },
+      },
+      {
+        type: 'response.mcp_call.in_progress',
+        event_id: 'evt_tool_started',
+        item_id: 'item_tool',
+        output_index: 1,
+      },
+      {
+        type: 'response.mcp_call.completed',
+        event_id: 'evt_tool_completed',
+        item_id: 'item_tool',
+        output_index: 1,
+      },
+    ]
+
+    const greeting = await startBellLiveGreeting('rtc_call_greeting', {
+      onLifecycleEvent: (event) => lifecycle.push(event),
+    })
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await greeting.conversation
+
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(lifecycle).toContainEqual(
+      expect.objectContaining({
+        event: 'bell_live.audio_output',
+        outcome: 'started',
+        purpose: 'normal',
+        toolCompletedBeforeStart: false,
+      })
+    )
+    expect(lifecycle).toContainEqual(
+      expect.objectContaining({
+        event: 'bell_live.realtime_response',
+        outcome: 'abandoned',
+        outputKind: 'tool_without_final_audio',
+        purpose: 'normal',
+        recoveryRequested: false,
+        toolCallCount: 1,
+      })
+    )
+    expect(lifecycle).toContainEqual({
+      event: 'bell_live.sideband',
+      outcome: 'completed',
+      socketCloseCode: 1_000,
+    })
+    expect(JSON.stringify(lifecycle)).not.toContain('PRIVATE_ARGUMENT')
+  })
+
+  it.each([
+    ['cancelled', undefined],
+    ['failed', undefined],
+    ['incomplete', undefined],
+    ['completed', 'bell_tool_continuation'],
+  ])('does not recover a %s tool response with purpose %s', async (status, purpose) => {
+    FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [
+      {
+        type: 'response.done',
+        event_id: 'evt_tool_done',
+        response: {
+          id: 'resp_tool',
+          status,
+          metadata: purpose ? { purpose } : undefined,
+          output: [
+            {
+              id: 'item_tool',
+              type: 'mcp_call',
+              name: 'fetch',
+              server_label: 'philip_archive',
+              arguments: '{}',
+              output: 'result',
+            },
+          ],
+        },
+      },
+    ]
+
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('logs a sanitized provider error that arrives after the greeting', async () => {
+    const lifecycle: BellLiveLifecycleEvent[] = []
+    const greeting = await startBellLiveGreeting('rtc_call_greeting', {
+      onLifecycleEvent: (event) => lifecycle.push(event),
+    })
+
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.emitServerEvent({
+      type: 'error',
+      event_id: 'evt_private_error',
+      error: {
+        code: 'response_rejected',
+        type: 'invalid_request_error',
+        message: 'PRIVATE_PROVIDER_MESSAGE',
+      },
+    })
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    await expect(greeting.conversation).resolves.toMatchObject({
+      observerCompleted: false,
+    })
+
+    expect(lifecycle).toContainEqual({
+      event: 'bell_live.observer',
+      outcome: 'failed',
+      providerCode: 'response_rejected',
+      providerType: 'invalid_request_error',
+      reason: 'provider_error',
+      socketHttpStatus: null,
+    })
+    expect(JSON.stringify(lifecycle)).not.toContain('PRIVATE_PROVIDER_MESSAGE')
   })
 
   it('allows normal model and playback latency beyond four seconds', async () => {

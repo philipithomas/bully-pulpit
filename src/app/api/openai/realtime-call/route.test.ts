@@ -122,6 +122,7 @@ async function postAndFlush(request: Request): Promise<Response> {
 beforeEach(() => {
   afterTasks.length = 0
   afterControl.throwOnSchedule = false
+  FakeOpenAiRealtimeWebSocket.afterContinuationEvents = []
   FakeOpenAiRealtimeWebSocket.connections = []
   FakeOpenAiRealtimeWebSocket.sockets = []
   FakeOpenAiRealtimeWebSocket.afterGreetingEvents = []
@@ -314,6 +315,128 @@ describe('POST /api/openai/realtime-call', () => {
         transcriptTurns: 2,
       })
     )
+  })
+
+  it('logs sanitized tool timing and recovers a tool-only terminal turn', async () => {
+    FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [
+      {
+        type: 'response.created',
+        event_id: 'evt_private_response',
+        response: { id: 'resp_private_response', status: 'in_progress' },
+      },
+      {
+        type: 'response.output_item.added',
+        event_id: 'evt_private_added',
+        response_id: 'resp_private_response',
+        output_index: 0,
+        item: {
+          id: 'item_private_tool',
+          type: 'mcp_call',
+          name: 'fetch',
+          server_label: 'PRIVATE_SERVER',
+          arguments: '{"id":"PRIVATE_ARGUMENT"}',
+        },
+      },
+      {
+        type: 'response.mcp_call.in_progress',
+        event_id: 'evt_private_started',
+        item_id: 'item_private_tool',
+        output_index: 0,
+      },
+      {
+        type: 'response.output_item.done',
+        event_id: 'evt_private_done',
+        response_id: 'resp_private_response',
+        output_index: 0,
+        item: {
+          id: 'item_private_tool',
+          type: 'mcp_call',
+          name: 'fetch',
+          server_label: 'PRIVATE_SERVER',
+          arguments: '{"id":"PRIVATE_ARGUMENT"}',
+          output: 'PRIVATE_OUTPUT',
+        },
+      },
+      {
+        type: 'response.done',
+        event_id: 'evt_private_response_done',
+        response: {
+          id: 'resp_private_response',
+          status: 'completed',
+          output: [
+            {
+              id: 'item_private_tool',
+              type: 'mcp_call',
+              name: 'fetch',
+              server_label: 'PRIVATE_SERVER',
+              arguments: '{"id":"PRIVATE_ARGUMENT"}',
+              output: 'PRIVATE_OUTPUT',
+            },
+          ],
+        },
+      },
+    ]
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 200 }))
+    )
+
+    const result = await postAndFlush(signedRequest(incomingEvent()))
+
+    expect(result.status).toBe(204)
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents[1]).toMatchObject({
+      type: 'response.create',
+      response: {
+        metadata: { purpose: 'bell_tool_continuation' },
+        tool_choice: 'none',
+      },
+    })
+    expect(console.info).toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({
+        event: 'bell_live.mcp_call',
+        outcome: 'completed',
+        tool: 'fetch',
+      })
+    )
+    expect(console.info).toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({
+        event: 'bell_live.realtime_response',
+        outputKind: 'tool_without_final_audio',
+        purpose: 'normal',
+        recoveryRequested: true,
+      })
+    )
+    expect(console.info).toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({
+        callId: 'rtc_call_123',
+        callSid: CALL_SID,
+        event: 'bell_live.tool_continuation',
+        eventType: 'realtime.call.incoming',
+        outcome: 'requested',
+      })
+    )
+    const lifecycleLogs = vi
+      .mocked(console.info)
+      .mock.calls.map((call) => call[1])
+      .filter(
+        (value) =>
+          value &&
+          typeof value === 'object' &&
+          'event' in value &&
+          typeof value.event === 'string' &&
+          (value.event === 'bell_live.mcp_call' ||
+            value.event === 'bell_live.realtime_response' ||
+            value.event === 'bell_live.tool_continuation')
+      )
+    const serializedLifecycle = JSON.stringify(lifecycleLogs)
+    expect(serializedLifecycle).not.toContain('PRIVATE_ARGUMENT')
+    expect(serializedLifecycle).not.toContain('PRIVATE_OUTPUT')
+    expect(serializedLifecycle).not.toContain('PRIVATE_SERVER')
+    expect(serializedLifecycle).not.toContain('resp_private_response')
+    expect(serializedLifecycle).not.toContain('item_private_tool')
   })
 
   it('accepts the equivalent Live incoming-call webhook into Realtime', async () => {
