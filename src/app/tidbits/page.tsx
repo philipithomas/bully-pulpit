@@ -3,6 +3,10 @@ import Link from 'next/link'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { TidbitsSmsSignup } from '@/components/tidbits/tidbits-sms-signup'
 import { siteConfig } from '@/lib/config'
+import {
+  isPortraitTidbitsCover,
+  postCoverSizes,
+} from '@/lib/content/cover-preload'
 import { getPostsByNewsletter } from '@/lib/content/loader'
 import { markdownToPlaintext } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
@@ -79,13 +83,19 @@ function viewerData(post: Post) {
   }
 }
 
-function LeadPhoto({ post }: { post: Post }) {
+export function LeadPhoto({ post }: { post: Post }) {
   const { coverImage, coverImageAlt, title } = post.frontmatter
   if (!coverImage || !post.coverDimensions) return null
   const ratio = post.coverDimensions.width / post.coverDimensions.height
+  const imageSizes = isPortraitTidbitsCover(post)
+    ? postCoverSizes(post)
+    : LEAD_IMAGE_SIZES
 
   return (
-    <figure className="w-full" style={{ maxWidth: `${ratio * 80}svh` }}>
+    <figure
+      className={ratio < 1 ? 'mx-auto w-full' : 'w-full'}
+      style={{ maxWidth: `${ratio * 80}svh` }}
+    >
       <a
         href={postPath(post.slug)}
         aria-label={coverImageAlt ?? title}
@@ -100,7 +110,7 @@ function LeadPhoto({ post }: { post: Post }) {
           src={coverImage}
           alt={coverImageAlt ?? title}
           fill
-          sizes={LEAD_IMAGE_SIZES}
+          sizes={imageSizes}
           className="z-10 object-contain transition-transform duration-700 group-hover:scale-[1.005]"
           priority
           fetchPriority="high"
