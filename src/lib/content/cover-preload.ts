@@ -37,7 +37,7 @@ export function portraitTidbitsCoverMaxWidth(
 export function postCoverSizes(post: CoverPost): string {
   const portraitMaxWidth = portraitTidbitsCoverMaxWidth(post)
   return portraitMaxWidth
-    ? `(max-width: 640px) calc(100vw - 2rem), min(calc(100vw - 4rem), ${portraitMaxWidth})`
+    ? `(max-width: 640px) min(calc(100vw - 2rem), ${portraitMaxWidth}), min(calc(100vw - 4rem), ${portraitMaxWidth})`
     : POST_COVER_SIZES
 }
 

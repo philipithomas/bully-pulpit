@@ -13,7 +13,7 @@ describe('post cover preload sizing', () => {
       coverDimensions: { width: 3360, height: 5120 },
     }
     const sizes =
-      '(max-width: 640px) calc(100vw - 2rem), min(calc(100vw - 4rem), 52.5svh)'
+      '(max-width: 640px) min(calc(100vw - 2rem), 52.5svh), min(calc(100vw - 4rem), 52.5svh)'
 
     expect(postCoverSizes(post)).toBe(sizes)
     expect(coverPreloadAttrs(post)['data-cover-sizes']).toBe(sizes)

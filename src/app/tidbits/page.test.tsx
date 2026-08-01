@@ -142,7 +142,7 @@ describe('TidbitsPage viewer contract', () => {
       '<figure class="mx-auto w-full" style="max-width:52.5svh">'
     )
     expect(portraitHtml).toContain(
-      'sizes="(max-width: 640px) calc(100vw - 2rem), min(calc(100vw - 4rem), 52.5svh)"'
+      'sizes="(max-width: 640px) min(calc(100vw - 2rem), 52.5svh), min(calc(100vw - 4rem), 52.5svh)"'
     )
     expect(landscapeHtml).toContain('<figure class="w-full"')
     expect(landscapeHtml).not.toContain('class="mx-auto w-full"')
