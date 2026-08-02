@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finalize Postcard"
+  short_description: "Finalize the monthly Postcard from its PR"
+  default_prompt: "Use $finalize-postcard to finalize the next monthly Postcard draft from its open PR and notes."
