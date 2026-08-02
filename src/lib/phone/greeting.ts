@@ -22,13 +22,13 @@ export const FALLBACK_GREETING = PHONE_IVR_FALLBACK_PROMPTS.greeting
 const WEATHER_TIMEOUT_MS = 2_000
 const GREETING_TIMEOUT_MS = 8_000
 const NYC_TIME_ZONE = 'America/New_York'
-const NYC_LOCATION_FORMS = ['New York City', 'NYC', 'New York', 'Brooklyn']
+const NYC_LOCATION_FORMS = ['New York City', 'NYC', 'New York']
 
 const SYSTEM_PROMPT = `Select one short opening sentence for a professional telephone receptionist in New York.
 
 The application supplies a list of approved sentences derived from the verified local time, vetted holiday, and current Weather.gov conditions. Return one sentence from that list exactly as written.
 
-The application rotates its local wording across calls among "New York City," "NYC," "New York," and "Brooklyn." The supplied options already use the location form selected for this call. Do not substitute a different form.
+The application rotates its local wording across calls among "New York City," "NYC," and "New York." The supplied options already use the location form selected for this call. Do not substitute a different form.
 
 The approved options are already calm, welcoming, professional, inclusive, and politically neutral. Do not rewrite, combine, embellish, or explain them. Do not add humor, an excuse for the unanswered call, company identification, an IVR instruction, quotation marks, emoji, or commentary.
 

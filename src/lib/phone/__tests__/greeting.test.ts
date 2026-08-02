@@ -56,7 +56,7 @@ describe('contextualGreetingOptions', () => {
     [0, 'New York City'],
     [1, 'NYC'],
     [2, 'New York'],
-    [3, 'Brooklyn'],
+    [3, 'New York City'],
   ])('rotates the location form across calls at second %i', (second, location) => {
     const now = new Date(ORDINARY_AFTERNOON)
     now.setUTCSeconds(second)
@@ -128,7 +128,7 @@ describe('generateGreeting', () => {
     [0, 'Good evening from New York City.'],
     [1, 'Good evening from NYC.'],
     [2, 'Good evening from New York.'],
-    [3, 'Good evening from Brooklyn.'],
+    [3, 'Good evening from New York City.'],
   ])('adds the fixed company identification after approved opener at second %i: %s', async (second, text) => {
     const now = new Date(JULY_FOURTH_EVENING)
     now.setUTCSeconds(second)
@@ -186,9 +186,8 @@ describe('generateGreeting', () => {
     const system = String(call.system)
     expect(system).toContain('professional telephone receptionist')
     expect(system).toContain('Return one sentence from that list exactly')
-    expect(system).toContain(
-      '"New York City," "NYC," "New York," and "Brooklyn."'
-    )
+    expect(system).toContain('"New York City," "NYC," and "New York."')
+    expect(system).not.toContain('Brooklyn')
     expect(system).toContain('rotates its local wording across calls')
     expect(system).toContain('Do not substitute a different form')
     expect(system).toContain('Do not rewrite, combine, embellish, or explain')
@@ -199,6 +198,7 @@ describe('generateGreeting', () => {
     expect(prompt).toContain('- Happy Independence Day.')
     expect(prompt).toContain('- Hello from rainy New York City.')
     expect(prompt).toContain('- Good evening from New York City.')
+    expect(prompt).not.toContain('Brooklyn')
   })
 
   it.each([
