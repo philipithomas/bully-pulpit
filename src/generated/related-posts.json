@@ -1,8 +1,12 @@
 {
-  "generatedAt": "2026-08-03T00:56:17.626Z",
+  "generatedAt": "2026-08-03T02:42:20.327Z",
   "posts": {
     "morning-fog": {
       "related": [
+        {
+          "slug": "2026-08",
+          "score": 0.2478078
+        },
         {
           "slug": "introducing-tidbits-ongoing-photo-journal",
           "score": 0.2589991
@@ -10,26 +14,22 @@
         {
           "slug": "workshop-welcome",
           "score": 0.2671441
-        },
-        {
-          "slug": "2023-10",
-          "score": 0.268817
         }
       ]
     },
     "2026-08": {
       "related": [
         {
-          "slug": "2026-04",
-          "score": 0.0379427
-        },
-        {
           "slug": "2025-08",
-          "score": 0.0409915
+          "score": 0.0540898
         },
         {
-          "slug": "2026-01",
-          "score": 0.0432449
+          "slug": "2024-11",
+          "score": 0.055105
+        },
+        {
+          "slug": "2025-02",
+          "score": 0.0584132
         }
       ]
     },
@@ -116,16 +116,16 @@
     "introducing-tidbits-ongoing-photo-journal": {
       "related": [
         {
+          "slug": "2026-08",
+          "score": 0.1366485
+        },
+        {
           "slug": "introducing-tsundoku",
           "score": 0.1515988
         },
         {
           "slug": "2023-10",
           "score": 0.1746665
-        },
-        {
-          "slug": "tacit-knowledge-in-software",
-          "score": 0.1829911
         }
       ]
     },
@@ -136,12 +136,12 @@
           "score": 0.1875879
         },
         {
-          "slug": "morning-fog",
-          "score": 0.3191919
+          "slug": "2026-08",
+          "score": 0.2717605
         },
         {
-          "slug": "sunrise-in-chinatown",
-          "score": 0.3198735
+          "slug": "morning-fog",
+          "score": 0.3191919
         }
       ]
     },
@@ -168,12 +168,12 @@
           "score": 0.1272102
         },
         {
-          "slug": "2026-08",
-          "score": 0.1745373
-        },
-        {
           "slug": "2023-10",
           "score": 0.1771971
+        },
+        {
+          "slug": "2026-08",
+          "score": 0.1774772
         }
       ]
     },
@@ -204,8 +204,8 @@
           "score": 0.2075955
         },
         {
-          "slug": "2026-07",
-          "score": 0.2101345
+          "slug": "2026-08",
+          "score": 0.2085991
         }
       ]
     },
@@ -301,7 +301,7 @@
         },
         {
           "slug": "2026-08",
-          "score": 0.0657207
+          "score": 0.0638763
         }
       ]
     },
@@ -812,8 +812,8 @@
           "score": 0.0353856
         },
         {
-          "slug": "2026-08",
-          "score": 0.0379427
+          "slug": "2025-04",
+          "score": 0.0403581
         }
       ]
     },
@@ -1896,12 +1896,12 @@
           "score": 0.0467964
         },
         {
-          "slug": "2026-08",
-          "score": 0.0567236
-        },
-        {
           "slug": "2022-07",
           "score": 0.0614033
+        },
+        {
+          "slug": "2025-08",
+          "score": 0.0640273
         }
       ]
     },
@@ -2473,7 +2473,7 @@
         },
         {
           "slug": "2026-08",
-          "score": 0.1329135
+          "score": 0.1285595
         },
         {
           "slug": "2023-10",
