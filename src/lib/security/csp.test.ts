@@ -13,6 +13,8 @@ describe('Content Security Policy', () => {
     expect(CONTENT_SECURITY_POLICY).toContain("base-uri 'self'")
     expect(CONTENT_SECURITY_POLICY).toContain("form-action 'self'")
     expect(CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'")
+    expect(CONTENT_SECURITY_POLICY).toContain("manifest-src 'self'")
+    expect(CONTENT_SECURITY_POLICY).toContain("worker-src 'self'")
     expect(CONTENT_SECURITY_POLICY).not.toContain("'unsafe-eval'")
   })
 

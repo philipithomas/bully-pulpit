@@ -245,6 +245,15 @@
   outline-offset: 2px;
 }
 
+/* Controls on dark surfaces opt into the same inverse treatment without
+   depending on layered utility specificity. */
+[data-inverse-focus-ring]:focus-visible:not([data-input-otp]):not(
+  input:not([type="checkbox"]):not([type="radio"])
+):not(textarea):not(select) {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
 /* Tier two indicator: a focused text field darkens its border to
    gray-900. Global so a field that forgets a focus:border utility still
    signals focus; unlayered so it also wins over a utility that set a

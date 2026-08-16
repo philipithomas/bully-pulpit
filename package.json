@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "postbuild": "pnpm canonical:check && pnpm metadata:check && pnpm workflow:check",
+    "postbuild": "pnpm canonical:check && pnpm metadata:check && pnpm pwa:check && pnpm workflow:check",
     "canonical:check": "tsx scripts/check-canonical.ts",
     "metadata:check": "tsx scripts/check-metadata.ts",
+    "pwa:check": "tsx scripts/check-pwa.ts",
     "start": "next start",
     "check": "biome check .",
     "test": "vitest run",

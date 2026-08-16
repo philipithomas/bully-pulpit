@@ -26,6 +26,8 @@ function buildContentSecurityPolicy(options: {
     `style-src ${styleSources.join(' ')}`,
     "font-src 'self' https://fonts.philipithomas.com",
     "img-src 'self' data: https:",
+    "manifest-src 'self'",
+    "worker-src 'self'",
     "connect-src 'self' https://cloudflareinsights.com https://accounts.google.com https://oauth2.googleapis.com",
     // 'self' is required by Vercel BotID/Kasada, which frames its bot-check
     // challenge from a same-origin /…/fp path (withBotId proxies it first-party).
