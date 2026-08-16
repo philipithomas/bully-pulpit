@@ -3,12 +3,18 @@
 import { usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
-import { PWA_MESSAGE, SERVICE_WORKER_URL } from '@/lib/pwa/config'
+import {
+  PWA_CACHE_PREFIX,
+  PWA_MESSAGE,
+  SERVICE_WORKER_URL,
+} from '@/lib/pwa/config'
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
+const WARM_DOCUMENT_TIMEOUT_MS = 10 * 1000
 
 let lastUpdateCheck = 0
 const warmedDocumentPaths = new Set<string>()
+const warmingDocumentPaths = new Set<string>()
 
 function isPrimaryUnmodifiedClick(event: MouseEvent): boolean {
   return (
@@ -29,17 +35,32 @@ export function PwaLifecycle() {
   const pathname = usePathname()
 
   useEffect(() => {
-    if (
-      process.env.NODE_ENV !== 'production' ||
-      !('serviceWorker' in navigator)
-    ) {
+    if (!('serviceWorker' in navigator)) return
+
+    if (process.env.NODE_ENV !== 'production') {
+      const removeProductionWorker = async () => {
+        const registration = await navigator.serviceWorker.getRegistration('/')
+        await registration?.unregister()
+
+        if ('caches' in window) {
+          const cacheNames = await window.caches.keys()
+          await Promise.all(
+            cacheNames
+              .filter((name) => name.startsWith(`${PWA_CACHE_PREFIX}-`))
+              .map((name) => window.caches.delete(name))
+          )
+        }
+      }
+      void removeProductionWorker().catch((error) => {
+        console.warn('[pwa] Development service worker cleanup failed', error)
+      })
       return
     }
 
     let disposed = false
     let registration: ServiceWorkerRegistration | null = null
     let registrationInFlight = false
-    let reloadForUpdate = false
+    let controlledByWorker = Boolean(navigator.serviceWorker.controller)
     const offeredWorkers = new WeakSet<ServiceWorker>()
     const watchedWorkers = new WeakSet<ServiceWorker>()
 
@@ -56,7 +77,6 @@ export function PwaLifecycle() {
         action: {
           label: 'Reload',
           onClick: () => {
-            reloadForUpdate = true
             worker.postMessage({ type: PWA_MESSAGE.skipWaiting })
           },
         },
@@ -64,8 +84,13 @@ export function PwaLifecycle() {
     }
 
     const handleControllerChange = () => {
-      if (!reloadForUpdate) return
-      reloadForUpdate = false
+      // Every tab already controlled by the previous worker reloads. This
+      // covers the accepting tab and sibling tabs when one visitor activates
+      // a waiting update, while avoiding a reload on the first installation.
+      if (!controlledByWorker) {
+        controlledByWorker = true
+        return
+      }
       window.location.reload()
     }
 
@@ -244,6 +269,7 @@ export function PwaLifecycle() {
       !('serviceWorker' in navigator) ||
       !pathname ||
       warmedDocumentPaths.has(pathname) ||
+      warmingDocumentPaths.has(pathname) ||
       window.location.search
     ) {
       return
@@ -254,11 +280,56 @@ export function PwaLifecycle() {
       void navigator.serviceWorker.ready
         .then((registration) => {
           if (!cancelled && registration.active) {
-            warmedDocumentPaths.add(pathname)
-            registration.active.postMessage({
-              type: PWA_MESSAGE.cachePublicPage,
-              path: pathname,
-            })
+            const worker = registration.active
+            if (typeof MessageChannel === 'undefined') {
+              worker.postMessage({
+                type: PWA_MESSAGE.cachePublicPage,
+                path: pathname,
+              })
+              return
+            }
+
+            warmingDocumentPaths.add(pathname)
+            const channel = new MessageChannel()
+            let settled = false
+            let timeoutId: number | undefined
+            const settle = (cached: boolean) => {
+              if (settled) return
+              settled = true
+              if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+              channel.port1.close()
+              warmingDocumentPaths.delete(pathname)
+              if (cached) warmedDocumentPaths.add(pathname)
+            }
+
+            channel.port1.onmessage = (event) => {
+              const result = event.data as {
+                cached?: boolean
+                path?: string
+                type?: string
+              }
+              settle(
+                result.type === PWA_MESSAGE.cachePublicPageResult &&
+                  result.path === pathname &&
+                  result.cached === true
+              )
+            }
+            timeoutId = window.setTimeout(
+              () => settle(false),
+              WARM_DOCUMENT_TIMEOUT_MS
+            )
+
+            try {
+              worker.postMessage(
+                {
+                  type: PWA_MESSAGE.cachePublicPage,
+                  path: pathname,
+                },
+                [channel.port2]
+              )
+            } catch {
+              settle(false)
+            }
           }
         })
         .catch(() => undefined)

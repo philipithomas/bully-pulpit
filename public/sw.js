@@ -122,9 +122,11 @@ async function putWithLimit(cacheName, key, response, maxEntries) {
     const cache = await caches.open(cacheName)
     await cache.put(key, response)
     await trimCache(cache, maxEntries)
+    return true
   } catch {
     // Cache Storage is best effort. Quota or private-mode failures must never
     // prevent a network response from reaching the page.
+    return false
   }
 }
 
@@ -176,25 +178,33 @@ async function warmHomeShell() {
 }
 
 async function cachePublicPage(path) {
-  if (typeof path !== 'string') return
+  if (typeof path !== 'string') return false
 
   let url
   try {
     url = new URL(path, self.location.origin)
   } catch {
-    return
+    return false
   }
-  if (!isPublicDocumentUrl(url)) return
+  if (!isPublicDocumentUrl(url)) return false
 
-  const response = await fetch(
-    new Request(url.href, {
-      cache: 'no-cache',
-      credentials: 'omit',
-      headers: { Accept: 'text/html' },
-    })
-  )
-  if (!responseAllowsStorage(response, 'text/html')) return
-  await putWithLimit(PAGE_CACHE, url.pathname, response, MAX_PAGE_ENTRIES)
+  try {
+    const response = await fetch(
+      new Request(url.href, {
+        cache: 'no-cache',
+        credentials: 'omit',
+        headers: { Accept: 'text/html' },
+      })
+    )
+    if (!responseAllowsStorage(response, 'text/html')) return false
+    return putWithLimit(PAGE_CACHE, url.pathname, response, MAX_PAGE_ENTRIES)
+  } catch {
+    return Boolean(
+      await caches.match(url.pathname, {
+        cacheName: PAGE_CACHE,
+      })
+    )
+  }
 }
 
 self.addEventListener('install', (event) => {
@@ -240,7 +250,23 @@ self.addEventListener('message', (event) => {
     return
   }
   if (event.data?.type === 'CACHE_PUBLIC_PAGE') {
-    event.waitUntil(cachePublicPage(event.data.path).catch(() => undefined))
+    const replyPort = event.ports?.[0]
+    const reply = (cached) => {
+      try {
+        replyPort?.postMessage({
+          type: 'CACHE_PUBLIC_PAGE_RESULT',
+          path: event.data.path,
+          cached,
+        })
+      } catch {
+        // The requesting page may have closed before the cache write finished.
+      }
+    }
+    event.waitUntil(
+      cachePublicPage(event.data.path)
+        .then(reply)
+        .catch(() => reply(false))
+    )
   }
 })
 

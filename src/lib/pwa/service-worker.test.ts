@@ -214,15 +214,24 @@ async function fetchResource(
 async function sendMessage(
   listeners: Map<string, (event: unknown) => void>,
   data: unknown
-): Promise<void> {
+): Promise<unknown> {
   let work: Promise<unknown> | undefined
+  let reply: unknown
   listeners.get('message')?.({
     data,
+    ports: [
+      {
+        postMessage(message: unknown) {
+          reply = message
+        },
+      },
+    ],
     waitUntil(promise: Promise<unknown>) {
       work = promise
     },
   })
   await work
+  return reply
 }
 
 async function dispatchExtendableEvent(
@@ -579,11 +588,11 @@ describe('service worker cache policy', () => {
     )
     const { cacheStorage, listeners } = loadWorker(fetcher)
 
-    await sendMessage(listeners, {
+    const cachedReply = await sendMessage(listeners, {
       type: 'CACHE_PUBLIC_PAGE',
       path: '/visited-via-link',
     })
-    await sendMessage(listeners, {
+    const sensitiveReply = await sendMessage(listeners, {
       type: 'CACHE_PUBLIC_PAGE',
       path: '/account',
     })
@@ -603,6 +612,28 @@ describe('service worker cache policy', () => {
     expect(await pageCache.keys()).toHaveLength(1)
     expect(fetcher).toHaveBeenCalledOnce()
     expect(fetcher.mock.calls[0][0]).toMatchObject({ credentials: 'omit' })
+    expect(cachedReply).toEqual({
+      type: 'CACHE_PUBLIC_PAGE_RESULT',
+      path: '/visited-via-link',
+      cached: true,
+    })
+    expect(sensitiveReply).toEqual({
+      type: 'CACHE_PUBLIC_PAGE_RESULT',
+      path: '/account',
+      cached: false,
+    })
+
+    fetcher.mockRejectedValue(new Error('offline'))
+    expect(
+      await sendMessage(listeners, {
+        type: 'CACHE_PUBLIC_PAGE',
+        path: '/not-yet-cached',
+      })
+    ).toEqual({
+      type: 'CACHE_PUBLIC_PAGE_RESULT',
+      path: '/not-yet-cached',
+      cached: false,
+    })
   })
 
   it('bounds the visited-page cache and evicts its oldest entry', async () => {

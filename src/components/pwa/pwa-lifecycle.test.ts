@@ -48,17 +48,53 @@ function eventHub(): EventHub {
   }
 }
 
+class TestMessagePort {
+  onmessage: ((event: { data: unknown }) => void) | null = null
+  peer: TestMessagePort | null = null
+  close = vi.fn()
+
+  postMessage(data: unknown) {
+    this.peer?.onmessage?.({ data })
+  }
+}
+
+class TestMessageChannel {
+  port1 = new TestMessagePort()
+  port2 = new TestMessagePort()
+
+  constructor() {
+    this.port1.peer = this.port2
+    this.port2.peer = this.port1
+  }
+}
+
 function installBrowserHarness(options?: {
+  cacheNames?: string[]
   controlled?: boolean
   failFirstRegistration?: boolean
   installing?: boolean
   waiting?: boolean
+  warmSucceeds?: boolean
 }) {
   const serviceWorkerEvents = eventHub()
   const registrationEvents = eventHub()
   const windowEvents = eventHub()
   const documentEvents = eventHub()
-  const active = { postMessage: vi.fn() }
+  const active = {
+    postMessage: vi.fn(
+      (
+        message: { path?: string; type?: string },
+        ports?: TestMessagePort[]
+      ) => {
+        if (message.type !== 'CACHE_PUBLIC_PAGE' || !ports?.[0]) return
+        ports[0].postMessage({
+          type: 'CACHE_PUBLIC_PAGE_RESULT',
+          path: message.path,
+          cached: options?.warmSucceeds !== false,
+        })
+      }
+    ),
+  }
   const waiting = options?.waiting ? { postMessage: vi.fn() } : null
   const installingEvents = eventHub()
   const installing = options?.installing
@@ -74,6 +110,7 @@ function installBrowserHarness(options?: {
     installing,
     waiting,
     update: vi.fn().mockResolvedValue(undefined),
+    unregister: vi.fn().mockResolvedValue(true),
   }
   const register = vi.fn().mockResolvedValue(registration)
   if (options?.failFirstRegistration) {
@@ -82,16 +119,28 @@ function installBrowserHarness(options?: {
   const serviceWorker = {
     ...serviceWorkerEvents,
     controller: options?.controlled ? {} : null,
+    getRegistration: vi.fn().mockResolvedValue(registration),
     ready: Promise.resolve(registration),
     register,
   }
   const reload = vi.fn()
   const assign = vi.fn()
+  const cacheStorage = {
+    delete: vi.fn().mockResolvedValue(true),
+    keys: vi
+      .fn()
+      .mockResolvedValue(
+        options?.cacheNames ?? ['philipithomas-pwa-pages-v1', 'other-cache']
+      ),
+  }
 
   vi.stubGlobal('navigator', { onLine: true, serviceWorker })
+  vi.stubGlobal('MessageChannel', TestMessageChannel)
   vi.stubGlobal('window', {
     ...windowEvents,
+    caches: cacheStorage,
     cancelIdleCallback: vi.fn(),
+    clearTimeout: globalThis.clearTimeout,
     location: {
       assign,
       href: 'https://www.philipithomas.com/',
@@ -104,6 +153,7 @@ function installBrowserHarness(options?: {
       callback()
       return 1
     }),
+    setTimeout: globalThis.setTimeout,
   })
   vi.stubGlobal('document', {
     ...documentEvents,
@@ -114,6 +164,7 @@ function installBrowserHarness(options?: {
   return {
     active,
     assign,
+    cacheStorage,
     documentEvents,
     installing,
     installingEvents,
@@ -161,10 +212,13 @@ describe('PWA lifecycle', () => {
     expect(browser.active.postMessage).toHaveBeenCalledWith({
       type: 'REFRESH_OFFLINE_CACHE',
     })
-    expect(browser.active.postMessage).toHaveBeenCalledWith({
-      type: 'CACHE_PUBLIC_PAGE',
-      path: '/visited-via-link',
-    })
+    expect(browser.active.postMessage).toHaveBeenCalledWith(
+      {
+        type: 'CACHE_PUBLIC_PAGE',
+        path: '/visited-via-link',
+      },
+      [expect.any(TestMessagePort)]
+    )
 
     cleanupLifecycle?.()
     cleanupWarmPage?.()
@@ -187,6 +241,27 @@ describe('PWA lifecycle', () => {
     expect(browser.waiting?.postMessage).toHaveBeenCalledWith({
       type: 'SKIP_WAITING',
     })
+    expect(browser.reload).not.toHaveBeenCalled()
+
+    browser.serviceWorkerEvents.dispatch('controllerchange')
+    expect(browser.reload).toHaveBeenCalledOnce()
+  })
+
+  it('reloads a sibling tab when another tab activates an update', async () => {
+    const browser = installBrowserHarness({ controlled: true })
+    await runLifecycleEffects()
+
+    browser.serviceWorkerEvents.dispatch('controllerchange')
+
+    expect(browser.reload).toHaveBeenCalledOnce()
+  })
+
+  it('does not reload after the first service worker installation', async () => {
+    const browser = installBrowserHarness()
+    await runLifecycleEffects()
+
+    browser.serviceWorkerEvents.dispatch('controllerchange')
+
     expect(browser.reload).not.toHaveBeenCalled()
 
     browser.serviceWorkerEvents.dispatch('controllerchange')
@@ -269,10 +344,13 @@ describe('PWA lifecycle', () => {
     const browser = installBrowserHarness()
     await runLifecycleEffects()
     await vi.waitFor(() =>
-      expect(browser.active.postMessage).toHaveBeenCalledWith({
-        type: 'CACHE_PUBLIC_PAGE',
-        path: '/visited-via-link',
-      })
+      expect(browser.active.postMessage).toHaveBeenCalledWith(
+        {
+          type: 'CACHE_PUBLIC_PAGE',
+          path: '/visited-via-link',
+        },
+        [expect.any(TestMessagePort)]
+      )
     )
 
     reactHarness.effects.length = 0
@@ -285,6 +363,46 @@ describe('PWA lifecycle', () => {
       ([message]) => message.type === 'CACHE_PUBLIC_PAGE'
     )
     expect(pageWarmMessages).toHaveLength(1)
+  })
+
+  it('retries warming a route when the worker reports failure', async () => {
+    const browser = installBrowserHarness({ warmSucceeds: false })
+    await runLifecycleEffects()
+    await vi.waitFor(() =>
+      expect(
+        browser.active.postMessage.mock.calls.filter(
+          ([message]) => message.type === 'CACHE_PUBLIC_PAGE'
+        )
+      ).toHaveLength(1)
+    )
+
+    reactHarness.effects.length = 0
+    const { PwaLifecycle } = await import('@/components/pwa/pwa-lifecycle')
+    PwaLifecycle()
+    reactHarness.effects[1]()
+
+    await vi.waitFor(() => {
+      const pageWarmMessages = browser.active.postMessage.mock.calls.filter(
+        ([message]) => message.type === 'CACHE_PUBLIC_PAGE'
+      )
+      expect(pageWarmMessages).toHaveLength(2)
+    })
+  })
+
+  it('unregisters the production worker and clears its caches in development', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    const browser = installBrowserHarness()
+    await runLifecycleEffects()
+
+    await vi.waitFor(() => {
+      expect(browser.registration.unregister).toHaveBeenCalledOnce()
+      expect(browser.cacheStorage.delete).toHaveBeenCalledOnce()
+    })
+    expect(browser.serviceWorker.register).not.toHaveBeenCalled()
+    expect(browser.cacheStorage.delete).toHaveBeenCalledWith(
+      'philipithomas-pwa-pages-v1'
+    )
+    expect(browser.cacheStorage.delete).not.toHaveBeenCalledWith('other-cache')
   })
 
   it('does nothing when service workers are unsupported', async () => {
