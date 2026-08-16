@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { preload } from 'react-dom'
 import '@/styles/globals.css'
 import { AuthProvider } from '@/components/auth/auth-provider'
@@ -9,11 +9,13 @@ import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
 import { NewsletterProvider } from '@/components/layout/newsletter-context'
 import { CoverPreload } from '@/components/posts/cover-preload'
+import { PwaLifecycle } from '@/components/pwa/pwa-lifecycle'
 import { ImageZoom } from '@/components/ui/image-zoom'
 import { Toaster } from '@/components/ui/sonner'
 import { PublicAnalytics } from '@/lib/analytics/public-analytics'
 import { siteConfig } from '@/lib/config'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { PWA_THEME_COLOR } from '@/lib/pwa/config'
 import { DEFAULT_SOCIAL_IMAGE } from '@/lib/seo/metadata'
 
 // The above-the-fold faces (Sohne 400/600, Tiempos Text 400, Sohne Mono 400
@@ -69,6 +71,23 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png',
   },
   manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: siteConfig.title,
+    statusBarStyle: 'default',
+  },
+  // Next 16 emits the standards-based mobile-web-app-capable tag. Retain the
+  // Apple-prefixed form as well for older iOS Home Screen installations.
+  other: {
+    'apple-mobile-web-app-capable': 'yes',
+  },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  colorScheme: 'light',
+  themeColor: PWA_THEME_COLOR,
 }
 
 export default function RootLayout({
@@ -121,6 +140,7 @@ export default function RootLayout({
             <CoverPreload />
             <ImageZoom />
             <PublicAnalytics />
+            <PwaLifecycle />
           </NewsletterProvider>
         </AuthProvider>
       </body>

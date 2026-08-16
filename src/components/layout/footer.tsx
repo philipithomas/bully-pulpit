@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { FooterNycStatus } from '@/components/layout/footer-nyc-status'
+import { PwaInstallLink } from '@/components/pwa/pwa-install-link'
 import { siteIdentity } from '@/lib/site-identity'
 
 export function Footer() {
@@ -67,6 +68,7 @@ export function Footer() {
             >
               Sitemap
             </Link>
+            <PwaInstallLink />
           </nav>
           <div className="order-4 md:order-none md:col-start-2 md:row-start-2 md:justify-self-end">
             <FooterNycStatus />

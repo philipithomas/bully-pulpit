@@ -57,12 +57,12 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       // Static pages — CDN caches 1 hour, browser caches 10 min, serve stale
-      // while revalidating. Excludes sitemap.xml and the dynamic Bell contact
-      // card, so the human sitemap page at /sitemap is cached like any other
-      // static page.
+      // while revalidating. Excludes private browser surfaces, PWA internals,
+      // sitemap.xml, and the dynamic Bell contact card; the human sitemap page
+      // at /sitemap is cached like any other static page.
       {
         source:
-          '/:path((?!api|auth|_next|feed|sitemap\\.xml|robots|llms|bell\\.vcf).*)',
+          '/:path((?!api|account|admin|auth|_next|feed|offline\\.html|printing-press|sitemap\\.xml|robots|llms|sw\\.js|unsubscribe|bell\\.vcf).*)',
         headers: [
           {
             key: 'Cache-Control',
@@ -142,6 +142,22 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // Browser pages carrying subscriber/admin state — never let the CDN,
+      // browser HTTP cache, or a future caching layer retain them.
+      ...[
+        '/account/:path*',
+        '/unsubscribe/:path*',
+        '/admin/:path*',
+        '/printing-press/:path*',
+      ].map((source) => ({
+        source,
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'private, no-store',
+          },
+        ],
+      })),
       // Search API — short CDN cache for repeated queries
       {
         source: '/api/search',
@@ -150,6 +166,38 @@ const nextConfig: NextConfig = {
             key: 'Cache-Control',
             value: 'public, max-age=0, s-maxage=300',
           },
+        ],
+      },
+      // A worker update check must always reach the current deployment. The
+      // worker itself is same-origin-only and receives a tighter CSP than the
+      // pages it controls.
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/javascript; charset=utf-8',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self'; connect-src 'self'",
+          },
+          { key: 'Service-Worker-Allowed', value: '/' },
+          { key: 'X-Robots-Tag', value: 'noindex' },
+        ],
+      },
+      {
+        source: '/offline.html',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
       },
     ]
