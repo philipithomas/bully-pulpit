@@ -8,7 +8,7 @@ describe('web app manifest', () => {
   it('has a stable cross-platform install identity', () => {
     expect(manifest()).toMatchObject({
       name: 'Philip Ilic Thomas',
-      short_name: 'Philip Thomas',
+      short_name: 'Philip Ilic Thomas',
       id: '/',
       start_url: '/',
       scope: '/',

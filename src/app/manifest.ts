@@ -5,7 +5,7 @@ import { siteIdentity } from '@/lib/site-identity'
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: siteIdentity.name,
-    short_name: 'Philip Thomas',
+    short_name: siteIdentity.name,
     description: siteIdentity.description,
     id: '/',
     start_url: '/',
