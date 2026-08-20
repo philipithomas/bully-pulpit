@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { codespacePortOrigin } from '@/lib/codespaces'
 
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 const CSV_IMPORT_PATH = '/api/printing-press/subscribers/import'
@@ -17,6 +18,14 @@ function error(message: string, status: number): NextResponse {
   )
 }
 
+function hasExpectedOrigin(request: NextRequest, origin: string): boolean {
+  if (origin === request.nextUrl.origin) return true
+
+  const forwardedOrigin =
+    process.env.NODE_ENV === 'development' ? codespacePortOrigin(3000) : null
+  return forwardedOrigin !== null && origin === forwardedOrigin
+}
+
 /**
  * CSRF boundary for routes whose browser credentials can change account or
  * Printing press state. Provider webhooks, cron Bearer routes, public signup,
@@ -27,7 +36,7 @@ export function proxy(request: NextRequest): NextResponse {
   if (!MUTATION_METHODS.has(request.method)) return NextResponse.next()
 
   const origin = request.headers.get('origin')
-  if (!origin || origin !== request.nextUrl.origin) {
+  if (!origin || !hasExpectedOrigin(request, origin)) {
     return error('Cross-site request denied', 403)
   }
 
