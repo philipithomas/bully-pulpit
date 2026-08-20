@@ -46,6 +46,27 @@ describe('siteConfig.url', () => {
 
   it('uses localhost during next dev', () => {
     vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('CODESPACES', undefined)
+    expect(siteConfig.url).toBe('http://localhost:3000')
+  })
+
+  it('uses the forwarded HTTPS origin during Codespaces development', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('CODESPACES', 'true')
+    vi.stubEnv('CODESPACE_NAME', 'octocat-bully-pulpit')
+    vi.stubEnv('GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN', 'app.github.dev')
+
+    expect(siteConfig.url).toBe(
+      'https://octocat-bully-pulpit-3000.app.github.dev'
+    )
+  })
+
+  it('rejects malformed Codespaces host values', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('CODESPACES', 'true')
+    vi.stubEnv('CODESPACE_NAME', 'octocat/bully-pulpit')
+    vi.stubEnv('GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN', 'app.github.dev')
+
     expect(siteConfig.url).toBe('http://localhost:3000')
   })
 

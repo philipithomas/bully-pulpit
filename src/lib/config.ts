@@ -1,3 +1,4 @@
+import { codespacePortOrigin } from '@/lib/codespaces'
 import { requireEnv } from '@/lib/env'
 import { siteIdentity } from '@/lib/site-identity'
 
@@ -82,19 +83,19 @@ export const siteConfig = {
   /**
    * Environment-aware base URL: preview deployments link back to themselves
    * (magic links, unsubscribe URLs, canonicals), `next dev` links to
-   * localhost, and everything else — production, local builds, tests — gets
-   * the real domain. VERCEL_BRANCH_URL is used over VERCEL_URL because it is
-   * stable across redeploys of the branch, so emailed links outlive the
-   * specific deployment that sent them. The canonical production host is the
-   * www subdomain, hardcoded; the apex domain 301-redirects to www at the
-   * Vercel domain level.
+   * localhost (or the forwarded HTTPS origin in GitHub Codespaces), and
+   * everything else — production, local builds, tests — gets the real domain.
+   * VERCEL_BRANCH_URL is used over VERCEL_URL because it is stable across
+   * redeploys of the branch, so emailed links outlive the specific deployment
+   * that sent them. The canonical production host is the www subdomain,
+   * hardcoded; the apex domain 301-redirects to www at the Vercel domain level.
    */
   get url(): string {
     if (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_BRANCH_URL) {
       return `https://${process.env.VERCEL_BRANCH_URL}`
     }
     if (process.env.NODE_ENV === 'development') {
-      return 'http://localhost:3000'
+      return codespacePortOrigin(3000) ?? 'http://localhost:3000'
     }
     return siteIdentity.productionUrl
   },

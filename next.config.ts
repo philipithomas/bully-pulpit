@@ -1,6 +1,7 @@
 import { withBotId } from 'botid/next/config'
 import type { NextConfig } from 'next'
 import { withWorkflow } from 'workflow/next'
+import { codespacePortOrigin } from '@/lib/codespaces'
 import { OPTIMIZED_IMAGE_WIDTHS } from '@/lib/content/zoom-image'
 import { getRedirects } from '@/lib/redirects'
 import { getRewrites } from '@/lib/rewrites'
@@ -32,7 +33,13 @@ const securityHeaders = [
   },
 ]
 
+const codespaceDevOrigin =
+  process.env.NODE_ENV === 'development' ? codespacePortOrigin(3000) : null
+
 const nextConfig: NextConfig = {
+  allowedDevOrigins: codespaceDevOrigin
+    ? [new URL(codespaceDevOrigin).hostname]
+    : undefined,
   // The Workflow step route pulls in AI SDK gateway serialization classes.
   // Externalize OIDC so Turbopack does not inline its CommonJS wrapper while
   // collecting page data for the generated workflow routes.
