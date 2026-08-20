@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "Bully Pulpit",
+  "image": "mcr.microsoft.com/devcontainers/base:3-noble",
+  "features": {
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "24",
+      "pnpmVersion": "10.34.4"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "updateContentCommand": "pnpm install --frozen-lockfile",
+  "postCreateCommand": "test -f .env.local || cp .env.example .env.local",
+  "waitFor": "updateContentCommand",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Bully Pulpit (Next.js)",
+      "onAutoForward": "openBrowserOnce",
+      "protocol": "http"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "biomejs.biome",
+        "bradlc.vscode-tailwindcss",
+        "unifiedjs.vscode-mdx",
+        "github.vscode-github-actions",
+        "GitHub.vscode-pull-request-github",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "[javascript][javascriptreact][typescript][typescriptreact][json][jsonc][css]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "npm.packageManager": "pnpm",
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    },
+    "codespaces": {
+      "openFiles": ["README.md"]
+    }
+  },
+  "remoteUser": "vscode"
+}

@@ -2,6 +2,8 @@
 
 Personal website and blog for [philipithomas.com](https://www.philipithomas.com).
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/philipithomas/bully-pulpit?quickstart=1)
+
 ## Features
 
 - Three newsletters: Contraption (essays), Workshop (notes), Postcard (monthly updates)
@@ -21,6 +23,23 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+### Browser development on GitHub
+
+[Open the repository in github.dev](https://github.dev/philipithomas/bully-pulpit)
+for quick edits and commits without cloning it. The lightweight editor has no
+terminal or runtime, so use the Codespaces button above when you need to install
+dependencies, run the site, execute tests, or debug.
+
+A new Codespace installs the pinned Node 24 and pnpm versions, restores the
+locked dependencies, creates an ignored `.env.local` from `.env.example` when
+needed, and forwards the Next.js server on port 3000. Run `pnpm dev` or select
+**Next.js: debug server** in Run and Debug; the forwarded HTTPS site opens in a
+new browser tab. Add real service credentials as
+[Codespaces secrets](https://docs.github.com/en/codespaces/managing-your-codespaces/managing-your-account-specific-secrets-for-github-codespaces),
+not in committed files. Port 3000 stays private by default; external webhooks
+require a deliberate visibility change, and OAuth providers may need the
+current Codespaces origin registered.
 
 ### Local Printing press
 

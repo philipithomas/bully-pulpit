@@ -1,14 +1,15 @@
 import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server'
 import { NextRequest } from 'next/server'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { config, proxy } from '@/proxy'
 
 function mutation(
   path: string,
   headers: Record<string, string> = {},
-  method = 'POST'
+  method = 'POST',
+  baseUrl = 'https://www.philipithomas.com'
 ) {
-  return new NextRequest(`https://www.philipithomas.com${path}`, {
+  return new NextRequest(`${baseUrl}${path}`, {
     method,
     headers,
   })
@@ -21,6 +22,10 @@ const sameOriginHeaders = {
 }
 
 describe('browser mutation proxy', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('matches only browser auth and Printing press routes', () => {
     for (const url of ['/api/auth/preferences', '/api/printing-press/send']) {
       expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true)
@@ -40,6 +45,51 @@ describe('browser mutation proxy', () => {
       mutation('/api/printing-press/send', sameOriginHeaders)
     )
     expect(response.headers.get('x-middleware-next')).toBe('1')
+  })
+
+  it('allows the exact forwarded Codespaces origin in development', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('CODESPACES', 'true')
+    vi.stubEnv('CODESPACE_NAME', 'octocat-bully-pulpit')
+    vi.stubEnv('GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN', 'app.github.dev')
+
+    const response = proxy(
+      mutation(
+        '/api/auth/preferences',
+        {
+          ...sameOriginHeaders,
+          origin: 'https://octocat-bully-pulpit-3000.app.github.dev',
+        },
+        'PATCH',
+        'https://localhost:3000'
+      )
+    )
+
+    expect(response.headers.get('x-middleware-next')).toBe('1')
+  })
+
+  it('rejects other forwarded hosts in Codespaces', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('CODESPACES', 'true')
+    vi.stubEnv('CODESPACE_NAME', 'octocat-bully-pulpit')
+    vi.stubEnv('GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN', 'app.github.dev')
+
+    const response = proxy(
+      mutation(
+        '/api/auth/preferences',
+        {
+          ...sameOriginHeaders,
+          origin: 'https://attacker-3000.app.github.dev',
+        },
+        'PATCH',
+        'https://localhost:3000'
+      )
+    )
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({
+      error: 'Cross-site request denied',
+    })
   })
 
   it.each([
