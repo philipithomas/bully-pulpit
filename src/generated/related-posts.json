@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-08-20T14:54:33.306Z",
+  "generatedAt": "2026-08-22T09:35:29.606Z",
   "posts": {
+    "subway": {
+      "related": [
+        {
+          "slug": "introducing-tidbits-ongoing-photo-journal",
+          "score": 0.3158027
+        },
+        {
+          "slug": "cable-car",
+          "score": 0.3188623
+        },
+        {
+          "slug": "2026-08",
+          "score": 0.3309706
+        }
+      ]
+    },
     "third-times-the-charm": {
       "related": [
         {
@@ -172,8 +188,8 @@
           "score": 0.2717605
         },
         {
-          "slug": "morning-fog",
-          "score": 0.3191919
+          "slug": "subway",
+          "score": 0.3188623
         }
       ]
     },
