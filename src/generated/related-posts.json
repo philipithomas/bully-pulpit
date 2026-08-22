@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-08-22T09:35:29.606Z",
+  "generatedAt": "2026-08-22T15:29:02.540Z",
   "posts": {
+    "kaffe": {
+      "related": [
+        {
+          "slug": "espresso",
+          "score": 0.1695728
+        },
+        {
+          "slug": "pourover",
+          "score": 0.1894178
+        },
+        {
+          "slug": "slow-travel",
+          "score": 0.2078024
+        }
+      ]
+    },
     "subway": {
       "related": [
         {
@@ -364,8 +380,8 @@
           "score": 0.2214326
         },
         {
-          "slug": "more-geisha",
-          "score": 0.2671301
+          "slug": "kaffe",
+          "score": 0.2667188
         }
       ]
     },
@@ -472,12 +488,12 @@
           "score": 0.151093
         },
         {
-          "slug": "2026-07",
-          "score": 0.1729233
+          "slug": "kaffe",
+          "score": 0.1695728
         },
         {
-          "slug": "avant-garde-coffee",
-          "score": 0.1757975
+          "slug": "2026-07",
+          "score": 0.1729233
         }
       ]
     },
