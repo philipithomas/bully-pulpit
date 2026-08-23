@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-08-22T15:29:02.540Z",
+  "generatedAt": "2026-08-23T22:12:20.939Z",
   "posts": {
+    "copenhagen-sunset": {
+      "related": [
+        {
+          "slug": "2023-10",
+          "score": 0.2254377
+        },
+        {
+          "slug": "2026-08",
+          "score": 0.2415702
+        },
+        {
+          "slug": "2024-11",
+          "score": 0.2553533
+        }
+      ]
+    },
     "kaffe": {
       "related": [
         {
