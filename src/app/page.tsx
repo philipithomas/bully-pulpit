@@ -112,16 +112,7 @@ export default async function HomePage() {
               of math, software, and business. I am interested in urbanism,
               coffee, and photography.
             </p>
-            <p className="mb-4">
-              I{' '}
-              <Link
-                href="/how-to-replace-social-media-with-a-personal-newsletter"
-                className="text-gray-800 underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
-              >
-                do not use social media
-              </Link>
-              , so this website contains my writing and media.
-            </p>
+            <p className="mb-4">This website contains my writing and media.</p>
           </div>
 
           {/* Horizontal portrait (mobile only) */}

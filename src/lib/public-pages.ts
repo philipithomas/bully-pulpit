@@ -94,7 +94,7 @@ export const publicAppPages = [
     description: siteConfig.description,
     searchText: `${siteConfig.author} crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He writes about software, projects, urbanism, coffee, and photography.`,
     bellText:
-      () => `The homepage of philipithomas.com, the personal website and blog of ${siteConfig.author}. Philip crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He is interested in urbanism, coffee, and photography. He does not use social media, so this website contains his writing and media. Visitors can connect with him on GitHub and LinkedIn.
+      () => `The homepage of philipithomas.com, the personal website and blog of ${siteConfig.author}. Philip crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He is interested in urbanism, coffee, and photography. This website contains his writing and media. Visitors can connect with him on GitHub and LinkedIn.
 
 He currently publishes four newsletters:
 - Contraption (/contraption): ${siteConfig.newsletters.contraption.tagline}
