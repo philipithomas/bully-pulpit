@@ -1,6 +1,54 @@
 {
-  "generatedAt": "2026-08-23T22:12:20.939Z",
+  "generatedAt": "2026-09-02T12:30:07.523Z",
   "posts": {
+    "copenhill": {
+      "related": [
+        {
+          "slug": "copenhagen-sunset",
+          "score": 0.3076614
+        },
+        {
+          "slug": "greenhouse",
+          "score": 0.3268167
+        },
+        {
+          "slug": "digital-product-studios",
+          "score": 0.3292184
+        }
+      ]
+    },
+    "greenhouse": {
+      "related": [
+        {
+          "slug": "house",
+          "score": 0.3128146
+        },
+        {
+          "slug": "copenhill",
+          "score": 0.3268167
+        },
+        {
+          "slug": "digital-gardening",
+          "score": 0.3286198
+        }
+      ]
+    },
+    "lamps": {
+      "related": [
+        {
+          "slug": "fresh-coat-of-paint",
+          "score": 0.3050992
+        },
+        {
+          "slug": "2023-10",
+          "score": 0.3085178
+        },
+        {
+          "slug": "maintenance",
+          "score": 0.3101676
+        }
+      ]
+    },
     "copenhagen-sunset": {
       "related": [
         {
