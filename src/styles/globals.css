@@ -110,11 +110,11 @@
   --color-offwhite-cool: #f5f6fa;
   --color-offwhite-dark: #edebe7;
   --color-offwhite-light: #faf9f7;
-  --color-tidbits: #f41986;
-  --color-tidbits-ink: #c80f6b;
-  /* Oaxaca blanket blush: sampled from its pale rose squares and lifted so
-     photography stays dominant. */
-  --color-tidbits-paper: #f6eae9;
+  --color-tidbits: #1f7a74;
+  --color-tidbits-ink: #125e59;
+  /* Verdigris paper: a cool, oxidized-metal tint, kept pale so photography
+     stays dominant. */
+  --color-tidbits-paper: #e8f1ee;
 
   /* Grays */
   --color-gray-50: #f2f2f1; /* alias: keeps the un-padded spelling warm */
@@ -553,9 +553,9 @@ body:has(> * [data-bg="tidbits"]) {
   transform: none;
 }
 
-/* Post-page subscription buttons inherit the newsletter identity from the
-   surrounding page. Tidbits's vivid cochineal takes dark ink; the writing
-   newsletters retain the light ink supplied by btn-primary. */
+/* Post-page subscription buttons inherit the newsletter identity. Tidbits
+   chooses a contrast-safe foreground for its primary; the writing newsletters
+   retain the light ink supplied by btn-primary. */
 [data-bg] .btn-newsletter {
   background-color: var(--prose-accent, var(--color-gray-950));
   border-color: var(--prose-accent, var(--color-gray-950));
@@ -564,12 +564,12 @@ body:has(> * [data-bg="tidbits"]) {
 [data-bg="tidbits"] .btn-newsletter {
   background-color: var(--color-tidbits);
   border-color: var(--color-tidbits);
-  color: var(--color-gray-950);
+  color: var(--color-white);
 }
 
 [data-bg="tidbits"] .btn-newsletter .btn-text,
 [data-bg="tidbits"] .btn-newsletter .btn-arrow {
-  color: var(--color-gray-950);
+  color: var(--color-white);
 }
 
 /* ============================
@@ -710,7 +710,7 @@ body:has(> * [data-bg="tidbits"]) {
   --prose-accent: var(--color-indigo);
 }
 [data-bg="tidbits"] {
-  /* The brand cochineal remains exact in marks and decoration; this darker
+  /* The brand primary remains exact in marks and decoration; this darker
      companion keeps linked text readable on Tidbits's pale background. */
   --prose-accent: var(--color-tidbits-ink);
 }
