@@ -15,7 +15,7 @@ const NEWSLETTER_SOCIAL_BACKGROUNDS = {
   contraption: '#f2f2f1',
   workshop: '#f3f0e9',
   postcard: '#f5f6fa',
-  tidbits: '#f6eae9',
+  tidbits: '#e9eef7',
   tsundoku: '#f4f4f2',
 } as const satisfies Record<Newsletter, string>
 
