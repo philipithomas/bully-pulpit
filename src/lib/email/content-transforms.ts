@@ -8,7 +8,7 @@ const accentColors: Record<NewsletterSlug, string> = {
   contraption: '#2b4a3e',
   workshop: '#6b4d3a',
   postcard: '#2c3e6b',
-  tidbits: '#f41986',
+  tidbits: '#d16a27',
   tsundoku: '#e20612',
 }
 const DEFAULT_ACCENT = '#3B3834'
