@@ -110,11 +110,11 @@
   --color-offwhite-cool: #f5f6fa;
   --color-offwhite-dark: #edebe7;
   --color-offwhite-light: #faf9f7;
-  --color-tidbits: #f41986;
-  --color-tidbits-ink: #c80f6b;
-  /* Oaxaca blanket blush: sampled from its pale rose squares and lifted so
-     photography stays dominant. */
-  --color-tidbits-paper: #f6eae9;
+  --color-tidbits: #b87912;
+  --color-tidbits-ink: #765000;
+  /* Ochre paper: a warm printmaker's tint, kept pale so photography stays
+     dominant. */
+  --color-tidbits-paper: #f6efdd;
 
   /* Grays */
   --color-gray-50: #f2f2f1; /* alias: keeps the un-padded spelling warm */
@@ -553,9 +553,9 @@ body:has(> * [data-bg="tidbits"]) {
   transform: none;
 }
 
-/* Post-page subscription buttons inherit the newsletter identity from the
-   surrounding page. Tidbits's vivid cochineal takes dark ink; the writing
-   newsletters retain the light ink supplied by btn-primary. */
+/* Post-page subscription buttons inherit the newsletter identity. Tidbits
+   chooses a contrast-safe foreground for its primary; the writing newsletters
+   retain the light ink supplied by btn-primary. */
 [data-bg] .btn-newsletter {
   background-color: var(--prose-accent, var(--color-gray-950));
   border-color: var(--prose-accent, var(--color-gray-950));
@@ -710,7 +710,7 @@ body:has(> * [data-bg="tidbits"]) {
   --prose-accent: var(--color-indigo);
 }
 [data-bg="tidbits"] {
-  /* The brand cochineal remains exact in marks and decoration; this darker
+  /* The brand primary remains exact in marks and decoration; this darker
      companion keeps linked text readable on Tidbits's pale background. */
   --prose-accent: var(--color-tidbits-ink);
 }

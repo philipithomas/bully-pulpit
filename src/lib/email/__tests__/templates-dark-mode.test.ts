@@ -41,7 +41,7 @@ describe('newsletter shell dark mode', () => {
       contraption: '#8FB8A5',
       workshop: '#C29B7E',
       postcard: '#97A8D9',
-      tidbits: '#F41986',
+      tidbits: '#E3B55A',
     } as const
     for (const [newsletter, accent] of Object.entries(darkAccents)) {
       const html = renderNewsletterShell({
@@ -104,16 +104,16 @@ describe('newsletter shell dark mode', () => {
     )
   })
 
-  it('renders tidbits with its photo shell and lowercase cochineal wordmark', () => {
+  it('renders tidbits with its photo shell and colored wordmark', () => {
     const html = renderNewsletterShell({
       ...baseInput,
       newsletter: 'tidbits',
     })
     expect(html).toContain(
-      '<body class="email-body" style="margin: 0; padding: 0; background-color: #f6eae9;">'
+      '<body class="email-body" style="margin: 0; padding: 0; background-color: #f6efdd;">'
     )
     expect(html).toContain(
-      'class="email-card email-card-tidbits" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #f6eae9;"'
+      'class="email-card email-card-tidbits" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #f6efdd;"'
     )
     expect(html).toContain(
       '<td class="content-cell content-cell-tidbits" style="padding: 0 32px 32px;'

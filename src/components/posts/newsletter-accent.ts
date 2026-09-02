@@ -2,8 +2,8 @@ import type { Newsletter } from '@/lib/content/types'
 
 /**
  * Newsletter accent color applied to text on `group` hover: forest for
- * Contraption, walnut for Workshop, indigo for Postcard, cochineal for
- * tidbits, and sun for Tsundoku.
+ * Contraption, walnut for Workshop, indigo for Postcard, the darker brand
+ * ink for tidbits, and sun for Tsundoku.
  */
 export const accentHoverText: Record<Newsletter, string> = {
   contraption: 'group-hover:text-forest',

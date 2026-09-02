@@ -15,7 +15,7 @@ const darkAccentColors: Record<NewsletterSlug, string> = {
   contraption: '#8FB8A5',
   workshop: '#C29B7E',
   postcard: '#97A8D9',
-  tidbits: '#F41986',
+  tidbits: '#E3B55A',
   tsundoku: '#FF7A82',
 }
 const DEFAULT_DARK_ACCENT = '#A8A49D'
@@ -23,7 +23,7 @@ const backgroundColors: Record<NewsletterSlug, string> = {
   contraption: '#ffffff',
   workshop: '#ffffff',
   postcard: '#ffffff',
-  tidbits: '#f6eae9',
+  tidbits: '#f6efdd',
   tsundoku: '#f4f4f2',
 }
 
