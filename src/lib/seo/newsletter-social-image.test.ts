@@ -31,7 +31,7 @@ const EXPECTED = {
   },
   tidbits: {
     alt: 'tidbits wordmark',
-    background: '#f6eae9',
+    background: '#f2eaf0',
     logoPath: '/images/tidbits.svg',
     logoWidth: 504,
     logoHeight: 116,
