@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const writes = vi.hoisted(() => ({
   started: vi.fn(),
@@ -23,6 +23,10 @@ beforeEach(() => {
   writes.started.mockResolvedValue(undefined)
   writes.succeeded.mockResolvedValue(undefined)
   writes.failed.mockResolvedValue(undefined)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('best-effort cron heartbeats', () => {
@@ -51,5 +55,33 @@ describe('best-effort cron heartbeats', () => {
       '[cron/bell-retention] succeeded heartbeat failed (Error)'
     )
     expect(log.mock.calls.flat().join(' ')).not.toContain('secret')
+  })
+
+  it('stops awaiting a slow write and consumes its eventual rejection', async () => {
+    vi.useFakeTimers()
+    let rejectWrite: ((reason?: unknown) => void) | undefined
+    const slowWrite = new Promise<void>((_resolve, reject) => {
+      rejectWrite = reject
+    })
+    writes.started.mockReturnValueOnce(slowWrite)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const unhandled = vi.fn()
+    process.on('unhandledRejection', unhandled)
+
+    try {
+      const heartbeat = recordCronStarted('subscriber-backup')
+      await vi.advanceTimersByTimeAsync(1_000)
+      await expect(heartbeat).resolves.toBeUndefined()
+      expect(log).toHaveBeenCalledWith(
+        '[cron/subscriber-backup] started heartbeat timed out'
+      )
+
+      rejectWrite?.(new Error('late database rejection'))
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(unhandled).not.toHaveBeenCalled()
+    } finally {
+      process.off('unhandledRejection', unhandled)
+    }
   })
 })

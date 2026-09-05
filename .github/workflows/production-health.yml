@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: production-health-${{ github.event_name }}
-  cancel-in-progress: true
-
 env:
   PRODUCTION_URL: https://www.philipithomas.com
 
@@ -24,6 +20,9 @@ jobs:
       (github.event_name == 'deployment_status' &&
       github.event.deployment_status.state == 'success' &&
       github.event.deployment.environment == 'Production')
+    concurrency:
+      group: production-workflow-smoke-${{ github.event.deployment.id || github.run_id }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -52,6 +51,9 @@ jobs:
   cron-dead-man:
     name: Scheduled cron dead-man check
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    concurrency:
+      group: production-cron-dead-man
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

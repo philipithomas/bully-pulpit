@@ -99,6 +99,44 @@ describe('cronHealthSnapshot', () => {
     expect(snapshot.jobs[1].status).toBe('stale')
   })
 
+  it('does not let a recent start mask a stale success heartbeat', () => {
+    const snapshot = cronHealthSnapshot(
+      [
+        row('suppression-sync', {
+          lastStartedAt: new Date('2026-09-05T11:59:00.000Z'),
+          lastSucceededAt: new Date('2026-09-05T11:00:00.000Z'),
+        }),
+        row('bell-retention', {
+          lastStartedAt: new Date('2026-09-05T10:17:00.000Z'),
+          lastSucceededAt: new Date('2026-09-05T10:18:00.000Z'),
+        }),
+        row('subscriber-backup', {
+          lastStartedAt: new Date('2026-09-01T11:00:00.000Z'),
+          lastSucceededAt: new Date('2026-09-01T11:01:00.000Z'),
+        }),
+      ],
+      NOW
+    )
+
+    expect(snapshot.jobs[0].status).toBe('stale')
+    expect(snapshot.ok).toBe(false)
+  })
+
+  it('does not let a first start mask an expired initial grace period', () => {
+    const snapshot = cronHealthSnapshot(
+      [
+        row('suppression-sync', {
+          monitoringStartedAt: new Date('2026-09-05T11:00:00.000Z'),
+          lastStartedAt: new Date('2026-09-05T11:59:00.000Z'),
+        }),
+      ],
+      NOW
+    )
+
+    expect(snapshot.jobs[0].status).toBe('stale')
+    expect(snapshot.ok).toBe(false)
+  })
+
   it('fails closed when a configured job has no durable registry row', () => {
     const snapshot = cronHealthSnapshot([], NOW)
 

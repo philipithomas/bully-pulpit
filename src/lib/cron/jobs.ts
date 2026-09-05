@@ -108,9 +108,22 @@ function snapshotJob(
   }
 
   const lastOutcome = latestDate(row.lastSucceededAt, row.lastFailedAt)
+  const cadenceBase = row.lastSucceededAt ?? row.monitoringStartedAt
+  const cadenceIsStale =
+    now.getTime() - cadenceBase.getTime() > definition.staleAfterMs
 
   let status: CronHealthStatus
-  if (
+  if (cadenceIsStale) {
+    // Starting another run is useful evidence that Vercel invoked the route,
+    // but it cannot restore health. Stay failed closed until that run records
+    // a success and advances the completed-work heartbeat.
+    status = 'stale'
+  } else if (
+    row.lastFailedAt &&
+    (!row.lastSucceededAt || row.lastFailedAt >= row.lastSucceededAt)
+  ) {
+    status = 'failing'
+  } else if (
     row.lastStartedAt &&
     (lastOutcome === null || row.lastStartedAt > lastOutcome)
   ) {
@@ -118,25 +131,12 @@ function snapshotJob(
       now.getTime() - row.lastStartedAt.getTime() <= definition.maxRuntimeMs
         ? 'running'
         : 'stale'
-  } else if (
-    row.lastFailedAt &&
-    (!row.lastSucceededAt || row.lastFailedAt >= row.lastSucceededAt)
-  ) {
-    status = 'failing'
   } else if (row.lastSucceededAt) {
-    status =
-      now.getTime() - row.lastSucceededAt.getTime() <= definition.staleAfterMs
-        ? 'healthy'
-        : 'stale'
+    status = 'healthy'
   } else {
-    status =
-      now.getTime() - row.monitoringStartedAt.getTime() <=
-      definition.staleAfterMs
-        ? 'pending'
-        : 'stale'
+    status = 'pending'
   }
 
-  const cadenceBase = row.lastSucceededAt ?? row.monitoringStartedAt
   const nextExpectedBy = new Date(
     cadenceBase.getTime() + definition.staleAfterMs
   )
