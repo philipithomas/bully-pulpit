@@ -10,6 +10,7 @@ import { Logo } from '@/components/layout/logo'
 import { useNewsletter } from '@/components/layout/newsletter-context'
 import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
 import { BellIcon } from '@/components/ui/bell-icon'
+import { Spinner } from '@/components/ui/spinner'
 import {
   BELL_DISCOVERY_OPENED_KEY,
   BELL_DISCOVERY_VIEWS_KEY,
@@ -20,15 +21,75 @@ import { siteConfig } from '@/lib/config'
 import type { Newsletter } from '@/lib/content/types'
 import { useChatSidebar } from '@/stores/chat-store'
 
+export function ChatSidebarLoading() {
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/50 sm:hidden" aria-hidden />
+      <div
+        role="dialog"
+        aria-label="Bell chat"
+        aria-busy="true"
+        className="fixed top-0 right-0 z-50 flex h-full w-full flex-col bg-offwhite-light shadow-xl sm:w-[420px]"
+      >
+        <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+          <BellIcon className="h-5 w-5 text-gray-950" aria-hidden="true" />
+          <span className="font-sans text-sm font-semibold text-gray-950">
+            Bell
+          </span>
+        </div>
+        <div
+          role="status"
+          className="flex flex-1 items-center justify-center gap-2 px-6 font-sans text-sm text-gray-500"
+        >
+          <Spinner className="h-4 w-4" />
+          <span>Opening Bell…</span>
+        </div>
+      </div>
+    </>
+  )
+}
+
+export function SearchDialogLoading() {
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/50" aria-hidden />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search"
+        aria-busy="true"
+        className="fixed top-[15vh] left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 bg-card shadow-xl"
+      >
+        <div className="flex items-center border-b border-gray-100 px-4">
+          <Search
+            className="h-4 w-4 shrink-0 text-gray-400"
+            aria-hidden="true"
+          />
+          <span className="flex-1 px-3 py-3 font-sans text-sm text-gray-400 pointer-coarse:text-base">
+            Search site…
+          </span>
+          <Spinner className="h-4 w-4 text-gray-400" />
+        </div>
+        <p
+          role="status"
+          className="px-4 py-6 text-center font-sans text-sm text-gray-500"
+        >
+          Loading search…
+        </p>
+      </div>
+    </>
+  )
+}
+
 // dynamic() splits chat (ai SDK + react-markdown) and search out of the
 // first-load bundle — a conditional render of a static import would not.
 const ChatSidebar = dynamic(
   () => import('@/components/chat/chat-sidebar').then((m) => m.ChatSidebar),
-  { ssr: false }
+  { loading: ChatSidebarLoading, ssr: false }
 )
 const SearchDialog = dynamic(
   () => import('@/components/search/search-dialog').then((m) => m.SearchDialog),
-  { ssr: false }
+  { loading: SearchDialogLoading, ssr: false }
 )
 
 const prefetchChat = () => void import('@/components/chat/chat-sidebar')
@@ -92,24 +153,6 @@ export function Header() {
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
-
-  // Warm the chat and search chunks once during idle time after first paint,
-  // so the first tap is instant on touch devices where the hover/focus
-  // prefetch never fires. Idle/timeout scheduling keeps it off the hydration
-  // path; repeat calls are no-ops because dynamic import caches the module.
-  useEffect(() => {
-    const warm = () => {
-      prefetchChat()
-      prefetchSearch()
-    }
-    if (typeof window.requestIdleCallback === 'function') {
-      const id = window.requestIdleCallback(warm, { timeout: 5000 })
-      return () => window.cancelIdleCallback(id)
-    }
-    // Safari has no requestIdleCallback
-    const id = window.setTimeout(warm, 2000)
-    return () => window.clearTimeout(id)
-  }, [])
 
   // Give the expressive bell one restrained ring on the second page view.
   // Reduced-motion visitors receive no animation through the global CSS guard.
