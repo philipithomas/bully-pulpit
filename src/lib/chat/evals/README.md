@@ -24,14 +24,16 @@ When Bell's model, prompt, tools, search corpus, or page registry changes, run:
 pnpm bell:eval:live -- --output /tmp/bell-eval.md
 ```
 
-The command uses `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN`, runs the same
-public and synthetic prompts against the configured primary and fallback
-models, and writes a Markdown report with tool use and a review checklist for
-each answer. Per-model provider errors stay in the report, and the command exits
-nonzero when any generation fails. Attach that report, or its relevant
-sections, to the pull request.
+The command uses `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` and runs the same
+public and synthetic prompts against Bell's production model and a fixed
+`openai/gpt-5.4-mini` baseline. The report identifies which model is production,
+which is the baseline, every model that actually ran, tool use, and a review
+checklist for each answer. Per-model provider errors stay in the report, and the
+command exits nonzero when any generation fails. Attach that report, or its
+relevant sections, to the pull request.
 
-To compare other models or narrow a review:
+`--models` replaces the default production/baseline pair. Use it to compare
+other models or narrow a review:
 
 ```bash
 pnpm bell:eval:live -- --models openai/gpt-5.6-luna,openai/gpt-5.4-mini --case print-current-page

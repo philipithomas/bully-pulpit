@@ -14,73 +14,14 @@ import {
 } from '@/lib/chat/bell-generation'
 import { bellEvalCases } from '@/lib/chat/evals/cases'
 import { runDeterministicBellEvals } from '@/lib/chat/evals/deterministic'
+import {
+  BELL_EVAL_BASELINE_MODEL_ID,
+  bellEvalUsage,
+  parseBellEvalArgs,
+} from '@/lib/chat/evals/live-options'
 import { getPageContextContent } from '@/lib/chat/page-context'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { formatBellSmsBody } from '@/lib/phone/bell-sms'
-
-interface CliOptions {
-  models: string[]
-  output: string | null
-  caseIds: Set<string>
-}
-
-function usage(): string {
-  return [
-    'Usage: pnpm bell:eval:live [options]',
-    '',
-    'Options:',
-    '  --models <ids>  Comma-separated Gateway model IDs',
-    '  --case <id>      Run one case. Repeat to run several cases',
-    '  --output <path>  Write the Markdown report to a file',
-    '  -h, --help       Show this help',
-  ].join('\n')
-}
-
-function requireValue(argv: string[], index: number, flag: string): string {
-  const value = argv[index + 1]
-  if (!value) throw new Error(`${flag} requires a value`)
-  return value
-}
-
-function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    models: [BELL_MODEL_ID],
-    output: null,
-    caseIds: new Set(),
-  }
-
-  for (let index = 0; index < argv.length; index++) {
-    const argument = argv[index]
-    if (argument === '--') continue
-    if (argument === '-h' || argument === '--help') {
-      console.log(usage())
-      process.exit(0)
-    }
-    if (argument === '--models') {
-      options.models = requireValue(argv, index, argument)
-        .split(',')
-        .map((model) => model.trim())
-        .filter(Boolean)
-      index++
-      continue
-    }
-    if (argument === '--case') {
-      options.caseIds.add(requireValue(argv, index, argument))
-      index++
-      continue
-    }
-    if (argument === '--output') {
-      options.output = requireValue(argv, index, argument)
-      index++
-      continue
-    }
-    throw new Error(`Unknown option: ${argument}`)
-  }
-
-  if (options.models.length === 0)
-    throw new Error('At least one model is required')
-  return options
-}
 
 function exactModelProviderOptions(surface: 'web' | 'sms', caseId: string) {
   return getBellProviderOptions({
@@ -98,7 +39,11 @@ function quoted(text: string): string {
 }
 
 async function main() {
-  const options = parseArgs(process.argv.slice(2))
+  const options = parseBellEvalArgs(process.argv.slice(2), BELL_MODEL_ID)
+  if (options.help) {
+    console.log(bellEvalUsage())
+    return
+  }
   if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN) {
     throw new Error(
       'bell:eval:live requires AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN'
@@ -127,6 +72,13 @@ async function main() {
     '# Bell model comparison',
     '',
     `Generated: ${new Date().toISOString()}`,
+    ...(options.modelSelection === 'production-vs-baseline'
+      ? [
+          'Selection: production vs fixed baseline',
+          `Production model: ${BELL_MODEL_ID}`,
+          `Baseline model: ${BELL_EVAL_BASELINE_MODEL_ID}`,
+        ]
+      : ['Selection: explicit --models list']),
     `Models: ${options.models.join(', ')}`,
     `Cases: ${cases.map((testCase) => testCase.id).join(', ')}`,
     '',
@@ -253,6 +205,6 @@ async function main() {
 
 main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error))
-  console.error(usage())
+  console.error(bellEvalUsage())
   process.exit(1)
 })
