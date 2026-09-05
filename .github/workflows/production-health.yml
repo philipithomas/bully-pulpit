@@ -43,7 +43,7 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.PRODUCTION_CRON_SECRET }}
         run: |
-          curl --silent --show-error --fail-with-body --retry 2 --max-time 30 \
+          curl --silent --show-error --fail-with-body --max-time 30 \
             --request POST \
             --header "Authorization: Bearer $CRON_SECRET" \
             "$PRODUCTION_URL/api/cron/workflow-smoke"
