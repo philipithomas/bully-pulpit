@@ -1,0 +1,77 @@
+name: Production health
+
+on:
+  deployment_status:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-health-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  PRODUCTION_URL: https://www.philipithomas.com
+
+jobs:
+  workflow-smoke:
+    name: Workflow smoke after production deploy
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'deployment_status' &&
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check smoke-test configuration
+        id: config
+        env:
+          CRON_SECRET: ${{ secrets.PRODUCTION_CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::notice::Workflow smoke skipped: configure the PRODUCTION_CRON_SECRET repository secret to enable it."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run Workflow smoke test
+        if: steps.config.outputs.configured == 'true'
+        env:
+          CRON_SECRET: ${{ secrets.PRODUCTION_CRON_SECRET }}
+        run: |
+          curl --silent --show-error --fail-with-body --retry 2 --max-time 30 \
+            --request POST \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "$PRODUCTION_URL/api/cron/workflow-smoke"
+
+  cron-dead-man:
+    name: Scheduled cron dead-man check
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check dead-man configuration
+        id: config
+        env:
+          CRON_SECRET: ${{ secrets.PRODUCTION_CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::notice::Cron dead-man check skipped: configure the PRODUCTION_CRON_SECRET repository secret to enable it."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check cron heartbeats
+        if: steps.config.outputs.configured == 'true'
+        env:
+          CRON_SECRET: ${{ secrets.PRODUCTION_CRON_SECRET }}
+        run: |
+          curl --silent --show-error --fail-with-body --retry 2 --max-time 30 \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "$PRODUCTION_URL/api/cron/health"

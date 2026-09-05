@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
+import {
+  recordCronFailed,
+  recordCronStarted,
+  recordCronSucceeded,
+} from '@/lib/cron/heartbeat'
 import { allSubscribersForExport } from '@/lib/db/queries/subscribers'
 import { sendEmailWithAttachment } from '@/lib/email/ses'
 import { requireEnv } from '@/lib/env'
@@ -15,6 +20,7 @@ export async function GET(request: Request) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
+  await recordCronStarted('subscriber-backup')
   try {
     const rows = await allSubscribersForExport()
     const csv = subscribersToCsv(rows)
@@ -33,11 +39,13 @@ export async function GET(request: Request) {
       },
     })
 
+    await recordCronSucceeded('subscriber-backup')
     return NextResponse.json({
       sent: admins.length,
       subscriberCount: rows.length,
     })
   } catch (err) {
+    await recordCronFailed('subscriber-backup')
     console.error('[cron/subscriber-backup] error:', err)
     return NextResponse.json({ error: 'Backup failed' }, { status: 500 })
   }

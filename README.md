@@ -147,6 +147,33 @@ In the Twilio Console, also confirm the Advanced Opt-Out START and HELP replies
 identify the program, include the support address, and match the frequency,
 message-and-data-rate, HELP, and STOP disclosures above.
 
+## Production operations
+
+Every scheduled route records best-effort start, success, and failure
+heartbeats in `cron_job_health`. The private Printing press Health page shows
+those timestamps and uses cadence-specific grace windows to identify failed or
+overdue jobs. Heartbeat writes are diagnostic: their failure never changes the
+result of the underlying suppression sync, Bell retention, or subscriber
+backup job.
+
+The `Production health` GitHub Actions workflow checks the redacted,
+bearer-protected `/api/cron/health` endpoint hourly and runs the existing
+Workflow smoke after a successful production deployment. Add the production
+Vercel `CRON_SECRET` as the GitHub repository secret
+`PRODUCTION_CRON_SECRET` to enable both checks. Until that secret is present,
+the jobs emit a notice and exit successfully rather than producing a false
+alarm. Configure the repository's Actions failure notifications or an alerting
+integration so a failed dead-man check reaches an operator.
+
+The repository cannot complete these provider-side operations:
+
+- migrate AWS credentials to a least-privilege IAM role trusted through Vercel
+  OIDC, then remove the long-lived production keys;
+- configure the desired Actions alert destination and escalation policy;
+- run and record a Neon point-in-time restore drill; and
+- choose and configure any additional encrypted off-site destination for the
+  subscriber export. The monthly email backup remains unchanged here.
+
 ## Content
 
 Posts live in `content/` as MDX files:
