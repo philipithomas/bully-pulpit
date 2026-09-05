@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 
@@ -18,12 +18,66 @@ const activationsCreatedByMigrations = await db
   .select()
   .from(cronJobHealthActivations)
 
-beforeEach(resetDb)
+beforeEach(async () => {
+  vi.stubEnv('VERCEL_ENV', 'development')
+  await resetDb()
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 describe('cron job health persistence', () => {
   it('does not start monitoring during the pre-build migration', () => {
     expect(healthRowsCreatedByMigrations).toEqual([])
     expect(activationsCreatedByMigrations).toEqual([])
+  })
+
+  it('keeps preview health reads read-only', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview')
+
+    expect(await listCronJobHealth()).toEqual([])
+    expect(await db.select().from(cronJobHealth)).toEqual([])
+    expect(await db.select().from(cronJobHealthActivations)).toEqual([])
+  })
+
+  it('blocks every preview lifecycle write against a shared database', async () => {
+    const monitoringStartedAt = new Date('2026-09-01T10:00:00.000Z')
+    const lastSucceededAt = new Date('2026-09-05T10:00:00.000Z')
+    await db.insert(cronJobHealth).values({
+      jobName: 'suppression-sync',
+      monitoringStartedAt,
+      lastSucceededAt,
+      updatedAt: lastSucceededAt,
+    })
+    vi.stubEnv('VERCEL_ENV', 'preview')
+
+    await markCronJobStarted(
+      'suppression-sync',
+      new Date('2026-09-06T10:00:00.000Z')
+    )
+    await markCronJobSucceeded(
+      'subscriber-backup',
+      new Date('2026-09-06T10:00:01.000Z')
+    )
+    await markCronJobFailed(
+      'bell-retention',
+      'bell_retention_failed',
+      new Date('2026-09-06T10:00:02.000Z')
+    )
+    const rows = await listCronJobHealth()
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        jobName: 'suppression-sync',
+        monitoringStartedAt,
+        lastSucceededAt,
+        lastStartedAt: null,
+        lastFailedAt: null,
+        updatedAt: lastSucceededAt,
+      }),
+    ])
+    expect(await db.select().from(cronJobHealthActivations)).toEqual([])
   })
 
   it('upserts the latest lifecycle timestamps without an execution log', async () => {

@@ -1,4 +1,5 @@
 import { asc, sql } from 'drizzle-orm'
+import { cronHealthWritesAllowed } from '@/lib/cron/environment'
 import {
   CRON_JOBS,
   type CronFailureCode,
@@ -34,6 +35,8 @@ export async function markCronJobStarted(
   jobName: CronJobName,
   at = new Date()
 ): Promise<void> {
+  if (!cronHealthWritesAllowed()) return
+
   await getDb()
     .insert(cronJobHealth)
     .values({
@@ -58,6 +61,8 @@ export async function markCronJobSucceeded(
   jobName: CronJobName,
   at = new Date()
 ): Promise<void> {
+  if (!cronHealthWritesAllowed()) return
+
   await getDb()
     .insert(cronJobHealth)
     .values({
@@ -83,6 +88,8 @@ export async function markCronJobFailed(
   failureCode: CronFailureCode,
   at = new Date()
 ): Promise<void> {
+  if (!cronHealthWritesAllowed()) return
+
   await getDb()
     .insert(cronJobHealth)
     .values({
@@ -111,27 +118,30 @@ export async function listCronJobHealth(): Promise<CronJobHealth[]> {
   const db = getDb()
   // The migration deliberately creates an empty table: production migrations
   // run before the app build, which may fail. The first successfully deployed
-  // health read atomically claims the versioned activation and seeds the fixed
-  // roster at that exact time. Later reads cannot hide row loss by reseeding;
-  // a real heartbeat may still recreate its own job row.
-  const jobValues = sql.join(
-    CRON_JOBS.map(({ name }) => sql`(${name})`),
-    sql`, `
-  )
-  await db.execute(sql`
-    WITH activation AS (
-      INSERT INTO ${cronJobHealthActivations} ("activation_key")
-      VALUES (${CRON_HEALTH_ACTIVATION_KEY})
-      ON CONFLICT ("activation_key") DO NOTHING
-      RETURNING "activated_at"
+  // write-eligible health read atomically claims the versioned activation and
+  // seeds the fixed roster at that exact time. Preview reads remain read-only.
+  // Later reads cannot hide row loss by reseeding; a real heartbeat may still
+  // recreate its own job row.
+  if (cronHealthWritesAllowed()) {
+    const jobValues = sql.join(
+      CRON_JOBS.map(({ name }) => sql`(${name})`),
+      sql`, `
     )
-    INSERT INTO ${cronJobHealth}
-      ("job_name", "monitoring_started_at", "updated_at")
-    SELECT jobs.job_name, activation.activated_at, activation.activated_at
-    FROM activation
-    CROSS JOIN (VALUES ${jobValues}) AS jobs(job_name)
-    ON CONFLICT ("job_name") DO NOTHING
-  `)
+    await db.execute(sql`
+      WITH activation AS (
+        INSERT INTO ${cronJobHealthActivations} ("activation_key")
+        VALUES (${CRON_HEALTH_ACTIVATION_KEY})
+        ON CONFLICT ("activation_key") DO NOTHING
+        RETURNING "activated_at"
+      )
+      INSERT INTO ${cronJobHealth}
+        ("job_name", "monitoring_started_at", "updated_at")
+      SELECT jobs.job_name, activation.activated_at, activation.activated_at
+      FROM activation
+      CROSS JOIN (VALUES ${jobValues}) AS jobs(job_name)
+      ON CONFLICT ("job_name") DO NOTHING
+    `)
+  }
 
   return db.select().from(cronJobHealth).orderBy(asc(cronJobHealth.jobName))
 }

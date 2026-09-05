@@ -154,7 +154,10 @@ heartbeats in `cron_job_health`. The private Printing press Health page shows
 those timestamps and uses cadence-specific grace windows to identify failed or
 overdue jobs. Heartbeat writes are diagnostic: their failure never changes the
 result of the underlying suppression sync, Bell retention, or subscriber
-backup job. The schema migration creates empty health and activation tables.
+backup job. Preview deployments keep this health store read-only, even if they
+share the production `DATABASE_URL`; `VERCEL_ENV=preview` disables both
+lifecycle writes and first-read activation. The schema migration creates empty
+health and activation tables.
 The first read from successfully deployed monitoring code atomically records a
 versioned activation marker and starts every fixed job's grace period; a real
 heartbeat can also create its own row first. Activation happens only once, so
