@@ -158,7 +158,7 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
         <DialogHeader>
           <DialogTitle>Sign in or join</DialogTitle>
           <DialogDescription>
-            Continue below to sign in. If you’re new, this creates an account
+            Continue below to sign in. If you are new, this creates an account
             and subscribes you to every current newsletter by email.
           </DialogDescription>
         </DialogHeader>

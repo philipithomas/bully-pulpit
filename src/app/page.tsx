@@ -64,7 +64,7 @@ export default async function HomePage() {
   const subscriberCount = await buildTimeSubscriberCount()
   const signupHeader =
     subscriberCount !== null && subscriberCount > 0
-      ? `Join ${formatMemberCount(subscriberCount)} other readers — get every current newsletter:`
+      ? `Join ${formatMemberCount(subscriberCount)} other readers - get every current newsletter:`
       : 'Get every current newsletter by email:'
   const smsSignupPhoneNumber = sitePhoneNumber()
   const smsSignupDisplayNumber = sitePhoneDisplayNumber()
