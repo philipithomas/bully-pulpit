@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { preload } from 'react-dom'
+import { latestTidbitsPalette } from '@/lib/tidbits/latest-palette'
+import { TIDBITS_PALETTE_CSS } from '@/lib/tidbits/palette'
 import '@/styles/globals.css'
 import { AuthProvider } from '@/components/auth/auth-provider'
 import { LazyNewSubscriberOnboarding } from '@/components/auth/new-subscriber-onboarding-lazy'
@@ -98,8 +100,13 @@ export default function RootLayout({
   return (
     // suppressHydrationWarning: the session hint script below adds a
     // data-member attribute to <html> before React hydrates.
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      data-tidbits-default={latestTidbitsPalette().id}
+      suppressHydrationWarning
+    >
       <head>
+        <style>{TIDBITS_PALETTE_CSS}</style>
         <link
           rel="preconnect"
           href="https://fonts.philipithomas.com"

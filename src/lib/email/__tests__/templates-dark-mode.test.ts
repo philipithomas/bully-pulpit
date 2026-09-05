@@ -41,7 +41,7 @@ describe('newsletter shell dark mode', () => {
       contraption: '#8FB8A5',
       workshop: '#C29B7E',
       postcard: '#97A8D9',
-      tidbits: '#F41986',
+      tidbits: '#79c7bb',
     } as const
     for (const [newsletter, accent] of Object.entries(darkAccents)) {
       const html = renderNewsletterShell({
@@ -104,24 +104,24 @@ describe('newsletter shell dark mode', () => {
     )
   })
 
-  it('renders tidbits with its photo shell and lowercase cochineal wordmark', () => {
+  it('renders tidbits with its photo shell and palette-specific wordmarks', () => {
     const html = renderNewsletterShell({
       ...baseInput,
       newsletter: 'tidbits',
     })
     expect(html).toContain(
-      '<body class="email-body" style="margin: 0; padding: 0; background-color: #f6eae9;">'
+      '<body class="email-body" style="margin: 0; padding: 0; background-color: #e8f1ee;">'
     )
     expect(html).toContain(
-      'class="email-card email-card-tidbits" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #f6eae9;"'
+      'class="email-card email-card-tidbits" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #e8f1ee;"'
     )
     expect(html).toContain(
       '<td class="content-cell content-cell-tidbits" style="padding: 0 32px 32px;'
     )
     expect(html).toContain(
-      'class="email-brand-tidbits" src="https://www.philipithomas.com/images/tidbits-email.png" alt="tidbits"'
+      'class="email-brand-light" src="https://www.philipithomas.com/images/tidbits-palettes/verdigris-email.png" alt="tidbits"'
     )
-    expect(html).not.toContain('/images/tidbits-email-dark.png')
+    expect(html).toContain('/images/tidbits-palettes/verdigris-email-dark.png')
     expect(extractDarkBlock(html)).toContain(
       '.email-card-tidbits { background-color: #121110 !important; }'
     )

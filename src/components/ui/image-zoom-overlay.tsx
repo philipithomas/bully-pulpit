@@ -9,7 +9,6 @@ import {
   PanelRightClose,
   X,
 } from 'lucide-react'
-import NextImage from 'next/image'
 import Link from 'next/link'
 import {
   type MouseEvent,
@@ -21,9 +20,11 @@ import {
   useState,
 } from 'react'
 import { PhotoMetadata } from '@/components/posts/photo-metadata'
+import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { preloadZoomGalleryNeighbors } from '@/components/ui/image-zoom-preload'
 import type { PhotoMetadata as PhotoMetadataValue } from '@/lib/content/types'
+import { tidbitsPaletteForPost } from '@/lib/tidbits/palette'
 
 export interface ZoomCaption {
   href?: string | null
@@ -1007,7 +1008,17 @@ export function ImageZoomOverlay({
                   className="inline-flex min-h-11 shrink-0 items-center transition-opacity hover:opacity-80"
                   onClick={handleLogoClick}
                 >
-                  <NextImage
+                  <NewsletterWordmark
+                    tone="dark"
+                    style={
+                      caption.collection === 'tidbits'
+                        ? {
+                            color: tidbitsPaletteForPost(
+                              caption.href?.replace(/^\//, '')
+                            ).dark,
+                          }
+                        : undefined
+                    }
                     src={collection.logo}
                     alt={collection.label}
                     width={collection.width}
@@ -1117,7 +1128,7 @@ export function ImageZoomOverlay({
                     className="shrink-0 transition-opacity hover:opacity-80"
                     onClick={handleLogoClick}
                   >
-                    <NextImage
+                    <NewsletterWordmark
                       src={collection.logo}
                       alt={collection.label}
                       width={collection.width}

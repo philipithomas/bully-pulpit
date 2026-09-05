@@ -110,11 +110,9 @@
   --color-offwhite-cool: #f5f6fa;
   --color-offwhite-dark: #edebe7;
   --color-offwhite-light: #faf9f7;
-  --color-tidbits: #f41986;
-  --color-tidbits-ink: #c80f6b;
-  /* Oaxaca blanket blush: sampled from its pale rose squares and lifted so
-     photography stays dominant. */
-  --color-tidbits-paper: #f6eae9;
+  --color-tidbits: var(--tidbits-accent, #1f7a74);
+  --color-tidbits-ink: var(--tidbits-ink, #125e59);
+  --color-tidbits-paper: var(--tidbits-paper, #e8f1ee);
 
   /* Grays */
   --color-gray-50: #f2f2f1; /* alias: keeps the un-padded spelling warm */
@@ -554,8 +552,7 @@ body:has(> * [data-bg="tidbits"]) {
 }
 
 /* Post-page subscription buttons inherit the newsletter identity from the
-   surrounding page. Tidbits's vivid cochineal takes dark ink; the writing
-   newsletters retain the light ink supplied by btn-primary. */
+   surrounding page. Each Tidbits palette supplies its tested foreground. */
 [data-bg] .btn-newsletter {
   background-color: var(--prose-accent, var(--color-gray-950));
   border-color: var(--prose-accent, var(--color-gray-950));
@@ -564,12 +561,12 @@ body:has(> * [data-bg="tidbits"]) {
 [data-bg="tidbits"] .btn-newsletter {
   background-color: var(--color-tidbits);
   border-color: var(--color-tidbits);
-  color: var(--color-gray-950);
+  color: var(--tidbits-foreground);
 }
 
 [data-bg="tidbits"] .btn-newsletter .btn-text,
 [data-bg="tidbits"] .btn-newsletter .btn-arrow {
-  color: var(--color-gray-950);
+  color: var(--tidbits-foreground);
 }
 
 /* ============================
@@ -710,9 +707,19 @@ body:has(> * [data-bg="tidbits"]) {
   --prose-accent: var(--color-indigo);
 }
 [data-bg="tidbits"] {
-  /* The brand cochineal remains exact in marks and decoration; this darker
-     companion keeps linked text readable on Tidbits's pale background. */
+  /* Color studies use a darker companion ink for readable small text. */
   --prose-accent: var(--color-tidbits-ink);
+}
+
+/* Keep the email field boundary and placeholder legible on every paper tint.
+   Focus retains the global gray-900 border treatment. */
+[data-bg="tidbits"] input[type="email"]:not(:focus) {
+  border-color: var(--color-gray-500);
+}
+
+[data-bg="tidbits"] input::placeholder {
+  color: var(--color-gray-500);
+  opacity: 1;
 }
 
 .tidbits-page-sms {
@@ -737,7 +744,7 @@ body:has(> * [data-bg="tidbits"]) {
     margin-bottom: 1.5rem;
   }
 
-  .tidbits-page-brand img {
+  .tidbits-page-brand .tidbits-wordmark {
     max-width: 11.25rem;
   }
 

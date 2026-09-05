@@ -52,7 +52,8 @@ export async function buildEmailBodyHtml(post: Post): Promise<EmailBody> {
     post.frontmatter.coverImageAlt,
     post.newsletter === 'postcard' ? null : post.frontmatter.publishedAt,
     post.frontmatter.location,
-    post.frontmatter.photo
+    post.frontmatter.photo,
+    post.newsletter === 'tidbits' ? { mutedColor: '#6b6760' } : undefined
   )
   const html = emailHeader + markdownHtml + relatedPostsHtml
   // Short snippet for the preheader/preview; full text for the text/plain

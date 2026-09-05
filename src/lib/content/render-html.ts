@@ -154,15 +154,17 @@ export function renderEmailHeaderHtml(
   coverImageAlt?: string | null,
   publishedAt?: string | null,
   location?: { name: string; url: string } | null,
-  photo?: PhotoMetadata | null
+  photo?: PhotoMetadata | null,
+  options: { mutedColor?: string } = {}
 ): string {
   const postUrl = `${siteUrl}/${slug}`
   const photoItems = photoMetadataItems(photo)
+  const mutedColor = options.mutedColor ?? '#7E7A73'
 
   let html = ''
 
   if (publishedAt || location) {
-    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0; color: #7E7A73; text-align: center; margin: 0 0 12px;">`
+    html += `<p style="font-family: 'Sohne Mono', 'SF Mono', 'Fira Code', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0; color: ${mutedColor}; text-align: center; margin: 0 0 12px;">`
     if (publishedAt) {
       html += escapeHtml(publishedAt)
     }
@@ -170,7 +172,7 @@ export function renderEmailHeaderHtml(
       html += ` <span aria-hidden="true">@</span> `
     }
     if (location) {
-      html += `<a href="${escapeHtml(location.url)}" style="color: #7E7A73; text-decoration: underline; text-decoration-color: #B1ADA6;">${escapeHtml(location.name)}</a>`
+      html += `<a href="${escapeHtml(location.url)}" style="color: ${mutedColor}; text-decoration: underline; text-decoration-color: #B1ADA6;">${escapeHtml(location.name)}</a>`
     }
     html += `</p>`
   }
@@ -200,7 +202,7 @@ export function renderEmailHeaderHtml(
           : value
       })
       .join(' <span aria-hidden="true">·</span> ')
-    html += `<p style="font-family: ${MONO_STACK}; font-size: 11px; font-weight: 400; color: #7E7A73; line-height: 1.5; text-align: center; margin: 0;">${values}</p>`
+    html += `<p style="font-family: ${MONO_STACK}; font-size: 11px; font-weight: 400; color: ${mutedColor}; line-height: 1.5; text-align: center; margin: 0;">${values}</p>`
   }
 
   html += `<div style="font-size: 1px; line-height: 24px; height: 24px;">&nbsp;</div>`

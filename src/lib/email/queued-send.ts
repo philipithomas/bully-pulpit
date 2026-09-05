@@ -7,13 +7,19 @@ import { renderNewsletterShell } from '@/lib/email/templates/newsletter-shell'
 /** Wraps the rendered body in the shell after applying the body transforms. */
 export function renderFullNewsletter(input: {
   bodyHtml: string
+  postSlug?: string
   newsletter?: NewsletterSlug
   previewText?: string | null
   unsubscribeUrl: string
 }): string {
-  const content = transformEmailBody(input.bodyHtml, input.newsletter)
+  const content = transformEmailBody(
+    input.bodyHtml,
+    input.newsletter,
+    input.postSlug
+  )
   return renderNewsletterShell({
     content,
+    postSlug: input.postSlug,
     unsubscribeUrl: input.unsubscribeUrl,
     newsletter: input.newsletter,
     previewText: input.previewText,
@@ -23,6 +29,7 @@ export function renderFullNewsletter(input: {
 /** Renders and sends one queued email_sends row. Throws on SES failure. */
 export async function sendQueuedEmail(row: {
   email: string
+  postSlug: string
   subject: string | null
   htmlContent: string | null
   textContent: string | null
@@ -36,6 +43,7 @@ export async function sendQueuedEmail(row: {
   const unsubscribePostUrl = `${siteConfig.url}/api/unsubscribe/${row.unsubscribeToken}`
   const html = renderFullNewsletter({
     bodyHtml: row.htmlContent ?? '',
+    postSlug: row.postSlug,
     newsletter,
     previewText: row.previewText,
     unsubscribeUrl,

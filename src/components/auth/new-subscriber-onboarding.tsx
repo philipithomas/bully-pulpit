@@ -1,11 +1,11 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { type ChangeEvent, type FormEvent, useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuthContext } from '@/components/auth/auth-provider'
 import { BrandedAuthDialog } from '@/components/auth/branded-auth-dialog'
+import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { trackClientEvent } from '@/lib/analytics/events'
@@ -157,7 +157,7 @@ export function NewSubscriberOnboarding({
             >
               <span className="flex min-w-0 items-center gap-4">
                 <span className="flex w-[100px] shrink-0 items-center">
-                  <Image
+                  <NewsletterWordmark
                     src={newsletter.logo.src}
                     alt={newsletter.name}
                     width={newsletter.logo.intrinsicWidth}

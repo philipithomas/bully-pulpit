@@ -153,6 +153,7 @@ export async function sendBatch(rowIds: number[]): Promise<{
         email,
         subject: send.subject,
         htmlContent: send.htmlContent,
+        postSlug: send.postSlug,
         textContent: send.textContent,
         newsletter: send.newsletter,
         previewText: send.previewText,

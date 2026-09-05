@@ -6,6 +6,8 @@ import {
   newsletterSocialImageSpec,
   renderNewsletterSocialImage,
 } from '@/lib/seo/newsletter-social-image'
+import { latestTidbitsPalette } from '@/lib/tidbits/latest-palette'
+import { tidbitsAsset } from '@/lib/tidbits/palette'
 
 const EXPECTED = {
   contraption: {
@@ -31,8 +33,8 @@ const EXPECTED = {
   },
   tidbits: {
     alt: 'tidbits wordmark',
-    background: '#f6eae9',
-    logoPath: '/images/tidbits.svg',
+    background: latestTidbitsPalette().paper,
+    logoPath: tidbitsAsset(latestTidbitsPalette(), 'wordmark'),
     logoWidth: 504,
     logoHeight: 116,
   },
