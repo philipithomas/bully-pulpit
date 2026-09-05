@@ -187,8 +187,9 @@ full-resolution originals outside this app repository.
 
 `pnpm build` finishes by measuring the Brotli-compressed initial JavaScript for
 the homepage, content route, newsletter archives, and photography page. The
-guard discovers hashed files through Next.js' generated client-reference
-manifests and fails when a route exceeds its reviewed budget. To rerun it
+guard discovers hashed files from every script referenced by the emitted HTML,
+uses the prerender manifest to check every generated post/content page, and
+fails when a route exceeds its reviewed budget. To rerun it
 against an existing `.next` build without rebuilding, use:
 
 ```bash

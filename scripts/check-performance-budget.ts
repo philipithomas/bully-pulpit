@@ -14,7 +14,11 @@ if (errors.length > 0) {
 
 console.log('Performance budget check passed:')
 for (const measurement of measurements) {
+  const routeDetail =
+    measurement.routeCount > 1
+      ? `; largest ${measurement.measuredRoute} of ${measurement.routeCount}`
+      : ''
   console.log(
-    `  ${measurement.label}: ${formatBytes(measurement.brotliBytes)} / ${formatBytes(measurement.maximumBytes)} (${measurement.chunks.length} initial chunks)`
+    `  ${measurement.label}: ${formatBytes(measurement.brotliBytes)} / ${formatBytes(measurement.maximumBytes)} (${measurement.chunks.length} initial chunks${routeDetail})`
   )
 }

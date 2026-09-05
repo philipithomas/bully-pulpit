@@ -1,16 +1,16 @@
 /**
- * Measure initial client JavaScript from Next.js client-reference manifests.
- * Hashed chunk names are always discovered from the build output rather than
- * copied into the budget configuration.
+ * Measure every Next.js client chunk referenced by prerendered route HTML.
+ * Hashed chunk names and generated paths always come from the build output.
  */
 
 import { readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { runInNewContext } from 'node:vm'
 import { brotliCompressSync, constants } from 'node:zlib'
 
 export type RouteBudget = {
-  appEntry: string
+  /** Exact route, or a source route such as /[slug] when match is `source`. */
+  route: string
+  match?: 'exact' | 'source'
   label: string
   maximumBytes: number
 }
@@ -18,17 +18,12 @@ export type RouteBudget = {
 export type RouteMeasurement = RouteBudget & {
   brotliBytes: number
   chunks: string[]
+  measuredRoute: string
+  routeCount: number
 }
 
-type ClientReferenceManifest = {
-  entryJSFiles?: Record<string, unknown>
-}
-
-type ManifestContext = {
-  __RSC_MANIFEST?: Record<string, ClientReferenceManifest>
-  process: {
-    env: NodeJS.ProcessEnv
-  }
+type PrerenderManifest = {
+  routes?: Record<string, { srcRoute?: string | null }>
 }
 
 type MeasureOptions = {
@@ -39,41 +34,42 @@ type MeasureOptions = {
 
 /** Roughly 25% headroom above the September 2026 main build. */
 export const PUBLIC_ROUTE_BUDGETS: RouteBudget[] = [
-  { label: '/', appEntry: 'page', maximumBytes: 175 * 1024 },
+  { label: '/', route: '/', maximumBytes: 365 * 1024 },
   {
     label: '/:slug (post or content page)',
-    appEntry: '[slug]/page',
-    maximumBytes: 205 * 1024,
+    route: '/[slug]',
+    match: 'source',
+    maximumBytes: 395 * 1024,
   },
   {
     label: '/contraption',
-    appEntry: 'contraption/page',
-    maximumBytes: 130 * 1024,
+    route: '/contraption',
+    maximumBytes: 315 * 1024,
   },
   {
     label: '/workshop',
-    appEntry: 'workshop/page',
-    maximumBytes: 130 * 1024,
+    route: '/workshop',
+    maximumBytes: 315 * 1024,
   },
   {
     label: '/postcard',
-    appEntry: 'postcard/page',
-    maximumBytes: 130 * 1024,
+    route: '/postcard',
+    maximumBytes: 315 * 1024,
   },
   {
     label: '/tidbits',
-    appEntry: 'tidbits/page',
-    maximumBytes: 175 * 1024,
+    route: '/tidbits',
+    maximumBytes: 365 * 1024,
   },
   {
     label: '/tsundoku',
-    appEntry: 'tsundoku/page',
-    maximumBytes: 175 * 1024,
+    route: '/tsundoku',
+    maximumBytes: 365 * 1024,
   },
   {
     label: '/photography',
-    appEntry: 'photography/page',
-    maximumBytes: 130 * 1024,
+    route: '/photography',
+    maximumBytes: 315 * 1024,
   },
 ]
 
@@ -90,89 +86,103 @@ export function brotliByteLength(source: Buffer): number {
   }).byteLength
 }
 
-function manifestPath(buildDir: string, appEntry: string): string {
-  return join(
-    buildDir,
-    'server',
-    'app',
-    `${appEntry}_client-reference-manifest.js`
-  )
-}
-
-function routeChunks(
-  manifestSource: string,
-  appEntry: string,
-  filename: string
-): string[] {
-  // Vercel's production build can leave environment checks in this generated
-  // manifest. Expose only the environment bag those checks need, rather than
-  // the full Node process object, while keeping code generation disabled.
-  const context: ManifestContext = { process: { env: { ...process.env } } }
-  runInNewContext(manifestSource, context, {
-    contextCodeGeneration: { strings: false, wasm: false },
-    filename,
-    timeout: 1000,
-  })
-
-  const routeKey = `/${appEntry}`
-  const manifest = context.__RSC_MANIFEST?.[routeKey]
-  if (!manifest) {
-    throw new Error(`manifest does not contain route key ${routeKey}`)
-  }
-
-  const entryFiles = manifest.entryJSFiles
-  if (!entryFiles) throw new Error('manifest does not contain entryJSFiles')
-
-  const sourceSuffix = `/src/app/${appEntry}`
-  const matches = Object.entries(entryFiles).filter(([source]) =>
-    source.endsWith(sourceSuffix)
-  )
-  if (matches.length !== 1) {
+function readPrerenderManifest(buildDir: string): PrerenderManifest {
+  const file = join(buildDir, 'prerender-manifest.json')
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')) as PrerenderManifest
+  } catch (error) {
+    const reason = error instanceof Error ? `: ${error.message}` : ''
     throw new Error(
-      `expected one ${sourceSuffix} entry, found ${matches.length}`
+      `${relative(process.cwd(), file)} is missing or invalid; run \`pnpm build\` first${reason}`
     )
   }
+}
 
-  const chunks = matches[0][1]
-  if (
-    !Array.isArray(chunks) ||
-    chunks.some((chunk) => typeof chunk !== 'string')
-  ) {
-    throw new Error(`route entry ${sourceSuffix} has an invalid chunk list`)
+function matchingRoutes(
+  manifest: PrerenderManifest,
+  budget: RouteBudget
+): string[] {
+  const routes = manifest.routes ?? {}
+  if ((budget.match ?? 'exact') === 'exact') {
+    if (!(budget.route in routes)) {
+      throw new Error(`prerender manifest does not contain ${budget.route}`)
+    }
+    return [budget.route]
   }
-  if (chunks.length === 0) {
-    throw new Error(`route entry ${sourceSuffix} has no initial chunks`)
+
+  const matches = Object.entries(routes)
+    .filter(([, entry]) => entry.srcRoute === budget.route)
+    .map(([route]) => route)
+    .sort()
+  if (matches.length === 0) {
+    throw new Error(
+      `prerender manifest has no pages generated from ${budget.route}`
+    )
+  }
+  return matches
+}
+
+function htmlPath(buildDir: string, route: string): string {
+  const routePath = route === '/' ? 'index' : route.slice(1)
+  if (
+    routePath.length === 0 ||
+    routePath.split('/').some((segment) => segment === '..')
+  ) {
+    throw new Error(`invalid prerendered route ${route}`)
+  }
+  return join(buildDir, 'server', 'app', `${routePath}.html`)
+}
+
+function initialChunks(html: string): string[] {
+  const chunks: string[] = []
+  const scripts = html.matchAll(
+    /<script\b[^>]*\bsrc=(?:"([^"]+)"|'([^']+)')[^>]*>/gi
+  )
+
+  for (const match of scripts) {
+    const src = match[1] ?? match[2]
+    let pathname: string
+    try {
+      pathname = new URL(src, 'https://build.invalid').pathname
+    } catch {
+      continue
+    }
+    if (
+      pathname.startsWith('/_next/static/chunks/') &&
+      pathname.endsWith('.js')
+    ) {
+      chunks.push(pathname.slice('/_next/'.length))
+    }
   }
 
   return [...new Set(chunks)]
 }
 
 function chunkPath(buildDir: string, chunk: string): string {
-  const buildRelative = chunk.startsWith('/_next/')
-    ? chunk.slice('/_next/'.length)
-    : chunk
-  if (!buildRelative.startsWith('static/chunks/')) {
+  if (!chunk.startsWith('static/chunks/') || !chunk.endsWith('.js')) {
     throw new Error(`route references unexpected client chunk ${chunk}`)
   }
-  return join(buildDir, buildRelative)
+  return join(buildDir, chunk)
 }
 
-export function measureRoute(
+function measurePrerenderedRoute(
   buildDir: string,
-  budget: RouteBudget,
-  options: MeasureOptions = {}
-): RouteMeasurement {
-  const file = manifestPath(buildDir, budget.appEntry)
-  let source: string
+  route: string,
+  options: MeasureOptions
+): { brotliBytes: number; chunks: string[] } {
+  const file = htmlPath(buildDir, route)
+  let html: string
   try {
-    source = readFileSync(file, 'utf8')
+    html = readFileSync(file, 'utf8')
   } catch {
-    throw new Error(
-      `${relative(process.cwd(), file)} is missing; run \`pnpm build\` first`
-    )
+    throw new Error(`${relative(process.cwd(), file)} is missing`)
   }
 
-  const chunks = routeChunks(source, budget.appEntry, file)
+  const chunks = initialChunks(html)
+  if (chunks.length === 0) {
+    throw new Error(`${route} HTML has no initial Next.js client chunks`)
+  }
+
   const read = options.read ?? readFileSync
   const compress = options.compress ?? brotliByteLength
   let brotliBytes = 0
@@ -195,7 +205,28 @@ export function measureRoute(
     }
   }
 
-  return { ...budget, brotliBytes, chunks }
+  return { brotliBytes, chunks }
+}
+
+export function measureRoute(
+  buildDir: string,
+  budget: RouteBudget,
+  options: MeasureOptions = {}
+): RouteMeasurement {
+  const routes = matchingRoutes(readPrerenderManifest(buildDir), budget)
+  let largest:
+    | { brotliBytes: number; chunks: string[]; measuredRoute: string }
+    | undefined
+
+  for (const route of routes) {
+    const measurement = measurePrerenderedRoute(buildDir, route, options)
+    if (!largest || measurement.brotliBytes > largest.brotliBytes) {
+      largest = { ...measurement, measuredRoute: route }
+    }
+  }
+
+  if (!largest) throw new Error(`no prerendered HTML matched ${budget.route}`)
+  return { ...budget, ...largest, routeCount: routes.length }
 }
 
 export function evaluateBudgets(
@@ -213,7 +244,7 @@ export function evaluateBudgets(
       measurements.push(measurement)
       if (measurement.brotliBytes > budget.maximumBytes) {
         errors.push(
-          `${budget.label}: ${formatBytes(measurement.brotliBytes)} exceeds ${formatBytes(budget.maximumBytes)}`
+          `${budget.label}: ${formatBytes(measurement.brotliBytes)} exceeds ${formatBytes(budget.maximumBytes)} (${measurement.measuredRoute})`
         )
       }
     } catch (error) {

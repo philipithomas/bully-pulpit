@@ -11,45 +11,56 @@ import {
 
 const tempDirs: string[] = []
 
-async function buildFixture({
-  appEntry = 'page',
-  chunks = ['static/chunks/first-hash.js', 'static/chunks/second-hash.js'],
-  manifestPrelude = '',
-}: {
-  appEntry?: string
-  chunks?: string[]
-  manifestPrelude?: string
-} = {}) {
+type PageFixture = {
+  route: string
+  srcRoute?: string | null
+  chunks: string[]
+}
+
+const sources: Record<string, string> = {
+  'static/chunks/bootstrap-hash.js': 'boot',
+  'static/chunks/first-hash.js': 'first',
+  'static/chunks/second-hash.js': 'second!',
+  'static/chunks/large-hash.js': 'large source',
+}
+
+async function buildFixture(
+  pages: PageFixture[] = [
+    {
+      route: '/',
+      chunks: [
+        'static/chunks/bootstrap-hash.js',
+        'static/chunks/first-hash.js',
+        'static/chunks/second-hash.js',
+      ],
+    },
+  ]
+) {
   const buildDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bp-budget-'))
   tempDirs.push(buildDir)
 
-  const manifestPath = path.join(
-    buildDir,
-    'server/app',
-    `${appEntry}_client-reference-manifest.js`
+  const routes = Object.fromEntries(
+    pages.map((page) => [page.route, { srcRoute: page.srcRoute ?? null }])
   )
-  await fs.mkdir(path.dirname(manifestPath), { recursive: true })
   await fs.writeFile(
-    manifestPath,
-    `${manifestPrelude}
-globalThis.__RSC_MANIFEST = globalThis.__RSC_MANIFEST || {};
-globalThis.__RSC_MANIFEST["/${appEntry}"] = ${JSON.stringify({
-      entryJSFiles: {
-        '[project]/src/app/layout': ['static/chunks/layout-only.js'],
-        [`[project]/src/app/${appEntry}`]: chunks,
-      },
-    })};`
+    path.join(buildDir, 'prerender-manifest.json'),
+    JSON.stringify({ routes })
   )
 
-  const sources: Record<string, string> = {
-    'static/chunks/first-hash.js': 'first',
-    'static/chunks/second-hash.js': 'second!',
-    'static/chunks/layout-only.js': 'not part of the route entry fixture',
+  for (const page of pages) {
+    const routePath = page.route === '/' ? 'index' : page.route.slice(1)
+    const file = path.join(buildDir, 'server/app', `${routePath}.html`)
+    await fs.mkdir(path.dirname(file), { recursive: true })
+    const scripts = page.chunks
+      .map((chunk) => `<script src="/_next/${chunk}?v=fixture"></script>`)
+      .join('')
+    await fs.writeFile(file, `<html><body>${scripts}</body></html>`)
   }
+
   for (const [chunk, source] of Object.entries(sources)) {
-    const chunkPath = path.join(buildDir, chunk)
-    await fs.mkdir(path.dirname(chunkPath), { recursive: true })
-    await fs.writeFile(chunkPath, source)
+    const file = path.join(buildDir, chunk)
+    await fs.mkdir(path.dirname(file), { recursive: true })
+    await fs.writeFile(file, source)
   }
 
   return buildDir
@@ -66,28 +77,62 @@ afterEach(async () => {
 describe('built route performance budget', () => {
   const budget: RouteBudget = {
     label: '/',
-    appEntry: 'page',
+    route: '/',
     maximumBytes: 100,
   }
 
-  it('discovers hashed chunks from the route entry and counts each once', async () => {
-    const buildDir = await buildFixture({
-      chunks: [
-        'static/chunks/first-hash.js',
-        'static/chunks/second-hash.js',
-        'static/chunks/first-hash.js',
-      ],
-    })
+  it('counts every unique Next.js chunk referenced by the initial HTML', async () => {
+    const buildDir = await buildFixture([
+      {
+        route: '/',
+        chunks: [
+          'static/chunks/bootstrap-hash.js',
+          'static/chunks/first-hash.js',
+          'static/chunks/second-hash.js',
+          'static/chunks/first-hash.js',
+        ],
+      },
+    ])
 
     const measurement = measureRoute(buildDir, budget, {
       compress: (source) => source.byteLength,
     })
 
     expect(measurement.chunks).toEqual([
+      'static/chunks/bootstrap-hash.js',
       'static/chunks/first-hash.js',
       'static/chunks/second-hash.js',
     ])
-    expect(measurement.brotliBytes).toBe(12)
+    expect(measurement.brotliBytes).toBe(16)
+  })
+
+  it('measures every generated dynamic page and guards the largest one', async () => {
+    const buildDir = await buildFixture([
+      {
+        route: '/first',
+        srcRoute: '/[slug]',
+        chunks: ['static/chunks/first-hash.js'],
+      },
+      {
+        route: '/second',
+        srcRoute: '/[slug]',
+        chunks: ['static/chunks/first-hash.js', 'static/chunks/large-hash.js'],
+      },
+      {
+        route: '/unrelated',
+        chunks: ['static/chunks/second-hash.js'],
+      },
+    ])
+
+    const measurement = measureRoute(
+      buildDir,
+      { ...budget, route: '/[slug]', match: 'source' },
+      { compress: (source) => source.byteLength }
+    )
+
+    expect(measurement.routeCount).toBe(2)
+    expect(measurement.measuredRoute).toBe('/second')
+    expect(measurement.brotliBytes).toBe(17)
   })
 
   it('reports route budgets that are exceeded', async () => {
@@ -95,12 +140,12 @@ describe('built route performance budget', () => {
 
     const result = evaluateBudgets(
       buildDir,
-      [{ ...budget, maximumBytes: 11 }],
+      [{ ...budget, maximumBytes: 15 }],
       { compress: (source) => source.byteLength }
     )
 
     expect(result.measurements).toHaveLength(1)
-    expect(result.errors).toEqual(['/: 12 B exceeds 11 B'])
+    expect(result.errors).toEqual(['/: 16 B exceeds 15 B (/)'])
   })
 
   it('turns missing build artifacts into an actionable failure', () => {
@@ -109,36 +154,22 @@ describe('built route performance budget', () => {
     const result = evaluateBudgets(buildDir, [budget])
 
     expect(result.measurements).toEqual([])
-    expect(result.errors[0]).toContain('is missing; run `pnpm build` first')
+    expect(result.errors[0]).toContain('run `pnpm build` first')
   })
 
-  it('does not treat an empty route entry as a zero-byte success', async () => {
-    const buildDir = await buildFixture({ chunks: [] })
+  it('does not treat HTML without client chunks as a zero-byte success', async () => {
+    const buildDir = await buildFixture([{ route: '/', chunks: [] }])
 
     const result = evaluateBudgets(buildDir, [budget])
 
     expect(result.measurements).toEqual([])
     expect(result.errors).toEqual([
-      '/: route entry /src/app/page has no initial chunks',
+      '/: / HTML has no initial Next.js client chunks',
     ])
   })
 
   it('uses Brotli rather than raw source bytes', () => {
     const source = Buffer.from('repeat '.repeat(1000))
     expect(brotliByteLength(source)).toBeLessThan(source.byteLength)
-  })
-
-  it('supports environment checks emitted by a Vercel production build', async () => {
-    const buildDir = await buildFixture({
-      manifestPrelude:
-        'if (!process.env.NODE_ENV) throw new Error("missing environment")',
-    })
-
-    const result = evaluateBudgets(buildDir, [budget], {
-      compress: (source) => source.byteLength,
-    })
-
-    expect(result.errors).toEqual([])
-    expect(result.measurements).toHaveLength(1)
   })
 })
