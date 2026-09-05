@@ -14,9 +14,11 @@ const tempDirs: string[] = []
 async function buildFixture({
   appEntry = 'page',
   chunks = ['static/chunks/first-hash.js', 'static/chunks/second-hash.js'],
+  manifestPrelude = '',
 }: {
   appEntry?: string
   chunks?: string[]
+  manifestPrelude?: string
 } = {}) {
   const buildDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bp-budget-'))
   tempDirs.push(buildDir)
@@ -29,7 +31,8 @@ async function buildFixture({
   await fs.mkdir(path.dirname(manifestPath), { recursive: true })
   await fs.writeFile(
     manifestPath,
-    `globalThis.__RSC_MANIFEST = globalThis.__RSC_MANIFEST || {};
+    `${manifestPrelude}
+globalThis.__RSC_MANIFEST = globalThis.__RSC_MANIFEST || {};
 globalThis.__RSC_MANIFEST["/${appEntry}"] = ${JSON.stringify({
       entryJSFiles: {
         '[project]/src/app/layout': ['static/chunks/layout-only.js'],
@@ -123,5 +126,19 @@ describe('built route performance budget', () => {
   it('uses Brotli rather than raw source bytes', () => {
     const source = Buffer.from('repeat '.repeat(1000))
     expect(brotliByteLength(source)).toBeLessThan(source.byteLength)
+  })
+
+  it('supports environment checks emitted by a Vercel production build', async () => {
+    const buildDir = await buildFixture({
+      manifestPrelude:
+        'if (!process.env.NODE_ENV) throw new Error("missing environment")',
+    })
+
+    const result = evaluateBudgets(buildDir, [budget], {
+      compress: (source) => source.byteLength,
+    })
+
+    expect(result.errors).toEqual([])
+    expect(result.measurements).toHaveLength(1)
   })
 })

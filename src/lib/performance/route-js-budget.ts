@@ -26,6 +26,9 @@ type ClientReferenceManifest = {
 
 type ManifestContext = {
   __RSC_MANIFEST?: Record<string, ClientReferenceManifest>
+  process: {
+    env: NodeJS.ProcessEnv
+  }
 }
 
 type MeasureOptions = {
@@ -101,7 +104,10 @@ function routeChunks(
   appEntry: string,
   filename: string
 ): string[] {
-  const context: ManifestContext = {}
+  // Vercel's production build can leave environment checks in this generated
+  // manifest. Expose only the environment bag those checks need, rather than
+  // the full Node process object, while keeping code generation disabled.
+  const context: ManifestContext = { process: { env: { ...process.env } } }
   runInNewContext(manifestSource, context, {
     contextCodeGeneration: { strings: false, wasm: false },
     filename,
