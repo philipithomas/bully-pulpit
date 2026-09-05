@@ -25,14 +25,16 @@ pnpm bell:eval:live -- --output /tmp/bell-eval.md
 ```
 
 The command uses `AI_GATEWAY_API_KEY` or `VERCEL_OIDC_TOKEN` and runs the same
-public and synthetic prompts against Bell's production model and a fixed
-`openai/gpt-5.4-mini` baseline. The report identifies which model is production,
-which is the baseline, every model that actually ran, tool use, and a review
-checklist for each answer. Per-model provider errors stay in the report, and the
-command exits nonzero when any generation fails. Attach that report, or its
-relevant sections, to the pull request.
+public and synthetic prompts against Bell's production model and the named
+`openai/gpt-5.4-mini` reference. This is a paired head-to-head at generation
+time, not an immutable longitudinal snapshot: provider behavior behind either
+Gateway model ID can change between runs. The report identifies which model is
+production, which is the reference, every model that actually ran, tool use,
+and a review checklist for each answer. Per-model provider errors stay in the
+report, and the command exits nonzero when any generation fails. Attach that
+report, or its relevant sections, to the pull request.
 
-`--models` replaces the default production/baseline pair. Use it to compare
+`--models` replaces the default production/reference pair. Use it to compare
 other models or narrow a review:
 
 ```bash

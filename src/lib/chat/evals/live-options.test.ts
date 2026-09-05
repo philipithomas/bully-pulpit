@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  BELL_EVAL_BASELINE_MODEL_ID,
+  BELL_EVAL_REFERENCE_MODEL_ID,
   bellEvalUsage,
   parseBellEvalArgs,
 } from '@/lib/chat/evals/live-options'
@@ -8,19 +8,19 @@ import {
 const PRODUCTION_MODEL = 'openai/gpt-production'
 
 describe('parseBellEvalArgs', () => {
-  it('compares the production model with the fixed baseline by default', () => {
+  it('compares the production model with the named reference by default', () => {
     const options = parseBellEvalArgs([], PRODUCTION_MODEL)
 
     expect(options.models).toEqual([
       PRODUCTION_MODEL,
-      BELL_EVAL_BASELINE_MODEL_ID,
+      BELL_EVAL_REFERENCE_MODEL_ID,
     ])
-    expect(options.modelSelection).toBe('production-vs-baseline')
+    expect(options.modelSelection).toBe('production-vs-reference')
   })
 
   it('does not run the same model twice if it becomes the production model', () => {
-    expect(parseBellEvalArgs([], BELL_EVAL_BASELINE_MODEL_ID).models).toEqual([
-      BELL_EVAL_BASELINE_MODEL_ID,
+    expect(parseBellEvalArgs([], BELL_EVAL_REFERENCE_MODEL_ID).models).toEqual([
+      BELL_EVAL_REFERENCE_MODEL_ID,
     ])
   })
 
@@ -67,5 +67,8 @@ describe('parseBellEvalArgs', () => {
 })
 
 it('documents that an explicit model list replaces the default pair', () => {
-  expect(bellEvalUsage()).toContain('Replace the production/baseline pair')
+  expect(bellEvalUsage()).toContain('Replace the production/reference pair')
+  expect(bellEvalUsage()).toContain(
+    'generation-time head-to-head, not an immutable longitudinal snapshot'
+  )
 })

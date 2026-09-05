@@ -1,8 +1,8 @@
-export const BELL_EVAL_BASELINE_MODEL_ID = 'openai/gpt-5.4-mini'
+export const BELL_EVAL_REFERENCE_MODEL_ID = 'openai/gpt-5.4-mini'
 
 export interface BellEvalCliOptions {
   models: string[]
-  modelSelection: 'production-vs-baseline' | 'explicit'
+  modelSelection: 'production-vs-reference' | 'explicit'
   output: string | null
   caseIds: Set<string>
   help: boolean
@@ -13,10 +13,12 @@ export function bellEvalUsage(): string {
     'Usage: pnpm bell:eval:live [options]',
     '',
     'Options:',
-    '  --models <ids>  Replace the production/baseline pair with comma-separated Gateway model IDs',
+    '  --models <ids>  Replace the production/reference pair with comma-separated Gateway model IDs',
     '  --case <id>      Run one case. Repeat to run several cases',
     '  --output <path>  Write the Markdown report to a file',
     '  -h, --help       Show this help',
+    '',
+    'The default is a generation-time head-to-head, not an immutable longitudinal snapshot.',
   ].join('\n')
 }
 
@@ -35,8 +37,8 @@ export function parseBellEvalArgs(
   productionModel: string
 ): BellEvalCliOptions {
   const options: BellEvalCliOptions = {
-    models: uniqueModels([productionModel, BELL_EVAL_BASELINE_MODEL_ID]),
-    modelSelection: 'production-vs-baseline',
+    models: uniqueModels([productionModel, BELL_EVAL_REFERENCE_MODEL_ID]),
+    modelSelection: 'production-vs-reference',
     output: null,
     caseIds: new Set(),
     help: false,

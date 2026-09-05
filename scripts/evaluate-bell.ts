@@ -15,7 +15,7 @@ import {
 import { bellEvalCases } from '@/lib/chat/evals/cases'
 import { runDeterministicBellEvals } from '@/lib/chat/evals/deterministic'
 import {
-  BELL_EVAL_BASELINE_MODEL_ID,
+  BELL_EVAL_REFERENCE_MODEL_ID,
   bellEvalUsage,
   parseBellEvalArgs,
 } from '@/lib/chat/evals/live-options'
@@ -72,11 +72,12 @@ async function main() {
     '# Bell model comparison',
     '',
     `Generated: ${new Date().toISOString()}`,
-    ...(options.modelSelection === 'production-vs-baseline'
+    ...(options.modelSelection === 'production-vs-reference'
       ? [
-          'Selection: production vs fixed baseline',
+          'Selection: production vs named reference',
           `Production model: ${BELL_MODEL_ID}`,
-          `Baseline model: ${BELL_EVAL_BASELINE_MODEL_ID}`,
+          `Reference model: ${BELL_EVAL_REFERENCE_MODEL_ID}`,
+          'Comparison: paired head-to-head at generation time; this is not an immutable longitudinal snapshot.',
         ]
       : ['Selection: explicit --models list']),
     `Models: ${options.models.join(', ')}`,
