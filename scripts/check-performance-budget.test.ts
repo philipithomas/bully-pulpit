@@ -15,6 +15,7 @@ type PageFixture = {
   route: string
   srcRoute?: string | null
   chunks: string[]
+  legacyChunks?: string[]
 }
 
 const sources: Record<string, string> = {
@@ -22,6 +23,7 @@ const sources: Record<string, string> = {
   'static/chunks/first-hash.js': 'first',
   'static/chunks/second-hash.js': 'second!',
   'static/chunks/large-hash.js': 'large source',
+  'static/chunks/legacy-hash.js': 'legacy source',
 }
 
 async function buildFixture(
@@ -51,10 +53,18 @@ async function buildFixture(
     const routePath = page.route === '/' ? 'index' : page.route.slice(1)
     const file = path.join(buildDir, 'server/app', `${routePath}.html`)
     await fs.mkdir(path.dirname(file), { recursive: true })
-    const scripts = page.chunks
+    const modernScripts = page.chunks
       .map((chunk) => `<script src="/_next/${chunk}?v=fixture"></script>`)
       .join('')
-    await fs.writeFile(file, `<html><body>${scripts}</body></html>`)
+    const legacyScripts = (page.legacyChunks ?? [])
+      .map(
+        (chunk) => `<script src="/_next/${chunk}?v=fixture" noModule></script>`
+      )
+      .join('')
+    await fs.writeFile(
+      file,
+      `<html><body>${modernScripts}${legacyScripts}</body></html>`
+    )
   }
 
   for (const [chunk, source] of Object.entries(sources)) {
@@ -81,7 +91,7 @@ describe('built route performance budget', () => {
     maximumBytes: 100,
   }
 
-  it('counts every unique Next.js chunk referenced by the initial HTML', async () => {
+  it('counts every unique modern Next.js boot chunk in the HTML', async () => {
     const buildDir = await buildFixture([
       {
         route: '/',
@@ -104,6 +114,23 @@ describe('built route performance budget', () => {
       'static/chunks/second-hash.js',
     ])
     expect(measurement.brotliBytes).toBe(16)
+  })
+
+  it('excludes nomodule fallback chunks that modern browsers do not load', async () => {
+    const buildDir = await buildFixture([
+      {
+        route: '/',
+        chunks: ['static/chunks/first-hash.js'],
+        legacyChunks: ['static/chunks/legacy-hash.js'],
+      },
+    ])
+
+    const measurement = measureRoute(buildDir, budget, {
+      compress: (source) => source.byteLength,
+    })
+
+    expect(measurement.chunks).toEqual(['static/chunks/first-hash.js'])
+    expect(measurement.brotliBytes).toBe(5)
   })
 
   it('measures every generated dynamic page and guards the largest one', async () => {
@@ -164,7 +191,7 @@ describe('built route performance budget', () => {
 
     expect(result.measurements).toEqual([])
     expect(result.errors).toEqual([
-      '/: / HTML has no initial Next.js client chunks',
+      '/: / HTML has no modern Next.js boot chunks',
     ])
   })
 

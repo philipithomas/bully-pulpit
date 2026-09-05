@@ -1,5 +1,5 @@
 /**
- * Measure every Next.js client chunk referenced by prerendered route HTML.
+ * Measure modern Next.js boot chunks referenced by prerendered route HTML.
  * Hashed chunk names and generated paths always come from the build output.
  */
 
@@ -133,13 +133,21 @@ function htmlPath(buildDir: string, route: string): string {
   return join(buildDir, 'server', 'app', `${routePath}.html`)
 }
 
-function initialChunks(html: string): string[] {
+function modernBootChunks(html: string): string[] {
   const chunks: string[] = []
   const scripts = html.matchAll(
     /<script\b[^>]*\bsrc=(?:"([^"]+)"|'([^']+)')[^>]*>/gi
   )
 
   for (const match of scripts) {
+    const tag = match[0]
+    // Next can emit nomodule fallbacks for legacy browsers alongside the
+    // modern scripts. A modern browser never downloads those fallback chunks.
+    if (
+      /\snomodule(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?(?=\s|\/?>)/i.test(tag)
+    ) {
+      continue
+    }
     const src = match[1] ?? match[2]
     let pathname: string
     try {
@@ -178,9 +186,9 @@ function measurePrerenderedRoute(
     throw new Error(`${relative(process.cwd(), file)} is missing`)
   }
 
-  const chunks = initialChunks(html)
+  const chunks = modernBootChunks(html)
   if (chunks.length === 0) {
-    throw new Error(`${route} HTML has no initial Next.js client chunks`)
+    throw new Error(`${route} HTML has no modern Next.js boot chunks`)
   }
 
   const read = options.read ?? readFileSync

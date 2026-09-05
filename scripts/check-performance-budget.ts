@@ -1,4 +1,4 @@
-/** Post-build guard for initial client JavaScript on key public routes. */
+/** Post-build guard for modern HTML boot JavaScript on key public routes. */
 
 import { join } from 'node:path'
 import { evaluateBudgets, formatBytes } from '@/lib/performance/route-js-budget'
@@ -19,6 +19,6 @@ for (const measurement of measurements) {
       ? `; largest ${measurement.measuredRoute} of ${measurement.routeCount}`
       : ''
   console.log(
-    `  ${measurement.label}: ${formatBytes(measurement.brotliBytes)} / ${formatBytes(measurement.maximumBytes)} (${measurement.chunks.length} initial chunks${routeDetail})`
+    `  ${measurement.label}: ${formatBytes(measurement.brotliBytes)} / ${formatBytes(measurement.maximumBytes)} (${measurement.chunks.length} modern boot chunks${routeDetail})`
   )
 }
