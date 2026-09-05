@@ -26,7 +26,10 @@ export const metadata = createPublicPageMetadata({
   newsletter: 'tidbits',
 })
 
-const ROW_HEIGHT = 280
+// Match the gallery's sm:230px and lg:280px row heights. On phones,
+// justification can make a tile fill the row, so retain the 100vw fallback.
+const TABLET_ROW_HEIGHT = 230
+const DESKTOP_ROW_HEIGHT = 280
 const MAX_ROW_WIDTH = 1216
 const STRETCH = 1.25
 const PHOTO_VIEWER_DESCRIPTION_MAX = 900
@@ -52,13 +55,13 @@ function photoViewerDescription(post: Post): string | undefined {
 function tileSizes(ratio: number): string {
   const tabletVw = Math.min(
     100,
-    Math.round(((ratio * ROW_HEIGHT * STRETCH) / 720) * 100)
+    Math.round(((ratio * TABLET_ROW_HEIGHT * STRETCH) / 720) * 100)
   )
   const desktopPx = Math.min(
     MAX_ROW_WIDTH,
-    Math.round(ratio * ROW_HEIGHT * STRETCH)
+    Math.round(ratio * DESKTOP_ROW_HEIGHT * STRETCH)
   )
-  return `(max-width: 640px) 100vw, (max-width: 1024px) ${tabletVw}vw, ${desktopPx}px`
+  return `(min-width: 1024px) ${desktopPx}px, (min-width: 640px) ${tabletVw}vw, 100vw`
 }
 
 function viewerData(post: Post) {
