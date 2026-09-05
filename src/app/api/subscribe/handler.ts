@@ -10,6 +10,7 @@ import {
   createOrRetrieve,
   InvalidEmailError,
   SuppressedEmailError,
+  subscribedNewslettersForSubscriber,
   UndeliverableEmailError,
 } from '@/lib/auth/subscriber-service'
 import { NEWSLETTERS } from '@/lib/content/types'
@@ -86,12 +87,17 @@ export async function handleSubscribeRequest(
     })
 
     const placement = parseAnalyticsPlacement(analytics_placement)
-    const newsletter = summarizeNewsletters(requestedNewsletters)
     if (result.nextStep === 'verification_sent') {
+      // An unconfirmed row's stored scope is immutable across unauthenticated
+      // retries, so report what this verification email actually confirms.
+      // Returning readers can still carry a pending explicit opt-in request.
+      const verificationNewsletters = result.subscriber.confirmedAt
+        ? requestedNewsletters
+        : subscribedNewslettersForSubscriber(result.subscriber)
       await trackServerEvent(request, 'Newsletter verification sent', {
         method: 'email',
         placement,
-        newsletter,
+        newsletter: summarizeNewsletters(verificationNewsletters),
         new_subscriber: result.isNew,
       })
     } else if (options.allowExistingSubscriberOptIn) {

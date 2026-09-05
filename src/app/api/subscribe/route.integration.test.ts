@@ -3,6 +3,10 @@ import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { emailSuppressions, logins, subscribers } from '@/lib/db/schema'
 
+const { trackServerEventMock } = vi.hoisted(() => ({
+  trackServerEventMock: vi.fn(async () => {}),
+}))
+
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('botid/server', () =>
   import('@/test/integration/mocks').then((m) => m.botidMock())
@@ -11,6 +15,9 @@ vi.mock('botid/server', () =>
 vi.mock('@/lib/email/ses', () =>
   import('@/test/integration/mocks').then((m) => m.sesMock())
 )
+vi.mock('@/lib/analytics/server', () => ({
+  trackServerEvent: trackServerEventMock,
+}))
 // Mock the resolver seam only — @/lib/email/deliverability stays real so the
 // MX deliverability check runs its actual logic against canned DNS answers.
 vi.mock('node:dns/promises', () => ({
@@ -44,6 +51,7 @@ beforeEach(async () => {
   await resetDb()
   vi.mocked(checkBotId).mockClear()
   vi.mocked(sendSimpleEmail).mockClear()
+  trackServerEventMock.mockClear()
   // Default DNS answer: every domain has a working MX record. Tests that
   // exercise the deliverability check override these per domain.
   clearDeliverabilityCache()
@@ -247,17 +255,18 @@ describe('POST /api/subscribe', () => {
     )
   })
 
-  it('keeps an unconfirmed subscriber on the first stored scope when a later request asks for more', async () => {
-    await db.insert(subscribers).values({
-      email: 'returning@example.com',
-      name: 'Original Name',
-      source: 'https://news.ycombinator.com',
-      subscribedContraption: true,
-      subscribedWorkshop: false,
-      subscribedPostcard: false,
-      subscribedTsundoku: false,
-      subscribedTidbits: false,
-    })
+  it('keeps and reports an unconfirmed subscriber on the first stored scope when a later request asks for more', async () => {
+    const first = await POST(
+      subscribeRequest({
+        email: 'returning@example.com',
+        name: 'Original Name',
+        source: 'https://news.ycombinator.com',
+        newsletters: ['workshop'],
+      })
+    )
+    expect(first.status).toBe(200)
+    vi.mocked(sendSimpleEmail).mockClear()
+    trackServerEventMock.mockClear()
 
     // A repeat unauthenticated request cannot rewrite pending consent, identity,
     // or attribution. The reader can change preferences after confirming.
@@ -282,8 +291,8 @@ describe('POST /api/subscribe', () => {
       .from(subscribers)
       .where(eq(subscribers.email, 'returning@example.com'))
     expect(rows).toHaveLength(1)
-    expect(rows[0].subscribedContraption).toBe(true)
-    expect(rows[0].subscribedWorkshop).toBe(false)
+    expect(rows[0].subscribedContraption).toBe(false)
+    expect(rows[0].subscribedWorkshop).toBe(true)
     expect(rows[0].subscribedPostcard).toBe(false)
     expect(rows[0].subscribedTsundoku).toBe(false)
     expect(rows[0].subscribedTidbits).toBe(false)
@@ -298,10 +307,20 @@ describe('POST /api/subscribe', () => {
       'Confirm your subscription to philipithomas.com'
     )
     expect(resend.text).toContain(
-      'Thanks for subscribing to Contraption at philipithomas.com.'
+      'Thanks for subscribing to Workshop at philipithomas.com.'
     )
-    expect(resend.text).not.toContain('subscribing to Workshop')
+    expect(resend.text).not.toContain('subscribing to Contraption')
     expect(resend.text).not.toContain('subscribing to Postcard')
+    expect(trackServerEventMock).toHaveBeenLastCalledWith(
+      expect.any(Request),
+      'Newsletter verification sent',
+      {
+        method: 'email',
+        placement: 'unknown',
+        newsletter: 'workshop',
+        new_subscriber: false,
+      }
+    )
   })
 
   it('signs in an existing confirmed subscriber without re-subscribing them when no newsletters are requested', async () => {
