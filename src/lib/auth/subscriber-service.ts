@@ -68,17 +68,26 @@ export type CreateResult = {
   nextStep: 'confirmed' | 'verification_sent'
 }
 
+const subscriberNewsletterPreferences = [
+  ['contraption', 'subscribedContraption'],
+  ['workshop', 'subscribedWorkshop'],
+  ['postcard', 'subscribedPostcard'],
+  ['tidbits', 'subscribedTidbits'],
+] as const
+
+export function subscribedNewslettersForSubscriber(
+  subscriber: Subscriber
+): Newsletter[] {
+  return subscriberNewsletterPreferences
+    .filter(([, key]) => subscriber[key])
+    .map(([newsletter]) => newsletter)
+}
+
 function changedNewsletterOptIns(
   before: Subscriber,
   after: Subscriber
 ): Newsletter[] {
-  const preferences = [
-    ['contraption', 'subscribedContraption'],
-    ['workshop', 'subscribedWorkshop'],
-    ['postcard', 'subscribedPostcard'],
-    ['tidbits', 'subscribedTidbits'],
-  ] as const
-  return preferences
+  return subscriberNewsletterPreferences
     .filter(([, key]) => !before[key] && after[key])
     .map(([newsletter]) => newsletter)
 }

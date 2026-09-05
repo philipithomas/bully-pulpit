@@ -19,6 +19,7 @@ import {
   applyNewsletterOptIns,
   normalizedNewsletters,
   notifyExistingSubscriberOptIns,
+  subscribedNewslettersForSubscriber,
 } from '@/lib/auth/subscriber-service'
 import { NEWSLETTERS } from '@/lib/content/types'
 import { serializeSubscriber } from '@/lib/db/queries/subscribers'
@@ -91,7 +92,9 @@ export async function POST(request: Request) {
       method: 'email_code',
       placement: parseAnalyticsPlacement(analytics_placement),
       newsletter: summarizeNewsletters(
-        verification.newlyConfirmed ? undefined : requestedNewsletters
+        verification.newlyConfirmed
+          ? subscribedNewslettersForSubscriber(subscriber)
+          : newsletters
       ),
       new_subscriber: verification.newlyConfirmed,
     })
