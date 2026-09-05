@@ -256,6 +256,9 @@ describe('sendNewsletterWorkflow', () => {
 
     await expect(promise).resolves.toEqual({ sent: 1, failed: 0 })
     expect(mockedSendQueued).toHaveBeenCalledTimes(1)
+    expect(mockedSendQueued).toHaveBeenCalledWith(
+      expect.objectContaining({ postSlug: 'hello-world' })
+    )
     expect(mockedSends.markSent).toHaveBeenCalledWith(1)
   })
 

@@ -95,6 +95,7 @@ export async function renderNewsletterPreview(slug: string): Promise<{
   const body = await buildEmailBodyHtml(post)
   const html = renderFullNewsletter({
     bodyHtml: body.html,
+    postSlug: post.slug,
     newsletter,
     previewText: body.previewText,
     unsubscribeUrl: `${siteConfig.url}/unsubscribe`,
@@ -125,6 +126,7 @@ export async function sendNewsletterToOne(input: {
   const unsubscribeUrl = `${siteConfig.url}/unsubscribe`
   const html = renderFullNewsletter({
     bodyHtml: body.html,
+    postSlug: post.slug,
     newsletter,
     previewText: body.previewText,
     unsubscribeUrl,

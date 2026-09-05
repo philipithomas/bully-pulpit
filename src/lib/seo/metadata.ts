@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { siteConfig } from '@/lib/config'
 import type { Newsletter } from '@/lib/content/types'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { latestTidbitsPalette } from '@/lib/tidbits/latest-palette'
+import { tidbitsAsset } from '@/lib/tidbits/palette'
 
 export const DEFAULT_SOCIAL_IMAGE = {
   url: siteConfig.image,
@@ -33,7 +35,9 @@ export function createPublicPageMetadata({
   newsletter,
 }: PublicPageMetadataOptions): Metadata {
   const newsletterIcon = newsletter
-    ? siteConfig.newsletters[newsletter].icon
+    ? newsletter === 'tidbits'
+      ? tidbitsAsset(latestTidbitsPalette(), 'icon')
+      : siteConfig.newsletters[newsletter].icon
     : null
 
   return {

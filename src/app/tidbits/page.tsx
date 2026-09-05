@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
+import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
 import { TidbitsSmsSignup } from '@/components/tidbits/tidbits-sms-signup'
 import { siteConfig } from '@/lib/config'
 import {
@@ -14,6 +15,7 @@ import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 import { publicAppPage } from '@/lib/public-pages'
 import { createPublicPageMetadata } from '@/lib/seo/metadata'
+import { tidbitsPaletteForPost } from '@/lib/tidbits/palette'
 
 const tidbitsPage = publicAppPage('/tidbits')
 
@@ -163,7 +165,11 @@ export default function TidbitsPage() {
   const smsSignupDisplayNumber = sitePhoneDisplayNumber()
 
   return (
-    <div className="bg-tidbits-paper" data-bg="tidbits">
+    <div
+      className="bg-tidbits-paper"
+      data-bg="tidbits"
+      data-tidbits-palette={tidbitsPaletteForPost(leadPost?.slug).id}
+    >
       <div className="tidbits-page-shell container pt-4 pb-10 sm:pt-6 sm:pb-12 md:pb-14">
         <div className="tidbits-page-intro mb-12 grid gap-7 text-center sm:mb-14 md:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] md:items-end md:gap-12 md:text-left">
           <div className="tidbits-page-brand flex flex-col items-center md:items-start">
@@ -172,7 +178,7 @@ export default function TidbitsPage() {
               aria-label="tidbits"
               className="block transition-opacity hover:opacity-80"
             >
-              <Image
+              <NewsletterWordmark
                 src="/images/tidbits.svg"
                 alt="tidbits"
                 width={1601}

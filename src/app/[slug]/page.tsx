@@ -48,6 +48,7 @@ import { feedDiscovery } from '@/lib/feeds/discovery'
 import { isPhotoNewsletter } from '@/lib/newsletters'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 import { contentDescription } from '@/lib/seo/content-description'
+import { tidbitsAsset, tidbitsPaletteForPost } from '@/lib/tidbits/palette'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -198,7 +199,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           icons: {
             icon: [
               {
-                url: siteConfig.newsletters[post.newsletter].icon,
+                url:
+                  post.newsletter === 'tidbits'
+                    ? tidbitsAsset(tidbitsPaletteForPost(post.slug), 'icon')
+                    : siteConfig.newsletters[post.newsletter].icon,
                 type: 'image/svg+xml',
               },
             ],
@@ -347,7 +351,13 @@ export default async function SlugPage({ params }: Props) {
   ) : null
 
   return (
-    <article className={bg?.className} data-bg={bg?.dataBg}>
+    <article
+      className={bg?.className}
+      data-bg={bg?.dataBg}
+      data-tidbits-palette={
+        isTidbitsPost ? tidbitsPaletteForPost(post?.slug).id : undefined
+      }
+    >
       <SetNewsletter newsletter={post?.newsletter ?? null} />
       <JsonLd
         type={post ? 'article' : 'webpage'}

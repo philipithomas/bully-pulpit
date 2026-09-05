@@ -2,6 +2,11 @@ import { siteConfig } from '@/lib/config'
 import type { NewsletterSlug } from '@/lib/db/queries/subscribers'
 import { escapeHtml } from '@/lib/email/escape'
 import { isPhotoNewsletter } from '@/lib/newsletters'
+import {
+  type TidbitsPalette,
+  tidbitsAsset,
+  tidbitsPaletteForPost,
+} from '@/lib/tidbits/palette'
 
 // Preheader padding: zero-width characters that stop email clients from pulling
 // body text into the inbox preview after the real preheader. Ported verbatim
@@ -15,7 +20,7 @@ const darkAccentColors: Record<NewsletterSlug, string> = {
   contraption: '#8FB8A5',
   workshop: '#C29B7E',
   postcard: '#97A8D9',
-  tidbits: '#F41986',
+  tidbits: '#79c7bb',
   tsundoku: '#FF7A82',
 }
 const DEFAULT_DARK_ACCENT = '#A8A49D'
@@ -23,14 +28,14 @@ const backgroundColors: Record<NewsletterSlug, string> = {
   contraption: '#ffffff',
   workshop: '#ffffff',
   postcard: '#ffffff',
-  tidbits: '#f6eae9',
+  tidbits: '#e8f1ee',
   tsundoku: '#f4f4f2',
 }
 
 // Each newsletter wordmark is a solid-ink PNG on transparency. Writing brands
 // swap to a cream *-email-dark.png in dark mode. The brighter photo brands use
-// one mark in both schemes; that avoids unreliable SVG email support while
-// preserving their identifying color.
+// one mark in both schemes. Tidbits uses palette-specific light/dark PNGs
+// so the darker candidate colors remain legible in dark-mode email clients.
 const wordmarks: Record<
   NewsletterSlug,
   { name: string; file: string; width: number; height: number }
@@ -47,12 +52,22 @@ const wordmarks: Record<
   tsundoku: { name: 'Tsundoku', file: 'tsundoku', width: 157, height: 24 },
 }
 
-function brandHeader(newsletter: NewsletterSlug | '', siteUrl: string): string {
+function brandHeader(
+  newsletter: NewsletterSlug | '',
+  siteUrl: string,
+  palette: TidbitsPalette
+): string {
   if (newsletter === '') {
     return `<a class="email-brand-text" href="${siteUrl}" style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #111110; text-decoration: none;">philipithomas.com</a>`
   }
   const mark = wordmarks[newsletter]
   const dims = `height: ${mark.height}px; width: ${mark.width}px;`
+  if (newsletter === 'tidbits') {
+    return `<a href="${siteUrl}/tidbits" style="text-decoration: none;">
+              <img class="email-brand-light" src="${siteUrl}${tidbitsAsset(palette, 'email')}" alt="tidbits" width="${mark.width}" height="${mark.height}" style="${dims}">
+              <img class="email-brand-dark" src="${siteUrl}${tidbitsAsset(palette, 'email-dark')}" alt="tidbits" width="${mark.width}" height="${mark.height}" style="${dims} display: none; mso-hide: all;">
+            </a>`
+  }
   if (isPhotoNewsletter(newsletter)) {
     return `<a href="${siteUrl}/${newsletter}" style="text-decoration: none;">
               <img class="email-brand-${newsletter}" src="${siteUrl}/images/${mark.file}-email.png" alt="${mark.name}" width="${mark.width}" height="${mark.height}" style="${dims}">
@@ -71,16 +86,22 @@ function brandHeader(newsletter: NewsletterSlug | '', siteUrl: string): string {
  */
 export function renderNewsletterShell(input: {
   content: string
+  postSlug?: string
   unsubscribeUrl: string
   newsletter?: NewsletterSlug
   previewText?: string | null
   siteUrl?: string
 }): string {
   const siteUrl = input.siteUrl ?? siteConfig.url
+  const palette = tidbitsPaletteForPost(input.postSlug)
+  const isTidbits = input.newsletter === 'tidbits'
+  const footerColor = isTidbits ? '#6b6760' : '#9E9A93'
   const isPhoto = input.newsletter ? isPhotoNewsletter(input.newsletter) : false
-  const bgColor = input.newsletter
-    ? backgroundColors[input.newsletter]
-    : '#ffffff'
+  const bgColor = isTidbits
+    ? palette.paper
+    : input.newsletter
+      ? backgroundColors[input.newsletter]
+      : '#ffffff'
   const cardBgColor = isPhoto ? bgColor : '#ffffff'
   const brandPadding = isPhoto ? '36px 20px 28px' : '40px 20px 0'
   const contentPadding = isPhoto ? '0 32px 32px' : '32px'
@@ -97,9 +118,11 @@ export function renderNewsletterShell(input: {
     .email-card-${input.newsletter} { background-color: #121110 !important; }
     img.email-brand-${input.newsletter} { display: inline-block !important; opacity: 1 !important; }`
     : ''
-  const darkAccent = input.newsletter
-    ? darkAccentColors[input.newsletter]
-    : DEFAULT_DARK_ACCENT
+  const darkAccent = isTidbits
+    ? palette.dark
+    : input.newsletter
+      ? darkAccentColors[input.newsletter]
+      : DEFAULT_DARK_ACCENT
   const year = new Date().getFullYear()
   const unsubscribeUrl = escapeHtml(input.unsubscribeUrl)
   const previewText = input.previewText ? escapeHtml(input.previewText) : ''
@@ -166,7 +189,7 @@ ${preheader}
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
         <tr>
           <td style="padding: 0; text-align: center;">
-            ${brandHeader(input.newsletter ?? '', siteUrl)}
+            ${brandHeader(input.newsletter ?? '', siteUrl, palette)}
           </td>
         </tr>
       </table>
@@ -200,10 +223,10 @@ ${preheader}
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
         <tr>
           <td class="email-footer" style="text-align: center; padding: 16px 0;">
-            <p style="margin: 0 0 8px; font-size: 11px; color: #9E9A93;">
-              <a href="${unsubscribeUrl}" style="color: #9E9A93; text-decoration: underline;">Unsubscribe</a>
+            <p style="margin: 0 0 8px; font-size: 11px; color: ${footerColor};">
+              <a href="${unsubscribeUrl}" style="color: ${footerColor}; text-decoration: underline;">Unsubscribe</a>
             </p>
-            <p style="margin: 0; font-size: 11px; line-height: 1.5; color: #9E9A93;">
+            <p style="margin: 0; font-size: 11px; line-height: 1.5; color: ${footerColor};">
               &copy; ${year}<br>
               The Contraption Company LLC<br>
               169 Madison Ave. Suite 2174<br>

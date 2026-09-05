@@ -160,11 +160,11 @@ describe('styleContentLinks', () => {
     )
   })
 
-  it('styles links with the Tidbits cochineal', () => {
+  it('styles links with the Tidbits readable palette ink', () => {
     expect(
       styleContentLinks('<a href="https://example.com">link</a>', 'tidbits')
     ).toBe(
-      '<a style="color: #3B3834; text-decoration: underline; text-decoration-color: #f41986; text-underline-offset: 2px;" href="https://example.com">link</a>'
+      '<a style="color: #3B3834; text-decoration: underline; text-decoration-color: #125e59; text-underline-offset: 2px;" href="https://example.com">link</a>'
     )
   })
 

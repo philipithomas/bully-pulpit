@@ -1,5 +1,6 @@
 import { siteConfig } from '@/lib/config'
 import type { NewsletterSlug } from '@/lib/db/queries/subscribers'
+import { tidbitsPaletteForPost } from '@/lib/tidbits/palette'
 
 // Ported from printing-press's templates/mod.rs. These run over the rendered
 // email body just before it is wrapped in the newsletter shell.
@@ -8,7 +9,7 @@ const accentColors: Record<NewsletterSlug, string> = {
   contraption: '#2b4a3e',
   workshop: '#6b4d3a',
   postcard: '#2c3e6b',
-  tidbits: '#f41986',
+  tidbits: '#1f7a74',
   tsundoku: '#e20612',
 }
 const DEFAULT_ACCENT = '#3B3834'
@@ -49,9 +50,15 @@ export function unwrapFragmentLinks(html: string): string {
  */
 export function styleContentLinks(
   html: string,
-  newsletter?: NewsletterSlug
+  newsletter?: NewsletterSlug,
+  postSlug?: string
 ): string {
-  const accent = newsletter ? accentColors[newsletter] : DEFAULT_ACCENT
+  const accent =
+    newsletter === 'tidbits'
+      ? tidbitsPaletteForPost(postSlug).ink
+      : newsletter
+        ? accentColors[newsletter]
+        : DEFAULT_ACCENT
   const style = `color: #3B3834; text-decoration: underline; text-decoration-color: ${accent}; text-underline-offset: 2px;`
   return html.replace(/<a ([^>]*?)>/g, (match, attrs) =>
     attrs.includes('style=') ? match : `<a style="${style}" ${attrs}>`
@@ -73,12 +80,14 @@ export function styleContentImages(html: string): string {
  */
 export function transformEmailBody(
   html: string,
-  newsletter?: NewsletterSlug
+  newsletter?: NewsletterSlug,
+  postSlug?: string
 ): string {
   return styleContentImages(
     styleContentLinks(
       resolveRelativeUrls(unwrapFragmentLinks(html)),
-      newsletter
+      newsletter,
+      postSlug
     )
   )
 }

@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
-import Image, { getImageProps } from 'next/image'
+import { getImageProps } from 'next/image'
 import Link from 'next/link'
 import { InlineSignupForm } from '@/components/auth/inline-signup-form'
 import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
+import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
 import { siteConfig } from '@/lib/config'
 import type { Newsletter } from '@/lib/content/types'
 import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
@@ -155,7 +156,7 @@ export default async function HomePage() {
                   className="flex items-center gap-3 group"
                 >
                   <span className="w-[76px] shrink-0 flex items-center">
-                    <Image
+                    <NewsletterWordmark
                       src={nl.logo.src}
                       alt={nl.name}
                       width={nl.logo.intrinsicWidth}

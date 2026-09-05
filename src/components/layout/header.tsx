@@ -2,13 +2,13 @@
 
 import { Search } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MemberMenu } from '@/components/auth/member-menu'
 import { Logo } from '@/components/layout/logo'
 import { useNewsletter } from '@/components/layout/newsletter-context'
+import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
 import { BellIcon } from '@/components/ui/bell-icon'
 import {
   BELL_DISCOVERY_OPENED_KEY,
@@ -167,7 +167,7 @@ export function Header() {
               href={`/${newsletter}`}
               className="-translate-y-1/2 absolute top-1/2 left-0 flex items-center"
             >
-              <Image
+              <NewsletterWordmark
                 src={newsletterLogo.src}
                 alt={siteConfig.newsletters[newsletter].name}
                 width={newsletterLogo.width}

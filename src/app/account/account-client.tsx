@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useAuthContext } from '@/components/auth/auth-provider'
@@ -9,6 +8,7 @@ import {
   PreferencesPageSkeleton,
 } from '@/components/auth/preferences-skeleton'
 import { prefetchSignInModal } from '@/components/auth/sign-in-modal-lazy'
+import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { Button } from '@/components/ui/button'
 import {
@@ -213,7 +213,7 @@ export function AccountClient() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="w-[100px] shrink-0 flex items-center">
-                      <Image
+                      <NewsletterWordmark
                         src={nl.logo.src}
                         alt={nl.name}
                         width={100}
