@@ -198,6 +198,68 @@ describe('POST /api/auth/google', () => {
     })
   })
 
+  it('replaces a broad pending scope with a verified focused Google selection', async () => {
+    await db.insert(subscribers).values({
+      email: 'bar@gmail.com',
+      subscribedContraption: true,
+      subscribedWorkshop: true,
+      subscribedPostcard: true,
+      subscribedTsundoku: false,
+      subscribedTidbits: true,
+    })
+
+    const response = await POST(
+      googlePost({ code: 'oauth-code', newsletters: ['tidbits'] })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      user: {
+        subscribed_contraption: false,
+        subscribed_workshop: false,
+        subscribed_postcard: false,
+        subscribed_tidbits: true,
+      },
+    })
+    expect(await subscriberByEmail('bar@gmail.com')).toMatchObject({
+      confirmedAt: expect.any(Date),
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTidbits: true,
+    })
+  })
+
+  it('replaces a narrow pending scope with all defaults for generic Google sign-in', async () => {
+    await db.insert(subscribers).values({
+      email: 'bar@gmail.com',
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+      subscribedTidbits: false,
+    })
+
+    const response = await POST(googlePost({ code: 'oauth-code' }))
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      user: {
+        subscribed_contraption: true,
+        subscribed_workshop: true,
+        subscribed_postcard: true,
+        subscribed_tidbits: true,
+      },
+    })
+    expect(await subscriberByEmail('bar@gmail.com')).toMatchObject({
+      confirmedAt: expect.any(Date),
+      subscribedContraption: true,
+      subscribedWorkshop: true,
+      subscribedPostcard: true,
+      subscribedTidbits: true,
+    })
+  })
+
   it('sets onboarding when Google creates and confirms a new subscriber', async () => {
     const response = await POST(
       googlePost({

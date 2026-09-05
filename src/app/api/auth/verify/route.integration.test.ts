@@ -341,6 +341,73 @@ describe('POST /api/auth/verify', () => {
     expect(tidbitsOptInNotificationCalls()).toHaveLength(0)
   })
 
+  it.each([
+    ['code', 'code-bound@example.com'],
+    ['magic link', 'magic-bound@example.com'],
+  ] as const)('keeps the first pending scope bound to an earlier %s after a repeat request', async (method, email) => {
+    await subscribe(email, { newsletters: ['workshop'] })
+
+    const initial = await subscriberByEmail(email)
+    const { token: originalCode } = await latestCodeLogin(initial.id)
+    const { token: originalMagicToken } = await latestMagicLogin(initial.id)
+    expect(initial).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTidbits: false,
+    })
+
+    sesSend.mockClear()
+    await subscribe(email, {
+      newsletters: ['contraption', 'workshop', 'postcard', 'tidbits'],
+    })
+
+    const unchanged = await subscriberByEmail(email)
+    expect(unchanged).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTidbits: false,
+    })
+    expect(sesSend).toHaveBeenCalledTimes(1)
+    expect(sesSend.mock.calls[0][0].text).toContain(
+      'Thanks for subscribing to Workshop at philipithomas.com.'
+    )
+    expect(sesSend.mock.calls[0][0].text).not.toContain(
+      'subscribing to tidbits'
+    )
+
+    if (method === 'code') {
+      const response = await verify(email, originalCode)
+      expect(response.status).toBe(200)
+      expect(await response.json()).toMatchObject({
+        user: {
+          subscribed_contraption: false,
+          subscribed_workshop: true,
+          subscribed_postcard: false,
+          subscribed_tidbits: false,
+        },
+      })
+    } else {
+      const response = await verifyMagicLinkGet(
+        new NextRequest(
+          `https://www.philipithomas.com/auth/verify?token=${originalMagicToken}`
+        )
+      )
+      expect(response.headers.get('location')).toBe(
+        'https://www.philipithomas.com/auth/complete'
+      )
+    }
+
+    expect(await subscriberByEmail(email)).toMatchObject({
+      confirmedAt: expect.any(Date),
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTidbits: false,
+    })
+  })
+
   it('returns 400 (not 500) for a malformed JSON body', async () => {
     const res = await verifyPost(
       new Request('http://localhost/api/auth/verify', {

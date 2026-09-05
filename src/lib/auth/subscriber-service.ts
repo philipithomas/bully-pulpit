@@ -145,6 +145,17 @@ function creationPrefsForNewSubscriber(newsletters: Newsletter[]) {
   }
 }
 
+async function replacePendingNewsletterSelection(
+  subscriber: Subscriber,
+  newsletters: Newsletter[]
+): Promise<Subscriber> {
+  const updated = await updateSubscriber(
+    subscriber.uuid,
+    creationPrefsForNewSubscriber(newsletters)
+  )
+  return updated ?? subscriber
+}
+
 /**
  * Best-effort admin notification for the deliberate existing-reader Tidbits
  * transition. New confirmations have their own notification and must not emit
@@ -226,9 +237,10 @@ async function sendLoginOrRejectSuppressed(
  * honor a non-empty explicit list of active newsletters; absent, empty, or
  * invalid-only lists use the all-active default. For existing confirmed
  * subscribers, public forms sign them in without changing preferences unless
- * the caller explicitly allows email-only opt-in. Existing unconfirmed rows
- * may still update active newsletter flags before the confirmation email is
- * resent.
+ * the caller explicitly allows email-only opt-in. An unconfirmed row keeps the
+ * first signup's stored scope across unauthenticated retries. A verified Google
+ * identity replaces that pending scope with its current surface's exact
+ * selection (or the active defaults for a generic sign-in) before confirming.
  */
 export async function createOrRetrieve(input: {
   email: string
@@ -265,9 +277,15 @@ export async function createOrRetrieve(input: {
   if (existing) {
     let subscriber = existing
 
-    if (
+    if (googleVerified && existing.confirmedAt == null) {
+      subscriber = await replacePendingNewsletterSelection(
+        existing,
+        newsletters
+      )
+    } else if (
       hasRequestedNewsletterOptIn &&
-      (existing.confirmedAt == null || allowExistingSubscriberOptIn)
+      existing.confirmedAt != null &&
+      allowExistingSubscriberOptIn
     ) {
       subscriber = await applyNewsletterOptIns(existing, newsletters)
     }

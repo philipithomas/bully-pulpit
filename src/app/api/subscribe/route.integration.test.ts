@@ -247,7 +247,7 @@ describe('POST /api/subscribe', () => {
     )
   })
 
-  it('opts an existing subscriber into explicitly requested newsletters without rewriting identity fields', async () => {
+  it('keeps an unconfirmed subscriber on the first stored scope when a later request asks for more', async () => {
     await db.insert(subscribers).values({
       email: 'returning@example.com',
       name: 'Original Name',
@@ -259,13 +259,14 @@ describe('POST /api/subscribe', () => {
       subscribedTidbits: false,
     })
 
-    // Requested newsletter flags opt in, while name and source remain untouched.
+    // A repeat unauthenticated request cannot rewrite pending consent, identity,
+    // or attribution. The reader can change preferences after confirming.
     const res = await POST(
       subscribeRequest({
         email: 'returning@example.com',
         name: 'Imposter Name',
         source: 'https://www.google.com',
-        newsletters: ['contraption', 'workshop', 'postcard'],
+        newsletters: ['contraption', 'workshop', 'postcard', 'tidbits'],
       })
     )
     expect(res.status).toBe(200)
@@ -282,8 +283,8 @@ describe('POST /api/subscribe', () => {
       .where(eq(subscribers.email, 'returning@example.com'))
     expect(rows).toHaveLength(1)
     expect(rows[0].subscribedContraption).toBe(true)
-    expect(rows[0].subscribedWorkshop).toBe(true)
-    expect(rows[0].subscribedPostcard).toBe(true)
+    expect(rows[0].subscribedWorkshop).toBe(false)
+    expect(rows[0].subscribedPostcard).toBe(false)
     expect(rows[0].subscribedTsundoku).toBe(false)
     expect(rows[0].subscribedTidbits).toBe(false)
     expect(rows[0].name).toBe('Original Name')
@@ -297,8 +298,10 @@ describe('POST /api/subscribe', () => {
       'Confirm your subscription to philipithomas.com'
     )
     expect(resend.text).toContain(
-      'Thanks for subscribing to Contraption, Workshop, and Postcard at philipithomas.com.'
+      'Thanks for subscribing to Contraption at philipithomas.com.'
     )
+    expect(resend.text).not.toContain('subscribing to Workshop')
+    expect(resend.text).not.toContain('subscribing to Postcard')
   })
 
   it('signs in an existing confirmed subscriber without re-subscribing them when no newsletters are requested', async () => {
