@@ -127,13 +127,19 @@ export async function applyNewsletterOptIns(
   return updated
 }
 
-function creationPrefsForNewSubscriber() {
-  const defaults = new Set(defaultSignupNewsletters)
+function creationPrefsForNewSubscriber(newsletters: Newsletter[]) {
+  // A focused CTA is an explicit subscription choice. Generic entry points
+  // either omit the list or send the full default set; an empty normalized
+  // list (including archived/invalid-only input) deliberately falls back to
+  // the active defaults so an obsolete client cannot create a zero-list row.
+  const selected = new Set(
+    newsletters.length > 0 ? newsletters : defaultSignupNewsletters
+  )
   return {
-    subscribedContraption: defaults.has('contraption'),
-    subscribedWorkshop: defaults.has('workshop'),
-    subscribedPostcard: defaults.has('postcard'),
-    subscribedTidbits: defaults.has('tidbits'),
+    subscribedContraption: selected.has('contraption'),
+    subscribedWorkshop: selected.has('workshop'),
+    subscribedPostcard: selected.has('postcard'),
+    subscribedTidbits: selected.has('tidbits'),
     // Archived newsletter columns remain for historical data only.
     subscribedTsundoku: false,
   }
@@ -217,11 +223,12 @@ async function sendLoginOrRejectSuppressed(
  * when the call is actually a sign-in.
  *
  * `name` and `source` apply only when the row is created. New public signups
- * start on every newsletter that is accepting subscriptions. For existing
- * confirmed subscribers, public forms sign them in without changing
- * preferences unless the caller explicitly allows email-only opt-in. Existing
- * unconfirmed rows may still update active newsletter flags before the
- * confirmation email is resent.
+ * honor a non-empty explicit list of active newsletters; absent, empty, or
+ * invalid-only lists use the all-active default. For existing confirmed
+ * subscribers, public forms sign them in without changing preferences unless
+ * the caller explicitly allows email-only opt-in. Existing unconfirmed rows
+ * may still update active newsletter flags before the confirmation email is
+ * resent.
  */
 export async function createOrRetrieve(input: {
   email: string
@@ -325,7 +332,7 @@ export async function createOrRetrieve(input: {
     email,
     name: input.name,
     source: input.source,
-    ...creationPrefsForNewSubscriber(),
+    ...creationPrefsForNewSubscriber(newsletters),
   })
 
   if (googleVerified) {

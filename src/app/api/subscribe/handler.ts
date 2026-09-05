@@ -71,10 +71,11 @@ export async function handleSubscribeRequest(
   }
 
   try {
-    // For a new email this creates the row (applying name, source, and the
-    // default public newsletter set) and sends a confirmation code. Existing
-    // confirmed subscribers sign in by default. Email-only opt-in is limited to
-    // server-owned endpoints that constrain the target newsletter.
+    // For a new email this creates the row (applying name, source, and an
+    // explicit active newsletter selection, or the all-active fallback) and
+    // sends a confirmation code. Existing confirmed subscribers sign in by
+    // default. Email-only opt-in is limited to server-owned endpoints that
+    // constrain the target newsletter.
     const result = await createOrRetrieve({
       email,
       name,

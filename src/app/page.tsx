@@ -11,6 +11,7 @@ import type { Newsletter } from '@/lib/content/types'
 import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
 import { countActive } from '@/lib/db/queries/subscribers'
 import { feedDiscovery } from '@/lib/feeds/discovery'
+import { formatMemberCount } from '@/lib/format-member-count'
 import { isNewsletterAcceptingSubscriptions } from '@/lib/newsletters'
 import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 
@@ -61,6 +62,10 @@ export default async function HomePage() {
     fetchPriority: 'high',
   })
   const subscriberCount = await buildTimeSubscriberCount()
+  const signupHeader =
+    subscriberCount !== null && subscriberCount > 0
+      ? `Join ${formatMemberCount(subscriberCount)} other readers — get every current newsletter:`
+      : 'Get every current newsletter by email:'
   const smsSignupPhoneNumber = sitePhoneNumber()
   const smsSignupDisplayNumber = sitePhoneDisplayNumber()
   const { props: mobilePortrait } = getImageProps({
@@ -140,6 +145,7 @@ export default async function HomePage() {
           <InlineSignupForm
             analyticsPlacement="homepage"
             hideWhenLoggedIn
+            headerText={signupHeader}
             initialSubscriberCount={subscriberCount}
           />
 

@@ -178,6 +178,39 @@ describe('POST /api/subscribe', () => {
     }
   })
 
+  it('creates a new subscriber on only the explicitly requested active newsletters', async () => {
+    const res = await POST(
+      subscribeRequest({
+        email: 'workshop-only@example.com',
+        newsletters: ['workshop', 'tsundoku'],
+      })
+    )
+
+    expect(res.status).toBe(200)
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.email, 'workshop-only@example.com'))
+    expect(row).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+      subscribedTidbits: false,
+    })
+
+    const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
+    expect(message.subject).toBe(
+      'Confirm your subscription to philipithomas.com'
+    )
+    expect(message.text).toContain(
+      'Thanks for subscribing to Workshop at philipithomas.com.'
+    )
+    expect(message.text).not.toContain('subscribing to Contraption')
+    expect(message.text).not.toContain('subscribing to Postcard')
+    expect(message.text).not.toContain('subscribing to tidbits')
+  })
+
   it('ignores an inactive focused newsletter and applies active defaults to a new subscriber', async () => {
     const res = await POST(
       subscribeRequest({
@@ -565,6 +598,12 @@ describe('POST /api/subscribe', () => {
       .select()
       .from(subscribers)
       .where(eq(subscribers.email, 'open-page@example.com'))
-    expect(subscriber.subscribedTidbits).toBe(true)
+    expect(subscriber).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+      subscribedTidbits: true,
+    })
   })
 })

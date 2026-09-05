@@ -229,4 +229,30 @@ describe('POST /api/auth/google', () => {
       purpose: 'new-subscriber-onboarding',
     })
   })
+
+  it('creates a new Google subscriber on only the explicitly requested newsletter', async () => {
+    const response = await POST(
+      googlePost({
+        code: 'oauth-code',
+        newsletters: ['postcard'],
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await subscriberByEmail('bar@gmail.com')).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: true,
+      subscribedTsundoku: false,
+      subscribedTidbits: false,
+    })
+    expect(await response.json()).toMatchObject({
+      user: {
+        subscribed_contraption: false,
+        subscribed_workshop: false,
+        subscribed_postcard: true,
+        subscribed_tidbits: false,
+      },
+    })
+  })
 })
