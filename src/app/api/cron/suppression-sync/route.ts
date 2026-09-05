@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server'
 import {
+  recordCronFailed,
+  recordCronStarted,
+  recordCronSucceeded,
+} from '@/lib/cron/heartbeat'
+import {
   deleteBySourceNotIn,
   upsertSuppression,
 } from '@/lib/db/queries/suppressions'
@@ -18,6 +23,7 @@ export async function GET(request: Request) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
+  await recordCronStarted('suppression-sync')
   try {
     const destinations = await listSuppressedDestinations()
     for (const { email, reason } of destinations) {
@@ -30,8 +36,10 @@ export async function GET(request: Request) {
       'ses_suppression_list',
       destinations.map((d) => d.email)
     )
+    await recordCronSucceeded('suppression-sync')
     return NextResponse.json({ synced: destinations.length, removed })
   } catch (err) {
+    await recordCronFailed('suppression-sync')
     console.error('[cron/suppression-sync] error:', err)
     return NextResponse.json({ error: 'Sync failed' }, { status: 500 })
   }

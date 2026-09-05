@@ -137,6 +137,46 @@ export const sendRuns = pgTable('send_runs', {
     .defaultNow(),
 })
 
+/**
+ * Last-observed lifecycle timestamps for each scheduled Vercel Cron job.
+ *
+ * This is deliberately a compact heartbeat rather than an execution log: no
+ * subscriber data, provider response, request metadata, or exception text is
+ * retained. `monitoringStartedAt` gives newly deployed jobs a full cadence to
+ * report before the health check calls them stale.
+ */
+export const cronJobHealth = pgTable('cron_job_health', {
+  jobName: text('job_name').primaryKey(),
+  monitoringStartedAt: timestamp('monitoring_started_at', {
+    withTimezone: true,
+  })
+    .notNull()
+    .defaultNow(),
+  lastStartedAt: timestamp('last_started_at', { withTimezone: true }),
+  lastSucceededAt: timestamp('last_succeeded_at', { withTimezone: true }),
+  lastFailedAt: timestamp('last_failed_at', { withTimezone: true }),
+  // A fixed, code-owned category only. Never store exception messages here.
+  lastFailureCode: text('last_failure_code'),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+/**
+ * Versioned, one-time activation markers for the fixed cron health roster.
+ *
+ * The marker and initial heartbeat rows are inserted atomically on the first
+ * health read by deployed code. Keeping this separate from the heartbeat rows
+ * means a later missing row stays missing (and therefore unhealthy) instead of
+ * silently receiving a new grace period on every read.
+ */
+export const cronJobHealthActivations = pgTable('cron_job_health_activations', {
+  activationKey: text('activation_key').primaryKey(),
+  activatedAt: timestamp('activated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
 export const logins = pgTable(
   'logins',
   {
@@ -502,6 +542,10 @@ export type NewLogin = typeof logins.$inferInsert
 export type EmailSuppression = typeof emailSuppressions.$inferSelect
 export type SendRun = typeof sendRuns.$inferSelect
 export type NewSendRun = typeof sendRuns.$inferInsert
+export type CronJobHealth = typeof cronJobHealth.$inferSelect
+export type NewCronJobHealth = typeof cronJobHealth.$inferInsert
+export type CronJobHealthActivation =
+  typeof cronJobHealthActivations.$inferSelect
 export type TextMessage = typeof textMessages.$inferSelect
 export type NewTextMessage = typeof textMessages.$inferInsert
 export type PhoneWebhookEvent = typeof phoneWebhookEvents.$inferSelect

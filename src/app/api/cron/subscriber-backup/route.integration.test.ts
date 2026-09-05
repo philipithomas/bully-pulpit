@@ -20,7 +20,7 @@ vi.mock('@aws-sdk/client-sesv2', async (importOriginal) => {
 import type { SendEmailCommand } from '@aws-sdk/client-sesv2'
 import { GET } from '@/app/api/cron/subscriber-backup/route'
 import { parseCsv } from '@/lib/csv'
-import { type NewSubscriber, subscribers } from '@/lib/db/schema'
+import { cronJobHealth, type NewSubscriber, subscribers } from '@/lib/db/schema'
 import { db, resetDb } from '@/test/integration/db'
 
 const CRON_SECRET = 'test-cron-secret'
@@ -95,6 +95,15 @@ describe('backup send', () => {
     const res = await GET(request(`Bearer ${CRON_SECRET}`))
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ sent: 2, subscriberCount: 2 })
+
+    expect(await db.select().from(cronJobHealth)).toEqual([
+      expect.objectContaining({
+        jobName: 'subscriber-backup',
+        lastStartedAt: expect.any(Date),
+        lastSucceededAt: expect.any(Date),
+        lastFailedAt: null,
+      }),
+    ])
 
     const input = sentCommand().input
     expect(input.Destination?.ToAddresses).toEqual([
@@ -175,6 +184,15 @@ describe('backup send', () => {
     const res = await GET(request(`Bearer ${CRON_SECRET}`))
     expect(res.status).toBe(500)
     expect(await res.json()).toEqual({ error: 'Backup failed' })
+    expect(await db.select().from(cronJobHealth)).toEqual([
+      expect.objectContaining({
+        jobName: 'subscriber-backup',
+        lastStartedAt: expect.any(Date),
+        lastSucceededAt: null,
+        lastFailedAt: expect.any(Date),
+        lastFailureCode: 'subscriber_backup_failed',
+      }),
+    ])
     expect(errorSpy).toHaveBeenCalled()
     errorSpy.mockRestore()
   })

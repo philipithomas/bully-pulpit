@@ -1,5 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const heartbeat = vi.hoisted(() => ({
+  started: vi.fn(),
+  succeeded: vi.fn(),
+  failed: vi.fn(),
+}))
+
+vi.mock('@/lib/cron/heartbeat', () => ({
+  recordCronStarted: heartbeat.started,
+  recordCronSucceeded: heartbeat.succeeded,
+  recordCronFailed: heartbeat.failed,
+}))
+
 vi.mock('@/lib/db/queries/bell-conversations', () => ({
   purgeExpiredBellConversations: vi.fn(),
 }))
@@ -17,6 +29,10 @@ function request(auth?: string) {
 
 beforeEach(() => {
   process.env.CRON_SECRET = 'test-cron-secret'
+  vi.clearAllMocks()
+  heartbeat.started.mockResolvedValue(undefined)
+  heartbeat.succeeded.mockResolvedValue(undefined)
+  heartbeat.failed.mockResolvedValue(undefined)
   mockedPurge.mockReset()
   mockedPurge.mockResolvedValue(0)
 })
@@ -31,6 +47,7 @@ describe('GET Bell retention cleanup', () => {
 
     expect(response.status).toBe(401)
     expect(mockedPurge).not.toHaveBeenCalled()
+    expect(heartbeat.started).not.toHaveBeenCalled()
   })
 
   it('deletes expired web conversations', async () => {
@@ -41,6 +58,9 @@ describe('GET Bell retention cleanup', () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ deleted: 3 })
     expect(mockedPurge).toHaveBeenCalledOnce()
+    expect(heartbeat.started).toHaveBeenCalledWith('bell-retention')
+    expect(heartbeat.succeeded).toHaveBeenCalledWith('bell-retention')
+    expect(heartbeat.failed).not.toHaveBeenCalled()
   })
 
   it('reports cleanup failures without exposing details', async () => {
@@ -51,5 +71,7 @@ describe('GET Bell retention cleanup', () => {
 
     expect(response.status).toBe(500)
     expect(await response.json()).toEqual({ error: 'Retention cleanup failed' })
+    expect(heartbeat.failed).toHaveBeenCalledWith('bell-retention')
+    expect(heartbeat.succeeded).not.toHaveBeenCalled()
   })
 })

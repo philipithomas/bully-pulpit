@@ -40,6 +40,11 @@ const items = [
     label: 'Bell',
     match: (p: string) => p.startsWith('/printing-press/bell'),
   },
+  {
+    href: '/printing-press/health',
+    label: 'Health',
+    match: (p: string) => p.startsWith('/printing-press/health'),
+  },
 ]
 
 export function PrintingPressNav() {
