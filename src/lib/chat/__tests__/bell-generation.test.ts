@@ -64,6 +64,8 @@ describe('Bell Gateway metadata', () => {
     })
 
     expect(options.gateway).toMatchObject({
+      only: ['openai'],
+      order: ['openai'],
       serviceTier: 'priority',
       zeroDataRetention: true,
       user: 'subscriber:reader-uuid',
@@ -79,6 +81,7 @@ describe('Bell Gateway metadata', () => {
 
   it('does not request priority service outside web Bell', () => {
     const gateway = getBellProviderOptions({ surface: 'sms' }).gateway
+    expect(gateway.only).toEqual(['openai'])
     expect('serviceTier' in gateway).toBe(false)
   })
 

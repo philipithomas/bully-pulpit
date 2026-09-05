@@ -21,6 +21,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.TWILIO_SID
   delete process.env.TWILIO_SECRET
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
@@ -148,6 +149,7 @@ describe('createCall', () => {
   })
 
   it('posts From, To, and Url and returns sid and status', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout')
     const fetchMock = vi.fn(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify({ sid: 'CA9', status: 'queued' }), {
@@ -165,6 +167,8 @@ describe('createCall', () => {
     expect(url).toBe(
       'https://api.twilio.com/2010-04-01/Accounts/AC_test/Calls.json'
     )
+    expect(timeout).toHaveBeenCalledWith(30_000)
+    expect(init?.signal).toBe(timeout.mock.results[0].value)
     const body = String(init?.body)
     expect(body).toContain('To=%2B12098677445')
     expect(body).toContain('From=%2B12123473190')

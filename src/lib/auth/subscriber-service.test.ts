@@ -44,7 +44,7 @@ describe('notifyExistingSubscriberOptIns', () => {
   })
 
   it('does not fail verification when claiming the admin notification fails', async () => {
-    const error = new Error('temporary database failure')
+    const error = new Error('Failed query with email reader@example.com')
     mocks.claimTidbitsOptInNotification.mockRejectedValue(error)
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -54,8 +54,7 @@ describe('notifyExistingSubscriberOptIns', () => {
 
     expect(mocks.sendExistingSubscriberOptInNotification).not.toHaveBeenCalled()
     expect(consoleError).toHaveBeenCalledWith(
-      '[subscriber] Tidbits opt-in notification failed:',
-      error
+      '[subscriber] Tidbits opt-in notification failed'
     )
     consoleError.mockRestore()
   })

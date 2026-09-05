@@ -164,8 +164,8 @@ export async function notifyExistingSubscriberOptIns(
       after.name,
       'tidbits'
     )
-  } catch (err) {
-    console.error('[subscriber] Tidbits opt-in notification failed:', err)
+  } catch {
+    console.error('[subscriber] Tidbits opt-in notification failed')
   }
 }
 
@@ -176,8 +176,8 @@ async function notifyNewSubscriber(subscriber: Subscriber): Promise<void> {
       subscriber.name,
       subscriber.source
     )
-  } catch (err) {
-    console.error('[subscriber] new subscriber notification failed:', err)
+  } catch {
+    console.error('[subscriber] new subscriber notification failed')
   }
 }
 
@@ -188,8 +188,8 @@ async function sendLoginBestEffort(
 ): Promise<void> {
   try {
     await createAndSendLogin(subscriber, purpose, { pendingNewsletters })
-  } catch (err) {
-    console.error('[subscriber] confirmation/sign-in email failed:', err)
+  } catch {
+    console.error('[subscriber] confirmation/sign-in email failed')
   }
 }
 
@@ -204,7 +204,7 @@ async function sendLoginOrRejectSuppressed(
   pendingNewsletters?: Newsletter[]
 ): Promise<void> {
   if (await isSuppressed(subscriber.email)) {
-    console.warn(`[subscriber] suppressed address blocked: ${subscriber.email}`)
+    console.warn('[subscriber] suppressed address blocked')
     throw new SuppressedEmailError()
   }
   await sendLoginBestEffort(subscriber, purpose, pendingNewsletters)
