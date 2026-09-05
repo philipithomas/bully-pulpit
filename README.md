@@ -154,9 +154,12 @@ heartbeats in `cron_job_health`. The private Printing press Health page shows
 those timestamps and uses cadence-specific grace windows to identify failed or
 overdue jobs. Heartbeat writes are diagnostic: their failure never changes the
 result of the underlying suppression sync, Bell retention, or subscriber
-backup job. The schema migration creates an empty health table; the first read
-from successfully deployed monitoring code or the first real heartbeat starts
-each job's grace period. Later deploys preserve the existing history.
+backup job. The schema migration creates empty health and activation tables.
+The first read from successfully deployed monitoring code atomically records a
+versioned activation marker and starts every fixed job's grace period; a real
+heartbeat can also create its own row first. Activation happens only once, so
+later reads preserve both existing history and a missing-row failure instead
+of silently granting a new grace period.
 
 The `Production health` GitHub Actions workflow checks the redacted,
 bearer-protected `/api/cron/health` endpoint hourly and runs the existing

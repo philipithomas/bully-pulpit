@@ -747,6 +747,32 @@
       },
       "isRLSEnabled": false
     },
+    "public.cron_job_health_activations": {
+      "name": "cron_job_health_activations",
+      "schema": "",
+      "columns": {
+        "activation_key": {
+          "name": "activation_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.cron_job_health": {
       "name": "cron_job_health",
       "schema": "",

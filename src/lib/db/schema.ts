@@ -162,6 +162,21 @@ export const cronJobHealth = pgTable('cron_job_health', {
     .defaultNow(),
 })
 
+/**
+ * Versioned, one-time activation markers for the fixed cron health roster.
+ *
+ * The marker and initial heartbeat rows are inserted atomically on the first
+ * health read by deployed code. Keeping this separate from the heartbeat rows
+ * means a later missing row stays missing (and therefore unhealthy) instead of
+ * silently receiving a new grace period on every read.
+ */
+export const cronJobHealthActivations = pgTable('cron_job_health_activations', {
+  activationKey: text('activation_key').primaryKey(),
+  activatedAt: timestamp('activated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
 export const logins = pgTable(
   'logins',
   {
@@ -529,6 +544,8 @@ export type SendRun = typeof sendRuns.$inferSelect
 export type NewSendRun = typeof sendRuns.$inferInsert
 export type CronJobHealth = typeof cronJobHealth.$inferSelect
 export type NewCronJobHealth = typeof cronJobHealth.$inferInsert
+export type CronJobHealthActivation =
+  typeof cronJobHealthActivations.$inferSelect
 export type TextMessage = typeof textMessages.$inferSelect
 export type NewTextMessage = typeof textMessages.$inferInsert
 export type PhoneWebhookEvent = typeof phoneWebhookEvents.$inferSelect
