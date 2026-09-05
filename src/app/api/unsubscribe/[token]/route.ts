@@ -11,6 +11,7 @@ import {
   type SubscriberPrefs,
   updateSubscriber,
 } from '@/lib/db/queries/subscribers'
+import { PUBLIC_JSON_BODY_MAX_BYTES, readJsonBody } from '@/lib/http/json-body'
 
 // A Response body is single-read, so this must mint a fresh instance per
 // request — a shared module-scope response would arrive empty the second time.
@@ -25,7 +26,7 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const preferencesSchema = z.strictObject({
-  name: z.string().optional(),
+  name: z.string().max(200).optional(),
   subscribed_postcard: z.boolean().optional(),
   subscribed_contraption: z.boolean().optional(),
   subscribed_workshop: z.boolean().optional(),
@@ -65,21 +66,32 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  const { token } = await params
-  const resolved = await resolveSubscriber(token)
-  if (!resolved) return notFound()
-
-  const body = await request.json().catch(() => null)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  // Validate the content type and enforce the byte cap before a bearer token
+  // can trigger database work. Content-Length is only a hint; readJsonBody
+  // also limits streamed bodies whose size is omitted or forged.
+  const parsedBody = await readJsonBody(
+    request,
+    z.unknown(),
+    PUBLIC_JSON_BODY_MAX_BYTES
+  )
+  if (!parsedBody.ok) {
+    return NextResponse.json(
+      { error: parsedBody.error },
+      { status: parsedBody.status }
+    )
   }
-  const parsed = preferencesSchema.safeParse(body)
+  const parsed = preferencesSchema.safeParse(parsedBody.data)
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid preferences in request body' },
       { status: 400 }
     )
   }
+
+  const { token } = await params
+  const resolved = await resolveSubscriber(token)
+  if (!resolved) return notFound()
+
   // Unsubscribe links are long-lived bearer tokens. They may continue to
   // manage existing preferences, but a leaked historical token must not bypass
   // Tidbits's verified OTP, magic-link, Google, or signed-in opt-in boundary.

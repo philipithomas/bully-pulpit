@@ -11,16 +11,17 @@ import {
   serializeSubscriberPreferences,
   updateSubscriber,
 } from '@/lib/db/queries/subscribers'
+import { PUBLIC_JSON_BODY_MAX_BYTES, readJsonBody } from '@/lib/http/json-body'
 
 // Mirrors the shape prefsFromBody/updateSubscriber consume: booleans for the
 // newsletter flags, an optional name, and no unknown keys.
 const preferencesSchema = z.strictObject({
-  name: z.string().optional(),
+  name: z.string().max(200).optional(),
   subscribed_postcard: z.boolean().optional(),
   subscribed_contraption: z.boolean().optional(),
   subscribed_workshop: z.boolean().optional(),
   subscribed_tidbits: z.boolean().optional(),
-  analytics_placement: z.string().optional(),
+  analytics_placement: z.string().max(100).optional(),
 })
 
 const NEWSLETTER_PREFERENCES = [
@@ -55,22 +56,33 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const verified = await getVerifiedSession()
-  if (!verified) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Parse the bounded body before session verification performs a database
+  // lookup. Authenticated callers cannot use an oversized stream to hold a
+  // database connection open while the body is still being buffered.
+  const parsedBody = await readJsonBody(
+    request,
+    z.unknown(),
+    PUBLIC_JSON_BODY_MAX_BYTES
+  )
+  if (!parsedBody.ok) {
+    return NextResponse.json(
+      { error: parsedBody.error },
+      { status: parsedBody.status }
+    )
   }
-
-  const body = await request.json().catch(() => null)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-  }
-  const parsed = preferencesSchema.safeParse(body)
+  const parsed = preferencesSchema.safeParse(parsedBody.data)
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid preferences in request body' },
       { status: 400 }
     )
   }
+
+  const verified = await getVerifiedSession()
+  if (!verified) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const before = verified.subscriber
 
   const subscriber = await updateSubscriber(

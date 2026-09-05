@@ -1,4 +1,4 @@
-import type { NextRequest } from 'next/server'
+import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EmailSend, Subscriber } from '@/lib/db/schema'
 
@@ -74,6 +74,17 @@ const GHOST = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
 
 const params = (token: string) => ({ params: Promise.resolve({ token }) })
 
+function patchRequest(
+  body: string | Record<string, unknown>,
+  contentType = 'application/json'
+) {
+  return new NextRequest(`http://localhost/api/unsubscribe/${TOKEN}`, {
+    method: 'PATCH',
+    headers: { 'content-type': contentType },
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+  })
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
 })
@@ -114,10 +125,10 @@ describe('PATCH /api/unsubscribe/[token]', () => {
     mockedSubs.findById.mockResolvedValue(makeSubscriber())
     mockedSubs.updateSubscriber.mockResolvedValue(makeSubscriber())
 
-    const req = {
-      json: async () => ({ subscribed_postcard: false }),
-    } as unknown as NextRequest
-    const res = await PATCH(req, params(TOKEN))
+    const res = await PATCH(
+      patchRequest({ subscribed_postcard: false }),
+      params(TOKEN)
+    )
 
     expect(mockedSubs.updateSubscriber).toHaveBeenCalledWith('uuid-1', {
       subscribedPostcard: false,
@@ -131,16 +142,64 @@ describe('PATCH /api/unsubscribe/[token]', () => {
       makeSubscriber({ subscribedTidbits: false })
     )
 
-    const req = {
-      json: async () => ({ subscribed_tidbits: true }),
-    } as unknown as NextRequest
-    const res = await PATCH(req, params(TOKEN))
+    const res = await PATCH(
+      patchRequest({ subscribed_tidbits: true }),
+      params(TOKEN)
+    )
 
     expect(res.status).toBe(403)
     expect(mockedSubs.updateSubscriber).not.toHaveBeenCalled()
     await expect(res.json()).resolves.toEqual({
       error: 'Sign in to subscribe to tidbits.',
     })
+  })
+
+  it.each([
+    {
+      label: 'a non-JSON media type',
+      request: () => patchRequest('{}', 'text/plain'),
+      status: 415,
+      error: 'Content-Type must be application/json',
+    },
+    {
+      label: 'malformed JSON',
+      request: () => patchRequest('{'),
+      status: 400,
+      error: 'Invalid request body',
+    },
+    {
+      label: 'an oversized streamed body',
+      request: () => patchRequest(JSON.stringify({ name: 'x'.repeat(20_000) })),
+      status: 413,
+      error: 'Request body is too large',
+    },
+  ])('rejects $label before resolving the token', async ({
+    request,
+    status,
+    error,
+  }) => {
+    const res = await PATCH(request(), params(TOKEN))
+
+    expect(res.status).toBe(status)
+    await expect(res.json()).resolves.toEqual({ error })
+    expect(mockedSends.findByUnsubscribeToken).not.toHaveBeenCalled()
+    expect(mockedSubs.findById).not.toHaveBeenCalled()
+    expect(mockedSubs.updateSubscriber).not.toHaveBeenCalled()
+  })
+
+  it('rejects names beyond the persisted field limit', async () => {
+    const res = await PATCH(
+      patchRequest({ name: 'x'.repeat(201) }),
+      params(TOKEN)
+    )
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      error: 'Invalid preferences in request body',
+    })
+    expect(mockedSends.findByUnsubscribeToken).not.toHaveBeenCalled()
+    expect(mockedSubs.findById).not.toHaveBeenCalled()
+    expect(mockedSubs.updateSubscriber).not.toHaveBeenCalled()
   })
 })
 
