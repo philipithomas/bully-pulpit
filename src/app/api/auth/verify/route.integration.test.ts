@@ -378,7 +378,12 @@ describe('POST /api/auth/verify', () => {
     )
 
     if (method === 'code') {
-      const response = await verify(email, originalCode)
+      const response = await verify(email, originalCode, [
+        'contraption',
+        'workshop',
+        'postcard',
+        'tidbits',
+      ])
       expect(response.status).toBe(200)
       expect(await response.json()).toMatchObject({
         user: {
@@ -391,12 +396,17 @@ describe('POST /api/auth/verify', () => {
     } else {
       const response = await verifyMagicLinkGet(
         new NextRequest(
-          `https://www.philipithomas.com/auth/verify?token=${originalMagicToken}`
+          `https://www.philipithomas.com/auth/verify?token=${originalMagicToken}&newsletter=contraption&newsletter=workshop&newsletter=postcard&newsletter=tidbits`
         )
       )
       expect(response.headers.get('location')).toBe(
         'https://www.philipithomas.com/auth/complete'
       )
+      expect(await magicLinkCompletionFrom(response)).toEqual({
+        newsletter: 'unspecified',
+        newSubscriber: true,
+        destination: 'home',
+      })
     }
 
     expect(await subscriberByEmail(email)).toMatchObject({

@@ -71,16 +71,12 @@ export async function POST(request: Request) {
   try {
     const verification = await verifyTokenWithMetadata(code, email)
     let subscriber = verification.subscriber
-    const beforeOptIns = subscriber
-    subscriber = await applyNewsletterOptIns(
-      subscriber,
-      normalizedNewsletters(newsletters)
-    )
-    await notifyExistingSubscriberOptIns(
-      beforeOptIns,
-      subscriber,
-      !verification.newlyConfirmed
-    )
+    const requestedNewsletters = normalizedNewsletters(newsletters)
+    if (!verification.newlyConfirmed) {
+      const beforeOptIns = subscriber
+      subscriber = await applyNewsletterOptIns(subscriber, requestedNewsletters)
+      await notifyExistingSubscriberOptIns(beforeOptIns, subscriber, true)
+    }
     const jwt = await signSession(subscriber)
     const response = NextResponse.json({
       user: serializeSubscriber(subscriber),
@@ -94,7 +90,9 @@ export async function POST(request: Request) {
     await trackServerEvent(request, 'Newsletter signup completed', {
       method: 'email_code',
       placement: parseAnalyticsPlacement(analytics_placement),
-      newsletter: summarizeNewsletters(newsletters),
+      newsletter: summarizeNewsletters(
+        verification.newlyConfirmed ? undefined : requestedNewsletters
+      ),
       new_subscriber: verification.newlyConfirmed,
     })
     return response

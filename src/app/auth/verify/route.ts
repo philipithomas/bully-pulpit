@@ -25,14 +25,15 @@ export async function GET(request: NextRequest) {
     let subscriber = verification.subscriber
     const requestedNewsletters =
       request.nextUrl.searchParams.getAll('newsletter')
-    const newsletters = normalizedNewsletters(requestedNewsletters)
-    const beforeOptIns = subscriber
-    subscriber = await applyNewsletterOptIns(subscriber, newsletters)
-    await notifyExistingSubscriberOptIns(
-      beforeOptIns,
-      subscriber,
-      !verification.newlyConfirmed
-    )
+    const effectiveRequestedNewsletters = verification.newlyConfirmed
+      ? []
+      : requestedNewsletters
+    const newsletters = normalizedNewsletters(effectiveRequestedNewsletters)
+    if (!verification.newlyConfirmed) {
+      const beforeOptIns = subscriber
+      subscriber = await applyNewsletterOptIns(subscriber, newsletters)
+      await notifyExistingSubscriberOptIns(beforeOptIns, subscriber, true)
+    }
     const jwt = await signSession(subscriber)
     const isTidbitsSignup = newsletters.includes('tidbits')
     // Complete analytics on a second, query-free request. Vercel's server SDK
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     )
     setSessionCookies(response, jwt)
     await setMagicLinkCompletionCookie(response, {
-      newsletter: summarizeNewsletters(requestedNewsletters),
+      newsletter: summarizeNewsletters(effectiveRequestedNewsletters),
       newSubscriber: verification.newlyConfirmed,
       destination: isTidbitsSignup ? 'account' : 'home',
     })
