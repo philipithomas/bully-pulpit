@@ -183,6 +183,22 @@ most 5120px and file size at most 8MB. It skips files that already fit the
 policy, so rerunning it on the same image does not keep recompressing it. Keep
 full-resolution originals outside this app repository.
 
+## Performance budgets
+
+`pnpm build` finishes by measuring the Brotli-compressed initial JavaScript for
+the homepage, content route, newsletter archives, and photography page. The
+guard discovers hashed files through Next.js' generated client-reference
+manifests and fails when a route exceeds its reviewed budget. To rerun it
+against an existing `.next` build without rebuilding, use:
+
+```bash
+pnpm performance:check
+```
+
+When an intentional feature needs more eager client JavaScript, prefer moving
+it behind interaction or a dynamic import. Raise a budget only after reviewing
+the resulting first-load tradeoff.
+
 ## License
 
 Copyright (c) 2020-2026 The Contraption Company LLC. All rights reserved.

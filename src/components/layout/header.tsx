@@ -18,6 +18,7 @@ import {
 } from '@/lib/chat/discovery'
 import { siteConfig } from '@/lib/config'
 import type { Newsletter } from '@/lib/content/types'
+import { scheduleIdlePrefetch } from '@/lib/performance/idle-prefetch'
 import { useChatSidebar } from '@/stores/chat-store'
 
 // dynamic() splits chat (ai SDK + react-markdown) and search out of the
@@ -102,13 +103,7 @@ export function Header() {
       prefetchChat()
       prefetchSearch()
     }
-    if (typeof window.requestIdleCallback === 'function') {
-      const id = window.requestIdleCallback(warm, { timeout: 5000 })
-      return () => window.cancelIdleCallback(id)
-    }
-    // Safari has no requestIdleCallback
-    const id = window.setTimeout(warm, 2000)
-    return () => window.clearTimeout(id)
+    return scheduleIdlePrefetch(warm)
   }, [])
 
   // Give the expressive bell one restrained ring on the second page view.

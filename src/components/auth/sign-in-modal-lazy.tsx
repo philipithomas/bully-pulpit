@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
+import { scheduleIdlePrefetch } from '@/lib/performance/idle-prefetch'
 import { useAuthModal } from '@/stores/auth-store'
 
 // dynamic() splits the sign-in modal (Base UI dialog, OTP input, Google
@@ -34,15 +35,7 @@ export function LazySignInModal() {
   // import caches the module.
   useEffect(() => {
     if (document.documentElement.hasAttribute('data-member')) return
-    if (typeof window.requestIdleCallback === 'function') {
-      const id = window.requestIdleCallback(prefetchSignInModal, {
-        timeout: 5000,
-      })
-      return () => window.cancelIdleCallback(id)
-    }
-    // Safari has no requestIdleCallback
-    const id = window.setTimeout(prefetchSignInModal, 2000)
-    return () => window.clearTimeout(id)
+    return scheduleIdlePrefetch(prefetchSignInModal)
   }, [])
 
   if (!open && !hasOpened) return null
