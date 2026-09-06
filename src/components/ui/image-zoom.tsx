@@ -4,6 +4,12 @@ import dynamic from 'next/dynamic'
 import { usePathname, useRouter } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import {
+  isPhotoCollection,
+  type ViewerHistory,
+  viewerHistoryAction,
+  zoomGalleryIndex,
+} from '@/components/ui/image-zoom-navigation'
 import type {
   ZoomCaptionLink,
   ZoomedImage,
@@ -28,11 +34,6 @@ const IMAGE_ZOOM_HISTORY_KEY = '__bpImageZoom'
 interface ImageZoomHistoryValue {
   sourceUrl: string
   image: ZoomedImage
-}
-
-interface ViewerHistory {
-  sourceUrl: string
-  targetUrl: string
 }
 
 function imageWithoutAnimationRect(image: ZoomedImage): ZoomedImage {
@@ -303,8 +304,14 @@ export function ImageZoom() {
   const zoomedImageRef = useRef<ZoomedImage | null>(null)
   const viewerHistoryRef = useRef<ViewerHistory | null>(null)
   const pathnameRef = useRef(pathname)
+  const openingRef = useRef(0)
+  const navigatingRef = useRef(false)
+  const [navigationError, setNavigationError] = useState<string | undefined>()
 
   const clearZoom = useCallback(() => {
+    openingRef.current++
+    navigatingRef.current = false
+    setNavigationError(undefined)
     zoomedImageRef.current = null
     viewerHistoryRef.current = null
     setZoomedImage(null)
@@ -318,9 +325,14 @@ export function ImageZoom() {
 
     const sourceUrl = window.location.href
     const targetUrl = fullUrlForPath(targetPath)
-    if (sourceUrl === targetUrl) return
-
-    viewerHistoryRef.current = { sourceUrl, targetUrl }
+    const source = new URL(sourceUrl)
+    const samePost = `${source.pathname}${source.search}` === targetPath
+    viewerHistoryRef.current = {
+      sourceUrl,
+      targetUrl: samePost ? sourceUrl : targetUrl,
+      hasEntry: !samePost,
+    }
+    if (samePost) return
     window.history.pushState(
       imageZoomHistoryState(image, sourceUrl),
       '',
@@ -334,47 +346,135 @@ export function ImageZoom() {
     if (!history || !targetPath) return
 
     const targetUrl = fullUrlForPath(targetPath)
-    if (history.targetUrl === targetUrl) return
-
-    viewerHistoryRef.current = { ...history, targetUrl }
-    window.history.replaceState(
+    const action = viewerHistoryAction(history, targetUrl)
+    if (action === 'none') return
+    viewerHistoryRef.current = { ...history, targetUrl, hasEntry: true }
+    window.history[action === 'push' ? 'pushState' : 'replaceState'](
       imageZoomHistoryState(image, history.sourceUrl),
       '',
       targetPath
     )
   }, [])
 
+  const hydratePhotoGallery = useCallback(async () => {
+    const current = zoomedImageRef.current
+    const collection = current?.caption?.collection
+    if (!current || current.gallery || !isPhotoCollection(collection)) return
+    const opening = openingRef.current
+    const { loadPhotoGallery, photoGalleryIndex } = await import(
+      '@/components/ui/photo-gallery-loader'
+    )
+    const items = await loadPhotoGallery(collection)
+    const active = zoomedImageRef.current
+    if (
+      opening !== openingRef.current ||
+      !active ||
+      active.caption?.collection !== collection
+    )
+      return
+    const index = photoGalleryIndex(collection, items, active.caption?.href)
+    if (index < 0) throw new Error('Photo not in collection')
+    const hydrated = {
+      ...active,
+      photoNeighbors: undefined,
+      gallery: { items, index },
+    }
+    zoomedImageRef.current = hydrated
+    setZoomedImage(hydrated)
+    if (viewerHistoryRef.current?.hasEntry) replaceViewerUrl(hydrated)
+    setNavigationError(undefined)
+  }, [replaceViewerUrl])
+
   const openZoom = useCallback(
     (image: ZoomedImage) => {
+      openingRef.current++
+      navigatingRef.current = false
+      setNavigationError(undefined)
       zoomedImageRef.current = image
       pushViewerUrl(image)
       setZoomedImage(image)
+      if (!image.gallery && isPhotoCollection(image.caption?.collection)) {
+        const opening = openingRef.current
+        preloadZoomItemSources(image.photoNeighbors?.newer)
+        preloadZoomItemSources(image.photoNeighbors?.older)
+        void hydratePhotoGallery().catch(() => {
+          if (opening === openingRef.current)
+            setNavigationError('Could not load more photos. Try again.')
+        })
+      }
     },
-    [pushViewerUrl]
+    [hydratePhotoGallery, pushViewerUrl]
   )
 
   const handleNavigate = useCallback(
-    (direction: -1 | 1) => {
-      const gallery = zoomedImageRef.current?.gallery
-      if (!gallery) return
-      const index = gallery.index + direction
-      if (index < 0 || index >= gallery.items.length) return
-
-      const nextImage: ZoomedImage = {
-        ...gallery.items[index],
-        rect: null,
-        gallery: { ...gallery, index },
+    async (direction: -1 | 1) => {
+      if (navigatingRef.current) return
+      let current = zoomedImageRef.current
+      if (!current) return
+      const opening = openingRef.current
+      setNavigationError(undefined)
+      const neighbor =
+        direction === 1
+          ? current.photoNeighbors?.older
+          : current.photoNeighbors?.newer
+      if (!current.gallery && !neighbor) {
+        navigatingRef.current = true
+        try {
+          await hydratePhotoGallery()
+        } catch {
+          if (opening === openingRef.current)
+            setNavigationError('Could not load more photos. Try again.')
+          return
+        } finally {
+          if (opening === openingRef.current) navigatingRef.current = false
+        }
+        if (opening !== openingRef.current) return
+        current = zoomedImageRef.current
+        if (!current) return
       }
+      const index = zoomGalleryIndex(current, direction)
+      let nextImage: ZoomedImage
+      if (current.gallery && index !== null) {
+        nextImage = {
+          ...current.gallery.items[index],
+          rect: null,
+          gallery: { ...current.gallery, index },
+        }
+      } else if (neighbor && current.photoNeighbors) {
+        const { total, index: previousIndex } = current.photoNeighbors
+        const {
+          rect: _rect,
+          gallery: _gallery,
+          photoNeighbors: _neighbors,
+          ...currentItem
+        } = current
+        nextImage = {
+          ...neighbor,
+          rect: null,
+          photoNeighbors: {
+            total,
+            index: (previousIndex + direction + total) % total,
+            older: total === 2 || direction === -1 ? currentItem : null,
+            newer: total === 2 || direction === 1 ? currentItem : null,
+          },
+        }
+      } else return
       zoomedImageRef.current = nextImage
       replaceViewerUrl(nextImage)
       setZoomedImage(nextImage)
+      if (!nextImage.gallery) {
+        void hydratePhotoGallery().catch(() => {
+          if (opening === openingRef.current)
+            setNavigationError('Could not load more photos. Try again.')
+        })
+      }
     },
-    [replaceViewerUrl]
+    [hydratePhotoGallery, replaceViewerUrl]
   )
 
   const handleClose = useCallback(() => {
     const history = viewerHistoryRef.current
-    if (history && window.location.href !== history.sourceUrl) {
+    if (history?.hasEntry) {
       window.history.back()
       window.setTimeout(() => {
         if (
@@ -422,8 +522,15 @@ export function ImageZoom() {
         viewerHistoryRef.current = {
           sourceUrl: value.sourceUrl,
           targetUrl: window.location.href,
+          hasEntry: true,
         }
+        openingRef.current++
+        navigatingRef.current = false
+        setNavigationError(undefined)
         setZoomedImage(image)
+        if (!image.gallery && isPhotoCollection(image.caption?.collection)) {
+          void hydratePhotoGallery().catch(() => {})
+        }
         return
       }
 
@@ -434,7 +541,7 @@ export function ImageZoom() {
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [clearZoom])
+  }, [clearZoom, hydratePhotoGallery])
 
   useEffect(() => {
     if (pathnameRef.current === pathname) return
@@ -487,9 +594,49 @@ export function ImageZoom() {
         .map(zoomItemFromElement)
         .filter((i): i is ZoomGalleryItem => i !== null)
       const groupIndex = groupElements.indexOf(matched)
+      let photoNeighbors: ZoomedImage['photoNeighbors']
+      if (
+        isPhotoCollection(item.caption?.collection) &&
+        matched.dataset.zoomPhotoNeighbors
+      ) {
+        try {
+          const neighbors: ZoomGalleryItem[] = JSON.parse(
+            matched.dataset.zoomPhotoNeighbors
+          )
+          const total = positiveIntegerFromDataset(
+            matched.dataset.zoomPhotoCount
+          )
+          const index = Number(matched.dataset.zoomPhotoIndex)
+          if (
+            total &&
+            total > 1 &&
+            Number.isInteger(index) &&
+            index >= 0 &&
+            index < total &&
+            Array.isArray(neighbors) &&
+            neighbors.length > 0 &&
+            neighbors.length <= 2 &&
+            neighbors.every(
+              (neighbor) =>
+                neighbor?.caption?.collection === item.caption?.collection &&
+                typeof neighbor.src === 'string'
+            )
+          ) {
+            photoNeighbors = {
+              newer: neighbors[0],
+              older: neighbors[1] ?? neighbors[0],
+              total,
+              index,
+            }
+          }
+        } catch {
+          /* Invalid neighbor data must not prevent opening the current photo. */
+        }
+      }
       const rect = img.getBoundingClientRect()
       openZoom({
         ...item,
+        photoNeighbors,
         // Plain object copy: the overlay animates from and back to this box.
         rect:
           rect.width > 0 && rect.height > 0
@@ -517,6 +664,7 @@ export function ImageZoom() {
       image={zoomedImage}
       onNavigate={handleNavigate}
       onNavigateTo={handleNavigateTo}
+      navigationError={navigationError}
       onClose={handleClose}
     />,
     document.body

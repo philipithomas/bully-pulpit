@@ -5,6 +5,7 @@ import {
   ImageZoomOverlay,
   type ZoomedImage,
 } from '@/components/ui/image-zoom-overlay'
+import { TIDBITS_PALETTES, tidbitsPaletteForPost } from '@/lib/tidbits/palette'
 
 function galleryItem(
   src: string,
@@ -117,14 +118,81 @@ describe('ImageZoomOverlay', () => {
     expect(html).not.toContain('<p class=')
   })
 
-  it('disables only the unavailable edge control', () => {
+  it('keeps both directions available at photo collection boundaries', () => {
     const firstHtml = renderOverlay(immersiveImage(0))
     const lastHtml = renderOverlay(immersiveImage(2))
 
-    expect(controlTag(firstHtml, 'Previous image')).toContain('disabled=""')
+    expect(controlTag(firstHtml, 'Previous image')).not.toContain('disabled=""')
     expect(controlTag(firstHtml, 'Next image')).not.toContain('disabled=""')
     expect(controlTag(lastHtml, 'Previous image')).not.toContain('disabled=""')
-    expect(controlTag(lastHtml, 'Next image')).toContain('disabled=""')
+    expect(controlTag(lastHtml, 'Next image')).not.toContain('disabled=""')
+  })
+
+  it('preserves bounded navigation for ordinary galleries', () => {
+    const image = immersiveImage(0)
+    image.caption = null
+    const html = renderOverlay(image)
+
+    expect(controlTag(html, 'Previous image')).toContain('disabled=""')
+    expect(controlTag(html, 'Next image')).not.toContain('disabled=""')
+    expect(html).not.toContain('data-zoom-tidbits-accent')
+    expect(html).not.toContain('pan-y pinch-zoom')
+  })
+
+  it('makes circular photo controls available while the rest of the album loads', () => {
+    const image = immersiveImage(0)
+    image.photoNeighbors = {
+      newer: image.gallery!.items[2],
+      older: null,
+      total: 17,
+      index: 0,
+    }
+    image.gallery = undefined
+    const html = renderOverlay(image)
+
+    expect(html).toContain('image 1 of 17')
+    expect(controlTag(html, 'Previous image')).not.toContain('disabled=""')
+    expect(controlTag(html, 'Next image')).not.toContain('disabled=""')
+  })
+
+  it('shows a palette accent while details are collapsed without recoloring the canvas', () => {
+    const html = renderOverlay(immersiveImage())
+    const palette = tidbitsPaletteForPost('sfmoma')
+
+    expect(html).toContain('data-zoom-tidbits-accent=""')
+    expect(html).toContain(`--photo-viewer-paper:${palette.paper}`)
+    expect(html).toContain(`--photo-viewer-ink:${palette.ink}`)
+    expect(html).toContain(`--photo-viewer-accent:${palette.accent}`)
+    expect(html).toContain('bg-[#0A0A0A]')
+    expect(html).toContain('duration-300 motion-reduce:transition-none')
+    expect(html).not.toContain('--tidbits-paper:')
+  })
+
+  it('keeps normal-sized viewer text readable on every palette paper', () => {
+    const html = renderOverlay(immersiveImage())
+    const body = html.match(/--photo-viewer-body:(#[0-9a-f]{6})/)?.[1]
+    const muted = html.match(/--photo-viewer-muted:(#[0-9a-f]{6})/)?.[1]
+    expect(body).toBeDefined()
+    expect(muted).toBeDefined()
+    function luminance(hex: string) {
+      const channels = hex
+        .slice(1)
+        .match(/../g)!
+        .map((channel) => {
+          const value = Number.parseInt(channel, 16) / 255
+          return value <= 0.04045
+            ? value / 12.92
+            : ((value + 0.055) / 1.055) ** 2.4
+        })
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722
+    }
+    for (const palette of TIDBITS_PALETTES) {
+      for (const text of [palette.ink, body!, muted!]) {
+        expect(
+          (luminance(palette.paper) + 0.05) / (luminance(text) + 0.05)
+        ).toBeGreaterThanOrEqual(4.5)
+      }
+    }
   })
 
   it('keeps the legacy caption viewer on the rail presentation', () => {
@@ -157,5 +225,8 @@ describe('ImageZoomOverlay', () => {
     )
     expect(html).not.toContain('immersive-zoom-stage')
     expect(html).not.toContain('immersive-zoom-chrome')
+    expect(html).toContain('pan-y pinch-zoom')
+    expect(html).not.toContain('data-zoom-tidbits-accent')
+    expect(html).not.toContain('--photo-viewer-paper:')
   })
 })
