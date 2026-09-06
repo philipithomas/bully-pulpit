@@ -47,7 +47,7 @@ describe('newsletter SMS', () => {
     )
   })
 
-  it('preserves lowercase tidbits and attaches its cover', () => {
+  it('uses the Tidbits name and attaches its cover', () => {
     const tidbitsPost = post({
       slug: 'sfmoma',
       newsletter: 'tidbits',
@@ -60,7 +60,7 @@ describe('newsletter SMS', () => {
     })
 
     expect(renderNewsletterSms(tidbitsPost)).toBe(
-      'New tidbits post: SFMOMA https://philipithomas.com/sfmoma'
+      'New Tidbits post: SFMOMA https://philipithomas.com/sfmoma'
     )
     expect(newsletterSmsMediaUrl(tidbitsPost)).toBe(
       'https://www.philipithomas.com/api/phone/newsletter-cover/sfmoma?v=%2Fimages%2Fcovers%2Ftidbits%2Fsfmoma.jpg'

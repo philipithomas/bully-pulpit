@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-06T20:18:57.843Z",
+  "generatedAt": "2026-09-06T20:52:57.546Z",
   "posts": {
     "cooking-class": {
       "related": [
@@ -133,7 +133,7 @@
       "related": [
         {
           "slug": "introducing-tidbits-ongoing-photo-journal",
-          "score": 0.3158027
+          "score": 0.3120352
         },
         {
           "slug": "cable-car",
@@ -165,7 +165,7 @@
       "related": [
         {
           "slug": "introducing-tidbits-ongoing-photo-journal",
-          "score": 0.2521984
+          "score": 0.2542493
         },
         {
           "slug": "2026-08",
@@ -185,7 +185,7 @@
         },
         {
           "slug": "introducing-tidbits-ongoing-photo-journal",
-          "score": 0.2589991
+          "score": 0.2568051
         },
         {
           "slug": "workshop-welcome",
@@ -280,12 +280,12 @@
           "score": 0.3360653
         },
         {
-          "slug": "cable-car",
-          "score": 0.3449094
+          "slug": "introducing-tidbits-ongoing-photo-journal",
+          "score": 0.3447354
         },
         {
-          "slug": "swivel",
-          "score": 0.3459971
+          "slug": "cable-car",
+          "score": 0.3449094
         }
       ]
     },
@@ -293,15 +293,15 @@
       "related": [
         {
           "slug": "2026-08",
-          "score": 0.1366485
+          "score": 0.1353696
         },
         {
           "slug": "introducing-tsundoku",
-          "score": 0.1515988
+          "score": 0.1509637
         },
         {
           "slug": "2023-10",
-          "score": 0.1746665
+          "score": 0.172109
         }
       ]
     },
@@ -309,7 +309,7 @@
       "related": [
         {
           "slug": "introducing-tidbits-ongoing-photo-journal",
-          "score": 0.1875879
+          "score": 0.1853525
         },
         {
           "slug": "2026-08",
@@ -333,7 +333,7 @@
         },
         {
           "slug": "introducing-tidbits-ongoing-photo-journal",
-          "score": 0.2877616
+          "score": 0.2875404
         }
       ]
     },
@@ -921,7 +921,7 @@
         },
         {
           "slug": "introducing-tidbits-ongoing-photo-journal",
-          "score": 0.2079665
+          "score": 0.2085609
         },
         {
           "slug": "2023-10",

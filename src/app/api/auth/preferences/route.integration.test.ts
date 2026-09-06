@@ -230,12 +230,12 @@ describe('PATCH', () => {
       vi
         .mocked(sendSimpleEmail)
         .mock.calls.filter(([message]) =>
-          message.subject.startsWith('Existing subscriber opted into tidbits:')
+          message.subject.startsWith('Existing subscriber opted into Tidbits:')
         )
     expect(notifications()).toHaveLength(1)
     expect(notifications()[0][0]).toMatchObject({
       to: siteConfig.adminEmails,
-      subject: 'Existing subscriber opted into tidbits: reader@example.com',
+      subject: 'Existing subscriber opted into Tidbits: reader@example.com',
     })
 
     // Saving an already-enabled preference does not duplicate the email. A

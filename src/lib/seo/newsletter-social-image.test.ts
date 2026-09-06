@@ -32,11 +32,11 @@ const EXPECTED = {
     logoHeight: 115,
   },
   tidbits: {
-    alt: 'tidbits wordmark',
+    alt: 'Tidbits wordmark',
     background: latestTidbitsPalette().paper,
     logoPath: tidbitsAsset(latestTidbitsPalette(), 'wordmark'),
     logoWidth: 504,
-    logoHeight: 116,
+    logoHeight: 110,
   },
   tsundoku: {
     alt: 'Tsundoku wordmark',

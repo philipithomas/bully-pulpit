@@ -17,7 +17,7 @@ const newsletterLabel: Record<Newsletter, string> = {
   contraption: 'Contraption',
   workshop: 'Workshop',
   postcard: 'Postcard',
-  tidbits: 'tidbits',
+  tidbits: 'Tidbits',
   tsundoku: 'Tsundoku',
 }
 

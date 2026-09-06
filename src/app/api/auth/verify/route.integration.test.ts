@@ -118,7 +118,7 @@ function adminNotificationCalls() {
 
 function tidbitsOptInNotificationCalls() {
   return sesSend.mock.calls.filter(([input]) =>
-    input.subject.startsWith('Existing subscriber opted into tidbits:')
+    input.subject.startsWith('Existing subscriber opted into Tidbits:')
   )
 }
 
@@ -500,7 +500,7 @@ describe('POST /api/auth/verify', () => {
     expect(tidbitsOptInNotificationCalls()).toHaveLength(1)
     expect(tidbitsOptInNotificationCalls()[0][0]).toMatchObject({
       to: siteConfig.adminEmails,
-      subject: `Existing subscriber opted into tidbits: ${subscriber.email}`,
+      subject: `Existing subscriber opted into Tidbits: ${subscriber.email}`,
     })
 
     // The sibling magic link is still valid, but replaying the requested opt-in

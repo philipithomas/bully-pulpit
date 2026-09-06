@@ -102,7 +102,7 @@ He currently publishes four newsletters:
 - Contraption (/contraption): ${siteConfig.newsletters.contraption.tagline}
 - Workshop (/workshop): ${siteConfig.newsletters.workshop.tagline}
 - Postcard (/postcard): ${siteConfig.newsletters.postcard.tagline}
-- tidbits (/tidbits): ${siteConfig.newsletters.tidbits.tagline}
+- Tidbits (/tidbits): ${siteConfig.newsletters.tidbits.tagline}
 
 The newsletters are available by email, RSS, and SMS, and the homepage has a signup form. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
     humanSitemap: true,
@@ -111,12 +111,12 @@ The newsletters are available by email, RSS, and SMS, and the homepage has a sig
   {
     id: 'app-drawer',
     path: '/drawer',
-    title: 'The drawer',
+    title: 'Drawer',
     description: 'A daily cabinet of curiosities from across the archive.',
     searchText:
-      'The drawer. A daily cabinet of curiosities from across the archive. Each ISO date reveals the same deterministic assortment: an older essay or journal entry, a photograph, a Diction word, a Contraptions term, and a Blogroll destination.',
+      'Drawer. A daily cabinet of curiosities from across the archive. Each ISO date reveals the same deterministic assortment: an older essay or journal entry, a photograph, a Diction word, a Contraptions term, and a Blogroll destination.',
     bellText: () =>
-      'The drawer is a daily cabinet of curiosities at /drawer. Each date reveals a deterministic assortment from the published archive: an older essay or journal entry, a photograph, a Diction word, a Contraptions term, and a Blogroll destination. Use the previous, next, date, or Surprise me controls to open another drawer. The ordinary page does not ask Bell or another model to make its selections.',
+      'Drawer is a daily cabinet of curiosities at /drawer. Each date reveals a deterministic assortment from the published archive: an older essay or journal entry, a photograph, a Diction word, a Contraptions term, and a Blogroll destination. Use the previous, next, date, or Surprise me controls to open another drawer. The ordinary page does not ask Bell or another model to make its selections.',
     humanSitemap: true,
     xmlSitemap: true,
   },

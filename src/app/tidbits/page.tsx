@@ -175,20 +175,20 @@ export default function TidbitsPage() {
           <div className="tidbits-page-brand flex flex-col items-center md:items-start">
             <Link
               href="/tidbits"
-              aria-label="tidbits"
+              aria-label="Tidbits"
               className="block transition-opacity hover:opacity-80"
             >
               <NewsletterWordmark
                 src="/images/tidbits.svg"
-                alt="tidbits"
-                width={1601}
+                alt="Tidbits"
+                width={1688}
                 height={369}
                 sizes="(max-width: 640px) 52vw, (max-width: 768px) 220px, 240px"
                 className="h-auto w-full max-w-[52vw] sm:max-w-[220px] md:max-w-[240px]"
                 priority
               />
             </Link>
-            <h1 className="sr-only">tidbits</h1>
+            <h1 className="sr-only">Tidbits</h1>
             <p className="mt-4 max-w-xl text-balance font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
               {siteConfig.newsletters.tidbits.tagline}
             </p>

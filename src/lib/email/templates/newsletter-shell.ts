@@ -48,7 +48,7 @@ const wordmarks: Record<
   },
   workshop: { name: 'Workshop', file: 'workshop-brand', width: 87, height: 24 },
   postcard: { name: 'Postcard', file: 'postcard', width: 79, height: 18 },
-  tidbits: { name: 'tidbits', file: 'tidbits', width: 104, height: 24 },
+  tidbits: { name: 'Tidbits', file: 'tidbits', width: 104, height: 23 },
   tsundoku: { name: 'Tsundoku', file: 'tsundoku', width: 157, height: 24 },
 }
 
@@ -64,8 +64,8 @@ function brandHeader(
   const dims = `height: ${mark.height}px; width: ${mark.width}px;`
   if (newsletter === 'tidbits') {
     return `<a href="${siteUrl}/tidbits" style="text-decoration: none;">
-              <img class="email-brand-light" src="${siteUrl}${tidbitsAsset(palette, 'email')}" alt="tidbits" width="${mark.width}" height="${mark.height}" style="${dims}">
-              <img class="email-brand-dark" src="${siteUrl}${tidbitsAsset(palette, 'email-dark')}" alt="tidbits" width="${mark.width}" height="${mark.height}" style="${dims} display: none; mso-hide: all;">
+              <img class="email-brand-light" src="${siteUrl}${tidbitsAsset(palette, 'email')}" alt="Tidbits" width="${mark.width}" height="${mark.height}" style="${dims}">
+              <img class="email-brand-dark" src="${siteUrl}${tidbitsAsset(palette, 'email-dark')}" alt="Tidbits" width="${mark.width}" height="${mark.height}" style="${dims} display: none; mso-hide: all;">
             </a>`
   }
   if (isPhotoNewsletter(newsletter)) {

@@ -150,7 +150,7 @@ describe('PATCH /api/unsubscribe/[token]', () => {
     expect(res.status).toBe(403)
     expect(mockedSubs.updateSubscriber).not.toHaveBeenCalled()
     await expect(res.json()).resolves.toEqual({
-      error: 'Sign in to subscribe to tidbits.',
+      error: 'Sign in to subscribe to Tidbits.',
     })
   })
 

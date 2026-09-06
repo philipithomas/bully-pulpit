@@ -582,9 +582,9 @@ export function ImageZoomOverlay({
     caption?.collection === 'tidbits'
       ? {
           href: '/tidbits',
-          label: 'tidbits',
+          label: 'Tidbits',
           logo: '/images/tidbits.svg',
-          width: 1601,
+          width: 1688,
           height: 369,
         }
       : {
@@ -677,7 +677,7 @@ export function ImageZoomOverlay({
       aria-modal="true"
       aria-label={
         isImmersive && caption?.collection === 'tidbits'
-          ? 'tidbits photo viewer'
+          ? 'Tidbits photo viewer'
           : image.alt || 'Image viewer'
       }
       aria-describedby={isPhotoCollection && caption ? statusId : undefined}

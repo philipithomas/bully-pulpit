@@ -28,7 +28,7 @@ export default function NotFound() {
             href="/drawer"
             className="no-underline font-sans text-sm text-white/60 hover:text-white transition-colors duration-300 inline-flex items-center"
           >
-            <span>Open the drawer</span>
+            <span>Open Drawer</span>
             <ArrowRight className="ml-2" size={16} />
           </Link>
         </div>

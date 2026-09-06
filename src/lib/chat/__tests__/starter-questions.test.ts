@@ -29,10 +29,10 @@ describe('Bell starter questions', () => {
     })
   })
 
-  it('preserves the lowercase tidbits name', () => {
+  it('uses the Tidbits name', () => {
     expect(bellStarterQuestions('/tidbits')[0]).toEqual({
       kind: 'newsletter_overview',
-      text: 'What is tidbits about?',
+      text: 'What is Tidbits about?',
     })
   })
 

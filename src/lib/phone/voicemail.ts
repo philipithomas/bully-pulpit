@@ -37,7 +37,7 @@ const OPENAI_TRANSCRIPTION_KEYWORDS = [
   'Contraption',
   'Postcard',
   'Tsundoku',
-  'tidbits',
+  'Tidbits',
 ]
 
 export function twilioRecordingMp3Url(

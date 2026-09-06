@@ -15,7 +15,7 @@ const newsletterNames = {
   contraption: 'Contraption',
   workshop: 'Workshop',
   postcard: 'Postcard',
-  tidbits: 'tidbits',
+  tidbits: 'Tidbits',
   tsundoku: 'Tsundoku',
 } as const
 
