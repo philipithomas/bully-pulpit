@@ -92,7 +92,7 @@ export const publicAppPages = [
     path: '/',
     title: 'Home',
     description: siteConfig.description,
-    searchText: `${siteConfig.author} crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He writes about software, projects, urbanism, coffee, and photography.`,
+    searchText: `${siteConfig.author} crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He writes about software, projects, urbanism, coffee, and photography. His homepage includes an interactive daily drawer of photographs from Tidbits and Tsundoku, a word from Diction, an object from Contraptions, and writing from the archive. Visitors can open the Photographs, Words, Contraptions, and Writing tabs, or choose another photograph.`,
     bellText:
       () => `The homepage of philipithomas.com, the personal website and blog of ${siteConfig.author}. Philip crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He is interested in urbanism, coffee, and photography. Visitors can connect with him on GitHub and LinkedIn.
 
@@ -102,7 +102,9 @@ He currently publishes four newsletters:
 - Postcard (/postcard): ${siteConfig.newsletters.postcard.tagline}
 - Tidbits (/tidbits): ${siteConfig.newsletters.tidbits.tagline}
 
-The newsletters are available by email, RSS, and SMS, and the homepage has a signup form. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
+The homepage has a daily drawer with Photographs, Words, Contraptions, and Writing tabs. It begins with the newest photograph from Tidbits or Tsundoku; Another photograph browses a small selection across those archives. The other tabs reveal a word from Diction (/diction), an object from Contraptions (/contraptions), and a piece of older writing. Writing is labeled On this day only when its publication month and day match; otherwise it is labeled From the archive. The selections are cached and refreshed throughout the day.
+
+The homepage links to Postcard, Contraption, and Tidbits; each newsletter page offers a subscription form. Workshop remains active and available at /workshop. The newsletters are available by email, RSS, and SMS. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
     humanSitemap: true,
     xmlSitemap: true,
   },
