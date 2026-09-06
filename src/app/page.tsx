@@ -36,11 +36,7 @@ export default function HomePage() {
       <div className={styles.introduction}>
         <div>
           <LatestPostPill />
-          <h1>
-            Tools, photographs,
-            <br />
-            and other curiosities.
-          </h1>
+          <h1>Crafting digital tools</h1>
         </div>
         <p className={styles.bio}>
           I am an engineer living in New York, working at the intersection of
