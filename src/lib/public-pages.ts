@@ -10,6 +10,7 @@ export const PUBLIC_APP_PAGE_PATHS = [
   '/tidbits',
   '/tsundoku',
   '/photography',
+  '/explore',
   '/mcp/setup',
   '/print',
   '/sitemap',
@@ -123,6 +124,19 @@ The newsletters are available by email, RSS, and SMS, and the homepage has a sig
       'Photography. Philip takes and edits all photos on the site. This page gathers post cover photography into a searchable gallery. Visitors can search the photographs by subject and open each image to see the posts where it appeared.',
     bellText: () =>
       "The Photography page gathers the cover photographs from Philip's posts into a gallery. Philip takes and edits all photos on the site. Visitors can search the photographs by subject and open a photo to see the posts where it appeared. Bell can search the same collection with image search.",
+    humanSitemap: true,
+    xmlSitemap: true,
+  },
+  {
+    id: 'app-explore',
+    path: '/explore',
+    title: 'Explore',
+    description:
+      "A curated guide to the site's writing, photography, curiosities, tools, and about pages.",
+    searchText:
+      "Explore. A curated editorial map of Philip Ilic Thomas's writing, photography, curiosities, tools, and about pages. Use the human sitemap for the exhaustive chronological directory of every page and post.",
+    bellText: () =>
+      "The Explore page is a curated editorial map of Philip Ilic Thomas's writing, photography, curiosities, tools, and about pages. It complements the exhaustive human sitemap, which lists every public page and published post chronologically.",
     humanSitemap: true,
     xmlSitemap: true,
   },

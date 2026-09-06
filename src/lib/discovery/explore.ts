@@ -1,0 +1,189 @@
+import { getPages } from '@/lib/content/loader'
+import { type PublicAppPagePath, publicAppPage } from '@/lib/public-pages'
+
+export const EXPLORE_GROUP_IDS = [
+  'writing',
+  'photography',
+  'curiosities',
+  'tools-about',
+] as const
+
+export type ExploreGroupId = (typeof EXPLORE_GROUP_IDS)[number]
+
+export type ExploreAccent = 'forest' | 'tidbits' | 'walnut' | 'indigo'
+
+const EXPLORE_CONTENT_PAGE_SLUGS = [
+  'diction',
+  'contraptions',
+  'blogroll',
+  'audio',
+  'media',
+  'colophon',
+  'contact',
+] as const
+
+export type ExploreContentPageSlug = (typeof EXPLORE_CONTENT_PAGE_SLUGS)[number]
+
+export type ExploreDestinationId =
+  | 'contraption'
+  | 'workshop'
+  | 'postcard'
+  | 'tidbits'
+  | 'tsundoku'
+  | 'photography'
+  | ExploreContentPageSlug
+  | 'bell'
+  | 'mcp'
+
+type ExploreDestinationReference =
+  | {
+      id: Exclude<ExploreDestinationId, ExploreContentPageSlug | 'bell'>
+      source: 'app'
+      path: PublicAppPagePath
+    }
+  | {
+      id: ExploreContentPageSlug
+      source: 'content'
+      slug: ExploreContentPageSlug
+    }
+  | {
+      id: 'bell'
+      source: 'bell'
+      title: 'Bell'
+      description: string
+    }
+
+interface ExploreGroupDefinition {
+  id: ExploreGroupId
+  title: string
+  description: string
+  accent: ExploreAccent
+  destinations: readonly ExploreDestinationReference[]
+}
+
+/**
+ * The editorial grouping is declared once here. App-page and MDX destination
+ * copy is deliberately referenced rather than repeated, so Explore follows
+ * the canonical public registries when a label or description changes.
+ */
+export const EXPLORE_GROUP_DEFINITIONS = [
+  {
+    id: 'writing',
+    title: 'Writing',
+    description: 'Essays, field notes, and dispatches from work in motion.',
+    accent: 'forest',
+    destinations: [
+      { id: 'contraption', source: 'app', path: '/contraption' },
+      { id: 'workshop', source: 'app', path: '/workshop' },
+      { id: 'postcard', source: 'app', path: '/postcard' },
+    ],
+  },
+  {
+    id: 'photography',
+    title: 'Photography',
+    description: 'Photo journals and a searchable view across the archive.',
+    accent: 'tidbits',
+    destinations: [
+      { id: 'tidbits', source: 'app', path: '/tidbits' },
+      { id: 'tsundoku', source: 'app', path: '/tsundoku' },
+      { id: 'photography', source: 'app', path: '/photography' },
+    ],
+  },
+  {
+    id: 'curiosities',
+    title: 'Curiosities',
+    description: 'Lists and collections assembled for repeat wandering.',
+    accent: 'walnut',
+    destinations: [
+      { id: 'diction', source: 'content', slug: 'diction' },
+      { id: 'contraptions', source: 'content', slug: 'contraptions' },
+      { id: 'blogroll', source: 'content', slug: 'blogroll' },
+      { id: 'audio', source: 'content', slug: 'audio' },
+      { id: 'media', source: 'content', slug: 'media' },
+    ],
+  },
+  {
+    id: 'tools-about',
+    title: 'Tools and about',
+    description: 'Ways to ask, connect, and see how the site works.',
+    accent: 'indigo',
+    destinations: [
+      {
+        id: 'bell',
+        source: 'bell',
+        title: 'Bell',
+        description:
+          "Ask the site's AI guide to find and explain public writing, pages, and photographs.",
+      },
+      { id: 'mcp', source: 'app', path: '/mcp/setup' },
+      { id: 'colophon', source: 'content', slug: 'colophon' },
+      { id: 'contact', source: 'content', slug: 'contact' },
+    ],
+  },
+] as const satisfies readonly ExploreGroupDefinition[]
+
+export type ExploreDestination = {
+  id: ExploreDestinationId
+  kind: 'link' | 'bell'
+  href: `/${string}` | '#bell'
+  title: string
+  description: string
+}
+
+export type ExploreGroup = {
+  id: ExploreGroupId
+  title: string
+  description: string
+  accent: ExploreAccent
+  destinations: readonly ExploreDestination[]
+}
+
+/** Resolve checked references into the serializable view model used by UI. */
+export function getExploreGroups(): readonly ExploreGroup[] {
+  const contentPages = new Map(getPages().map((page) => [page.slug, page]))
+
+  return EXPLORE_GROUP_DEFINITIONS.map((group) => ({
+    ...group,
+    destinations: group.destinations.map((destination) => {
+      if (destination.source === 'app') {
+        const page = publicAppPage(destination.path)
+        return {
+          id: destination.id,
+          kind: 'link' as const,
+          href: page.path,
+          title: page.title,
+          description: page.description,
+        }
+      }
+
+      if (destination.source === 'content') {
+        const page = contentPages.get(destination.slug)
+        if (!page) {
+          throw new Error(
+            `Explore references missing content page: ${destination.slug}`
+          )
+        }
+        if (!page.frontmatter.description) {
+          throw new Error(
+            `Explore content page needs a description: ${destination.slug}`
+          )
+        }
+        return {
+          id: destination.id,
+          kind: 'link' as const,
+          href: `/${destination.slug}` as const,
+          title: page.frontmatter.title,
+          description: page.frontmatter.description,
+        }
+      }
+
+      return {
+        id: destination.id,
+        kind: 'bell' as const,
+        href: '#bell' as const,
+        title: destination.title,
+        description: destination.description,
+      }
+    }),
+  }))
+}

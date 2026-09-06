@@ -41,7 +41,7 @@ interface ChatSidebarState {
   hasOpened: boolean
   pinned: boolean
   initialQuery: string
-  entrySource: 'header' | 'search' | 'onboarding'
+  entrySource: 'header' | 'search' | 'onboarding' | 'explore'
   savedMessages: UIMessage[]
   pendingLocalMessage: UIMessage | null
   // The mounted AI SDK Chat instance must be stopped before an action rotates
@@ -52,7 +52,10 @@ interface ChatSidebarState {
   // this beside the persisted chat ID so a sign-out or account switch cannot
   // replay one person's transcript into another person's conversation.
   conversationIdentity: string | null
-  openSidebar: (query?: string) => void
+  openSidebar: (
+    query?: string,
+    options?: { entrySource?: 'header' | 'explore' }
+  ) => void
   openSidebarWithLocalMessage: (
     message: string,
     options: {
@@ -95,13 +98,18 @@ export const useChatSidebar = create<ChatSidebarState>()(
       activeChatStop: null,
       chatId: generateChatId(),
       conversationIdentity: null,
-      openSidebar: (query?: string) => {
+      openSidebar: (
+        query?: string,
+        options?: { entrySource?: 'header' | 'explore' }
+      ) => {
         const searchHandoff = Boolean(query)
         set({
           open: true,
           hasOpened: true,
           initialQuery: query ?? '',
-          entrySource: searchHandoff ? 'search' : 'header',
+          entrySource: searchHandoff
+            ? 'search'
+            : (options?.entrySource ?? 'header'),
           // Asking Bell from search deliberately presents a fresh thread.
           // Rotate the durable ID and clear both persisted and in-memory
           // history before the handoff can send its first message.
