@@ -1,11 +1,26 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { getAllPosts, getPostsByNewsletter } from '@/lib/content/loader'
+import { photoGalleryItemFromPost } from '@/lib/content/photo-gallery'
+import { getPhotoPosts } from '@/lib/content/photo-navigation'
 import { newsletterSchema } from '@/lib/content/types'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const newsletter = searchParams.get('newsletter')
+  if (searchParams.get('view') === 'gallery') {
+    if (newsletter !== 'tidbits' && newsletter !== 'tsundoku') {
+      return NextResponse.json(
+        { error: 'Unknown photo collection' },
+        { status: 400 }
+      )
+    }
+    const photos = getPhotoPosts(newsletter).map(photoGalleryItemFromPost)
+    return NextResponse.json(
+      { photos },
+      { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' } }
+    )
+  }
   const page = Number.parseInt(searchParams.get('page') ?? '1', 10)
   const limit = Number.parseInt(searchParams.get('limit') ?? '24', 10)
   const skip = Number.parseInt(searchParams.get('skip') ?? '0', 10)

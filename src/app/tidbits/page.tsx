@@ -8,7 +8,7 @@ import {
   isPortraitTidbitsCover,
   postCoverSizes,
 } from '@/lib/content/cover-preload'
-import { getPostsByNewsletter } from '@/lib/content/loader'
+import { getPhotoPosts } from '@/lib/content/photo-navigation'
 import { markdownToPlaintext } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
 import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
@@ -159,7 +159,7 @@ function PhotoTile({ post }: { post: Post }) {
 }
 
 export default function TidbitsPage() {
-  const posts = getPostsByNewsletter('tidbits')
+  const posts = getPhotoPosts('tidbits')
   const [leadPost, ...archivePosts] = posts
   const smsSignupPhoneNumber = sitePhoneNumber()
   const smsSignupDisplayNumber = sitePhoneDisplayNumber()

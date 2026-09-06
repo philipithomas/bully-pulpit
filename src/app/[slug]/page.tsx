@@ -15,6 +15,11 @@ import {
 } from '@/components/posts/mdx-components'
 import { accentHoverText } from '@/components/posts/newsletter-accent'
 import { PhotoMetadata } from '@/components/posts/photo-metadata'
+import { PhotoPostNavigation } from '@/components/posts/photo-post-navigation'
+import {
+  PhotoSwipeCover,
+  type PhotoSwipeDestination,
+} from '@/components/posts/photo-swipe-cover'
 import { PostNavigation } from '@/components/posts/post-navigation'
 import { RelatedPosts } from '@/components/posts/related-posts'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
@@ -24,6 +29,7 @@ import { YouTubeEmbed } from '@/components/ui/youtube-embed'
 import { getCollection, isCollectionSlug } from '@/lib/collections'
 import { siteConfig } from '@/lib/config'
 import {
+  coverPreloadAttrs,
   isPortraitTidbitsCover,
   POST_COVER_SIZES,
   portraitTidbitsCoverMaxWidth,
@@ -38,6 +44,8 @@ import {
   getPages,
   getPostBySlug,
 } from '@/lib/content/loader'
+import { photoGalleryItemFromPost } from '@/lib/content/photo-gallery'
+import { getPhotoNavigation } from '@/lib/content/photo-navigation'
 import { getRelatedPosts } from '@/lib/content/related'
 import { markdownToPlaintext } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
@@ -71,6 +79,18 @@ function photoViewerDescription(post: Post): string | undefined {
   return text.length > PHOTO_VIEWER_DESCRIPTION_MAX
     ? `${text.slice(0, PHOTO_VIEWER_DESCRIPTION_MAX).trimEnd()}...`
     : text
+}
+
+function photoSwipeDestination(
+  post: Post | null
+): PhotoSwipeDestination | null {
+  if (!post) return null
+  const attrs = coverPreloadAttrs(post)
+  return {
+    href: `/${encodeURIComponent(post.slug)}`,
+    srcSet: attrs['data-cover-srcset'],
+    sizes: attrs['data-cover-sizes'],
+  }
 }
 
 function toVercelImagePath(
@@ -246,9 +266,10 @@ export default async function SlugPage({ params }: Props) {
   const item = post ?? page!
   const isFindAiPage = page?.slug === 'find-ai'
   const relatedPosts = post ? getRelatedPosts(post.slug) : []
-  const { previous, next } = post
-    ? getAdjacentPosts(post.slug)
-    : { previous: null, next: null }
+  const { previous, next } =
+    post && !isPhotoNewsletter(post.newsletter)
+      ? getAdjacentPosts(post.slug)
+      : { previous: null, next: null }
   const bgMap: Record<string, { className: string; dataBg: string }> = {
     workshop: { className: 'bg-offwhite-warm', dataBg: 'offwhite-warm' },
     contraption: { className: 'bg-gray-050', dataBg: 'gray-050' },
@@ -264,13 +285,22 @@ export default async function SlugPage({ params }: Props) {
     post && post.newsletter !== 'postcard' ? post.frontmatter.publishedAt : null
   const showPostMetadata = Boolean(postDate || location || photo)
   const isPhotoPost = Boolean(post && isPhotoNewsletter(post.newsletter))
+  const photoNavigation = isPhotoPost && post ? getPhotoNavigation(post) : null
+  const photoNeighbors = photoNavigation
+    ? [photoNavigation.newer, photoNavigation.older].filter(
+        (neighbor, index, all): neighbor is Post =>
+          neighbor !== null &&
+          all.findIndex((candidate) => candidate?.slug === neighbor.slug) ===
+            index
+      )
+    : []
   const isTidbitsPost = post?.newsletter === 'tidbits'
   const hasPortraitTidbitsCover = Boolean(post && isPortraitTidbitsCover(post))
   const coverSizes = post ? postCoverSizes(post) : POST_COVER_SIZES
   const coverZoomCaption =
     isPhotoPost && post
       ? {
-          'data-zoom-caption-href': `/${post.slug}`,
+          'data-zoom-caption-href': `/${encodeURIComponent(post.slug)}`,
           'data-zoom-caption-title': post.frontmatter.title,
           'data-zoom-caption-description': photoViewerDescription(post),
           'data-zoom-caption-date': post.frontmatter.publishedAt,
@@ -281,6 +311,11 @@ export default async function SlugPage({ params }: Props) {
             ? 'immersive'
             : 'rail',
           'data-zoom-caption-collection': post.newsletter,
+          'data-zoom-photo-neighbors': JSON.stringify(
+            photoNeighbors.map(photoGalleryItemFromPost)
+          ),
+          'data-zoom-photo-count': photoNavigation?.total,
+          'data-zoom-photo-index': photoNavigation?.index,
         }
       : {}
   const postDateline =
@@ -310,7 +345,7 @@ export default async function SlugPage({ params }: Props) {
       {photo ? <PhotoMetadata photo={photo} align="center" /> : null}
     </div>
   ) : null
-  const coverImage = item.frontmatter.coverImage ? (
+  const coverContent = item.frontmatter.coverImage ? (
     <div
       className={`w-full ${
         hasPortraitTidbitsCover
@@ -355,6 +390,18 @@ export default async function SlugPage({ params }: Props) {
       </button>
     </div>
   ) : null
+  const coverImage =
+    coverContent && isPhotoPost && post && photoNavigation ? (
+      <PhotoSwipeCover
+        slug={post.slug}
+        older={photoSwipeDestination(photoNavigation.older)}
+        newer={photoSwipeDestination(photoNavigation.newer)}
+      >
+        {coverContent}
+      </PhotoSwipeCover>
+    ) : (
+      coverContent
+    )
 
   return (
     <article
@@ -506,7 +553,15 @@ export default async function SlugPage({ params }: Props) {
             )}
 
             {/* Previous and next posts in the same newsletter */}
-            {post && <PostNavigation previous={previous} next={next} />}
+            {post &&
+              (photoNavigation ? (
+                <PhotoPostNavigation
+                  older={photoNavigation.older}
+                  newer={photoNavigation.newer}
+                />
+              ) : (
+                <PostNavigation previous={previous} next={next} />
+              ))}
           </div>
 
           {/* Related posts */}
