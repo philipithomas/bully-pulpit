@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
-import { PHONE_IVR_FALLBACK_PROMPTS } from '@/lib/phone/ivr-audio'
-import {
-  playAndHangupTwiml,
-  twimlResponse,
-  voicemailTwiml,
-} from '@/lib/phone/twiml'
-import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
-import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
+import { phoneKeypadTwiml } from '@/lib/phone/keypad'
+import { twimlResponse } from '@/lib/phone/twiml'
 
 const DIAL_STATUSES = new Set([
   'busy',
@@ -44,11 +38,10 @@ export async function POST(request: Request): Promise<Response> {
 
   const rawStatus = String(form.get('DialCallStatus') ?? '')
   const dialCallStatus = DIAL_STATUSES.has(rawStatus) ? rawStatus : 'unknown'
-  const outcome = dialCallStatus === 'completed' ? 'completed' : 'voicemail'
 
   console.info('[phone/bell-complete]', {
     event: 'bell_live.twilio_dial_complete',
-    outcome,
+    outcome: 'keypad',
     dialCallStatus,
     dialSipResponseCode: boundedInteger(
       form.get('DialSipResponseCode'),
@@ -71,18 +64,12 @@ export async function POST(request: Request): Promise<Response> {
     dialCallSid: opaqueCallSid(form.get('DialCallSid')),
   })
 
-  if (dialCallStatus === 'completed') {
-    return twimlResponse(playAndHangupTwiml('goodbye'))
-  }
-
-  const from = String(form.get('From') ?? 'Unknown')
-  const to = String(form.get('To') ?? 'Unknown')
-  const metadata = twilioWebhookMetadataFromForm(form, from)
+  // hangupOnStar ends the SIP leg with "completed", too. Keep the parent
+  // call alive for manual choices; no keypad input still leads to voicemail.
   return twimlResponse(
-    voicemailTwiml({
-      greeting: PHONE_IVR_FALLBACK_PROMPTS.bellUnavailable,
-      greetingFallback: 'bellUnavailable',
-      ...voicemailCallbackUrls({ from, to, metadata }),
+    phoneKeypadTwiml(form, {
+      bellUnavailable: dialCallStatus !== 'completed',
+      requestUrl: request.url,
     })
   )
 }

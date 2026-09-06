@@ -8,6 +8,7 @@ import {
   renderMissedCallText,
   renderSmsSignupEmail,
   renderSmsSignupText,
+  type SmsSignupSource,
 } from '@/lib/email/templates/phone'
 import {
   type BellLiveTranscriptTurn,
@@ -101,7 +102,7 @@ export async function sendIncomingSmsNotification(input: {
 export async function sendSmsSignupNotification(input: {
   phoneNumber: string
   to: string
-  source: 'sms' | 'voice-menu'
+  source: SmsSignupSource
   metadata?: TwilioWebhookMetadata | null
 }): Promise<void> {
   const toLabel = numberLabel(input.to)
@@ -116,7 +117,11 @@ export async function sendSmsSignupNotification(input: {
   await sendSimpleEmail({
     to: phoneNotificationRecipients(),
     subject: `SMS signup from ${input.phoneNumber} via ${
-      input.source === 'sms' ? 'text' : 'voice menu'
+      {
+        sms: 'text',
+        'voice-menu': 'voice menu',
+        'voice-bell': 'Bell AI voice',
+      }[input.source]
     }`,
     html: renderSmsSignupEmail(payload),
     text: renderSmsSignupText(payload),

@@ -250,4 +250,17 @@ describe('sms signup email', () => {
     expect(text).toContain('Source: Pressed 2 during a phone call')
     expect(text).toContain('Origin: Area code 415: San Francisco, CA')
   })
+
+  it('describes spoken consent to Bell without claiming a keypad entry', () => {
+    const speechInput = { ...input, source: 'voice-bell' as const }
+    for (const rendered of [
+      renderSmsSignupEmail(speechInput),
+      renderSmsSignupText(speechInput),
+    ]) {
+      expect(rendered).toContain(
+        'Confirmed verbally with Bell AI during a phone call'
+      )
+      expect(rendered).not.toContain('Pressed 2')
+    }
+  })
 })

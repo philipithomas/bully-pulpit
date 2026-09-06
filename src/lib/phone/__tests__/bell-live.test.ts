@@ -4,8 +4,8 @@ import {
   BellLiveGreetingError,
   type BellLiveLifecycleEvent,
   bellLiveSipUri,
+  hangupBellLiveCall,
   OpenAiCallActionError,
-  PHONE_BELL_INITIAL_GREETING,
   PHONE_BELL_MAX_CALL_SECONDS,
   PHONE_BELL_REALTIME_DEFAULT_MODEL_ID,
   PHONE_BELL_REALTIME_MINI_MODEL_ID,
@@ -16,6 +16,7 @@ import {
   verifiedBellLiveSipCallSid,
   verifyBellLiveSipInvitation,
 } from '@/lib/phone/bell-live'
+import { phoneBellInitialGreeting } from '@/lib/phone/bell-live-greeting'
 import { FakeOpenAiRealtimeWebSocket } from '@/test/fake-openai-realtime-websocket'
 
 vi.mock('openai/realtime/ws', async () => {
@@ -174,16 +175,17 @@ describe('Bell Live Realtime session', () => {
           allowed_tools: ['search', 'fetch', 'list_posts'],
           require_approval: 'never',
         },
+        { type: 'function', name: 'start_voicemail' },
+        { type: 'function', name: 'subscribe_caller' },
       ],
       tracing: null,
     })
-    expect(PHONE_BELL_INITIAL_GREETING).toBe(
-      'Hi, this is Bell AI. What can I help with?'
-    )
     expect(session.instructions).toContain('You are Bell AI')
-    expect(session.instructions).toContain(PHONE_BELL_INITIAL_GREETING)
+    expect(session.instructions).toContain('based on New York time')
     expect(session.instructions).toContain('say "Bell AI," never "Bell" alone')
-    expect(session.instructions).toContain('long, complete answers are allowed')
+    expect(session.instructions).toContain('concise, direct spoken answer')
+    expect(session.instructions).toContain('confirmed=false')
+    expect(session.instructions).toContain('subsequent turn')
     expect(session.instructions).toContain(
       'Never stop at a tool call, omit the answer, or end mid-thought'
     )
@@ -267,6 +269,26 @@ describe('Bell Live Realtime session', () => {
     })
   })
 
+  it('hangs up only the OpenAI child and tolerates an already ended call', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 404 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(hangupBellLiveCall('rtc_call_ended')).resolves.toMatchObject({
+      action: 'hangup',
+      outcome: 'already_handled',
+      status: 404,
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.openai.com/v1/realtime/calls/rtc_call_ended/hangup',
+      expect.objectContaining({
+        method: 'POST',
+        redirect: 'error',
+        body: undefined,
+      })
+    )
+  })
+
   it('treats a conflict on a retried acceptance as already handled', async () => {
     vi.stubGlobal(
       'fetch',
@@ -338,7 +360,7 @@ describe('Bell Live Realtime session', () => {
       {
         type: 'response.create',
         response: {
-          instructions: `Say exactly: "${PHONE_BELL_INITIAL_GREETING}" Do not add anything else.`,
+          instructions: `Say exactly: "${phoneBellInitialGreeting()}" Do not add anything else.`,
           max_output_tokens: 512,
           metadata: { purpose: 'bell_initial_greeting' },
           output_modalities: ['audio'],
@@ -1438,7 +1460,7 @@ describe('Bell Live Realtime session', () => {
     await greeting.conversation
   })
 
-  it('logs a successful continuation after an earlier observer error', async () => {
+  it('stops continuations after a provider error and restores the fallback', async () => {
     const lifecycle: BellLiveLifecycleEvent[] = []
     const greeting = await startBellLiveGreeting('rtc_call_greeting', {
       onLifecycleEvent: (event) => lifecycle.push(event),
@@ -1489,23 +1511,16 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
-    expect(lifecycle).toContainEqual({
-      event: 'bell_live.tool_continuation',
-      hop: 1,
-      outcome: 'requested',
-      toolsAllowed: true,
-    })
-    expect(lifecycle).toContainEqual(
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(lifecycle).not.toContainEqual(
       expect.objectContaining({
-        event: 'bell_live.realtime_response',
-        recoveryQueued: true,
-        recoveryRequested: false,
+        event: 'bell_live.tool_continuation',
+        outcome: 'requested',
       })
     )
-
-    socket?.closeFromServer()
-    await greeting.conversation
+    await expect(greeting.conversation).resolves.toMatchObject({
+      observerCompleted: false,
+    })
   })
 
   it('does not duplicate a complete spoken answer after a tool result', async () => {
@@ -1692,7 +1707,6 @@ describe('Bell Live Realtime session', () => {
         message: 'PRIVATE_PROVIDER_MESSAGE',
       },
     })
-    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
     await expect(greeting.conversation).resolves.toMatchObject({
       observerCompleted: false,
     })

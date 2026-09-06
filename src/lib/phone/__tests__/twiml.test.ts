@@ -129,6 +129,22 @@ describe('voiceMenuTwiml', () => {
       PHONE_IVR_FALLBACK_PROMPTS.bellMenu
     )
   })
+
+  it('opens a menu without replaying an introduction and retains voicemail on timeout', () => {
+    const menu = voiceMenuTwiml({
+      menuPrompt: 'menuWithBell',
+      menuActionUrl: 'https://philipithomas.com/api/phone/voice-menu',
+      recordingStatusUrl: 'https://philipithomas.com/recording-status',
+      recordingCompleteUrl: 'https://philipithomas.com/recording-complete',
+    })
+
+    expect(menu.indexOf('<Gather')).toBeLessThan(menu.indexOf('<Play>'))
+    expect(playedTexts(menu)).toEqual([
+      PHONE_IVR_FALLBACK_PROMPTS.menuWithBell,
+      PHONE_IVR_FALLBACK_PROMPTS.voicemail,
+    ])
+    expect(menu.indexOf('</Gather>')).toBeLessThan(menu.indexOf('<Record'))
+  })
 })
 
 describe('bellLiveTwiml', () => {
@@ -142,7 +158,7 @@ describe('bellLiveTwiml', () => {
     expect(playedTexts(xml)).toEqual([])
     expect(xml).not.toContain('<Play>')
     expect(xml).toContain(
-      '<Dial action="https://philipithomas.com/api/phone/bell-complete" method="POST" answerOnBridge="true" timeout="20" timeLimit="300">'
+      '<Dial action="https://philipithomas.com/api/phone/bell-complete" method="POST" answerOnBridge="true" hangupOnStar="true" timeout="20" timeLimit="300">'
     )
     expect(xml).toContain(
       '<Sip>sip:proj_test@sip.api.openai.com;transport=tls?x-bp-call-sid=CA123&amp;x-bp-token=abc</Sip>'

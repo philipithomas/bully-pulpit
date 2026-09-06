@@ -304,7 +304,7 @@ export function renderIncomingSmsText(input: IncomingSmsEmailInput): string {
 
 // --- SMS signup ---
 
-export type SmsSignupSource = 'sms' | 'voice-menu'
+export type SmsSignupSource = 'sms' | 'voice-menu' | 'voice-bell'
 
 export type SmsSignupEmailInput = {
   phoneNumber: string
@@ -316,7 +316,12 @@ export type SmsSignupEmailInput = {
 }
 
 function signupSourceLabel(source: SmsSignupSource): string {
-  return source === 'sms' ? 'Texted SUBSCRIBE' : 'Pressed 2 during a phone call'
+  const labels: Record<SmsSignupSource, string> = {
+    sms: 'Texted SUBSCRIBE',
+    'voice-menu': 'Pressed 2 during a phone call',
+    'voice-bell': 'Confirmed verbally with Bell AI during a phone call',
+  }
+  return labels[source]
 }
 
 function smsSignupContent(input: SmsSignupEmailInput) {

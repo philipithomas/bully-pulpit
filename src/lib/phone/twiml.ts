@@ -42,19 +42,22 @@ ${greeting}  ${play(PHONE_IVR_FALLBACK_PROMPTS.voicemail, 'voicemail')}
 </Response>`
 }
 
-/** Greets the caller and asks whether to leave voicemail or subscribe by SMS. */
+/** Optionally greets the caller before the keypad menu and voicemail timeout. */
 export function voiceMenuTwiml(input: {
-  greeting: string
+  greeting?: string
+  greetingFallback?: PhoneIvrFallbackKey
   menuPrompt?: 'bellMenu' | 'menu' | 'menuWithBell'
   menuActionUrl: string
   recordingStatusUrl: string
   recordingCompleteUrl: string
 }): string {
   const menuPrompt = input.menuPrompt ?? 'menu'
+  const greeting = input.greeting
+    ? `  ${play(input.greeting, input.greetingFallback ?? 'greeting')}\n`
+    : ''
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  ${play(input.greeting, 'greeting')}
-  <Gather action="${escapeXml(input.menuActionUrl)}" method="POST" input="dtmf" numDigits="1" timeout="6">
+${greeting}  <Gather action="${escapeXml(input.menuActionUrl)}" method="POST" input="dtmf" numDigits="1" timeout="6">
     ${play(PHONE_IVR_FALLBACK_PROMPTS[menuPrompt], menuPrompt)}
   </Gather>
   ${play(PHONE_IVR_FALLBACK_PROMPTS.voicemail, 'voicemail')}
@@ -69,7 +72,7 @@ export function bellLiveTwiml(input: {
 }): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Dial action="${escapeXml(input.actionUrl)}" method="POST" answerOnBridge="true" timeout="20" timeLimit="${PHONE_BELL_MAX_CALL_SECONDS}">
+  <Dial action="${escapeXml(input.actionUrl)}" method="POST" answerOnBridge="true" hangupOnStar="true" timeout="20" timeLimit="${PHONE_BELL_MAX_CALL_SECONDS}">
     <Sip>${escapeXml(input.sipUri)}</Sip>
   </Dial>
 </Response>`

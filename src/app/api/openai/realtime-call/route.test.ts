@@ -2,6 +2,8 @@ import { createHmac } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from '@/app/api/openai/realtime-call/route'
 import { bellLiveSipUri } from '@/lib/phone/bell-live'
+import * as bellLiveActions from '@/lib/phone/bell-live-actions'
+import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 import { FakeOpenAiRealtimeWebSocket } from '@/test/fake-openai-realtime-websocket'
 
 const afterTasks = vi.hoisted(() => [] as Array<() => Promise<void>>)
@@ -55,8 +57,8 @@ const WEBHOOK_SECRET_BYTES = Buffer.from('test-openai-webhook-secret')
 const WEBHOOK_SECRET = `whsec_${WEBHOOK_SECRET_BYTES.toString('base64')}`
 const CALL_SID = 'CA1234567890abcdef1234567890abcdef'
 
-function sipHeaders() {
-  const uri = bellLiveSipUri(CALL_SID)
+function sipHeaders(metadata?: TwilioWebhookMetadata) {
+  const uri = bellLiveSipUri(CALL_SID, new Date(), metadata)
   if (!uri) throw new Error('Bell Live SIP URI was not configured')
   return Array.from(
     new URLSearchParams(uri.slice(uri.indexOf('?') + 1)),
@@ -103,7 +105,7 @@ function liveIncomingEvent(headers = sipHeaders()) {
     type: 'live.call.incoming',
     created_at: Math.floor(Date.now() / 1_000),
     data: {
-      session_id: 'rtc_call_live_123',
+      session_id: 'rtc_call_123',
       sip_headers: headers,
     },
   }
@@ -143,7 +145,7 @@ beforeEach(() => {
   webhookEvents.findOrCreate.mockResolvedValue({
     event: {
       id: 1,
-      eventKey: `bell-live-greeting:${CALL_SID}`,
+      eventKey: `bell-live-greeting:${CALL_SID}:rtc_call_123`,
       eventType: 'bell-live-greeting',
       attemptCount: 0,
       processingAt: null,
@@ -181,6 +183,66 @@ afterEach(() => {
 })
 
 describe('POST /api/openai/realtime-call', () => {
+  it('passes authenticated original caller metadata to private actions', async () => {
+    const createController = vi.spyOn(
+      bellLiveActions,
+      'createBellLiveActionHandler'
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 200 }))
+    )
+    const response = await postAndFlush(
+      signedRequest(
+        incomingEvent(
+          sipHeaders({
+            callerName: 'Ada Caller',
+            fromCity: 'Brooklyn',
+            fromState: 'NY',
+          })
+        )
+      )
+    )
+    expect(response.status).toBe(204)
+    expect(createController).toHaveBeenCalledWith(CALL_SID, {
+      callSid: CALL_SID,
+      callerName: 'Ada Caller',
+      fromCity: 'Brooklyn',
+      fromState: 'NY',
+    })
+  })
+
+  it('ends the AI child promptly after a post-greeting provider error', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    FakeOpenAiRealtimeWebSocket.autoCloseAfterGreeting = false
+    expect((await POST(signedRequest(incomingEvent()))).status).toBe(204)
+    const background = flushAfterTasks()
+    await vi.waitFor(() =>
+      expect(console.info).toHaveBeenCalledWith(
+        '[openai/realtime-call]',
+        expect.objectContaining({
+          event: 'bell_live.openai_greeting',
+          outcome: 'completed',
+        })
+      )
+    )
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.emitServerEvent({
+      type: 'error',
+      event_id: 'evt_failed_provider',
+      error: {
+        code: 'server_error',
+        type: 'server_error',
+        message: 'Provider failure',
+      },
+    })
+    await background
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://api.openai.com/v1/realtime/calls/rtc_call_123/hangup',
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+
   it('verifies both signatures and accepts an authorized SIP call', async () => {
     const fetchMock = vi.fn(
       async (_input: string | URL | Request, _init?: RequestInit) =>
@@ -462,7 +524,7 @@ describe('POST /api/openai/realtime-call', () => {
 
     expect(response.status).toBe(204)
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      'https://api.openai.com/v1/realtime/calls/rtc_call_live_123/accept'
+      'https://api.openai.com/v1/realtime/calls/rtc_call_123/accept'
     )
     expect(console.info).toHaveBeenCalledWith(
       '[openai/realtime-call]',
@@ -480,7 +542,7 @@ describe('POST /api/openai/realtime-call', () => {
     webhookEvents.findOrCreate.mockImplementation(async () => ({
       event: {
         id: 1,
-        eventKey: `bell-live-greeting:${CALL_SID}`,
+        eventKey: `bell-live-greeting:${CALL_SID}:rtc_call_123`,
         eventType: 'bell-live-greeting',
         attemptCount: 0,
         processingAt: null,
@@ -497,7 +559,7 @@ describe('POST /api/openai/realtime-call', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 200 }))
-      .mockResolvedValueOnce(new Response(null, { status: 409 }))
+      .mockResolvedValue(new Response(null, { status: 409 }))
     vi.stubGlobal('fetch', fetchMock)
 
     expect(await postAndFlush(signedRequest(incomingEvent()))).toHaveProperty(
@@ -511,13 +573,60 @@ describe('POST /api/openai/realtime-call', () => {
     expect(webhookEvents.markProcessed).toHaveBeenCalledOnce()
   })
 
+  it('starts a new controller when the keypad reconnects the same parent call', async () => {
+    const processed = new Set<string>()
+    const identities = new Map<number, string>()
+    webhookEvents.findOrCreate.mockImplementation(async ({ eventKey }) => {
+      const id = eventKey.endsWith(':rtc_call_123') ? 1 : 2
+      identities.set(id, eventKey)
+      return {
+        event: {
+          id,
+          eventKey,
+          eventType: 'bell-live-greeting',
+          attemptCount: 0,
+          processingAt: null,
+          processedAt: processed.has(eventKey) ? new Date() : null,
+          processedStepId: null,
+          createdAt: new Date(),
+        },
+        inserted: !processed.has(eventKey),
+      }
+    })
+    webhookEvents.markProcessed.mockImplementation(
+      async (id, _lease, stepId) => {
+        expect(stepId).toBe(identities.get(id))
+        processed.add(stepId)
+        return true
+      }
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 200 }))
+    )
+    await postAndFlush(signedRequest(incomingEvent()))
+    const reconnect = incomingEvent()
+    reconnect.data.call_id = 'rtc_call_reconnected'
+    await postAndFlush(signedRequest(reconnect))
+
+    expect(FakeOpenAiRealtimeWebSocket.connections).toHaveLength(2)
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
+    expect(webhookEvents.findOrCreate).toHaveBeenLastCalledWith({
+      eventKey: `bell-live-greeting:${CALL_SID}:rtc_call_reconnected`,
+      eventType: 'bell-live-greeting',
+    })
+    // A duplicate delivery for the new leg still cannot replay its greeting.
+    await postAndFlush(signedRequest(reconnect))
+    expect(FakeOpenAiRealtimeWebSocket.connections).toHaveLength(2)
+  })
+
   it('recovers a lost checkpoint acknowledgement without replaying audio', async () => {
     let processedAt: Date | null = null
     let processedStepId: string | null = null
     webhookEvents.findOrCreate.mockImplementation(async () => ({
       event: {
         id: 1,
-        eventKey: `bell-live-greeting:${CALL_SID}`,
+        eventKey: `bell-live-greeting:${CALL_SID}:rtc_call_123`,
         eventType: 'bell-live-greeting',
         attemptCount: processedAt ? 1 : 0,
         processingAt: null,
@@ -529,7 +638,9 @@ describe('POST /api/openai/realtime-call', () => {
     }))
     webhookEvents.markProcessed.mockImplementation(
       async (_id, _lease, candidateStepId) => {
-        expect(candidateStepId).toBe(`bell-live-greeting:${CALL_SID}`)
+        expect(candidateStepId).toBe(
+          `bell-live-greeting:${CALL_SID}:rtc_call_123`
+        )
         if (processedStepId === candidateStepId) return true
         processedAt = new Date()
         processedStepId = candidateStepId
@@ -539,7 +650,7 @@ describe('POST /api/openai/realtime-call', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 200 }))
-      .mockResolvedValueOnce(new Response(null, { status: 409 }))
+      .mockResolvedValue(new Response(null, { status: 409 }))
     vi.stubGlobal('fetch', fetchMock)
 
     expect(await postAndFlush(signedRequest(incomingEvent()))).toHaveProperty(
@@ -561,12 +672,14 @@ describe('POST /api/openai/realtime-call', () => {
     webhookEvents.findOrCreate.mockImplementation(async () => ({
       event: {
         id: 1,
-        eventKey: `bell-live-greeting:${CALL_SID}`,
+        eventKey: `bell-live-greeting:${CALL_SID}:rtc_call_123`,
         eventType: 'bell-live-greeting',
         attemptCount: processedAt ? 1 : 0,
         processingAt: null,
         processedAt,
-        processedStepId: processedAt ? `bell-live-greeting:${CALL_SID}` : null,
+        processedStepId: processedAt
+          ? `bell-live-greeting:${CALL_SID}:rtc_call_123`
+          : null,
         createdAt: new Date(),
       },
       inserted: calls++ === 0,
@@ -574,7 +687,9 @@ describe('POST /api/openai/realtime-call', () => {
     webhookEvents.markProcessed.mockResolvedValue(false)
     webhookEvents.markSideEffectObserved.mockImplementation(
       async (_id, candidateStepId) => {
-        expect(candidateStepId).toBe(`bell-live-greeting:${CALL_SID}`)
+        expect(candidateStepId).toBe(
+          `bell-live-greeting:${CALL_SID}:rtc_call_123`
+        )
         processedAt = new Date()
         return true
       }
@@ -584,7 +699,7 @@ describe('POST /api/openai/realtime-call', () => {
       vi
         .fn()
         .mockResolvedValueOnce(new Response(null, { status: 200 }))
-        .mockResolvedValueOnce(new Response(null, { status: 409 }))
+        .mockResolvedValue(new Response(null, { status: 409 }))
     )
 
     expect(await postAndFlush(signedRequest(incomingEvent()))).toHaveProperty(
@@ -606,7 +721,7 @@ describe('POST /api/openai/realtime-call', () => {
     webhookEvents.findOrCreate.mockImplementation(async () => ({
       event: {
         id: 1,
-        eventKey: `bell-live-greeting:${CALL_SID}`,
+        eventKey: `bell-live-greeting:${CALL_SID}:rtc_call_123`,
         eventType: 'bell-live-greeting',
         attemptCount: calls > 0 ? 1 : 0,
         processingAt: null,
@@ -630,7 +745,7 @@ describe('POST /api/openai/realtime-call', () => {
       vi
         .fn()
         .mockResolvedValueOnce(new Response(null, { status: 200 }))
-        .mockResolvedValueOnce(new Response(null, { status: 409 }))
+        .mockResolvedValue(new Response(null, { status: 409 }))
     )
 
     expect(await postAndFlush(signedRequest(incomingEvent()))).toHaveProperty(
@@ -664,12 +779,14 @@ describe('POST /api/openai/realtime-call', () => {
     webhookEvents.findOrCreate.mockImplementation(async () => ({
       event: {
         id: 1,
-        eventKey: `bell-live-greeting:${CALL_SID}`,
+        eventKey: `bell-live-greeting:${CALL_SID}:rtc_call_123`,
         eventType: 'bell-live-greeting',
         attemptCount: processedAt ? 1 : 0,
         processingAt: null,
         processedAt,
-        processedStepId: processedAt ? `bell-live-greeting:${CALL_SID}` : null,
+        processedStepId: processedAt
+          ? `bell-live-greeting:${CALL_SID}:rtc_call_123`
+          : null,
         createdAt: new Date(),
       },
       inserted: calls++ === 0,
@@ -681,7 +798,7 @@ describe('POST /api/openai/realtime-call', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 200 }))
-      .mockResolvedValueOnce(new Response(null, { status: 409 }))
+      .mockResolvedValue(new Response(null, { status: 409 }))
     vi.stubGlobal('fetch', fetchMock)
     FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = 401
 
@@ -720,6 +837,10 @@ describe('POST /api/openai/realtime-call', () => {
 
     expect(result.status).toBe(204)
     expect(afterTasks).toHaveLength(0)
+    expect(fetch).toHaveBeenLastCalledWith(
+      'https://api.openai.com/v1/realtime/calls/rtc_call_123/hangup',
+      expect.objectContaining({ method: 'POST', redirect: 'error' })
+    )
     expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(0)
     expect(console.error).toHaveBeenCalledWith(
       '[openai/realtime-call]',

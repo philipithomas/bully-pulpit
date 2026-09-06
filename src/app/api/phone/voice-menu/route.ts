@@ -1,29 +1,20 @@
-import { after, NextResponse } from 'next/server'
-import { start } from 'workflow/api'
+import { NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
-import {
-  claimPhoneWebhookEvent,
-  findOrCreatePhoneWebhookEvent,
-  markPhoneWebhookEventProcessed,
-  releasePhoneWebhookEvent,
-} from '@/lib/db/queries/phone-webhook-events'
-import {
-  findSmsSubscriberByPhoneNumber,
-  subscribeSmsNumber,
-} from '@/lib/db/queries/sms-subscribers'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { bellLiveSipUri } from '@/lib/phone/bell-live'
-import { isE164, numberLabel, sitePhoneNumber } from '@/lib/phone/config'
-import { sendSmsSignupNotification } from '@/lib/phone/notifications'
+import { sitePhoneNumber } from '@/lib/phone/config'
 import {
   bellLiveTwiml,
   playAndHangupTwiml,
   twimlResponse,
   voicemailTwiml,
 } from '@/lib/phone/twiml'
+import { subscribeVoiceCaller } from '@/lib/phone/voice-subscription'
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
-import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
-import { smsSignupOnboardingWorkflow } from '@/workflows/sms-signup-onboarding'
+import {
+  phoneHandoffCallbackUrl,
+  twilioWebhookMetadataFromSignedRequest,
+} from '@/lib/phone/webhook-metadata'
 
 /**
  * Handles the DTMF choice from /api/phone/voice. 1 or timeout goes to voicemail;
@@ -40,90 +31,36 @@ export async function POST(request: Request) {
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
   const callSid = form.get('CallSid') ? String(form.get('CallSid')) : ''
-  const metadata = twilioWebhookMetadataFromForm(form, from)
+  const metadata = twilioWebhookMetadataFromSignedRequest(
+    form,
+    request.url,
+    from
+  )
   const confirmationFrom = sitePhoneNumber()
 
   if (digits === '3') {
-    const sipUri = bellLiveSipUri(callSid)
+    const sipUri = bellLiveSipUri(callSid, new Date(), metadata)
     if (sipUri) {
       return twimlResponse(
         bellLiveTwiml({
           sipUri,
-          actionUrl: `${siteConfig.url}/api/phone/bell-complete`,
+          actionUrl: phoneHandoffCallbackUrl(
+            `${siteConfig.url}/api/phone/bell-complete`,
+            metadata
+          ),
         })
       )
     }
   }
 
   if (digits === '2' && confirmationFrom) {
-    if (!isE164(from)) {
+    const result = await subscribeVoiceCaller({ from, to, callSid, metadata })
+    if (result === 'unavailable') {
       return twimlResponse(playAndHangupTwiml('subscribeFailed'))
     }
-
-    const webhookEvent = callSid
-      ? await findOrCreatePhoneWebhookEvent({
-          eventKey: `voice-menu:${callSid}:2`,
-          eventType: 'voice-menu',
-        })
-      : null
-    if (webhookEvent?.event.processedAt) {
+    if (result === 'already_handled') {
       return twimlResponse(playAndHangupTwiml('alreadyHandled'))
     }
-
-    const existing = await findSmsSubscriberByPhoneNumber(from)
-    const lease = webhookEvent
-      ? await claimPhoneWebhookEvent(webhookEvent.event.id)
-      : null
-    if (webhookEvent && !lease) {
-      return twimlResponse(playAndHangupTwiml('alreadyHandled'))
-    }
-
-    try {
-      await subscribeSmsNumber({
-        phoneNumber: from,
-        source: `call:${numberLabel(to).toLowerCase()}`,
-      })
-      await start(smsSignupOnboardingWorkflow, [
-        {
-          from: confirmationFrom,
-          to: from,
-          sendConfirmation: true,
-        },
-      ])
-      if (webhookEvent && lease) {
-        const marked = await markPhoneWebhookEventProcessed(
-          webhookEvent.event.id,
-          lease
-        )
-        if (!marked) {
-          throw new Error(`Voice signup ${callSid} lost its processing lease`)
-        }
-      }
-    } catch (err) {
-      if (webhookEvent && lease) {
-        await releasePhoneWebhookEvent(webhookEvent.event.id, lease)
-      }
-      throw err
-    }
-    after(async () => {
-      const tasks: Promise<unknown>[] = []
-      if (!existing?.confirmedAt) {
-        tasks.push(
-          sendSmsSignupNotification({
-            phoneNumber: from,
-            to,
-            source: 'voice-menu',
-            metadata,
-          }).catch((err) => {
-            console.error(
-              '[phone/voice-menu] SMS signup notification failed:',
-              err
-            )
-          })
-        )
-      }
-      await Promise.all(tasks)
-    })
     return twimlResponse(playAndHangupTwiml('subscribed'))
   }
 
