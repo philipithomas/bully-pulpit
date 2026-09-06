@@ -107,6 +107,26 @@ describe('Bell chat boundaries', () => {
     expect(useChatSidebar.getState().activePassageRequest).toBeNull()
   })
 
+  it('preserves an unsent passage query when reopening the same thread', () => {
+    const request = {
+      action: 'context' as const,
+      text: 'This queued passage remains available when Bell reopens.',
+      path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
+      headingId: 'technical-details',
+    }
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const queued = useChatSidebar.getState()
+
+    queued.closeSidebar()
+    queued.openSidebar()
+
+    const reopened = useChatSidebar.getState()
+    expect(reopened.chatId).toBe(queued.chatId)
+    expect(reopened.initialQuery).toContain(request.text)
+    expect(reopened.activePassageRequest).toEqual(request)
+  })
+
   it('starts every search handoff with a fresh durable conversation', () => {
     const previousId = useChatSidebar.getState().chatId
     useChatSidebar.setState({

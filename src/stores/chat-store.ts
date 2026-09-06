@@ -116,10 +116,12 @@ export const useChatSidebar = create<ChatSidebarState>()(
         set({
           open: true,
           hasOpened: true,
-          initialQuery: query ?? '',
           entrySource: searchHandoff
             ? 'search'
             : (options?.entrySource ?? 'header'),
+          // A query-less open resumes the existing conversation. Preserve a
+          // passage/search handoff that was closed before its send timer ran.
+          ...(query === undefined ? {} : { initialQuery: query }),
           // Asking Bell from search deliberately presents a fresh thread.
           // Rotate the durable ID and clear both persisted and in-memory
           // history before the handoff can send its first message.
