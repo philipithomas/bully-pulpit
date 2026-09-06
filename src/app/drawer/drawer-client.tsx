@@ -3,11 +3,19 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { type ChangeEvent, useCallback, useEffect, useId, useMemo } from 'react'
+import {
+  type ChangeEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+} from 'react'
 import {
   drawerHref,
   isDrawerDate,
   MIN_DRAWER_DATE,
+  millisecondsUntilNextUtcDay,
   resolveDrawerDate,
   selectDrawer,
   shiftDrawerDate,
@@ -123,7 +131,7 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const dateHeadingId = useId()
-  const today = useMemo(() => utcIsoDate(new Date()), [])
+  const [today, setToday] = useState(() => utcIsoDate(new Date()))
   const earliestDate = catalog.earliestDate ?? MIN_DRAWER_DATE
   const requestedDate = searchParams.get('date')
   const date = resolveDrawerDate(requestedDate, today, earliestDate)
@@ -132,6 +140,29 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
   const previousDate = canGoPrevious ? shiftDrawerDate(date, -1) : null
   const canGoNext = date < today
   const nextDate = canGoNext ? shiftDrawerDate(date, 1) : null
+
+  useEffect(() => {
+    let refreshTimer: number | undefined
+    const refreshToday = () => {
+      const now = new Date()
+      setToday(utcIsoDate(now))
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
+      refreshTimer = window.setTimeout(
+        refreshToday,
+        millisecondsUntilNextUtcDay(now)
+      )
+    }
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refreshToday()
+    }
+
+    refreshToday()
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [])
 
   useEffect(() => {
     if (requestedDate !== date) {

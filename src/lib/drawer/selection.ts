@@ -67,6 +67,12 @@ export function utcIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
+export function millisecondsUntilNextUtcDay(date: Date): number {
+  const nextDay = new Date(date.getTime())
+  nextDay.setUTCHours(24, 0, 0, 0)
+  return nextDay.getTime() - date.getTime()
+}
+
 export function resolveDrawerDate(
   requestedDate: string | null | undefined,
   today: string,

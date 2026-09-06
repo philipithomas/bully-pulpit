@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   drawerHref,
   isDrawerDate,
+  millisecondsUntilNextUtcDay,
   resolveDrawerDate,
   selectDrawer,
   shiftDrawerDate,
@@ -60,6 +61,18 @@ describe('drawer dates', () => {
       'outside the supported range'
     )
     expect(drawerHref('2026-09-06')).toBe('/drawer?date=2026-09-06')
+  })
+
+  it('schedules the current-day refresh at the next UTC midnight', () => {
+    expect(
+      millisecondsUntilNextUtcDay(new Date('2026-09-06T23:59:59.500Z'))
+    ).toBe(500)
+    expect(
+      millisecondsUntilNextUtcDay(new Date('2026-12-31T23:59:59.999Z'))
+    ).toBe(1)
+    expect(
+      millisecondsUntilNextUtcDay(new Date('2026-09-06T20:00:00-04:00'))
+    ).toBe(24 * 60 * 60 * 1000)
   })
 
   it('normalizes invalid and future requests to today', () => {
