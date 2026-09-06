@@ -1,6 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
+import {
+  COLLECTION_SLUGS,
+  collectionValidationProblems,
+} from '@/lib/collections'
 import { siteConfig } from '@/lib/config'
 import {
   formatImageBytes,
@@ -111,6 +115,22 @@ async function main() {
   const posts = getAllPosts()
   const pages = getPages()
   const referencedPhotoCovers = new Set<string>()
+
+  for (const problem of collectionValidationProblems()) {
+    errors.push(`structured collection: ${problem}`)
+  }
+  for (const slug of COLLECTION_SLUGS) {
+    const legacySource = path.join(
+      process.cwd(),
+      'content/pages',
+      `${slug}.mdx`
+    )
+    if (fs.existsSync(legacySource)) {
+      errors.push(
+        `${path.relative(process.cwd(), legacySource)} duplicates the canonical structured source in src/lib/collections/data.json`
+      )
+    }
+  }
 
   errors.push(
     ...validateTidbitsPaletteAssignments(

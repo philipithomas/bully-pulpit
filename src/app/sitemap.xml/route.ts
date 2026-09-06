@@ -1,5 +1,6 @@
 import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPages } from '@/lib/content/loader'
+import { publicContentPath } from '@/lib/content/public-path'
 import { publicAppPages } from '@/lib/public-pages'
 
 // Policy pages stay indexable but are not advertised in the sitemap.
@@ -20,9 +21,12 @@ export async function GET() {
     ),
     ...posts.map(
       (p) =>
-        `  <url><loc>${siteConfig.url}/${p.slug}</loc><lastmod>${new Date(p.frontmatter.publishedAt).toISOString()}</lastmod></url>`
+        `  <url><loc>${siteConfig.url}${publicContentPath(p.slug)}</loc><lastmod>${new Date(p.frontmatter.publishedAt).toISOString()}</lastmod></url>`
     ),
-    ...pages.map((p) => `  <url><loc>${siteConfig.url}/${p.slug}</loc></url>`),
+    ...pages.map(
+      (p) =>
+        `  <url><loc>${siteConfig.url}${publicContentPath(p.slug)}</loc></url>`
+    ),
   ].join('\n')
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

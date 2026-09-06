@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getAllPosts, getPages } from '@/lib/content/loader'
+import { publicContentPath } from '@/lib/content/public-path'
 import type { Newsletter } from '@/lib/content/types'
 import { publicAppPage, publicAppPages } from '@/lib/public-pages'
 import { createPublicPageMetadata } from '@/lib/seo/metadata'
@@ -35,7 +36,7 @@ export default function SitemapPage() {
 
   const contentPages = getPages()
     .map((page) => ({
-      href: `/${page.slug}`,
+      href: publicContentPath(page.slug),
       title: page.frontmatter.title,
     }))
     .sort((a, b) => a.title.localeCompare(b.title))
@@ -112,7 +113,7 @@ export default function SitemapPage() {
                         {post.frontmatter.publishedAt}
                       </time>
                       <Link
-                        href={`/${post.slug}`}
+                        href={publicContentPath(post.slug)}
                         className="text-gray-900 hover:text-gray-950 transition-colors flex-1 leading-snug"
                       >
                         {post.frontmatter.title}

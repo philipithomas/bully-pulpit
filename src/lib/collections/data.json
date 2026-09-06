@@ -1,0 +1,1506 @@
+{
+  "diction": {
+    "slug": "diction",
+    "title": "Diction",
+    "description": "A collection of words worth knowing.",
+    "entries": [
+      {
+        "term": "Gavage",
+        "definition": "the administration of food or drugs by force, especially to an animal.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Force-feeding"
+        }
+      },
+      {
+        "term": "Brouhaha",
+        "definition": "a noisy and overexcited reaction or response to something"
+      },
+      {
+        "term": "Donnybrook",
+        "definition": "a scene of uproar and disorder; a heated argument.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Donnybrook_Fair"
+        }
+      },
+      {
+        "term": "Hegemony",
+        "definition": "leadership or dominance, especially by one country or social group over others.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Hegemony"
+        }
+      },
+      {
+        "term": "Lindy",
+        "definition": "the idea that the future life expectancy of a technology or idea is proportional to its current age.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Lindy_effect"
+        }
+      },
+      {
+        "term": "Nut graf",
+        "definition": "a paragraph that explains the significance or context of a story.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Nut_graph"
+        }
+      },
+      {
+        "term": "Asymptote",
+        "definition": "a line that a curve approaches but never quite reaches.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Asymptote"
+        }
+      },
+      {
+        "term": "Asymptotic",
+        "definition": "approaching a limit increasingly closely without ever fully reaching it.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Asymptote"
+        }
+      },
+      {
+        "term": "Athwart",
+        "definition": "from side to side; in opposition to. \"Pearl Jam stood athwart popularity.\""
+      },
+      {
+        "term": "Milquetoast",
+        "definition": "a timid, meek, unassertive person.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Milquetoast"
+        }
+      },
+      {
+        "term": "Kitsch",
+        "definition": "art or design in poor taste due to excessive garishness or sentimentality.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Kitsch"
+        }
+      },
+      {
+        "term": "Ennui",
+        "definition": "a feeling of listlessness and dissatisfaction from lack of occupation or excitement.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Boredom"
+        }
+      },
+      {
+        "term": "Bacchanal",
+        "definition": "a wild, drunken celebration or revelry.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Bacchanalia"
+        }
+      },
+      {
+        "term": "Atavistic",
+        "definition": "relating to or characterized by reversion to something ancestral or primitive.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Atavism"
+        }
+      },
+      {
+        "term": "Rigmarole",
+        "definition": "a lengthy, complicated, and seemingly pointless procedure"
+      },
+      {
+        "term": "Interlocutor",
+        "definition": "a person who takes part in a dialogue or conversation"
+      },
+      {
+        "term": "Locution",
+        "definition": "a word, phrase, or particular way of speaking"
+      },
+      {
+        "term": "Disparate",
+        "definition": "fundamentally different or distinct in kind; unable to be compared"
+      },
+      {
+        "term": "Confabulation",
+        "definition": "the production of fabricated or distorted memories without intent to deceive; in AI, when a model generates plausible but false information.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Confabulation"
+        }
+      },
+      {
+        "term": "Sanguine",
+        "definition": "optimistic, especially in a difficult situation; also blood-red in color"
+      },
+      {
+        "term": "Cogent",
+        "definition": "clear, logical, and convincing"
+      },
+      {
+        "term": "Cull",
+        "definition": "to select and remove for rejection or disposal; to reduce by selective slaughter.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Culling"
+        }
+      },
+      {
+        "term": "Digression",
+        "definition": "a temporary departure from the main subject in speech or writing.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Digression"
+        }
+      },
+      {
+        "term": "Nihilistic",
+        "definition": "rejecting all religious and moral principles in the belief that life is meaningless.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Nihilism"
+        }
+      },
+      {
+        "term": "Reprobate",
+        "definition": "an unprincipled or immoral person"
+      },
+      {
+        "term": "Shtick",
+        "definition": "a gimmick, comic routine, or style associated with a particular person.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Shtick"
+        }
+      },
+      {
+        "term": "Shoddy",
+        "definition": "badly made or done; of poor quality.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Recycled_wool"
+        }
+      },
+      {
+        "term": "Acrimonious",
+        "definition": "angry and bitter, especially in speech or debate"
+      },
+      {
+        "term": "Alacrity",
+        "definition": "brisk and cheerful readiness"
+      },
+      {
+        "term": "Apotheosis",
+        "definition": "the highest point in the development of something; a perfect example.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Apotheosis"
+        }
+      },
+      {
+        "term": "Blather",
+        "definition": "to talk at length in a foolish way"
+      },
+      {
+        "term": "Cavalcade",
+        "definition": "a formal procession of people walking, riding, or driving.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Cavalcade"
+        }
+      },
+      {
+        "term": "Collimate",
+        "definition": "to make rays of light or particles accurately parallel.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Collimated_beam"
+        }
+      },
+      {
+        "term": "Detritus",
+        "definition": "waste or debris of any kind; organic matter produced by decomposition.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Detritus"
+        }
+      },
+      {
+        "term": "Dialectic",
+        "definition": "the art of investigating the truth of opinions; inquiry through dialogue.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Dialectic"
+        }
+      },
+      {
+        "term": "Dilettante",
+        "definition": "a person who cultivates an area of interest without real commitment or knowledge.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Amateur"
+        }
+      },
+      {
+        "term": "Doldrums",
+        "definition": "a state of inactivity or stagnation; a belt of calm near the equator.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Intertropical_Convergence_Zone"
+        }
+      },
+      {
+        "term": "Halcyon",
+        "definition": "denoting a period of time that was idyllically happy and peaceful.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Halcyon_Days"
+        }
+      },
+      {
+        "term": "Incongruous",
+        "definition": "not in harmony or keeping with the surroundings"
+      },
+      {
+        "term": "Indelible",
+        "definition": "making marks that cannot be removed; not able to be forgotten"
+      },
+      {
+        "term": "Insipid",
+        "definition": "lacking flavor or interest; dull"
+      },
+      {
+        "term": "Insouciance",
+        "definition": "casual lack of concern; indifference"
+      },
+      {
+        "term": "Karoshi",
+        "definition": "death caused by overwork or work-related stress (Japanese).",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Karoshi"
+        }
+      },
+      {
+        "term": "Kerfuffle",
+        "definition": "a commotion or fuss, especially caused by conflicting views"
+      },
+      {
+        "term": "Kludge",
+        "definition": "an ill-assorted collection of parts assembled to fulfill a particular purpose; an inelegant solution.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Kludge"
+        }
+      },
+      {
+        "term": "Kludgy",
+        "definition": "awkwardly assembled, inelegant, or patched together in a crude but functional way.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Kludge"
+        }
+      },
+      {
+        "term": "Languid",
+        "definition": "displaying a disinclination for physical exertion or effort"
+      },
+      {
+        "term": "Leitmotif",
+        "definition": "a recurrent theme associated with a particular person, idea, or situation.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Leitmotif"
+        }
+      },
+      {
+        "term": "Maelstrom",
+        "definition": "a powerful whirlpool; a situation of confused and turbulent movement"
+      },
+      {
+        "term": "Menagerie",
+        "definition": "a collection of wild or exotic animals kept for exhibition; a varied group of people or things.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Menagerie"
+        }
+      },
+      {
+        "term": "Obsequious",
+        "definition": "obedient or attentive to an excessive or servile degree"
+      },
+      {
+        "term": "Obstreperous",
+        "definition": "noisy and difficult to control"
+      },
+      {
+        "term": "Oeuvre",
+        "definition": "the complete works of a writer, artist, or composer.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Oeuvre"
+        }
+      },
+      {
+        "term": "Orthogonal",
+        "definition": "independent, unrelated, or statistically uncorrelated; at right angles in geometry.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Orthogonality"
+        }
+      },
+      {
+        "term": "Opprobrium",
+        "definition": "harsh criticism or censure; public disgrace"
+      },
+      {
+        "term": "Palimpsest",
+        "definition": "a manuscript on which earlier writing has been effaced to make room for later writing; something bearing visible traces of its earlier form.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Palimpsest"
+        }
+      },
+      {
+        "term": "Paltry",
+        "definition": "small or meager; petty or trivial"
+      },
+      {
+        "term": "Parochial",
+        "definition": "having a limited or narrow outlook; relating to a parish"
+      },
+      {
+        "term": "Parsimonious",
+        "definition": "unwilling to spend money or use resources; stingy"
+      },
+      {
+        "term": "Patois",
+        "definition": "the dialect of a particular region, especially one with low prestige.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Patois"
+        }
+      },
+      {
+        "term": "Pathological",
+        "definition": "relating to disease; extreme, obsessive, or compulsive in a way considered unhealthy.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pathology"
+        }
+      },
+      {
+        "term": "Pejorative",
+        "definition": "expressing contempt or disapproval.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pejorative"
+        }
+      },
+      {
+        "term": "Penultimate",
+        "definition": "second to last"
+      },
+      {
+        "term": "Perfidy",
+        "definition": "deceitfulness; untrustworthiness; treachery.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Perfidy"
+        }
+      },
+      {
+        "term": "Phantasmagoric",
+        "definition": "having a dreamlike quality; surreal and constantly shifting.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Phantasmagoria"
+        }
+      },
+      {
+        "term": "Picayune",
+        "definition": "of little value or importance; petty.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Picayune"
+        }
+      },
+      {
+        "term": "Piddling",
+        "definition": "pathetically trivial; trifling"
+      },
+      {
+        "term": "Polemic",
+        "definition": "a strong verbal or written attack; a controversial argument.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Polemic"
+        }
+      },
+      {
+        "term": "Posterity",
+        "definition": "all future generations; the descendants of a person"
+      },
+      {
+        "term": "Prevaricate",
+        "definition": "to speak or act in an evasive way; to avoid giving a direct answer"
+      },
+      {
+        "term": "Prole",
+        "definition": "a member of the working class (short for proletarian).",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Proletariat"
+        }
+      },
+      {
+        "term": "Prosaic",
+        "definition": "lacking poetic beauty; commonplace; dull"
+      },
+      {
+        "term": "Prudence",
+        "definition": "the quality of acting with care and forethought; cautiousness.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Prudence"
+        }
+      },
+      {
+        "term": "Pyrrhic",
+        "definition": "(of a victory) won at too great a cost to have been worthwhile for the victor.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pyrrhic_victory"
+        }
+      },
+      {
+        "term": "Quandary",
+        "definition": "a state of perplexity or uncertainty over what to do"
+      },
+      {
+        "term": "Quixotic",
+        "definition": "exceedingly idealistic; unrealistic and impractical.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Don_Quixote"
+        }
+      },
+      {
+        "term": "Quotidian",
+        "definition": "of or occurring every day; ordinary; commonplace"
+      },
+      {
+        "term": "Recalcitrant",
+        "definition": "having an obstinately uncooperative attitude"
+      },
+      {
+        "term": "Redolent",
+        "definition": "strongly reminiscent or suggestive of; fragrant"
+      },
+      {
+        "term": "Rote",
+        "definition": "mechanical or habitual repetition as a means of learning.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Rote_learning"
+        }
+      },
+      {
+        "term": "Roughshod",
+        "definition": "(ride roughshod over) carrying out one's own plans without regard for others"
+      },
+      {
+        "term": "Rapacious",
+        "definition": "aggressively greedy or grasping, especially for wealth or resources"
+      },
+      {
+        "term": "Resplendent",
+        "definition": "attractive and impressive through being richly colorful or splendid"
+      },
+      {
+        "term": "Sanctimonious",
+        "definition": "making a show of being morally superior to others.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Self-righteousness"
+        }
+      },
+      {
+        "term": "Sardonic",
+        "definition": "grimly mocking or cynical.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Sardonicism"
+        }
+      },
+      {
+        "term": "Shokunin",
+        "definition": "a Japanese term for an artisan devoted to mastering their craft.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Artisan"
+        }
+      },
+      {
+        "term": "Sibilance",
+        "definition": "a hissing sound; the quality of being sibilant.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Sibilant"
+        }
+      },
+      {
+        "term": "Sinecure",
+        "definition": "a position requiring little or no work but giving the holder status or financial benefit.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Sinecure"
+        }
+      },
+      {
+        "term": "Sophomoric",
+        "definition": "pretentious or immature.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Sophomoric_humor"
+        }
+      },
+      {
+        "term": "Sordid",
+        "definition": "involving ignoble actions and motives; morally degraded"
+      },
+      {
+        "term": "Splurge",
+        "definition": "an act of spending money freely or extravagantly"
+      },
+      {
+        "term": "Subterfuge",
+        "definition": "deceit used to achieve one's goal"
+      },
+      {
+        "term": "Tawdry",
+        "definition": "showy but cheap and of poor quality"
+      },
+      {
+        "term": "Temerity",
+        "definition": "excessive confidence or boldness; audacity"
+      },
+      {
+        "term": "Toil",
+        "definition": "hard and continuous work; exhausting labor"
+      },
+      {
+        "term": "Toff",
+        "definition": "a rich upper-class person (British slang).",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Toff"
+        }
+      },
+      {
+        "term": "Traipse",
+        "definition": "to walk or trudge wearily or reluctantly"
+      },
+      {
+        "term": "Triumvirate",
+        "definition": "a group of three powerful or notable people or things.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Triumvirate"
+        }
+      },
+      {
+        "term": "Troika",
+        "definition": "a group of three people working together, especially in an administrative capacity; a Russian vehicle drawn by three horses.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Troika"
+        }
+      },
+      {
+        "term": "Trundle",
+        "definition": "to move slowly and heavily, especially with a rolling motion"
+      },
+      {
+        "term": "Tsundoku",
+        "definition": "the practice of acquiring books and letting them pile up without reading them (Japanese).",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Tsundoku"
+        }
+      },
+      {
+        "term": "Umbrage",
+        "definition": "offense or annoyance (take umbrage)"
+      },
+      {
+        "term": "Vicissitude",
+        "definition": "a change of circumstances, typically unwelcome; the uncertainty of outcomes"
+      },
+      {
+        "term": "Vituperative",
+        "definition": "bitter and abusive in language or criticism"
+      },
+      {
+        "term": "Wanton",
+        "definition": "deliberate and unprovoked; reckless"
+      },
+      {
+        "term": "Accretion",
+        "definition": "growth or increase by the gradual accumulation of layers or additions.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Accretion"
+        }
+      },
+      {
+        "term": "Analogous",
+        "definition": "comparable in certain respects; similar in function but not in origin.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Analogy"
+        }
+      },
+      {
+        "term": "Apostasy",
+        "definition": "the abandonment or renunciation of a religious or political belief.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Apostasy"
+        }
+      },
+      {
+        "term": "Avarice",
+        "definition": "extreme greed for wealth or material gain.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Greed"
+        }
+      },
+      {
+        "term": "Bedlam",
+        "definition": "a scene of uproar and confusion.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Bethlem_Royal_Hospital"
+        }
+      },
+      {
+        "term": "Blandishments",
+        "definition": "flattering or pleasing statements used to persuade someone.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Flattery"
+        }
+      },
+      {
+        "term": "Cabal",
+        "definition": "a secret political clique or faction.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Cabal"
+        }
+      },
+      {
+        "term": "Capitulate",
+        "definition": "to cease to resist; to surrender.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Capitulation"
+        }
+      },
+      {
+        "term": "Chthonic",
+        "definition": "relating to the underworld; subterranean or dwelling beneath the earth.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Chthonic_deities"
+        }
+      },
+      {
+        "term": "Codswallop",
+        "definition": "nonsense (British slang).",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Codswallop"
+        }
+      },
+      {
+        "term": "Copacetic",
+        "definition": "in excellent order; perfectly satisfactory"
+      },
+      {
+        "term": "Cornpone",
+        "definition": "unsophisticated or countrified; lacking subtlety"
+      },
+      {
+        "term": "Crass",
+        "definition": "showing no sensitivity or finesse; grossly insensitive"
+      },
+      {
+        "term": "Demonym",
+        "definition": "a word identifying residents of a particular place (e.g. \"Parisian\").",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Demonym"
+        }
+      },
+      {
+        "term": "Drivel",
+        "definition": "silly nonsense; to talk in a foolish or meaningless way"
+      },
+      {
+        "term": "Drogue",
+        "definition": "a device trailed behind a vessel or aircraft to provide drag or stability.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Drogue"
+        }
+      },
+      {
+        "term": "Ecumenical",
+        "definition": "promoting unity among different religions or groups.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Ecumenism"
+        }
+      },
+      {
+        "term": "Edification",
+        "definition": "moral or intellectual instruction or improvement"
+      },
+      {
+        "term": "Edify",
+        "definition": "to instruct or improve someone morally or intellectually"
+      },
+      {
+        "term": "Epistolary",
+        "definition": "relating to or conducted through letters or correspondence"
+      },
+      {
+        "term": "Equanimity",
+        "definition": "mental calmness and composure, especially in a difficult situation.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Equanimity"
+        }
+      },
+      {
+        "term": "Espouse",
+        "definition": "to adopt or support a cause, belief, or way of life"
+      },
+      {
+        "term": "Exuberant",
+        "definition": "filled with lively energy and excitement"
+      },
+      {
+        "term": "Garish",
+        "definition": "obtrusively bright and showy; lurid"
+      },
+      {
+        "term": "Garret",
+        "definition": "a top-floor or attic room, especially a small dismal one.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Garret"
+        }
+      },
+      {
+        "term": "Gestalt",
+        "definition": "an organized whole that is perceived as more than the sum of its parts.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Gestalt"
+        }
+      },
+      {
+        "term": "Hiraeth",
+        "definition": "a Welsh word for a deep longing for home or a place you can never return to.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Hiraeth"
+        }
+      },
+      {
+        "term": "Inchoate",
+        "definition": "just begun and not fully formed or developed; rudimentary"
+      },
+      {
+        "term": "Incongruent",
+        "definition": "not in agreement or harmony; incompatible"
+      },
+      {
+        "term": "Incredulous",
+        "definition": "unwilling or unable to believe something"
+      },
+      {
+        "term": "Miserliness",
+        "definition": "the quality of being excessively unwilling to spend or share; stinginess.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Miser"
+        }
+      },
+      {
+        "term": "Ineffable",
+        "definition": "too great or extreme to be expressed or described in words.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Ineffability"
+        }
+      },
+      {
+        "term": "Sagacity",
+        "definition": "the quality of being discerning, sound in judgment, and farsighted; wisdom"
+      },
+      {
+        "term": "Solipsistic",
+        "definition": "relating to the view that the self is all that can be known to exist; self-absorbed.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Solipsism"
+        }
+      },
+      {
+        "term": "Taciturn",
+        "definition": "reserved or uncommunicative in speech; saying little"
+      },
+      {
+        "term": "Assuage",
+        "definition": "to make an unpleasant feeling less intense; to satisfy an appetite or desire"
+      },
+      {
+        "term": "Erudite",
+        "definition": "having or showing great knowledge gained from study and reading"
+      },
+      {
+        "term": "Folkelig",
+        "emphasis": "italic",
+        "definition": "a Norwegian and Danish adjective meaning \"of the people\"; popular, unpretentious, or rooted in everyday life"
+      },
+      {
+        "term": "Bagatelle",
+        "definition": "a thing of little importance; a trifle; a short, light piece of music"
+      },
+      {
+        "term": "Aplomb",
+        "definition": "self-confidence or assurance, especially in a demanding situation"
+      },
+      {
+        "term": "Puerile",
+        "definition": "childishly silly or immature"
+      },
+      {
+        "term": "Anodyne",
+        "definition": "unlikely to provoke offense or disagreement, but often dull; a medicine that relieves pain.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Anodyne"
+        }
+      },
+      {
+        "term": "Paucity",
+        "definition": "the presence of something in only small or insufficient quantities; scarcity.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Scarcity"
+        }
+      },
+      {
+        "term": "Philistine",
+        "definition": "a person who is hostile or indifferent to art, culture, and intellectual pursuits.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Philistinism"
+        }
+      },
+      {
+        "term": "Milieu",
+        "definition": "the social or cultural environment in which a person or group lives or develops.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Social_environment"
+        }
+      },
+      {
+        "term": "Chockablock",
+        "definition": "packed tightly together or completely full.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Block_%28sailing%29#Sailing_terms_in_everyday_English"
+        }
+      }
+    ]
+  },
+  "contraptions": {
+    "slug": "contraptions",
+    "title": "Contraptions",
+    "description": "A curated vocabulary of mechanical words, curious objects, and interesting terms.",
+    "entries": [
+      {
+        "term": "Pinion",
+        "definition": "a small gear that meshes with a larger gear or rack.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pinion"
+        }
+      },
+      {
+        "term": "Claxon",
+        "definition": "an electrically operated horn, originally a brand of motor-vehicle horn.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Vehicle_horn"
+        }
+      },
+      {
+        "term": "Quokka",
+        "definition": "a small marsupial native to southwestern Australia.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Quokka"
+        }
+      },
+      {
+        "term": "Epigraph",
+        "definition": "a short quotation at the beginning of a book, chapter, or other work.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Epigraph_(literature)"
+        }
+      },
+      {
+        "term": "Pastiche",
+        "definition": "an artistic work that imitates the style of another work, artist, or period.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pastiche"
+        }
+      },
+      {
+        "term": "Manicule",
+        "definition": "a typographical symbol of a pointing hand, used to direct the reader's attention.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Manicule"
+        },
+        "suffix": "👉🏻"
+      },
+      {
+        "term": "Pefletti",
+        "definition": "a small seat cover placed on a Finnish sauna bench for hygiene and protection from the heat.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pefletti"
+        }
+      },
+      {
+        "term": "Jig",
+        "definition": "a device that holds a piece of work and guides the tool operating on it.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Jig_(tool)"
+        }
+      },
+      {
+        "term": "Pablum",
+        "definition": "bland or insipid ideas, writing, or entertainment; named for a brand of infant cereal.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pablum"
+        }
+      },
+      {
+        "term": "Cairn",
+        "definition": "a mound of rough stones built as a memorial, landmark, or trail marker.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Cairn"
+        }
+      },
+      {
+        "term": "Andon",
+        "definition": "a manufacturing term for a system to notify management, maintenance, and other workers of a quality or process problem.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Andon_(manufacturing)"
+        }
+      },
+      {
+        "term": "Bunkobon",
+        "definition": "a small, usually A6-sized Japanese paperback format.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Bunkobon"
+        }
+      },
+      {
+        "term": "Tsundoku",
+        "definition": "the practice of acquiring books and letting them pile up unread.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Tsundoku"
+        }
+      },
+      {
+        "term": "Binnacle",
+        "definition": "a stand or housing for a ship's compass.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Binnacle"
+        }
+      },
+      {
+        "term": "Imprimatur",
+        "definition": "an official license to print or publish; more broadly, an authoritative approval.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Imprimatur"
+        }
+      },
+      {
+        "term": "Artifact",
+        "definition": "an object made or modified by people, especially one of archaeological or historical interest.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Artifact_(archaeology)"
+        }
+      },
+      {
+        "term": "Pamphlet",
+        "definition": "a short, usually unbound publication about a single subject.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pamphlet"
+        }
+      },
+      {
+        "term": "Gear",
+        "definition": "a rotating machine part with teeth that mesh with another part to transmit motion or torque.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Gear"
+        }
+      },
+      {
+        "term": "Piggy bank",
+        "definition": "a small container, traditionally shaped like a pig, used for saving coins.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Piggy_bank"
+        }
+      },
+      {
+        "term": "Nest egg",
+        "definition": "money saved or invested for a future purpose.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Saving"
+        }
+      },
+      {
+        "term": "Carrier pigeon",
+        "definition": "a homing pigeon trained to carry messages back to its home loft.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Homing_pigeon"
+        }
+      },
+      {
+        "term": "Workshop",
+        "definition": "a room or building equipped for making or repairing things; also a collaborative working session.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Workshop"
+        }
+      },
+      {
+        "term": "Toolbelt",
+        "definition": "a belt with loops, pouches, or pockets for carrying tools close at hand"
+      },
+      {
+        "term": "Almanac",
+        "definition": "an annual reference book of dates, statistics, forecasts, and other practical information.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Almanac"
+        }
+      },
+      {
+        "term": "Orlop",
+        "definition": "the lowest deck of a wooden sailing ship, typically used for storage.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Orlop_deck"
+        }
+      },
+      {
+        "term": "Tidbit",
+        "definition": "a small morsel of food or a brief, interesting piece of information"
+      },
+      {
+        "term": "Brigade",
+        "definition": "a military formation made up of several battalions; more broadly, an organized group.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Brigade"
+        }
+      },
+      {
+        "term": "Gasket",
+        "definition": "a shaped seal placed between surfaces to prevent leakage under compression.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Gasket"
+        }
+      },
+      {
+        "term": "Doohickey",
+        "definition": "an informal name for an object or device whose proper name is unknown or forgotten.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Placeholder_name"
+        }
+      },
+      {
+        "term": "Lathe",
+        "definition": "a machine tool that rotates a workpiece so it can be cut, shaped, drilled, or finished.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Lathe"
+        }
+      },
+      {
+        "term": "Piston",
+        "definition": "a sliding component that moves inside a cylinder to transfer force or compress a fluid.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Piston"
+        }
+      },
+      {
+        "term": "Foundry",
+        "definition": "a workshop or factory where metal is melted and cast into shapes.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Foundry"
+        }
+      },
+      {
+        "term": "Bauble",
+        "definition": "a small, showy ornament or trinket.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Bauble"
+        }
+      },
+      {
+        "term": "Dynamo",
+        "definition": "an electrical generator that uses a commutator to produce direct current.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Dynamo"
+        }
+      },
+      {
+        "term": "Camshaft",
+        "definition": "a rotating shaft whose cams operate valves or convert rotary motion into reciprocating motion.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Camshaft"
+        }
+      },
+      {
+        "term": "Turbine",
+        "definition": "a rotary machine driven by a moving fluid, such as steam, water, gas, or air.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Turbine"
+        }
+      },
+      {
+        "term": "Bellows",
+        "definition": "a device that expands and contracts to force air through an outlet.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Bellows"
+        }
+      },
+      {
+        "term": "Pulley",
+        "definition": "a grooved wheel that guides a rope, belt, or cable to redirect force or transmit motion.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pulley"
+        }
+      },
+      {
+        "term": "Crankshaft",
+        "definition": "a shaft with offset cranks that converts reciprocating motion into rotation, or the reverse.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Crankshaft"
+        }
+      },
+      {
+        "term": "Manometer",
+        "definition": "an instrument that measures fluid pressure, often by the movement of a liquid column.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Manometer"
+        }
+      },
+      {
+        "term": "Planer",
+        "definition": "a tool or machine that produces a flat surface on wood or metal.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Planer"
+        }
+      },
+      {
+        "term": "Winch",
+        "definition": "a hauling or lifting device that winds rope or cable around a rotating drum.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Winch"
+        }
+      },
+      {
+        "term": "Treadle",
+        "definition": "a foot-operated lever that drives a machine or mechanism.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Treadle"
+        }
+      },
+      {
+        "term": "Caliper",
+        "definition": "a measuring instrument with two adjustable legs or jaws for checking dimensions.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Calipers"
+        }
+      },
+      {
+        "term": "Codex",
+        "definition": "an ancient manuscript book made of bound pages, rather than a scroll.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Codex"
+        }
+      },
+      {
+        "term": "Catalog",
+        "definition": "an organized list of items, often with descriptions or other identifying information.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Catalog"
+        }
+      },
+      {
+        "term": "Accoutrement",
+        "definition": "an accessory item of clothing or equipment, especially one associated with a particular activity"
+      },
+      {
+        "term": "Snollygoster",
+        "definition": "a shrewd, unprincipled person, especially a politician"
+      },
+      {
+        "term": "Excoriation",
+        "definition": "a scrape or abrasion of the skin; also severe criticism"
+      },
+      {
+        "term": "Bespoke",
+        "definition": "made to order for a particular person or purpose.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Bespoke"
+        }
+      },
+      {
+        "term": "Paperclip",
+        "definition": "a bent-wire fastener used to hold sheets of paper together.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Paper_clip"
+        }
+      },
+      {
+        "term": "Talisman",
+        "definition": "an object believed to bring good luck or protect its bearer.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Talisman"
+        }
+      },
+      {
+        "term": "Dogear",
+        "definition": "a folded corner of a page used to mark a place in a book.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Dogear"
+        }
+      },
+      {
+        "term": "Quay",
+        "definition": "a platform built along a shore where ships load and unload.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Wharf"
+        }
+      },
+      {
+        "term": "Pilcrow",
+        "definition": "the paragraph mark, ¶, used to indicate the start of a new paragraph.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pilcrow"
+        }
+      },
+      {
+        "term": "Denouement",
+        "definition": "the final resolution of a story's plot, after its climax.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Denouement"
+        }
+      },
+      {
+        "term": "Forsooth",
+        "definition": "an archaic adverb meaning \"in truth,\" often used for emphasis or mock solemnity"
+      },
+      {
+        "term": "Moquette",
+        "definition": "a durable woven upholstery fabric, often used on public-transport seats and carpets.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Moquette"
+        }
+      },
+      {
+        "term": "Mountebank",
+        "definition": "a fraudulent seller of supposed medicines; more broadly, a boastful charlatan.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Mountebank"
+        }
+      },
+      {
+        "term": "Bivouac",
+        "definition": "a temporary camp or improvised shelter, especially for soldiers or mountaineers.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Bivouac"
+        }
+      },
+      {
+        "term": "Transom",
+        "definition": "a horizontal structural bar above a door or window; also the flat stern of a boat.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Transom"
+        }
+      },
+      {
+        "term": "Pannier",
+        "definition": "a basket, bag, or box carried in pairs on an animal, bicycle, or motorcycle.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pannier"
+        }
+      },
+      {
+        "term": "Maquette",
+        "definition": "a small preliminary model used to plan a sculpture, building, or other work.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Maquette"
+        }
+      },
+      {
+        "term": "Zhuzh",
+        "definition": "to make something more stylish, lively, or attractive"
+      },
+      {
+        "term": "Scribbler",
+        "definition": "a person who writes hurriedly, carelessly, or prolifically, often used disparagingly"
+      },
+      {
+        "term": "Manufactory",
+        "definition": "an early term for a factory, especially one relying substantially on manual labor.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Factory"
+        }
+      },
+      {
+        "term": "Apron",
+        "definition": "a protective garment worn over the front of the body; also a platform or surface surrounding a work area.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Apron"
+        }
+      },
+      {
+        "term": "Carnet",
+        "definition": "a customs document that permits the temporary duty-free import of goods.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/ATA_Carnet"
+        }
+      },
+      {
+        "term": "Pimlico",
+        "definition": "a residential district in central London, known for its Regency architecture.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Pimlico"
+        }
+      },
+      {
+        "term": "Expedition",
+        "definition": "an organized journey undertaken for a particular purpose, especially exploration or research"
+      },
+      {
+        "term": "Tipples",
+        "definition": "structures at mines that load coal or ore into vehicles for transport.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Tipple"
+        }
+      },
+      {
+        "term": "Blip",
+        "definition": "a brief interruption, a small spike or dot on a display, or a minor deviation from a trend"
+      },
+      {
+        "term": "Dowel",
+        "definition": "a cylindrical rod used to align, join, or support parts.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Dowel"
+        }
+      },
+      {
+        "term": "Kerfuffle",
+        "definition": "a commotion or fuss, especially one caused by disagreement.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Glossary_of_British_terms_not_widely_used_in_the_United_States#K"
+        }
+      },
+      {
+        "term": "Ansatz",
+        "definition": "an assumed form for a solution that gives a mathematical or physical problem a tractable starting point.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Ansatz"
+        }
+      }
+    ]
+  }
+}

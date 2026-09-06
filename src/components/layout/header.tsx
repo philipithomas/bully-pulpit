@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MemberMenu } from '@/components/auth/member-menu'
+import { ExploreNavigationLink } from '@/components/layout/explore-navigation-link'
 import { Logo } from '@/components/layout/logo'
 import { useNewsletter } from '@/components/layout/newsletter-context'
 import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
@@ -197,8 +198,8 @@ export function Header() {
   const newsletterLogo = newsletter ? newsletterLogos[newsletter] : null
 
   return (
-    <header className="py-4 md:py-6">
-      <div className="container flex items-center justify-between">
+    <header className="py-3 sm:py-4 md:py-6">
+      <div className="container flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="relative h-6 flex items-center">
           <div
             className={`transition-opacity duration-200 ${newsletterLogo ? 'opacity-0' : 'opacity-100'}`}
@@ -221,7 +222,11 @@ export function Header() {
             </Link>
           ) : null}
         </div>
-        <nav className="flex items-center gap-3 md:gap-5">
+        <nav
+          aria-label="Primary"
+          className="flex w-full items-center justify-between sm:w-auto sm:justify-start sm:gap-3 md:gap-5"
+        >
+          <ExploreNavigationLink active={pathname === '/explore'} />
           <button
             type="button"
             onClick={handleOpenSearch}

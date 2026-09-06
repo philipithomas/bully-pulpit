@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { GET } from '@/app/sitemap.xml/route'
 import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPages } from '@/lib/content/loader'
+import { publicContentPath } from '@/lib/content/public-path'
 
 describe('sitemap', () => {
   it('all posts have slugs for sitemap', () => {
@@ -65,7 +66,7 @@ describe('sitemap.xml route', () => {
     for (const post of getAllPosts()) {
       const lastmod = new Date(post.frontmatter.publishedAt).toISOString()
       expect(xml).toContain(
-        `<url><loc>${siteConfig.url}/${post.slug}</loc><lastmod>${lastmod}</lastmod></url>`
+        `<url><loc>${siteConfig.url}${publicContentPath(post.slug)}</loc><lastmod>${lastmod}</lastmod></url>`
       )
     }
   })
@@ -83,7 +84,9 @@ describe('sitemap.xml route', () => {
     const remaining = getPages().filter((p) => !excluded.has(p.slug))
     expect(remaining.length).toBeGreaterThan(0)
     for (const page of remaining) {
-      expect(xml).toContain(`<loc>${siteConfig.url}/${page.slug}</loc>`)
+      expect(xml).toContain(
+        `<loc>${siteConfig.url}${publicContentPath(page.slug)}</loc>`
+      )
     }
   })
 })
