@@ -28,6 +28,13 @@ describe('CollectionIndex', () => {
     expect(html).toContain('151 entries')
     expect(html).toContain('id="gavage"')
     expect(html).toContain('id="chockablock"')
+    expect(html).toContain('data-bell-selectable=""')
+    expect(html.indexOf('type="search"')).toBeLessThan(
+      html.indexOf('data-bell-selectable=""')
+    )
+    expect(html.indexOf('data-bell-selectable=""')).toBeLessThan(
+      html.indexOf('<dd')
+    )
     expect(html).toContain('lg:grid-cols-2')
     expect(html).not.toContain('border-t')
     expect(html).not.toContain('border-y')
@@ -40,6 +47,9 @@ describe('CollectionIndex', () => {
 
     expect(html).toContain('href="#pinion"')
     expect(html).toContain('id="pinion"')
+    expect(html).toMatch(
+      /<div id="pinion" data-bell-source-anchor="" class="scroll-mt-6">/
+    )
     expect(html).toContain('https://en.wikipedia.org/wiki/Pinion')
     expect(html).toContain('rel="noopener noreferrer"')
     expect(html).toContain('👉🏻')

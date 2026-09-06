@@ -273,6 +273,18 @@ describe('extractHeadings', () => {
       'Another',
     ])
   })
+
+  it('matches rendered headings inside blockquotes and ignores quoted fences', () => {
+    const markdown =
+      '> ```md\n> ## not a heading\n> ```\n> ## Data ingestion\n>\n> Body.'
+    expect(extractHeadings(markdown)).toEqual([
+      {
+        text: 'Data ingestion',
+        anchor: 'data-ingestion',
+        line: 3,
+      },
+    ])
+  })
 })
 
 describe('chunk headings', () => {

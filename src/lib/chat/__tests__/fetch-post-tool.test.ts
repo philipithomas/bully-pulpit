@@ -61,6 +61,16 @@ describe('fetchPost tool outline', () => {
     }
   })
 
+  it('includes rendered blockquote headings in real post outlines', async () => {
+    const result = await run('chat-with-my-dog')
+    expect(result.error).toBeUndefined()
+    expect(result.outline).toContainEqual({
+      heading: 'Data ingestion',
+      anchor: 'data-ingestion',
+      url: '/chat-with-my-dog#data-ingestion',
+    })
+  })
+
   it('returns the same complete Stargazing content that search indexes', async () => {
     const result = await run('stargazing')
     expect(result.error).toBeUndefined()

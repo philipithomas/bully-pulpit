@@ -27,7 +27,7 @@ function CollectionEntryRow({ entry }: { entry: CollectionEntry }) {
   const anchor = collectionEntryAnchor(entry)
 
   return (
-    <div id={anchor} className="scroll-mt-6">
+    <div id={anchor} data-bell-source-anchor="" className="scroll-mt-6">
       <dt className="font-sans font-semibold text-gray-950 text-lg leading-snug tracking-tight">
         <a
           href={`#${anchor}`}
@@ -170,7 +170,10 @@ export function CollectionIndex({
       </div>
 
       {groups.length > 0 ? (
-        <div className="mt-10 space-y-12 md:mt-14 md:space-y-16">
+        <div
+          data-bell-selectable=""
+          className="mt-10 space-y-12 md:mt-14 md:space-y-16"
+        >
           {groups.map((group) => (
             <section
               key={group.letter}

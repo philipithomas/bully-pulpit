@@ -298,6 +298,99 @@ describe('Bell tool provenance', () => {
     ])
   })
 
+  it('keeps the server-validated passage section beside other tool sources', () => {
+    expect(
+      bellSourcesFromMessage({
+        parts: [
+          {
+            type: 'tool-fetchPage',
+            state: 'output-available',
+            input: { path: '/colophon' },
+            output: JSON.stringify({
+              type: 'page',
+              title: 'Colophon',
+              url: '/colophon',
+              publishedAt: null,
+              newsletter: 'page',
+            }),
+          },
+          {
+            type: 'tool-fetchPost',
+            state: 'output-available',
+            input: { slug: 'another-post' },
+            output: JSON.stringify({
+              type: 'post',
+              title: 'Another post',
+              url: '/another-post',
+              publishedAt: '2026-07-09',
+              newsletter: 'contraption',
+            }),
+          },
+        ],
+        metadata: {
+          selectedPassageSource: {
+            type: 'page',
+            title: 'Colophon',
+            url: '/colophon#technical',
+            publishedAt: null,
+            newsletter: 'page',
+            section: 'Technical',
+          },
+        },
+      })
+    ).toEqual([
+      {
+        type: 'page',
+        title: 'Colophon',
+        url: '/colophon#technical',
+        newsletter: 'page',
+        section: 'Technical',
+      },
+      {
+        type: 'post',
+        title: 'Another post',
+        url: '/another-post',
+        publishedAt: '2026-07-09',
+        newsletter: 'contraption',
+      },
+    ])
+  })
+
+  it('rejects malformed selected-passage source metadata', () => {
+    for (const selectedPassageSource of [
+      {
+        type: 'page',
+        title: 'Colophon',
+        url: '/colophon#technical',
+        publishedAt: null,
+        newsletter: 'page',
+      },
+      {
+        type: 'page',
+        title: 'Colophon',
+        url: '/colophon#technical?private=value',
+        publishedAt: null,
+        newsletter: 'page',
+        section: 'Technical',
+      },
+      {
+        type: 'page',
+        title: 'Colophon',
+        url: 'https://example.com/colophon#technical',
+        publishedAt: null,
+        newsletter: 'page',
+        section: 'Technical',
+      },
+    ]) {
+      expect(
+        bellSourcesFromMessage({
+          parts: [{ type: 'text', text: 'Answer.' }],
+          metadata: { selectedPassageSource },
+        })
+      ).toEqual([])
+    }
+  })
+
   it('rejects malformed current-page metadata', () => {
     const malformedSources = [
       {

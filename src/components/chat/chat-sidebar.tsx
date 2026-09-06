@@ -25,6 +25,7 @@ import { createBellChat } from '@/lib/chat/bell-chat'
 import { chatErrorMessage } from '@/lib/chat/chat-error-message'
 import { BELL_DISCOVERY_OPENED_KEY } from '@/lib/chat/discovery'
 import { textOnlyChatMessages } from '@/lib/chat/sanitize-messages'
+import { selectedPassageRequestOptions } from '@/lib/chat/selected-passage'
 import {
   type BellStarterQuestion,
   bellStarterQuestions,
@@ -127,6 +128,7 @@ export function ChatSidebar() {
     setActiveChatStop,
     saveMessages,
     clearMessages,
+    clearPassageRequest,
     consumePendingLocalMessage,
     consumeInitialQuery,
     syncConversationIdentity,
@@ -248,8 +250,8 @@ export function ChatSidebar() {
     setMessages([])
   }, [authLoading, setMessages, stop, syncConversationIdentity, user])
 
-  // Count an open once per visible session. Search handoffs and the header
-  // share the same panel but represent meaningfully different entry points.
+  // Count an open once per visible session. Search and passage handoffs share
+  // the same panel but represent meaningfully different entry points.
   const wasOpenRef = useRef(false)
   useEffect(() => {
     if (open && !wasOpenRef.current) {
@@ -298,10 +300,10 @@ export function ChatSidebar() {
     setMessages,
   ])
 
-  // Send an initial search query once for the fresh chat ID created by the
-  // handoff. Mark it consumed only when the timer fires: auth hydration can
-  // otherwise cancel the effect between clearing the old transcript and
-  // sending the query, leaving Bell open with an empty thread.
+  // Send an initial search or selected-passage query once for the fresh chat
+  // ID created by the handoff. Mark it consumed only when the timer fires:
+  // auth hydration can otherwise cancel the effect between clearing the old
+  // transcript and sending the query, leaving Bell open with an empty thread.
   useEffect(() => {
     if (!open || !initialQuery || lastHandoffChatIdRef.current === chatId) {
       return
@@ -316,12 +318,16 @@ export function ChatSidebar() {
       ) {
         return
       }
+      const passageRequest = state.activePassageRequest
       lastHandoffChatIdRef.current = chatId
-      sendMessage({ text: initialQuery })
+      sendMessage(
+        { text: initialQuery },
+        selectedPassageRequestOptions(passageRequest)
+      )
       consumeInitialQuery(chatId)
       trackClientEvent('Bell message submitted', {
         surface: 'web',
-        source: 'search_handoff',
+        source: passageRequest ? 'passage' : 'search_handoff',
         signed_in: Boolean(userRef.current),
         turn: '1',
       })
@@ -428,6 +434,7 @@ export function ChatSidebar() {
     (text: string, source: 'composer' | 'suggestion') => {
       const depth =
         messagesRef.current.filter((m) => m.role === 'user').length + 1
+      clearPassageRequest()
       sendMessage({ text })
       trackClientEvent('Bell message submitted', {
         surface: 'web',
@@ -436,7 +443,7 @@ export function ChatSidebar() {
         turn: bucketTurn(depth),
       })
     },
-    [sendMessage, user]
+    [clearPassageRequest, sendMessage, user]
   )
 
   const handleSend = useCallback(
@@ -463,7 +470,8 @@ export function ChatSidebar() {
       surface: 'web',
       turn: bucketTurn(turns),
     })
-    regenerate()
+    const passageRequest = useChatSidebar.getState().activePassageRequest
+    regenerate(selectedPassageRequestOptions(passageRequest))
   }, [regenerate])
 
   const handleBackdropKeyDown = useCallback(

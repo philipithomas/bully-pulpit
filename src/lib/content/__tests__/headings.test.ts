@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { extractHeadings, stripCodeFences } from '@/lib/content/headings'
+import {
+  extractHeadingSections,
+  extractHeadings,
+  stripCodeFences,
+} from '@/lib/content/headings'
 import { getAllPosts } from '@/lib/content/loader'
 
 describe('stripCodeFences', () => {
@@ -21,6 +25,11 @@ describe('stripCodeFences', () => {
   it('does not close a backtick fence with a tilde fence', () => {
     const md = 'a\n```\n~~~\n## inside\n```\nb'
     expect(stripCodeFences(md)).toBe('a\nb')
+  })
+
+  it('removes fenced blocks nested inside blockquotes', () => {
+    const md = '> before\n> ```md\n> ## not a heading\n> ```\n> after'
+    expect(stripCodeFences(md)).toBe('> before\n> after')
   })
 })
 
@@ -64,6 +73,22 @@ describe('extractHeadings', () => {
     expect(extractHeadings(md).map((h) => h.slug)).toEqual(['notes', 'notes-2'])
   })
 
+  it('extracts headings rendered inside blockquotes', () => {
+    const md =
+      '> Prompt\n>\n> ## Data ingestion\n>\n> Body.\n>\n> ### Querying\n>\n> More.'
+    expect(extractHeadings(md)).toEqual([
+      { depth: 2, text: 'Data ingestion', slug: 'data-ingestion' },
+      { depth: 3, text: 'Querying', slug: 'querying' },
+    ])
+  })
+
+  it('ignores blockquoted headings inside blockquoted code fences', () => {
+    const md = '> ```md\n> ## not a heading\n> ```\n> ## Real'
+    expect(extractHeadings(md)).toEqual([
+      { depth: 2, text: 'Real', slug: 'real' },
+    ])
+  })
+
   it('requires whitespace after the hashes', () => {
     expect(extractHeadings('##NotAHeading')).toEqual([])
   })
@@ -71,6 +96,41 @@ describe('extractHeadings', () => {
   it('skips headings whose text slugs to nothing', () => {
     expect(extractHeadings('## ✨\n\n## Real')).toEqual([
       { depth: 2, text: 'Real', slug: 'real' },
+    ])
+  })
+})
+
+describe('extractHeadingSections', () => {
+  it('bounds each stable heading at the next h2 or h3', () => {
+    const sections = extractHeadingSections(
+      '## First\n\nFirst body.\n\n#### Detail\n\nStill first.\n\n### Second\n\nSecond body.'
+    )
+    expect(sections).toEqual([
+      {
+        depth: 2,
+        text: 'First',
+        slug: 'first',
+        markdown: 'First\n\nFirst body.\n\n#### Detail\n\nStill first.',
+      },
+      {
+        depth: 3,
+        text: 'Second',
+        slug: 'second',
+        markdown: 'Second\n\nSecond body.',
+      },
+    ])
+  })
+
+  it('lets an unusable heading end the prior stable section', () => {
+    expect(
+      extractHeadingSections('## Stable\n\nBefore.\n\n## ✨\n\nAfter.')
+    ).toEqual([
+      {
+        depth: 2,
+        text: 'Stable',
+        slug: 'stable',
+        markdown: 'Stable\n\nBefore.',
+      },
     ])
   })
 })

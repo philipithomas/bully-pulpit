@@ -176,6 +176,30 @@ function currentPageSourceFromMetadata(metadata: unknown): BellSource | null {
   }
 }
 
+function selectedPassageSourceFromMetadata(
+  metadata: unknown
+): BellSource | null {
+  const source = record(record(metadata)?.selectedPassageSource)
+  if (!source) return null
+
+  const url = internalUrl(source.url)
+  const match = url?.match(
+    /^\/(?:[a-z0-9][a-z0-9-]*)(?:#([a-z0-9][a-z0-9-]*))?$/
+  )
+  const section = shortText(source.section)
+  if (!url || !match || Boolean(match[1]) !== Boolean(section)) return null
+
+  const pageSource = currentPageSourceFromMetadata({
+    currentPageSource: { ...source, url: url.split('#')[0] },
+  })
+  if (!pageSource) return null
+  return {
+    ...pageSource,
+    url,
+    ...(section ? { section } : {}),
+  }
+}
+
 function fallbackUrlForTool(
   toolName: string,
   input: UnknownRecord | null
@@ -261,6 +285,22 @@ export function bellSourcesFromMessage(message: {
   metadata?: unknown
 }): BellSource[] {
   const toolSources = bellSourcesFromMessageParts(message.parts)
+  const selectedPassageSource = selectedPassageSourceFromMetadata(
+    message.metadata
+  )
+  if (selectedPassageSource) {
+    const byPage = new Map<string, BellSource>([
+      [selectedPassageSource.url.split('#')[0], selectedPassageSource],
+    ])
+    for (const source of toolSources) {
+      const page = source.url.split('#')[0]
+      const previous = byPage.get(page)
+      if (!previous || (!previous.section && source.section)) {
+        byPage.set(page, source)
+      }
+    }
+    return [...byPage.values()].slice(0, MAX_BELL_SOURCES)
+  }
   if (toolSources.length > 0) return toolSources
 
   const currentPageSource = currentPageSourceFromMetadata(message.metadata)

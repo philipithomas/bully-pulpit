@@ -1,3 +1,17 @@
+import {
+  collapsePlainTextWhitespace,
+  isPassageSelectableContent,
+  isSelectedPassageAction,
+  normalizeSelectedPassage,
+  type SelectedPassageAction,
+} from '@/lib/chat/selected-passage'
+import {
+  type CollectionEntry,
+  collectionEntryAnchor,
+  getCollection,
+  isCollectionSlug,
+} from '@/lib/collections'
+import { extractHeadingSections } from '@/lib/content/headings'
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
 import { photoMetadataLabeledText } from '@/lib/content/photo-metadata'
 import {
@@ -12,6 +26,24 @@ import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 
 /** Character budget for injected page content. Roughly 1k tokens. */
 export const PAGE_CONTENT_MAX_CHARS = 4000
+const MARKDOWN_ESCAPABLE_PUNCTUATION = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
+
+function stripMarkupTags(value: string): string {
+  let plaintext = ''
+  let index = 0
+
+  while (index < value.length) {
+    if (value[index] === '<') {
+      const tagEnd = value.indexOf('>', index + 1)
+      index = tagEnd === -1 ? index + 1 : tagEnd + 1
+      continue
+    }
+    plaintext += value[index]
+    index += 1
+  }
+
+  return plaintext
+}
 
 export interface PageContextSource {
   type: 'post' | 'page'
@@ -32,6 +64,20 @@ export interface PageContextContent {
   fetchPath?: string
 }
 
+export interface SelectedPassageSource extends PageContextSource {
+  section?: string
+}
+
+export interface SelectedPassageContext {
+  action: SelectedPassageAction
+  text: string
+  path: string
+  headingId?: string
+  headingText?: string
+  entryAnchor?: string
+  source: SelectedPassageSource
+}
+
 function appPageNewsletter(path: string): Newsletter | 'page' {
   const slug = path.replace(/^\//, '')
   return (NEWSLETTERS as readonly string[]).includes(slug)
@@ -44,19 +90,46 @@ function appPageNewsletter(path: string): Newsletter | 'page' {
  * strips imports, JSX/HTML tags, images, and markdown syntax while keeping
  * the prose intact.
  */
-export function toPlaintext(mdx: string): string {
-  return mdx
+function plaintextFromMdx(
+  mdx: string,
+  { stripBlockMarkers = false }: { stripBlockMarkers?: boolean } = {}
+): string {
+  const unwrapped = mdx
     .replace(/^(import|export)\s[^\n]*$/gm, '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
     .replace(/\[((?:\\.|[^\]\\])*)\]\(#[^)]*\)/g, (_match, text: string) =>
       text.replace(/\\([[\]])/g, '$1')
     )
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/<[^>]+>/g, '')
     .replace(/^#{1,6}\s+/gm, '')
-    .replace(/[*_`~]/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+
+  const withoutBlockMarkers = stripBlockMarkers
+    ? unwrapped
+        .replace(/^[\t ]*(?:>[\t ]*)+/gm, '')
+        .replace(
+          /^ {0,3}(?:(?:-[\t ]*){3,}|(?:\*[\t ]*){3,}|(?:_[\t ]*){3,})\r?$/gm,
+          ''
+        )
+        .replace(/^[\t ]*(?:[-+*]|\d+[.)])[\t ]+/gm, '')
+    : unwrapped
+
+  return stripMarkupTags(
+    withoutBlockMarkers
+      .replace(/(?<!\\)[*_`~]/g, '')
+      .replace(/\\(.)/g, (match, character: string) =>
+        MARKDOWN_ESCAPABLE_PUNCTUATION.includes(character) ? character : match
+      )
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  )
+}
+
+export function toPlaintext(mdx: string): string {
+  return plaintextFromMdx(mdx)
+}
+
+function toRenderedPlaintext(mdx: string): string {
+  return plaintextFromMdx(mdx, { stripBlockMarkers: true })
 }
 
 /**
@@ -64,12 +137,13 @@ export function toPlaintext(mdx: string): string {
  * its environment-specific phone number out of the committed content corpus,
  * then adds the active number here for live page reads.
  */
-export function toPagePlaintext(
-  item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>
+function pagePlaintext(
+  item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>,
+  convertMdx: (mdx: string) => string
 ): string {
-  const plain = toPlaintext(item.content)
+  const plain = convertMdx(item.content)
   if (item.slug === 'stargazing') {
-    return toPlaintext(stargazingPageContent(item.content))
+    return convertMdx(stargazingPageContent(item.content))
   }
   const photo = photoMetadataLabeledText(item.frontmatter.photo)
   const content = [photo ? `Photo metadata: ${photo}` : '', plain]
@@ -79,6 +153,18 @@ export function toPagePlaintext(
 
   const phoneNumber = sitePhoneDisplayNumber()
   return phoneNumber ? `${content}\n\nTelephone: ${phoneNumber}` : content
+}
+
+export function toPagePlaintext(
+  item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>
+): string {
+  return pagePlaintext(item, toPlaintext)
+}
+
+function toRenderedPagePlaintext(
+  item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>
+): string {
+  return pagePlaintext(item, toRenderedPlaintext)
 }
 
 /**
@@ -136,6 +222,110 @@ export function getPageContextContent(
       url: `/${slug}`,
       publishedAt: item.frontmatter.publishedAt ?? null,
       newsletter: post?.newsletter ?? 'page',
+    },
+  }
+}
+
+function selectedPassageRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+function collectionEntryPlaintext(entry: CollectionEntry): string {
+  return [entry.term, entry.definition, entry.reference?.label, entry.suffix]
+    .filter(Boolean)
+    .join(' ')
+}
+
+/**
+ * Resolves client passage metadata back to the canonical content corpus. The
+ * selected text remains untrusted prompt input, but it receives a source only
+ * when its page, quote, and optional stable heading all match server data.
+ */
+export function getSelectedPassageContext(
+  value: unknown,
+  currentPath: string | undefined,
+  pageContent: PageContextContent | null
+): SelectedPassageContext | null {
+  const request = selectedPassageRecord(value)
+  if (
+    !request ||
+    !currentPath ||
+    !pageContent ||
+    pageContent.fetchPath ||
+    request.path !== currentPath ||
+    pageContent.source.url !== currentPath ||
+    !isSelectedPassageAction(request.action)
+  ) {
+    return null
+  }
+
+  const text = normalizeSelectedPassage(request.text)
+  if (!text) return null
+
+  const post = getPostBySlug(pageContent.slug)
+  const page = post ? null : getPageBySlug(pageContent.slug)
+  const item = post ?? page
+  if (
+    !item ||
+    !isPassageSelectableContent(item.slug, post ? 'post' : 'page') ||
+    !collapsePlainTextWhitespace(toRenderedPagePlaintext(item)).includes(text)
+  ) {
+    return null
+  }
+
+  const rawHeadingId = request.headingId
+  const rawEntryAnchor = request.entryAnchor
+  const collection = isCollectionSlug(item.slug)
+    ? getCollection(item.slug)
+    : null
+  const candidateEntry =
+    collection &&
+    typeof rawEntryAnchor === 'string' &&
+    rawEntryAnchor.length <= 200
+      ? collection.entries.find(
+          (entry) => collectionEntryAnchor(entry) === rawEntryAnchor
+        )
+      : undefined
+  const entry =
+    candidateEntry &&
+    collapsePlainTextWhitespace(
+      collectionEntryPlaintext(candidateEntry)
+    ).includes(text)
+      ? candidateEntry
+      : undefined
+  const headingSection =
+    !entry && typeof rawHeadingId === 'string' && rawHeadingId.length <= 200
+      ? extractHeadingSections(item.content).find(
+          (candidate) => candidate.slug === rawHeadingId
+        )
+      : undefined
+  const heading =
+    headingSection &&
+    collapsePlainTextWhitespace(
+      toRenderedPlaintext(headingSection.markdown)
+    ).includes(text)
+      ? headingSection
+      : undefined
+  const entryAnchor = entry ? collectionEntryAnchor(entry) : undefined
+  const sourceUrl = entryAnchor
+    ? `${pageContent.source.url}#${entryAnchor}`
+    : heading
+      ? `${pageContent.source.url}#${heading.slug}`
+      : pageContent.source.url
+  const sourceSection = entry?.term ?? heading?.text
+
+  return {
+    action: request.action,
+    text,
+    path: currentPath,
+    ...(heading ? { headingId: heading.slug, headingText: heading.text } : {}),
+    ...(entryAnchor ? { entryAnchor } : {}),
+    source: {
+      ...pageContent.source,
+      url: sourceUrl,
+      ...(sourceSection ? { section: sourceSection } : {}),
     },
   }
 }

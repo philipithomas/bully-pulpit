@@ -26,6 +26,7 @@ import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { JsonLd } from '@/components/seo/json-ld'
 import { SpotifyEmbed } from '@/components/ui/spotify-embed'
 import { YouTubeEmbed } from '@/components/ui/youtube-embed'
+import { isPassageSelectableContent } from '@/lib/chat/selected-passage'
 import { getCollection, isCollectionSlug } from '@/lib/collections'
 import { siteConfig } from '@/lib/config'
 import {
@@ -510,6 +511,11 @@ export default async function SlugPage({ params }: Props) {
 
           {/* Content */}
           <div
+            data-bell-selectable={
+              isPassageSelectableContent(item.slug, post ? 'post' : 'page')
+                ? ''
+                : undefined
+            }
             className={`prose prose-xl max-w-2xl font-serif ${
               isTidbitsPost ? '' : 'mx-auto'
             }`}

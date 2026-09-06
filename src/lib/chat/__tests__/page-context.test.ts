@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   getPageContextContent,
+  getSelectedPassageContext,
   PAGE_CONTENT_MAX_CHARS,
   toPlaintext,
 } from '@/lib/chat/page-context'
+import { collectionEntryAnchor, getCollection } from '@/lib/collections'
 import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPageBySlug } from '@/lib/content/loader'
 
@@ -122,8 +124,302 @@ describe('getPageContextContent', () => {
   })
 })
 
+describe('getSelectedPassageContext', () => {
+  const quote =
+    'The site is a Next.js application with MDX content, statically generated at build time'
+
+  it('resolves the page, quote, and heading against canonical content', () => {
+    const pageContent = getPageContextContent('/colophon')
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'context',
+          text: ` ${quote}\n`,
+          path: '/colophon',
+          headingId: 'technical',
+        },
+        '/colophon',
+        pageContent
+      )
+    ).toEqual({
+      action: 'context',
+      text: quote,
+      path: '/colophon',
+      headingId: 'technical',
+      headingText: 'Technical',
+      source: {
+        type: 'page',
+        title: 'Colophon',
+        url: '/colophon#technical',
+        publishedAt: null,
+        newsletter: 'page',
+        section: 'Technical',
+      },
+    })
+  })
+
+  it('rejects spoofed paths, noncanonical quotes, and utility pages', () => {
+    const validRequest = {
+      action: 'explain',
+      text: quote,
+      path: '/colophon',
+      headingId: 'technical',
+    }
+    expect(
+      getSelectedPassageContext(
+        { ...validRequest, path: '/privacy' },
+        '/colophon',
+        getPageContextContent('/colophon')
+      )
+    ).toBeNull()
+    expect(
+      getSelectedPassageContext(
+        { ...validRequest, text: 'This fabricated quotation is long enough.' },
+        '/colophon',
+        getPageContextContent('/colophon')
+      )
+    ).toBeNull()
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'explain',
+          text: 'This Privacy Policy describes how your personal information',
+          path: '/privacy',
+        },
+        '/privacy',
+        getPageContextContent('/privacy')
+      )
+    ).toBeNull()
+  })
+
+  it('drops a spoofed heading while retaining valid page provenance', () => {
+    const context = getSelectedPassageContext(
+      {
+        action: 'explain',
+        text: quote,
+        path: '/colophon',
+        headingId: 'not-a-real-heading',
+      },
+      '/colophon',
+      getPageContextContent('/colophon')
+    )
+    expect(context?.headingId).toBeUndefined()
+    expect(context?.source.url).toBe('/colophon')
+    expect(context?.source.section).toBeUndefined()
+  })
+
+  it('drops a real but incorrect heading for the canonical quote', () => {
+    const context = getSelectedPassageContext(
+      {
+        action: 'explain',
+        text: quote,
+        path: '/colophon',
+        headingId: 'typographical',
+      },
+      '/colophon',
+      getPageContextContent('/colophon')
+    )
+    expect(context?.headingId).toBeUndefined()
+    expect(context?.source.url).toBe('/colophon')
+  })
+
+  it('matches escaped Markdown punctuation to rendered passage text', () => {
+    const path = '/how-to-host-web-apps-on-a-mac-mini'
+    const escapedQuote = '*(When I build this, the scripts will be in Github!)'
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'context',
+          text: escapedQuote,
+          path,
+          headingId: 'disaster-recovery',
+        },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({
+      text: escapedQuote,
+      headingId: 'disaster-recovery',
+      headingText: 'Disaster recovery',
+      source: {
+        url: `${path}#disaster-recovery`,
+        section: 'Disaster recovery',
+      },
+    })
+  })
+
+  it('matches rendered text selected across Markdown list items', () => {
+    const path = '/digital-quiet'
+    const listQuote =
+      'Elevate the threshold for initiating conversations, discouraging trivial interruptions. Promote well-considered, clear communication to reduce the need for follow-up clarifications.'
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'explain',
+          text: listQuote,
+          path,
+        },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({ text: listQuote, path })
+  })
+
+  it('matches rendered text selected across a Markdown thematic break', () => {
+    const path = '/software-in-the-ai-era'
+    const text =
+      'The impetus was a desire to add some new features to the site, and led to a reflection on how AI is changing the software industry. A few years ago, I spent the day in the test kitchen and fermentation lab at'
+
+    expect(
+      getSelectedPassageContext(
+        { action: 'context', text, path },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({
+      action: 'context',
+      text,
+      path,
+      source: {
+        type: 'post',
+        title: 'Software in the AI era',
+        url: path,
+      },
+    })
+  })
+
+  it('matches rendered text selected across Markdown blockquote lines', () => {
+    const path = '/the-next-iteration-of-contraption-company'
+    const blockquote =
+      'In most cases the recipe for doing great work is simply: work hard on excitingly ambitious projects, and something good will come of it. - Paul Graham in "How to Do Great Work"'
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'context',
+          text: blockquote,
+          path,
+        },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({ text: blockquote, path })
+  })
+
+  it('preserves a rendered heading nested inside a real blockquote', () => {
+    const path = '/chat-with-my-dog'
+    const text =
+      'Use OpenAI o3 model, pass the image in and ask OpenAI to generate a caption'
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'context',
+          text,
+          path,
+          headingId: 'data-ingestion',
+        },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({
+      text,
+      headingId: 'data-ingestion',
+      headingText: 'Data ingestion',
+      source: {
+        url: `${path}#data-ingestion`,
+        section: 'Data ingestion',
+      },
+    })
+  })
+
+  it.each([
+    {
+      path: '/2023-03',
+      text: 'One Contraption Co. client went from an idea to >$7m in seed funding within five weeks.',
+    },
+    {
+      path: '/2022-12',
+      text: 'Had >15k visitors on the first day and hundreds of signups',
+    },
+  ])('matches real rendered comparisons in $path', ({ path, text }) => {
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'explain',
+          text,
+          path,
+        },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({ text, path })
+  })
+
+  it('validates a selected collection entry before preserving its anchor', () => {
+    const path = '/diction'
+    const collection = getCollection('diction')
+    const entry = collection.entries.find(
+      (candidate) => candidate.term === 'Nut graf'
+    )
+    if (!entry) throw new Error('Expected the Nut graf entry')
+    const entryAnchor = collectionEntryAnchor(entry)
+    const request = {
+      action: 'context',
+      text: entry.definition,
+      path,
+      headingId: 'letter-n',
+      entryAnchor,
+    }
+
+    expect(
+      getSelectedPassageContext(request, path, getPageContextContent(path))
+    ).toMatchObject({
+      text: entry.definition,
+      entryAnchor,
+      source: {
+        type: 'page',
+        title: 'Diction',
+        url: '/diction#nut-graf',
+        publishedAt: null,
+        newsletter: 'page',
+        section: 'Nut graf',
+      },
+    })
+
+    const mismatchedEntry = getSelectedPassageContext(
+      { ...request, entryAnchor: 'lindy-effect' },
+      path,
+      getPageContextContent(path)
+    )
+    expect(mismatchedEntry?.entryAnchor).toBeUndefined()
+    expect(mismatchedEntry?.source.url).toBe('/diction')
+    expect(mismatchedEntry?.source.section).toBeUndefined()
+  })
+})
+
 describe('toPlaintext', () => {
+  it('preserves thematic breaks outside selection comparison', () => {
+    expect(toPlaintext('Before\n\n---\n\nAfter')).toBe('Before\n\n---\n\nAfter')
+  })
+
   it('unwraps escaped footnote links', () => {
     expect(toPlaintext('Great[\\[1\\]](#fn1)!')).toBe('Great[1]!')
+  })
+
+  it('preserves escaped Markdown punctuation as rendered text', () => {
+    expect(toPlaintext('A \\*literal star and \\_underscore.')).toBe(
+      'A *literal star and _underscore.'
+    )
+  })
+
+  it('does not let Markdown normalization reconstruct an HTML tag', () => {
+    const plaintext = toPlaintext('Visible prose <scr*ipt')
+    expect(plaintext.toLocaleLowerCase('en-US')).not.toContain('<script')
+    expect(plaintext).toBe('Visible prose script')
+  })
+
+  it('preserves standalone greater-than signs in rendered comparisons', () => {
+    expect(
+      toPlaintext('Funding was \\>$7m and launch traffic was \\>15k.')
+    ).toBe('Funding was >$7m and launch traffic was >15k.')
   })
 })

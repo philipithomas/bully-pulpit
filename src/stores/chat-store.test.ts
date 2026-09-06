@@ -9,6 +9,7 @@ import {
   vi,
 } from 'vitest'
 import { createBellChat } from '@/lib/chat/bell-chat'
+import { selectedPassageRequestOptions } from '@/lib/chat/selected-passage'
 import {
   isScriptedChatMessage,
   SUBSCRIBER_WELCOME_MESSAGE,
@@ -39,6 +40,93 @@ beforeEach(() => {
 })
 
 describe('Bell chat boundaries', () => {
+  it('waits for an explicit passage action before creating a fresh handoff', () => {
+    const previousId = useChatSidebar.getState().chatId
+    const request = {
+      action: 'context' as const,
+      text: 'This selected passage is long enough to ask Bell about.',
+      path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
+      headingId: 'technical-details',
+    }
+
+    expect(useChatSidebar.getState().activePassageRequest).toBeNull()
+    expect(useChatSidebar.getState().open).toBe(false)
+
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const handoff = useChatSidebar.getState()
+    expect(handoff.open).toBe(true)
+    expect(handoff.entrySource).toBe('passage')
+    expect(handoff.chatId).not.toBe(previousId)
+    expect(handoff.initialQuery).toContain('Give me the surrounding context')
+    expect(handoff.initialQuery).toContain(request.text)
+    expect(handoff.activePassageRequest).toEqual(request)
+
+    handoff.consumeInitialQuery(handoff.chatId)
+    expect(useChatSidebar.getState().initialQuery).toBe('')
+    expect(useChatSidebar.getState().activePassageRequest).toEqual(request)
+
+    handoff.clearPassageRequest()
+    expect(useChatSidebar.getState().activePassageRequest).toBeNull()
+  })
+
+  it('preserves a consumed passage request when reopening the same thread', () => {
+    const request = {
+      action: 'explain' as const,
+      text: 'This failed passage request remains available for a retry.',
+      path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
+      headingId: 'technical-details',
+    }
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const passageChatId = useChatSidebar.getState().chatId
+    useChatSidebar.getState().consumeInitialQuery(passageChatId)
+    useChatSidebar.getState().closeSidebar()
+
+    useChatSidebar.getState().openSidebar()
+
+    const reopened = useChatSidebar.getState()
+    expect(reopened.open).toBe(true)
+    expect(reopened.chatId).toBe(passageChatId)
+    expect(reopened.initialQuery).toBe('')
+    expect(reopened.activePassageRequest).toEqual(request)
+    expect(
+      selectedPassageRequestOptions(reopened.activePassageRequest)
+    ).toEqual({
+      body: {
+        selectedPassage: request,
+        pageContext: {
+          path: request.path,
+          title: request.pageTitle,
+        },
+      },
+    })
+
+    reopened.openSidebar('A new search question')
+    expect(useChatSidebar.getState().chatId).not.toBe(passageChatId)
+    expect(useChatSidebar.getState().activePassageRequest).toBeNull()
+  })
+
+  it('preserves an unsent passage query when reopening the same thread', () => {
+    const request = {
+      action: 'context' as const,
+      text: 'This queued passage remains available when Bell reopens.',
+      path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
+      headingId: 'technical-details',
+    }
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const queued = useChatSidebar.getState()
+
+    queued.closeSidebar()
+    queued.openSidebar()
+
+    const reopened = useChatSidebar.getState()
+    expect(reopened.chatId).toBe(queued.chatId)
+    expect(reopened.initialQuery).toContain(request.text)
+    expect(reopened.activePassageRequest).toEqual(request)
+  })
+
   it('starts every search handoff with a fresh durable conversation', () => {
     const previousId = useChatSidebar.getState().chatId
     useChatSidebar.setState({
@@ -182,6 +270,72 @@ describe('Bell chat boundaries', () => {
     ).toBe(true)
     expect(useChatSidebar.getState().chatId).not.toBe(switchedId)
     expect(useChatSidebar.getState().savedMessages).toEqual([])
+  })
+
+  it('preserves a pending passage request through identity rotation', () => {
+    useChatSidebar.getState().syncConversationIdentity('subscriber:reader-a')
+    const request = {
+      action: 'connect' as const,
+      text: 'This selected passage remains canonically grounded after login.',
+      path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
+      headingId: 'technical-details',
+    }
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const passageChatId = useChatSidebar.getState().chatId
+
+    expect(
+      useChatSidebar.getState().syncConversationIdentity('subscriber:reader-b')
+    ).toBe(true)
+
+    const rotated = useChatSidebar.getState()
+    expect(rotated.chatId).not.toBe(passageChatId)
+    expect(rotated.initialQuery).toContain(request.text)
+    expect(rotated.activePassageRequest).toEqual(request)
+  })
+
+  it('requeues a consumed passage request when identity rotation interrupts it', () => {
+    useChatSidebar.getState().syncConversationIdentity('subscriber:reader-a')
+    const request = {
+      action: 'explain' as const,
+      text: 'This consumed passage remains canonically grounded after login.',
+      path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
+      headingId: 'technical-details',
+    }
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const passageChatId = useChatSidebar.getState().chatId
+    useChatSidebar.getState().consumeInitialQuery(passageChatId)
+    expect(useChatSidebar.getState().initialQuery).toBe('')
+
+    expect(
+      useChatSidebar.getState().syncConversationIdentity('subscriber:reader-b')
+    ).toBe(true)
+
+    const rotated = useChatSidebar.getState()
+    expect(rotated.chatId).not.toBe(passageChatId)
+    expect(rotated.initialQuery).toContain('Explain this selected passage')
+    expect(rotated.initialQuery).toContain(request.text)
+    expect(rotated.activePassageRequest).toEqual(request)
+  })
+
+  it('does not requeue a consumed passage after its panel closes', () => {
+    useChatSidebar.getState().syncConversationIdentity('subscriber:reader-a')
+    const request = {
+      action: 'context' as const,
+      text: 'This closed passage should not reopen after an identity change.',
+      path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
+    }
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const passageChatId = useChatSidebar.getState().chatId
+    useChatSidebar.getState().consumeInitialQuery(passageChatId)
+    useChatSidebar.getState().closeSidebar()
+
+    expect(
+      useChatSidebar.getState().syncConversationIdentity('subscriber:reader-b')
+    ).toBe(true)
+    expect(useChatSidebar.getState().initialQuery).toBe('')
   })
 
   it('opens a fresh thread with a local assistant welcome and no query', () => {

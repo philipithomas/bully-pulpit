@@ -1,6 +1,10 @@
 import type { UIMessage } from 'ai'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
+import {
+  type SelectedPassageRequest,
+  selectedPassageUserMessage,
+} from '@/lib/chat/selected-passage'
 
 export const SUBSCRIBER_WELCOME_MESSAGE =
   'Thanks for subscribing. I am the AI research assistant for this site. Try asking me about the archive anytime.'
@@ -41,9 +45,12 @@ interface ChatSidebarState {
   hasOpened: boolean
   pinned: boolean
   initialQuery: string
-  entrySource: 'header' | 'search' | 'onboarding' | 'explore'
+  entrySource: 'header' | 'search' | 'onboarding' | 'explore' | 'passage'
   savedMessages: UIMessage[]
   pendingLocalMessage: UIMessage | null
+  // Kept for retries of the selected-passage turn, then cleared when the
+  // visitor starts another turn. It is never written to sessionStorage.
+  activePassageRequest: SelectedPassageRequest | null
   // The mounted AI SDK Chat instance must be stopped before an action rotates
   // chatId. This callback is runtime-only and deliberately not persisted.
   activeChatStop: (() => void) | null
@@ -56,6 +63,7 @@ interface ChatSidebarState {
     query?: string,
     options?: { entrySource?: 'header' | 'explore' }
   ) => void
+  openSidebarWithPassage: (request: SelectedPassageRequest) => void
   openSidebarWithLocalMessage: (
     message: string,
     options: {
@@ -69,6 +77,7 @@ interface ChatSidebarState {
   setActiveChatStop: (stop: (() => void) | null) => void
   saveMessages: (chatId: string, messages: UIMessage[]) => void
   clearMessages: () => void
+  clearPassageRequest: () => void
   consumePendingLocalMessage: (chatId: string) => void
   consumeInitialQuery: (chatId: string) => void
   syncConversationIdentity: (identity: string) => boolean
@@ -95,6 +104,7 @@ export const useChatSidebar = create<ChatSidebarState>()(
       entrySource: 'header',
       savedMessages: [],
       pendingLocalMessage: null,
+      activePassageRequest: null,
       activeChatStop: null,
       chatId: generateChatId(),
       conversationIdentity: null,
@@ -106,20 +116,42 @@ export const useChatSidebar = create<ChatSidebarState>()(
         set({
           open: true,
           hasOpened: true,
-          initialQuery: query ?? '',
           entrySource: searchHandoff
             ? 'search'
             : (options?.entrySource ?? 'header'),
+          // A query-less open resumes the existing conversation. Preserve a
+          // passage/search handoff that was closed before its send timer ran.
+          ...(query === undefined ? {} : { initialQuery: query }),
           // Asking Bell from search deliberately presents a fresh thread.
           // Rotate the durable ID and clear both persisted and in-memory
           // history before the handoff can send its first message.
           ...(searchHandoff
             ? {
+                activePassageRequest: null,
                 savedMessages: [],
                 pendingLocalMessage: null,
                 chatId: generateChatId(),
               }
             : {}),
+        })
+      },
+      openSidebarWithPassage: (request) => {
+        // A passage question always starts a fresh, page-bound thread. Stop
+        // any superseded stream before rotating the Chat instance.
+        get().activeChatStop?.()
+        set({
+          open: true,
+          hasOpened: true,
+          pinned: false,
+          initialQuery: selectedPassageUserMessage(
+            request.action,
+            request.text
+          ),
+          entrySource: 'passage',
+          savedMessages: [],
+          pendingLocalMessage: null,
+          activePassageRequest: request,
+          chatId: generateChatId(),
         })
       },
       openSidebarWithLocalMessage: (message, options) => {
@@ -142,6 +174,7 @@ export const useChatSidebar = create<ChatSidebarState>()(
           chatId: generateChatId(),
           savedMessages: [localMessage],
           pendingLocalMessage: localMessage,
+          activePassageRequest: null,
           conversationIdentity: options.conversationIdentity,
         })
       },
@@ -159,25 +192,42 @@ export const useChatSidebar = create<ChatSidebarState>()(
           initialQuery: '',
           entrySource: 'header',
           pendingLocalMessage: null,
+          activePassageRequest: null,
         }),
+      clearPassageRequest: () => set({ activePassageRequest: null }),
       consumePendingLocalMessage: (chatId: string) => {
         if (get().chatId === chatId) set({ pendingLocalMessage: null })
       },
       consumeInitialQuery: (chatId: string) => {
-        if (get().chatId === chatId) set({ initialQuery: '' })
+        if (get().chatId === chatId) {
+          set({ initialQuery: '' })
+        }
       },
       syncConversationIdentity: (identity: string) => {
-        const previous = get().conversationIdentity
+        const state = get()
+        const previous = state.conversationIdentity
         if (previous === identity) return false
         if (previous === null) {
           set({ conversationIdentity: identity })
           return false
         }
+        const passageRequest = state.open ? state.activePassageRequest : null
         set({
           conversationIdentity: identity,
           savedMessages: [],
           pendingLocalMessage: null,
           chatId: generateChatId(),
+          ...(passageRequest
+            ? {
+                // The old Chat instance may already have consumed its query
+                // before auth hydration interrupts the request. Requeue the
+                // same canonically grounded passage for the rotated instance.
+                initialQuery: selectedPassageUserMessage(
+                  passageRequest.action,
+                  passageRequest.text
+                ),
+              }
+            : {}),
         })
         return true
       },
@@ -212,6 +262,7 @@ export const useChatSidebar = create<ChatSidebarState>()(
           chatId: generateChatId(),
           savedMessages: [],
           pendingLocalMessage: null,
+          activePassageRequest: null,
           conversationIdentity: null,
         }
       },
