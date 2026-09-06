@@ -29,6 +29,8 @@ describe('CollectionIndex', () => {
     expect(html).toContain('id="gavage"')
     expect(html).toContain('id="chockablock"')
     expect(html).toContain('lg:grid-cols-2')
+    expect(html).not.toContain('border-t')
+    expect(html).not.toContain('border-y')
   })
 
   it('renders durable entry links and preserved reference markup', () => {

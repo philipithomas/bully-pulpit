@@ -27,10 +27,7 @@ function CollectionEntryRow({ entry }: { entry: CollectionEntry }) {
   const anchor = collectionEntryAnchor(entry)
 
   return (
-    <div
-      id={anchor}
-      className="scroll-mt-6 border-gray-200 border-t pt-4 first:border-t-0 first:pt-0"
-    >
+    <div id={anchor} className="scroll-mt-6">
       <dt className="font-sans font-semibold text-gray-950 text-lg leading-snug tracking-tight">
         <a
           href={`#${anchor}`}
@@ -97,7 +94,7 @@ export function CollectionIndex({
 
   return (
     <div className="mt-10 md:mt-14">
-      <div className="border-gray-300 border-y py-5">
+      <div className="py-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="w-full max-w-xl">
             <label
