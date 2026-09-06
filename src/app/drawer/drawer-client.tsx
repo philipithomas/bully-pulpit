@@ -10,6 +10,7 @@ import {
   useId,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from 'react'
 import {
   drawerDateReplacementHref,
@@ -36,6 +37,10 @@ const categoryLabels: Record<DrawerCategory, string> = {
   contraption: 'Contraptions',
   blogroll: 'Elsewhere',
 }
+
+const subscribeToHydration = () => () => {}
+const isHydrated = () => true
+const isServerRendered = () => false
 
 function ItemLink({
   item,
@@ -132,9 +137,14 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const dateHeadingId = useId()
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    isHydrated,
+    isServerRendered
+  )
   const [today, setToday] = useState(() => utcIsoDate(new Date()))
   const earliestDate = catalog.earliestDate ?? MIN_DRAWER_DATE
-  const requestedDate = searchParams.get('date')
+  const requestedDate = hydrated ? searchParams.get('date') : null
   const date = resolveDrawerDate(requestedDate, today, earliestDate)
   const selection = useMemo(() => selectDrawer(catalog, date), [catalog, date])
   const canGoPrevious = date > earliestDate
