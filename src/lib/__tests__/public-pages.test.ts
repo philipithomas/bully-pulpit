@@ -61,6 +61,16 @@ describe('public app page registry', () => {
     )
   })
 
+  it('excludes the retired discovery directories from search, Bell, and sitemaps', () => {
+    for (const path of ['/drawer', '/explore']) {
+      expect(findPublicAppPage(path)).toBeNull()
+      expect(getPageText(path)).toContain('No page exists')
+    }
+    const sitemapText = findPublicAppPage('/sitemap')?.bellText()
+    expect(sitemapText).not.toContain('(/drawer)')
+    expect(sitemapText).not.toContain('(/explore)')
+  })
+
   it('gives every registered page searchable and Bell-readable text', () => {
     for (const page of publicAppPages) {
       expect(page.searchText.trim().length).toBeGreaterThan(20)

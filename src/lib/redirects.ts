@@ -42,6 +42,9 @@ type Redirect = {
 
 export function getRedirects(): Redirect[] {
   return [
+    // Discovery now belongs on the homepage; retain old shared links.
+    { source: '/explore', destination: '/', permanent: true },
+    { source: '/drawer', destination: '/', permanent: true },
     // Admin panel renamed to the Printing Press (temporary: private path, no SEO,
     // and avoids browsers hard-caching the redirect if it ever moves again).
     { source: '/admin', destination: '/printing-press', permanent: false },

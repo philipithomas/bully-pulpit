@@ -25,10 +25,10 @@ export default function NotFound() {
             <ArrowRight className="ml-2" size={16} />
           </Link>
           <Link
-            href="/drawer"
+            href="/photography"
             className="no-underline font-sans text-sm text-white/60 hover:text-white transition-colors duration-300 inline-flex items-center"
           >
-            <span>Open Drawer</span>
+            <span>Browse photography</span>
             <ArrowRight className="ml-2" size={16} />
           </Link>
         </div>
