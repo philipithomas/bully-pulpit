@@ -69,6 +69,7 @@ export async function POST(request: Request): Promise<Response> {
   return twimlResponse(
     phoneKeypadTwiml(form, {
       bellUnavailable: dialCallStatus !== 'completed',
+      requestUrl: request.url,
     })
   )
 }

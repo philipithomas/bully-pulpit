@@ -18,13 +18,14 @@ import {
   phoneBellLiveConfigured,
   rejectBellLiveCall,
   startBellLiveGreeting,
-  verifiedBellLiveSipCallSid,
+  verifiedBellLiveSipMetadata,
 } from '@/lib/phone/bell-live'
 import {
   type BellLiveActionHandler,
   createBellLiveActionHandler,
 } from '@/lib/phone/bell-live-actions'
 import { sendBellLiveTranscriptNotification } from '@/lib/phone/notifications'
+import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -295,6 +296,7 @@ async function runBellLiveGreeting(input: {
   callId: string
   logContext: Record<string, unknown>
   twilioCallSid: string
+  metadata: TwilioWebhookMetadata
 }): Promise<void> {
   const { callId, logContext: baseLogContext, twilioCallSid } = input
   const logContext = { ...baseLogContext, callSid: twilioCallSid }
@@ -363,7 +365,7 @@ async function runBellLiveGreeting(input: {
       logContext,
       onGreetingConsumed: checkpointGreeting,
       onLifecycleEvent: (event) => logBellLiveLifecycle(event, logContext),
-      actions: createBellLiveActionHandler(twilioCallSid),
+      actions: createBellLiveActionHandler(twilioCallSid, input.metadata),
     })
     if (!greeting.responseCheckpointed) {
       console.error('[openai/realtime-call]', {
@@ -513,8 +515,9 @@ export async function POST(request: Request): Promise<Response> {
   if (!incoming) {
     return response(400)
   }
-  const twilioCallSid = verifiedBellLiveSipCallSid(incoming.sipHeaders)
-  if (!twilioCallSid) {
+  const metadata = verifiedBellLiveSipMetadata(incoming.sipHeaders)
+  const twilioCallSid = metadata?.callSid
+  if (!metadata || !twilioCallSid) {
     try {
       const result = await rejectBellLiveCall(incoming.callId)
       console.info('[openai/realtime-call]', {
@@ -558,6 +561,7 @@ export async function POST(request: Request): Promise<Response> {
           callId: incoming.callId,
           logContext,
           twilioCallSid,
+          metadata,
         })
       } catch {
         console.error('[openai/realtime-call]', {

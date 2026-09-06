@@ -39,6 +39,96 @@ const NANP_AREA_CODES: Record<string, string> = {
   '929': 'New York City, NY',
 }
 
+// Only short caller-name/location hints cross the SIP handoff. Full telephone
+// numbers and message IDs are deliberately absent; the invitation binds CallSid.
+const HANDOFF_METADATA_FIELDS = [
+  ['n', 'callerName', 96],
+  ['c', 'fromCity', 96],
+  ['s', 'fromState', 32],
+  ['z', 'fromZip', 16],
+  ['o', 'fromCountry', 8],
+  ['a', 'areaCode', 3],
+] as const
+const HANDOFF_METADATA_MAX_LENGTH = 600
+const HANDOFF_METADATA_QUERY_PARAM = 'phoneMetadata'
+
+function boundedHandoffValue(value: unknown, byteLimit: number): string {
+  if (typeof value !== 'string') return ''
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: remove control characters from SIP metadata
+  const clean = value.replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
+  let result = ''
+  for (const character of clean) {
+    if (Buffer.byteLength(result + character, 'utf8') > byteLimit) break
+    result += character
+  }
+  return result.trim()
+}
+
+/** Encodes a bounded allowlist; it must be authenticated by the SIP invitation. */
+export function encodePhoneHandoffMetadata(
+  metadata?: TwilioWebhookMetadata | null
+): string | undefined {
+  if (!metadata) return undefined
+  const values: Record<string, string> = {}
+  for (const [key, field, byteLimit] of HANDOFF_METADATA_FIELDS) {
+    const value = boundedHandoffValue(metadata[field], byteLimit)
+    if (value && (field !== 'areaCode' || /^\d{3}$/.test(value))) {
+      values[key] = value
+    }
+  }
+  if (Object.keys(values).length === 0) return undefined
+  const encoded = Buffer.from(JSON.stringify(values), 'utf8').toString(
+    'base64url'
+  )
+  return encoded.length <= HANDOFF_METADATA_MAX_LENGTH ? encoded : undefined
+}
+
+/** Decodes only the allowlisted transport shape, after its HMAC is verified. */
+export function decodePhoneHandoffMetadata(
+  encoded: string
+): TwilioWebhookMetadata | null {
+  if (
+    encoded.length === 0 ||
+    encoded.length > HANDOFF_METADATA_MAX_LENGTH ||
+    !/^[A-Za-z0-9_-]+$/.test(encoded)
+  ) {
+    return null
+  }
+  try {
+    const decoded = Buffer.from(encoded, 'base64url')
+    if (decoded.toString('base64url') !== encoded) return null
+    const values: unknown = JSON.parse(decoded.toString('utf8'))
+    if (!values || typeof values !== 'object' || Array.isArray(values)) {
+      return null
+    }
+    const allowedKeys = new Set<string>(
+      HANDOFF_METADATA_FIELDS.map(([key]) => key)
+    )
+    if (Object.keys(values).some((key) => !allowedKeys.has(key))) return null
+
+    const metadata: TwilioWebhookMetadata = {}
+    for (const [key, field, byteLimit] of HANDOFF_METADATA_FIELDS) {
+      if (!Object.hasOwn(values, key)) continue
+      const value = (values as Record<string, unknown>)[key]
+      if (
+        typeof value !== 'string' ||
+        !value ||
+        boundedHandoffValue(value, byteLimit) !== value ||
+        (field === 'areaCode' && !/^\d{3}$/.test(value))
+      ) {
+        return null
+      }
+      metadata[field] = value
+    }
+    if (metadata.areaCode) {
+      metadata.areaDescription = NANP_AREA_CODES[metadata.areaCode] ?? null
+    }
+    return metadata
+  } catch {
+    return null
+  }
+}
+
 type TwilioValueSource = Pick<FormData, 'get'> | Pick<URLSearchParams, 'get'>
 
 function sourceValue(source: TwilioValueSource, key: string): string | null {
@@ -100,6 +190,41 @@ export function twilioWebhookMetadataFromForm(
   phoneNumber: string
 ): TwilioWebhookMetadata {
   return twilioWebhookMetadataFromSource(form, phoneNumber)
+}
+
+/**
+ * Call only after validatedPhoneWebhookForm authenticates the exact request URL.
+ * A signed callback carries the original hints; current Twilio fields win when
+ * present. Primary From/To identity must still come from the signed form itself.
+ */
+export function twilioWebhookMetadataFromSignedRequest(
+  form: FormData,
+  requestUrl: string,
+  phoneNumber: string
+): TwilioWebhookMetadata {
+  const encoded = new URL(requestUrl).searchParams.get(
+    HANDOFF_METADATA_QUERY_PARAM
+  )
+  const original = encoded ? decodePhoneHandoffMetadata(encoded) : null
+  const current = twilioWebhookMetadataFromForm(form, phoneNumber)
+  if (!original) return current
+  return {
+    ...original,
+    ...Object.fromEntries(
+      Object.entries(current).filter(([, value]) => value != null)
+    ),
+  }
+}
+
+/** Twilio's signature on its later request authenticates this bounded payload. */
+export function phoneHandoffCallbackUrl(
+  callbackUrl: string,
+  metadata?: TwilioWebhookMetadata | null
+): string {
+  const url = new URL(callbackUrl)
+  const encoded = encodePhoneHandoffMetadata(metadata)
+  if (encoded) url.searchParams.set(HANDOFF_METADATA_QUERY_PARAM, encoded)
+  return url.toString()
 }
 
 export function twilioWebhookMetadataFromSearchParams(

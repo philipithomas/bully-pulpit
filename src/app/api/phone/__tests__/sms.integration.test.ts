@@ -1032,7 +1032,7 @@ describe('POST /api/phone/voice-menu', () => {
     expect(xml).not.toContain('<Play>')
     expect(xml).not.toContain('transcrib')
     expect(xml).toContain(
-      '<Dial action="https://www.philipithomas.com/api/phone/bell-complete"'
+      '<Dial action="https://www.philipithomas.com/api/phone/bell-complete?phoneMetadata='
     )
     expect(xml).toContain(
       '<Sip>sip:proj_test123@sip.api.openai.com;transport=tls?'

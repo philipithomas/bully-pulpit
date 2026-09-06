@@ -1,13 +1,21 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import OpenAI from 'openai'
 import { OpenAIRealtimeWS } from 'openai/realtime/ws'
-import type { BellLiveActionHandler } from '@/lib/phone/bell-live-actions'
+import type {
+  BellLiveActionHandler,
+  BellLiveActionResult,
+} from '@/lib/phone/bell-live-actions'
 import { phoneBellInitialGreeting } from '@/lib/phone/bell-live-greeting'
 import {
   BellLiveTranscriptCollector,
   type BellLiveTranscriptTurn,
 } from '@/lib/phone/bell-live-transcript'
 import { twilioSecret } from '@/lib/phone/config'
+import {
+  decodePhoneHandoffMetadata,
+  encodePhoneHandoffMetadata,
+  type TwilioWebhookMetadata,
+} from '@/lib/phone/webhook-metadata'
 import { siteIdentity } from '@/lib/site-identity'
 
 export const PHONE_BELL_REALTIME_DEFAULT_MODEL_ID = 'gpt-realtime-2.1'
@@ -31,13 +39,16 @@ const OPENAI_ERROR_TEXT_MAX_CHARS = 240
 const SIP_INVITATION_TTL_SECONDS = 5 * 60
 const SIP_INVITATION_CLOCK_SKEW_SECONDS = 30
 const SIP_INVITATION_SIGNING_CONTEXT = 'phone-bell-realtime-sip-v1'
+const SIP_INVITATION_METADATA_SIGNING_CONTEXT = 'phone-bell-realtime-sip-v2'
 const SIP_PROJECT_ID_PATTERN = /^proj_[A-Za-z0-9_-]{3,128}$/
 const TWILIO_CALL_SID_PATTERN = /^CA[A-Za-z0-9]{3,64}$/
 const OPENAI_CALL_ID_PATTERN = /^[A-Za-z0-9_-]{3,160}$/
 const SIP_HEADER_CALL_SID = 'x-bp-call-sid'
 const SIP_HEADER_EXPIRES_AT = 'x-bp-expires-at'
 const SIP_HEADER_TOKEN = 'x-bp-token'
+const SIP_HEADER_METADATA = 'x-bp-metadata'
 const SIP_URI_MAX_LENGTH = 255
+const SIP_HEADERS_MAX_LENGTH = 1024
 
 const PHONE_BELL_REALTIME_MODELS = new Set([
   PHONE_BELL_REALTIME_DEFAULT_MODEL_ID,
@@ -74,15 +85,21 @@ export function phoneBellLiveConfigured(): boolean {
 function invitationSignature(
   callSid: string,
   expiresAt: number,
-  secret: string
+  secret: string,
+  metadata?: string
 ): Buffer {
-  return createHmac('sha256', secret)
-    .update(SIP_INVITATION_SIGNING_CONTEXT)
+  const signature = createHmac('sha256', secret)
+    .update(
+      metadata === undefined
+        ? SIP_INVITATION_SIGNING_CONTEXT
+        : SIP_INVITATION_METADATA_SIGNING_CONTEXT
+    )
     .update('\0')
     .update(callSid)
     .update('\0')
     .update(String(expiresAt))
-    .digest()
+  if (metadata !== undefined) signature.update('\0').update(metadata)
+  return signature.digest()
 }
 
 /**
@@ -92,7 +109,8 @@ function invitationSignature(
  */
 export function bellLiveSipUri(
   callSid: string,
-  now = new Date()
+  now = new Date(),
+  metadata?: TwilioWebhookMetadata
 ): string | null {
   const projectId = configuredProjectId()
   const secret = twilioSecret()
@@ -107,16 +125,27 @@ export function bellLiveSipUri(
 
   const expiresAt =
     Math.floor(now.getTime() / 1_000) + SIP_INVITATION_TTL_SECONDS
-  const token = invitationSignature(callSid, expiresAt, secret).toString(
-    'base64url'
-  )
+  const encodedMetadata = encodePhoneHandoffMetadata(metadata)
+  const token = invitationSignature(
+    callSid,
+    expiresAt,
+    secret,
+    encodedMetadata
+  ).toString('base64url')
   const query = new URLSearchParams({
     [SIP_HEADER_CALL_SID]: callSid,
     [SIP_HEADER_EXPIRES_AT]: String(expiresAt),
     [SIP_HEADER_TOKEN]: token,
   })
-  const uri = `sip:${projectId}@sip.api.openai.com;transport=tls?${query.toString()}`
-  return uri.length <= SIP_URI_MAX_LENGTH ? uri : null
+  if (encodedMetadata) query.set(SIP_HEADER_METADATA, encodedMetadata)
+  const address = `sip:${projectId}@sip.api.openai.com;transport=tls`
+  const headers = query.toString()
+  // Twilio bounds the SIP address and appended custom headers separately:
+  // https://www.twilio.com/docs/voice/twiml/sip#custom-headers
+  return address.length < SIP_URI_MAX_LENGTH &&
+    headers.length < SIP_HEADERS_MAX_LENGTH
+    ? `${address}?${headers}`
+    : null
 }
 
 function uniqueSipHeaders(
@@ -128,7 +157,8 @@ function uniqueSipHeaders(
     if (
       name !== SIP_HEADER_CALL_SID &&
       name !== SIP_HEADER_EXPIRES_AT &&
-      name !== SIP_HEADER_TOKEN
+      name !== SIP_HEADER_TOKEN &&
+      name !== SIP_HEADER_METADATA
     ) {
       continue
     }
@@ -138,11 +168,11 @@ function uniqueSipHeaders(
   return result
 }
 
-/** Returns the signed Twilio call SID when an OpenAI SIP invitation is valid. */
-export function verifiedBellLiveSipCallSid(
+/** Returns only metadata authenticated by this call's SIP invitation. */
+export function verifiedBellLiveSipMetadata(
   headers: readonly OpenAiSipHeader[],
   now = new Date()
-): string | null {
+): TwilioWebhookMetadata | null {
   const secret = twilioSecret()
   const normalized = uniqueSipHeaders(headers)
   if (!secret || !normalized) return null
@@ -150,6 +180,7 @@ export function verifiedBellLiveSipCallSid(
   const callSid = normalized.get(SIP_HEADER_CALL_SID) ?? ''
   const rawExpiresAt = normalized.get(SIP_HEADER_EXPIRES_AT) ?? ''
   const suppliedToken = normalized.get(SIP_HEADER_TOKEN) ?? ''
+  const encodedMetadata = normalized.get(SIP_HEADER_METADATA)
   if (
     !TWILIO_CALL_SID_PATTERN.test(callSid) ||
     !/^\d{10}$/.test(rawExpiresAt) ||
@@ -172,11 +203,31 @@ export function verifiedBellLiveSipCallSid(
   }
 
   const supplied = Buffer.from(suppliedToken, 'base64url')
-  const expected = invitationSignature(callSid, expiresAt, secret)
-  return supplied.length === expected.length &&
-    timingSafeEqual(supplied, expected)
-    ? callSid
-    : null
+  const expected = invitationSignature(
+    callSid,
+    expiresAt,
+    secret,
+    encodedMetadata
+  )
+  if (
+    supplied.length !== expected.length ||
+    !timingSafeEqual(supplied, expected)
+  ) {
+    return null
+  }
+  const metadata =
+    encodedMetadata === undefined
+      ? {}
+      : decodePhoneHandoffMetadata(encodedMetadata)
+  return metadata ? { ...metadata, callSid } : null
+}
+
+/** Returns the signed Twilio call SID when an OpenAI SIP invitation is valid. */
+export function verifiedBellLiveSipCallSid(
+  headers: readonly OpenAiSipHeader[],
+  now = new Date()
+): string | null {
+  return verifiedBellLiveSipMetadata(headers, now)?.callSid ?? null
 }
 
 /** Verifies that an incoming OpenAI SIP leg was minted by our Twilio menu. */
@@ -889,6 +940,74 @@ export async function startBellLiveGreeting(
     const actionCallIds = new Set<string>()
     let actionQueue = Promise.resolve()
     const pendingActionResponses = new Set<string>()
+    let subscriptionDisclosure: {
+      id: string
+      sourceResponseId: string
+      callerTurn: number
+      text: string
+      requested: boolean
+      responseId: string | null
+      audioStarted: boolean
+      audioFinished: boolean
+      responseCompleted: boolean
+    } | null = null
+    const cancelSubscriptionDisclosure = (): void => {
+      if (!subscriptionDisclosure) return
+      options.actions?.cancelSubscriptionDisclosure(
+        subscriptionDisclosure.callerTurn
+      )
+      subscriptionDisclosure = null
+    }
+    const finishSubscriptionDisclosure = (): void => {
+      const disclosure = subscriptionDisclosure
+      if (
+        !disclosure?.audioStarted ||
+        !disclosure.audioFinished ||
+        !disclosure.responseCompleted
+      )
+        return
+      if (
+        !conversationSettled &&
+        disclosure.callerTurn === callerSpeechGeneration
+      ) {
+        options.actions?.markSubscriptionDisclosureDelivered(
+          disclosure.callerTurn
+        )
+        subscriptionDisclosure = null
+      } else {
+        cancelSubscriptionDisclosure()
+      }
+    }
+    const requestSubscriptionDisclosure = (
+      sourceResponseId: string
+    ): boolean => {
+      const disclosure = subscriptionDisclosure
+      if (!disclosure || disclosure.sourceResponseId !== sourceResponseId)
+        return false
+      if (disclosure.requested) return true
+      if (
+        conversationSettled ||
+        disclosure.callerTurn !== callerSpeechGeneration
+      ) {
+        cancelSubscriptionDisclosure()
+        return false
+      }
+      disclosure.requested = true
+      connection.send({
+        type: 'response.create',
+        response: {
+          instructions: `Read this subscription disclosure exactly, without additions or paraphrasing, then wait for the caller's answer: ${disclosure.text}`,
+          metadata: {
+            purpose: 'bell_subscription_disclosure',
+            disclosure_id: disclosure.id,
+          },
+          output_modalities: ['audio'],
+          tool_choice: 'none',
+          tools: [],
+        },
+      })
+      return true
+    }
     let resolveConversation: (result: BellLiveConversationResult) => void =
       () => undefined
     const conversation = new Promise<BellLiveConversationResult>((resolve) => {
@@ -906,7 +1025,7 @@ export async function startBellLiveGreeting(
       callerTurn: number,
       responseId: string
     ): void => {
-      if (!Array.isArray(output)) return
+      if (conversationSettled || !Array.isArray(output)) return
       const calls = output.filter((item) => {
         if (
           item?.type !== 'function_call' ||
@@ -931,7 +1050,7 @@ export async function startBellLiveGreeting(
               call.name === 'subscribe_caller'
                 ? call.name
                 : 'unknown'
-            let result = {
+            let result: BellLiveActionResult = {
               status: 'unavailable',
               message: 'Please press star to use the keypad options.',
             }
@@ -949,9 +1068,13 @@ export async function startBellLiveGreeting(
                 typeof call.arguments === 'string' &&
                 call.arguments.length <= 1_024
               ) {
+                const args = JSON.parse(call.arguments)
+                if (tool === 'subscribe_caller' && args?.confirmed === false) {
+                  cancelSubscriptionDisclosure()
+                }
                 result = await options.actions.execute(
                   tool,
-                  JSON.parse(call.arguments),
+                  args,
                   callerTurn,
                   () =>
                     !conversationSettled &&
@@ -979,6 +1102,19 @@ export async function startBellLiveGreeting(
               return
             }
             if (conversationSettled) return
+            if (result.disclosure && callerTurn === callerSpeechGeneration) {
+              subscriptionDisclosure = {
+                id: randomUUID(),
+                sourceResponseId: responseId,
+                callerTurn,
+                text: result.disclosure,
+                requested: false,
+                responseId: null,
+                audioStarted: false,
+                audioFinished: false,
+                responseCompleted: false,
+              }
+            }
             connection.send({
               type: 'conversation.item.create',
               item: {
@@ -998,6 +1134,7 @@ export async function startBellLiveGreeting(
             // A response can contain both archive and private tools. Wait for
             // both result paths, then request a single spoken continuation.
             if (maybeRequestToolContinuation(responseId) !== 'missing') return
+            if (requestSubscriptionDisclosure(responseId)) return
             connection.send({
               type: 'response.create',
               response: {
@@ -1017,6 +1154,7 @@ export async function startBellLiveGreeting(
     const requestToolContinuation = (
       pending: BellLivePendingToolContinuation
     ): boolean => {
+      if (conversationSettled) return false
       const observerErrorGenerationBeforeSend = observerErrorGeneration
       try {
         connection.send({
@@ -1101,6 +1239,7 @@ export async function startBellLiveGreeting(
         )
       if (!outputReady) return 'waiting'
       pendingToolContinuations.delete(responseId)
+      if (requestSubscriptionDisclosure(responseId)) return 'requested'
       return requestToolContinuation(pending) ? 'requested' : 'failed'
     }
     const finishMcpCall = (
@@ -1137,6 +1276,7 @@ export async function startBellLiveGreeting(
     const finishConversation = (observerCompleted: boolean): void => {
       if (conversationSettled) return
       conversationSettled = true
+      cancelSubscriptionDisclosure()
       if (observerTimeout) clearTimeout(observerTimeout)
       const now = Date.now()
       for (const discovery of mcpDiscoveries.values()) {
@@ -1346,6 +1486,7 @@ export async function startBellLiveGreeting(
     })
     connection.on('input_audio_buffer.speech_started', () => {
       callerSpeechGeneration += 1
+      cancelSubscriptionDisclosure()
       for (const responseId of pendingToolContinuations.keys()) {
         finishPendingToolContinuation(responseId, 'superseded')
       }
@@ -1449,7 +1590,15 @@ export async function startBellLiveGreeting(
     })
 
     connection.on('response.created', (event) => {
+      if (conversationSettled) return
       const purpose = event.response.metadata?.purpose
+      if (
+        subscriptionDisclosure?.requested &&
+        purpose === 'bell_subscription_disclosure' &&
+        event.response.metadata?.disclosure_id === subscriptionDisclosure.id
+      ) {
+        subscriptionDisclosure.responseId = event.response.id ?? null
+      }
       if (purpose !== PHONE_BELL_GREETING_PURPOSE) {
         if (event.response.id) {
           for (const pendingResponseId of pendingToolContinuations.keys()) {
@@ -1512,6 +1661,9 @@ export async function startBellLiveGreeting(
         })
     }
     connection.on('output_audio_buffer.started', (event) => {
+      if (subscriptionDisclosure?.responseId === event.response_id) {
+        subscriptionDisclosure.audioStarted = true
+      }
       const responsePurpose = responsePurposes.get(event.response_id)
       if (responsePurpose) {
         const toolCompletedBeforeStart =
@@ -1549,8 +1701,17 @@ export async function startBellLiveGreeting(
       audioBufferFinished = true
       finishCompletedIfReady()
     }
-    connection.on('output_audio_buffer.stopped', markAudioBufferFinished)
+    connection.on('output_audio_buffer.stopped', (event) => {
+      if (subscriptionDisclosure?.responseId === event.response_id) {
+        subscriptionDisclosure.audioFinished = true
+        finishSubscriptionDisclosure()
+      }
+      markAudioBufferFinished(event)
+    })
     connection.on('output_audio_buffer.cleared', (event) => {
+      if (subscriptionDisclosure?.responseId === event.response_id) {
+        cancelSubscriptionDisclosure()
+      }
       if (
         event.response_id === greetingResponseId &&
         callerSpeechGeneration > 0
@@ -1561,6 +1722,18 @@ export async function startBellLiveGreeting(
       markAudioBufferFinished(event)
     })
     connection.on('response.done', (event) => {
+      if (conversationSettled) return
+      if (
+        subscriptionDisclosure &&
+        subscriptionDisclosure.responseId === event.response.id
+      ) {
+        if (event.response.status === 'completed') {
+          subscriptionDisclosure.responseCompleted = true
+          finishSubscriptionDisclosure()
+        } else {
+          cancelSubscriptionDisclosure()
+        }
+      }
       if (event.response.status !== 'completed' && event.response.id) {
         transcript.markBellResponseIncomplete(event.response.id)
       }
@@ -1745,7 +1918,7 @@ export async function startBellLiveGreeting(
         reason: error.error ? 'provider_error' : 'socket_error',
         socketHttpStatus,
       })
-      if (settled && !error.error) {
+      if (settled) {
         finishConversation(false)
         connection.close()
       }

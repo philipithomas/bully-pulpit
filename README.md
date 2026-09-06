@@ -71,8 +71,9 @@ With `OPENAI_API_KEY`, `OPENAI_PROJECT_ID`, and `OPENAI_WEBHOOK_SECRET`
 configured, calls connect directly to Bell AI. It opens with a short New York
 local greeting, such as “Good evening” or “Happy Labor Day.” Callers can ask
 questions, say “leave a voicemail,” or ask to subscribe to new-post texts.
-Spoken signup reads the disclosures and waits for an explicit yes in a later
-caller turn. The action always uses the verified calling number.
+Spoken signup waits for the full disclosure to finish playing before accepting
+an explicit yes in a later caller turn. Interrupting the disclosure cancels
+that confirmation step. The action always uses the verified calling number.
 
 Manual input remains available: press star during Bell to reach the keypad,
 then 1 for voicemail, 2 to subscribe, or 3 to return to Bell. A failed Bell

@@ -4,16 +4,22 @@ import { sitePhoneNumber } from '@/lib/phone/config'
 import { PHONE_IVR_FALLBACK_PROMPTS } from '@/lib/phone/ivr-audio'
 import { voiceMenuTwiml, voicemailTwiml } from '@/lib/phone/twiml'
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
-import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
+import {
+  phoneHandoffCallbackUrl,
+  twilioWebhookMetadataFromForm,
+  twilioWebhookMetadataFromSignedRequest,
+} from '@/lib/phone/webhook-metadata'
 
 /** Used only after validating Twilio's signature on the complete form. */
 export function phoneKeypadTwiml(
   form: FormData,
-  options: { bellUnavailable?: boolean } = {}
+  options: { bellUnavailable?: boolean; requestUrl?: string } = {}
 ): string {
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
-  const metadata = twilioWebhookMetadataFromForm(form, from)
+  const metadata = options.requestUrl
+    ? twilioWebhookMetadataFromSignedRequest(form, options.requestUrl, from)
+    : twilioWebhookMetadataFromForm(form, from)
   const callbackUrls = voicemailCallbackUrls({ from, to, metadata })
   const bellAvailable = phoneBellLiveConfigured()
   const smsAvailable = Boolean(sitePhoneNumber())
@@ -37,7 +43,10 @@ export function phoneKeypadTwiml(
         ? 'menuWithBell'
         : 'bellMenu'
       : 'menu',
-    menuActionUrl: `${siteConfig.url}/api/phone/voice-menu`,
+    menuActionUrl: phoneHandoffCallbackUrl(
+      `${siteConfig.url}/api/phone/voice-menu`,
+      metadata
+    ),
     ...callbackUrls,
   })
 }

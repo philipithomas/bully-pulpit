@@ -4,6 +4,10 @@
 
 import { siteConfig } from '@/lib/config'
 import { twilioSecret } from '@/lib/phone/config'
+import {
+  phoneHandoffCallbackUrl,
+  type TwilioWebhookMetadata,
+} from '@/lib/phone/webhook-metadata'
 
 const TWILIO_REQUEST_TIMEOUT_MS = 30_000
 
@@ -195,7 +199,10 @@ export async function getCall(callSid: string): Promise<TwilioCall> {
 }
 
 /** Interrupt the parent call's active TwiML with our fixed voicemail route. */
-export async function redirectCallToVoicemail(callSid: string): Promise<void> {
+export async function redirectCallToVoicemail(
+  callSid: string,
+  metadata?: TwilioWebhookMetadata
+): Promise<void> {
   const { accountSid, authToken } = twilioCredentials()
   const response = await fetch(twilioCallResourceUrl(accountSid, callSid), {
     method: 'POST',
@@ -204,7 +211,10 @@ export async function redirectCallToVoicemail(callSid: string): Promise<void> {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      Url: new URL('/api/phone/voicemail', siteConfig.url).href,
+      Url: phoneHandoffCallbackUrl(
+        new URL('/api/phone/voicemail', siteConfig.url).href,
+        metadata
+      ),
       Method: 'POST',
     }),
     redirect: 'error',

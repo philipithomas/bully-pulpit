@@ -113,11 +113,13 @@ describe('private Bell Live actions', () => {
     ).toEqual({
       status: 'confirmation_required',
       message: BELL_VOICE_SUBSCRIPTION_DISCLOSURE,
+      disclosure: BELL_VOICE_SUBSCRIPTION_DISCLOSURE,
     })
     expect(
       await actions.execute('subscribe_caller', { confirmed: true }, 1)
     ).toMatchObject({ status: 'confirmation_required' })
     expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(true)
     const result = await actions.execute(
       'subscribe_caller',
       { confirmed: true },
@@ -141,6 +143,7 @@ describe('private Bell Live actions', () => {
   it('does not subscribe if the caller hangs up after hearing the disclosure', async () => {
     const actions = createBellLiveActionHandler(callSid)
     await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(true)
     vi.mocked(getCall).mockResolvedValue({ ...call, status: 'completed' })
     expect(
       await actions.execute('subscribe_caller', { confirmed: true }, 2)
@@ -157,7 +160,9 @@ describe('private Bell Live actions', () => {
       status: 'handed_off',
     })
     await actions.execute('start_voicemail', {}, 2)
-    expect(redirectCallToVoicemail).toHaveBeenCalledExactlyOnceWith(callSid)
+    expect(redirectCallToVoicemail).toHaveBeenCalledExactlyOnceWith(callSid, {
+      callSid,
+    })
     expect(markPhoneWebhookEventSideEffectObserved).toHaveBeenCalledWith(
       1,
       `bell-live:${callSid}:voicemail`
@@ -239,6 +244,7 @@ describe('private Bell Live actions', () => {
     let current = true
     const actions = createBellLiveActionHandler(callSid)
     await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(true)
     vi.mocked(getCall).mockImplementationOnce(async () => {
       current = false
       return call
@@ -268,5 +274,111 @@ describe('private Bell Live actions', () => {
       `bell-live:${callSid}:voicemail`
     )
     expect(actions.hasHandedOff()).toBe(true)
+  })
+  it('does not authorize signup merely because the disclosure was generated', async () => {
+    const actions = createBellLiveActionHandler(callSid)
+    await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: true }, 2)
+    ).toMatchObject({ status: 'confirmation_required' })
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    expect(getCall).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects acknowledgements that do not match the prepared disclosure turn', async () => {
+    const actions = createBellLiveActionHandler(callSid)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    await actions.execute('subscribe_caller', { confirmed: false }, 2)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: true }, 3)
+    ).toMatchObject({ status: 'confirmation_required' })
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it('invalidates interrupted playback so a late completion cannot arm consent', async () => {
+    const actions = createBellLiveActionHandler(callSid)
+    await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    actions.cancelSubscriptionDisclosure(1)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: true }, 2)
+    ).toMatchObject({ status: 'confirmation_required' })
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it('requires fresh playback after a repeated prepare even on the same caller turn', async () => {
+    const actions = createBellLiveActionHandler(callSid)
+    await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(true)
+    await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: true }, 2)
+    ).toMatchObject({ status: 'confirmation_required' })
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(true)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: true }, 3)
+    ).toMatchObject({ status: 'subscribed' })
+  })
+
+  it('clears armed consent when its confirmation turn is cancelled', async () => {
+    const actions = createBellLiveActionHandler(callSid)
+    await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(true)
+    expect(
+      await actions.execute(
+        'subscribe_caller',
+        { confirmed: true },
+        2,
+        () => false
+      )
+    ).toMatchObject({ status: 'cancelled' })
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: true }, 3)
+    ).toMatchObject({ status: 'confirmation_required' })
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+  it('forwards authenticated provider metadata without letting it replace the bound CallSid', async () => {
+    const actions = createBellLiveActionHandler(callSid, {
+      callSid: 'CAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      callerName: 'Jane Caller',
+      fromCity: 'San Francisco',
+      fromState: 'CA',
+      fromCountry: 'US',
+    })
+    await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(true)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: true }, 2)
+    ).toMatchObject({ status: 'subscribed' })
+    expect(subscribeVoiceCaller).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callSid,
+        metadata: {
+          callSid,
+          callerName: 'Jane Caller',
+          fromCity: 'San Francisco',
+          fromState: 'CA',
+          fromCountry: 'US',
+        },
+      })
+    )
+  })
+  it('preserves trusted caller hints when handing off to voicemail', async () => {
+    const actions = createBellLiveActionHandler(callSid, {
+      callSid: 'CAwrong',
+      callerName: 'Jane',
+      fromCity: 'San Francisco',
+    })
+    expect(await actions.execute('start_voicemail', {}, 1)).toMatchObject({
+      status: 'handed_off',
+    })
+    expect(redirectCallToVoicemail).toHaveBeenCalledWith(callSid, {
+      callSid,
+      callerName: 'Jane',
+      fromCity: 'San Francisco',
+    })
   })
 })

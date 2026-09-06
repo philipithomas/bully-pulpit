@@ -14,7 +14,10 @@ import {
   voicemailTwiml,
 } from '@/lib/phone/twiml'
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
-import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
+import {
+  phoneHandoffCallbackUrl,
+  twilioWebhookMetadataFromForm,
+} from '@/lib/phone/webhook-metadata'
 
 async function hasConfirmedSmsSubscription(
   phoneNumber: string
@@ -44,7 +47,11 @@ export async function POST(request: Request) {
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
   const metadata = twilioWebhookMetadataFromForm(form, from)
-  const sipUri = bellLiveSipUri(String(form.get('CallSid') ?? ''))
+  const sipUri = bellLiveSipUri(
+    String(form.get('CallSid') ?? ''),
+    new Date(),
+    metadata
+  )
 
   if (sipUri) {
     after(async () => {
@@ -63,7 +70,10 @@ export async function POST(request: Request) {
     return twimlResponse(
       bellLiveTwiml({
         sipUri,
-        actionUrl: `${siteConfig.url}/api/phone/bell-complete`,
+        actionUrl: phoneHandoffCallbackUrl(
+          `${siteConfig.url}/api/phone/bell-complete`,
+          metadata
+        ),
       })
     )
   }
@@ -95,7 +105,10 @@ export async function POST(request: Request) {
     voiceMenuTwiml({
       greeting,
       menuPrompt: 'menu',
-      menuActionUrl: `${siteConfig.url}/api/phone/voice-menu`,
+      menuActionUrl: phoneHandoffCallbackUrl(
+        `${siteConfig.url}/api/phone/voice-menu`,
+        metadata
+      ),
       ...callbackUrls,
     })
   )

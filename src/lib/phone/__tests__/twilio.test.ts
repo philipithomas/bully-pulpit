@@ -9,6 +9,8 @@ import {
   twilioBasicAuthHeader,
 } from '@/lib/phone/twilio'
 
+import { decodePhoneHandoffMetadata } from '@/lib/phone/webhook-metadata'
+
 const smsInput = { from: '+12123473190', to: '+15551234567', body: 'hi' }
 const callInput = {
   from: '+12123473190',
@@ -281,5 +283,34 @@ describe('verified live call actions', () => {
       'Twilio voicemail handoff failed'
     )
     await expect(getCall(sid)).rejects.toThrow('Twilio call lookup failed')
+  })
+  it('carries bounded caller metadata on the fixed voicemail URL', async () => {
+    const fetchMock = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify(call))
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await redirectCallToVoicemail(sid, {
+      callSid: sid,
+      callerName: 'Jane',
+      fromCity: 'San Francisco',
+      fromState: 'CA',
+    })
+    const [, init] = fetchMock.mock.calls[0]
+    const body = new URLSearchParams(String(init?.body))
+    const destination = new URL(body.get('Url') ?? '')
+    expect(destination.origin + destination.pathname).toBe(
+      'https://www.philipithomas.com/api/phone/voicemail'
+    )
+    expect(
+      decodePhoneHandoffMetadata(
+        destination.searchParams.get('phoneMetadata') ?? ''
+      )
+    ).toEqual({
+      callerName: 'Jane',
+      fromCity: 'San Francisco',
+      fromState: 'CA',
+    })
+    expect(body.get('Method')).toBe('POST')
   })
 })

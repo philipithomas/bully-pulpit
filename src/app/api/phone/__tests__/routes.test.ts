@@ -47,6 +47,7 @@ import {
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
 import { findSmsSubscriberByPhoneNumber } from '@/lib/db/queries/sms-subscribers'
+import { verifiedBellLiveSipMetadata } from '@/lib/phone/bell-live'
 import { generateGreeting } from '@/lib/phone/greeting'
 import {
   PHONE_IVR_FALLBACK_PROMPTS,
@@ -243,6 +244,9 @@ describe('POST /api/phone/voice', () => {
         From: '+15551234567',
         To: '+12123473190',
         CallSid: 'CA123',
+        CallerName: 'Jane Caller',
+        FromCity: 'San Francisco',
+        FromState: 'CA',
       })
     )
 
@@ -258,6 +262,19 @@ describe('POST /api/phone/voice', () => {
     expect(xml).not.toContain('<Gather')
     expect(generateGreeting).not.toHaveBeenCalled()
     expect(findSmsSubscriberByPhoneNumber).not.toHaveBeenCalled()
+    const sipUri =
+      xml.match(/<Sip>([^<]+)<\/Sip>/)?.[1].replaceAll('&amp;', '&') ?? ''
+    const sipHeaders = Array.from(
+      new URLSearchParams(sipUri.slice(sipUri.indexOf('?') + 1)),
+      ([name, value]) => ({ name, value })
+    )
+    expect(verifiedBellLiveSipMetadata(sipHeaders)).toMatchObject({
+      callSid: 'CA123',
+      callerName: 'Jane Caller',
+      fromCity: 'San Francisco',
+      fromState: 'CA',
+      areaCode: '555',
+    })
     expect(sendMissedCallNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         from: '+15551234567',

@@ -16,12 +16,18 @@ vi.mock('openai/realtime/ws', async () => {
 interface SentEvent {
   type: string
   item?: { call_id?: string; output?: string; type?: string }
-  response?: { metadata?: { purpose?: string } }
+  response?: {
+    instructions?: string
+    metadata?: { purpose?: string; [key: string]: string | undefined }
+    tools?: unknown[]
+    tool_choice?: string
+  }
 }
 
 const confirmation: BellLiveActionResult = {
   status: 'confirmation_required',
   message: 'Would you like recurring new-post texts? Please say yes or no.',
+  disclosure: 'Would you like recurring new-post texts? Please say yes or no.',
 }
 
 function functionCall(
@@ -76,11 +82,25 @@ async function startController() {
     .fn<BellLiveActionHandler['execute']>()
     .mockResolvedValue(confirmation)
   const hasHandedOff = vi.fn(() => false)
+  const markSubscriptionDisclosureDelivered = vi.fn()
+  const cancelSubscriptionDisclosure = vi.fn()
   const greeting = await startBellLiveGreeting('rtc_dispatch', {
-    actions: { execute, hasHandedOff },
+    actions: {
+      execute,
+      hasHandedOff,
+      markSubscriptionDisclosureDelivered,
+      cancelSubscriptionDisclosure,
+    },
   })
   const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
-  return { execute, hasHandedOff, greeting, socket }
+  return {
+    execute,
+    hasHandedOff,
+    markSubscriptionDisclosureDelivered,
+    cancelSubscriptionDisclosure,
+    greeting,
+    socket,
+  }
 }
 
 function startCallerResponse(
@@ -103,6 +123,28 @@ function completeResponse(
     type: 'response.done',
     response: { id: responseId, status: 'completed', output },
   })
+}
+
+function startDisclosureResponse(
+  socket: FakeOpenAiRealtimeWebSocket,
+  responseId = 'response_disclosure'
+) {
+  const response = continuations().at(-1)?.response
+  expect(response).toMatchObject({
+    metadata: { purpose: 'bell_subscription_disclosure' },
+    tools: [],
+    tool_choice: 'none',
+  })
+  expect(response?.instructions).toContain(confirmation.disclosure)
+  const responseMetadata = {
+    id: responseId,
+    metadata: response?.metadata,
+  }
+  socket.emitServerEvent({
+    type: 'response.created',
+    response: { ...responseMetadata, status: 'in_progress' },
+  })
+  return responseMetadata
 }
 
 beforeEach(() => {
@@ -150,7 +192,12 @@ describe('Bell Live private action dispatch', () => {
       .mockResolvedValue(confirmation)
     const checkpoint = vi.fn(async () => true)
     const pendingGreeting = startBellLiveGreeting('rtc_early_caller', {
-      actions: { execute, hasHandedOff: () => false },
+      actions: {
+        execute,
+        hasHandedOff: () => false,
+        markSubscriptionDisclosureDelivered: vi.fn(),
+        cancelSubscriptionDisclosure: vi.fn(),
+      },
       onGreetingConsumed: checkpoint,
     })
     await vi.advanceTimersByTimeAsync(0)
@@ -310,6 +357,318 @@ describe('Bell Live private action dispatch', () => {
     expect(continuations()).toHaveLength(0)
   })
 
+  it('arms subscription consent once after the entire disclosure has played and completed', async () => {
+    const {
+      socket,
+      markSubscriptionDisclosureDelivered,
+      cancelSubscriptionDisclosure,
+    } = await startController()
+    startCallerResponse(socket)
+    completeResponse(socket, [functionCall()])
+    await flushDispatch()
+    expect(markSubscriptionDisclosureDelivered).not.toHaveBeenCalled()
+    const response = startDisclosureResponse(socket)
+
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).not.toHaveBeenCalled()
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed', output: [] },
+    })
+    expect(markSubscriptionDisclosureDelivered).toHaveBeenCalledExactlyOnceWith(
+      1
+    )
+
+    // Duplicate terminal provider events must not authorize another consent.
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed', output: [] },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).toHaveBeenCalledTimes(1)
+
+    // The caller's next answer must retain the fully delivered disclosure.
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    expect(cancelSubscriptionDisclosure).not.toHaveBeenCalled()
+  })
+
+  it('waits for audio playback to stop after disclosure generation completes', async () => {
+    const { socket, markSubscriptionDisclosureDelivered } =
+      await startController()
+    startCallerResponse(socket)
+    completeResponse(socket, [functionCall()])
+    await flushDispatch()
+    const response = startDisclosureResponse(socket)
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed', output: [] },
+    })
+    expect(markSubscriptionDisclosureDelivered).not.toHaveBeenCalled()
+
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).toHaveBeenCalledExactlyOnceWith(
+      1
+    )
+  })
+
+  it('does not arm consent if the caller interrupts before disclosure playback', async () => {
+    const {
+      socket,
+      markSubscriptionDisclosureDelivered,
+      cancelSubscriptionDisclosure,
+    } = await startController()
+    startCallerResponse(socket)
+    completeResponse(socket, [functionCall()])
+    await flushDispatch()
+    const response = startDisclosureResponse(socket)
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+
+    // Late playback and completion events still belong to the interrupted turn.
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed', output: [] },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).not.toHaveBeenCalled()
+    expect(cancelSubscriptionDisclosure).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not arm consent if the caller interrupts in the middle of the disclosure', async () => {
+    const {
+      socket,
+      markSubscriptionDisclosureDelivered,
+      cancelSubscriptionDisclosure,
+    } = await startController()
+    startCallerResponse(socket)
+    completeResponse(socket, [functionCall()])
+    await flushDispatch()
+    const response = startDisclosureResponse(socket)
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.cleared',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed', output: [] },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).not.toHaveBeenCalled()
+    expect(cancelSubscriptionDisclosure).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    'cancelled',
+    'failed',
+  ])('does not arm consent when disclosure generation is %s', async (status) => {
+    const { socket, markSubscriptionDisclosureDelivered } =
+      await startController()
+    startCallerResponse(socket)
+    completeResponse(socket, [functionCall()])
+    await flushDispatch()
+    const response = startDisclosureResponse(socket)
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status, output: [] },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).not.toHaveBeenCalled()
+  })
+
+  it('requires audio to have started before accepting a stop event as delivery', async () => {
+    const { socket, markSubscriptionDisclosureDelivered } =
+      await startController()
+    startCallerResponse(socket)
+    completeResponse(socket, [functionCall()])
+    await flushDispatch()
+    const response = startDisclosureResponse(socket)
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed', output: [] },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).not.toHaveBeenCalled()
+  })
+
+  it('ignores a different response carrying a stale disclosure nonce', async () => {
+    const { socket, markSubscriptionDisclosureDelivered } =
+      await startController()
+    startCallerResponse(socket)
+    completeResponse(socket, [functionCall()])
+    await flushDispatch()
+    const requested = continuations().at(-1)?.response
+    const unrelated = {
+      id: 'response_stale_disclosure',
+      metadata: { ...requested?.metadata, disclosure_id: 'stale-disclosure' },
+    }
+    socket.emitServerEvent({
+      type: 'response.created',
+      response: { ...unrelated, status: 'in_progress' },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: unrelated.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...unrelated, status: 'completed', output: [] },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: unrelated.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).not.toHaveBeenCalled()
+
+    const response = startDisclosureResponse(socket)
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed', output: [] },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).toHaveBeenCalledExactlyOnceWith(
+      1
+    )
+  })
+
+  it('does not let late events from an earlier disclosure arm its replacement', async () => {
+    const { socket, markSubscriptionDisclosureDelivered } =
+      await startController()
+    startCallerResponse(socket)
+    completeResponse(socket, [functionCall()])
+    await flushDispatch()
+    const previous = startDisclosureResponse(socket, 'response_disclosure_old')
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: previous.id,
+    })
+    startCallerResponse(socket, 'response_action_new')
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...previous, status: 'cancelled', output: [] },
+    })
+    completeResponse(
+      socket,
+      [functionCall('function_subscription_new')],
+      'response_action_new'
+    )
+    await flushDispatch()
+    const replacement = startDisclosureResponse(
+      socket,
+      'response_disclosure_new'
+    )
+    expect(replacement.metadata?.disclosure_id).not.toBe(
+      previous.metadata?.disclosure_id
+    )
+
+    socket.emitServerEvent({
+      type: 'response.created',
+      response: { ...previous, status: 'in_progress' },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: previous.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...previous, status: 'completed', output: [] },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: previous.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).not.toHaveBeenCalled()
+
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: replacement.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...replacement, status: 'completed', output: [] },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: replacement.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).toHaveBeenCalledExactlyOnceWith(
+      2
+    )
+  })
+
+  it('never treats cleared disclosure audio as fully delivered', async () => {
+    const { socket, markSubscriptionDisclosureDelivered } =
+      await startController()
+    startCallerResponse(socket)
+    completeResponse(socket, [functionCall()])
+    await flushDispatch()
+    const response = startDisclosureResponse(socket)
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed', output: [] },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.cleared',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    expect(markSubscriptionDisclosureDelivered).not.toHaveBeenCalled()
+  })
+
   it('closes the controller after voicemail handoff without speaking over the recorder', async () => {
     const { socket, execute, hasHandedOff, greeting } = await startController()
     const close = vi.spyOn(socket, 'close')
@@ -379,6 +738,14 @@ describe('Bell Live private action dispatch', () => {
 
     expect(functionOutputs()).toHaveLength(1)
     expect(continuations()).toHaveLength(1)
+    expect(continuations()[0].response).toMatchObject({
+      metadata: { purpose: 'bell_subscription_disclosure' },
+      tools: [],
+      tool_choice: 'none',
+    })
+    expect(continuations()[0].response?.instructions).toContain(
+      confirmation.disclosure
+    )
     expect(sentEvents().indexOf(functionOutputs()[0])).toBeLessThan(
       sentEvents().indexOf(continuations()[0])
     )

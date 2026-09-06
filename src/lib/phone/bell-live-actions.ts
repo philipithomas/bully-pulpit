@@ -12,8 +12,13 @@ import {
   TwilioApiError,
 } from '@/lib/phone/twilio'
 import { subscribeVoiceCaller } from '@/lib/phone/voice-subscription'
+import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 
-export type BellLiveActionResult = { status: string; message: string }
+export type BellLiveActionResult = {
+  status: string
+  message: string
+  disclosure?: string
+}
 
 export const BELL_VOICE_SUBSCRIPTION_DISCLOSURE =
   'Would you like recurring new-post texts from philipithomas.com on the number you called from? A new or reactivated subscription includes one Bell contact-card multimedia message. Frequency varies; message and data rates may apply. Text STOP to unsubscribe or HELP for help. Please say yes or no.'
@@ -45,10 +50,29 @@ function exactArguments(
  * A private controller bound to the authenticated SIP invitation's parent
  * CallSid. Tool arguments cannot choose a telephone number or redirect URL.
  */
-export function createBellLiveActionHandler(callSid: string) {
+export function createBellLiveActionHandler(
+  callSid: string,
+  metadata?: TwilioWebhookMetadata
+) {
   let handedOff = false
   let confirmationPreparedAt: number | null = null
+  let confirmationDelivered = false
   let pending: Promise<unknown> = Promise.resolve()
+
+  function clearSubscriptionConfirmation() {
+    confirmationPreparedAt = null
+    confirmationDelivered = false
+  }
+
+  function cancelAction(callerTurn: number): BellLiveActionResult {
+    if (
+      confirmationPreparedAt !== null &&
+      callerTurn >= confirmationPreparedAt
+    ) {
+      clearSubscriptionConfirmation()
+    }
+    return cancelled
+  }
 
   async function verifiedCaller() {
     if (!isTwilioCallSid(callSid)) return null
@@ -72,9 +96,10 @@ export function createBellLiveActionHandler(callSid: string) {
     isCurrent: () => boolean
   ): Promise<BellLiveActionResult> {
     if (!Number.isSafeInteger(callerTurn) || callerTurn < 0) return unavailable
-    if (!isCurrent()) return cancelled
+    if (!isCurrent()) return cancelAction(callerTurn)
     if (name === 'start_voicemail') {
       if (!exactArguments(args, [])) return unavailable
+      clearSubscriptionConfirmation()
       if (handedOff) {
         return {
           status: 'handed_off',
@@ -82,12 +107,12 @@ export function createBellLiveActionHandler(callSid: string) {
         }
       }
       if (!(await verifiedCaller())) return unavailable
-      if (!isCurrent()) return cancelled
+      if (!isCurrent()) return cancelAction(callerTurn)
       const { event } = await findOrCreatePhoneWebhookEvent({
         eventKey: `bell-live:${callSid}:voicemail`,
         eventType: 'bell-live-action',
       })
-      if (!isCurrent()) return cancelled
+      if (!isCurrent()) return cancelAction(callerTurn)
       if (event.processedAt) {
         handedOff = true
         return {
@@ -98,7 +123,7 @@ export function createBellLiveActionHandler(callSid: string) {
       const lease = await claimPhoneWebhookEvent(event.id)
       if (!isCurrent()) {
         if (lease) await releasePhoneWebhookEvent(event.id, lease)
-        return cancelled
+        return cancelAction(callerTurn)
       }
       if (!lease) {
         handedOff = true
@@ -111,7 +136,7 @@ export function createBellLiveActionHandler(callSid: string) {
       // arrive. Suppress the sideband's failure fallback before that race.
       handedOff = true
       try {
-        await redirectCallToVoicemail(callSid)
+        await redirectCallToVoicemail(callSid, { ...metadata, callSid })
       } catch (error) {
         if (
           error instanceof TwilioApiError &&
@@ -155,39 +180,43 @@ export function createBellLiveActionHandler(callSid: string) {
       return unavailable
     }
     if (!args.confirmed) {
+      clearSubscriptionConfirmation()
       if (!(await verifiedCaller())) return unavailable
-      if (!isCurrent()) return cancelled
+      if (!isCurrent()) return cancelAction(callerTurn)
       confirmationPreparedAt = callerTurn
       return {
         status: 'confirmation_required',
         message: BELL_VOICE_SUBSCRIPTION_DISCLOSURE,
+        disclosure: BELL_VOICE_SUBSCRIPTION_DISCLOSURE,
       }
     }
-    // Only a new, server-observed caller turn can authorize the second phase.
+    // Both completed disclosure playback and a later server-observed caller
+    // turn are required; generating the disclosure is not proof it was heard.
     if (
       confirmationPreparedAt === null ||
+      !confirmationDelivered ||
       callerTurn <= confirmationPreparedAt
     ) {
       return {
         status: 'confirmation_required',
         message:
-          'First call subscribe_caller with confirmed false, read its disclosure, and wait for the caller to explicitly say yes.',
+          'First call subscribe_caller with confirmed false, let the full disclosure finish playing, and wait for the caller to explicitly say yes.',
       }
     }
+    clearSubscriptionConfirmation()
     const caller = await verifiedCaller()
     if (!caller) return unavailable
-    if (!isCurrent()) return cancelled
-    confirmationPreparedAt = null
+    if (!isCurrent()) return cancelAction(callerTurn)
     const status = await subscribeVoiceCaller({
       from: caller.from,
       to: caller.to,
       callSid,
-      metadata: { callSid },
+      metadata: { ...metadata, callSid },
       source: 'voice-bell',
       isCurrent,
     })
     if (status === 'unavailable') return unavailable
-    if (status === 'cancelled') return cancelled
+    if (status === 'cancelled') return cancelAction(callerTurn)
     return {
       status,
       message:
@@ -209,9 +238,22 @@ export function createBellLiveActionHandler(callSid: string) {
       // Different model tool-call IDs still share the same action/consent state.
       const result = pending
         .then(() => perform(name, args, callerTurn, isCurrent))
-        .catch(() => unavailable)
+        .catch(() => {
+          cancelAction(callerTurn)
+          return unavailable
+        })
       pending = result
       return result
+    },
+    /** Only the trusted sideband may acknowledge complete, uninterrupted audio. */
+    markSubscriptionDisclosureDelivered(callerTurn: number): boolean {
+      if (handedOff || confirmationPreparedAt !== callerTurn) return false
+      confirmationDelivered = true
+      return true
+    },
+    /** Invalidates an interrupted disclosure and any late playback acknowledgement. */
+    cancelSubscriptionDisclosure(callerTurn: number): void {
+      if (confirmationPreparedAt === callerTurn) clearSubscriptionConfirmation()
     },
     hasHandedOff: () => handedOff,
   }

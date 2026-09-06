@@ -11,7 +11,10 @@ import {
 } from '@/lib/phone/twiml'
 import { subscribeVoiceCaller } from '@/lib/phone/voice-subscription'
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
-import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
+import {
+  phoneHandoffCallbackUrl,
+  twilioWebhookMetadataFromSignedRequest,
+} from '@/lib/phone/webhook-metadata'
 
 /**
  * Handles the DTMF choice from /api/phone/voice. 1 or timeout goes to voicemail;
@@ -28,16 +31,23 @@ export async function POST(request: Request) {
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
   const callSid = form.get('CallSid') ? String(form.get('CallSid')) : ''
-  const metadata = twilioWebhookMetadataFromForm(form, from)
+  const metadata = twilioWebhookMetadataFromSignedRequest(
+    form,
+    request.url,
+    from
+  )
   const confirmationFrom = sitePhoneNumber()
 
   if (digits === '3') {
-    const sipUri = bellLiveSipUri(callSid)
+    const sipUri = bellLiveSipUri(callSid, new Date(), metadata)
     if (sipUri) {
       return twimlResponse(
         bellLiveTwiml({
           sipUri,
-          actionUrl: `${siteConfig.url}/api/phone/bell-complete`,
+          actionUrl: phoneHandoffCallbackUrl(
+            `${siteConfig.url}/api/phone/bell-complete`,
+            metadata
+          ),
         })
       )
     }

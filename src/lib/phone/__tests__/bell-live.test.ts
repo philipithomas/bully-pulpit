@@ -1460,7 +1460,7 @@ describe('Bell Live Realtime session', () => {
     await greeting.conversation
   })
 
-  it('logs a successful continuation after an earlier observer error', async () => {
+  it('stops continuations after a provider error and restores the fallback', async () => {
     const lifecycle: BellLiveLifecycleEvent[] = []
     const greeting = await startBellLiveGreeting('rtc_call_greeting', {
       onLifecycleEvent: (event) => lifecycle.push(event),
@@ -1511,23 +1511,16 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
-    expect(lifecycle).toContainEqual({
-      event: 'bell_live.tool_continuation',
-      hop: 1,
-      outcome: 'requested',
-      toolsAllowed: true,
-    })
-    expect(lifecycle).toContainEqual(
+    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(lifecycle).not.toContainEqual(
       expect.objectContaining({
-        event: 'bell_live.realtime_response',
-        recoveryQueued: true,
-        recoveryRequested: false,
+        event: 'bell_live.tool_continuation',
+        outcome: 'requested',
       })
     )
-
-    socket?.closeFromServer()
-    await greeting.conversation
+    await expect(greeting.conversation).resolves.toMatchObject({
+      observerCompleted: false,
+    })
   })
 
   it('does not duplicate a complete spoken answer after a tool result', async () => {
@@ -1714,7 +1707,6 @@ describe('Bell Live Realtime session', () => {
         message: 'PRIVATE_PROVIDER_MESSAGE',
       },
     })
-    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
     await expect(greeting.conversation).resolves.toMatchObject({
       observerCompleted: false,
     })

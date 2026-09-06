@@ -2,6 +2,8 @@ import { createHmac } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from '@/app/api/openai/realtime-call/route'
 import { bellLiveSipUri } from '@/lib/phone/bell-live'
+import * as bellLiveActions from '@/lib/phone/bell-live-actions'
+import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 import { FakeOpenAiRealtimeWebSocket } from '@/test/fake-openai-realtime-websocket'
 
 const afterTasks = vi.hoisted(() => [] as Array<() => Promise<void>>)
@@ -55,8 +57,8 @@ const WEBHOOK_SECRET_BYTES = Buffer.from('test-openai-webhook-secret')
 const WEBHOOK_SECRET = `whsec_${WEBHOOK_SECRET_BYTES.toString('base64')}`
 const CALL_SID = 'CA1234567890abcdef1234567890abcdef'
 
-function sipHeaders() {
-  const uri = bellLiveSipUri(CALL_SID)
+function sipHeaders(metadata?: TwilioWebhookMetadata) {
+  const uri = bellLiveSipUri(CALL_SID, new Date(), metadata)
   if (!uri) throw new Error('Bell Live SIP URI was not configured')
   return Array.from(
     new URLSearchParams(uri.slice(uri.indexOf('?') + 1)),
@@ -181,6 +183,66 @@ afterEach(() => {
 })
 
 describe('POST /api/openai/realtime-call', () => {
+  it('passes authenticated original caller metadata to private actions', async () => {
+    const createController = vi.spyOn(
+      bellLiveActions,
+      'createBellLiveActionHandler'
+    )
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 200 }))
+    )
+    const response = await postAndFlush(
+      signedRequest(
+        incomingEvent(
+          sipHeaders({
+            callerName: 'Ada Caller',
+            fromCity: 'Brooklyn',
+            fromState: 'NY',
+          })
+        )
+      )
+    )
+    expect(response.status).toBe(204)
+    expect(createController).toHaveBeenCalledWith(CALL_SID, {
+      callSid: CALL_SID,
+      callerName: 'Ada Caller',
+      fromCity: 'Brooklyn',
+      fromState: 'NY',
+    })
+  })
+
+  it('ends the AI child promptly after a post-greeting provider error', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    FakeOpenAiRealtimeWebSocket.autoCloseAfterGreeting = false
+    expect((await POST(signedRequest(incomingEvent()))).status).toBe(204)
+    const background = flushAfterTasks()
+    await vi.waitFor(() =>
+      expect(console.info).toHaveBeenCalledWith(
+        '[openai/realtime-call]',
+        expect.objectContaining({
+          event: 'bell_live.openai_greeting',
+          outcome: 'completed',
+        })
+      )
+    )
+    FakeOpenAiRealtimeWebSocket.sockets[0]?.emitServerEvent({
+      type: 'error',
+      event_id: 'evt_failed_provider',
+      error: {
+        code: 'server_error',
+        type: 'server_error',
+        message: 'Provider failure',
+      },
+    })
+    await background
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://api.openai.com/v1/realtime/calls/rtc_call_123/hangup',
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+
   it('verifies both signatures and accepts an authorized SIP call', async () => {
     const fetchMock = vi.fn(
       async (_input: string | URL | Request, _init?: RequestInit) =>

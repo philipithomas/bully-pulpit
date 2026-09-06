@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { twimlResponse, voicemailTwiml } from '@/lib/phone/twiml'
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
-import { twilioWebhookMetadataFromForm } from '@/lib/phone/webhook-metadata'
+import { twilioWebhookMetadataFromSignedRequest } from '@/lib/phone/webhook-metadata'
 
 /** Fixed destination for an authenticated live-call voicemail handoff. */
 export async function POST(request: Request) {
@@ -17,7 +17,11 @@ export async function POST(request: Request) {
       voicemailCallbackUrls({
         from,
         to,
-        metadata: twilioWebhookMetadataFromForm(form, from),
+        metadata: twilioWebhookMetadataFromSignedRequest(
+          form,
+          request.url,
+          from
+        ),
       })
     )
   )
