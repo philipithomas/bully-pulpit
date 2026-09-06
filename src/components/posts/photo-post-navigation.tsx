@@ -38,7 +38,7 @@ function PhotoNavCell({
 
   return (
     <Link
-      href={`/${post.slug}#photo`}
+      href={`/${encodeURIComponent(post.slug)}#photo`}
       className={`group flex flex-col no-underline ${isOlder ? 'items-end text-right' : ''}`}
       {...coverPreloadAttrs(post)}
     >

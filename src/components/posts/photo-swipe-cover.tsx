@@ -44,7 +44,7 @@ export function PhotoSwipeCover({
   useEffect(() => {
     navigating.current = false
     warmed.current.clear()
-    warmed.current.add(`/${slug}`)
+    warmed.current.add(`/${encodeURIComponent(slug)}`)
   }, [slug])
 
   const warmNeighbors = useCallback(() => {

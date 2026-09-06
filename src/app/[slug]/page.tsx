@@ -85,7 +85,7 @@ function photoSwipeDestination(
   if (!post) return null
   const attrs = coverPreloadAttrs(post)
   return {
-    href: `/${post.slug}`,
+    href: `/${encodeURIComponent(post.slug)}`,
     srcSet: attrs['data-cover-srcset'],
     sizes: attrs['data-cover-sizes'],
   }
@@ -294,7 +294,7 @@ export default async function SlugPage({ params }: Props) {
   const coverZoomCaption =
     isPhotoPost && post
       ? {
-          'data-zoom-caption-href': `/${post.slug}`,
+          'data-zoom-caption-href': `/${encodeURIComponent(post.slug)}`,
           'data-zoom-caption-title': post.frontmatter.title,
           'data-zoom-caption-description': photoViewerDescription(post),
           'data-zoom-caption-date': post.frontmatter.publishedAt,

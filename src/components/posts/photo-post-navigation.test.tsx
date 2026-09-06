@@ -26,4 +26,29 @@ describe('photo post navigation links', () => {
       renderToStaticMarkup(<PhotoPostNavigation older={null} newer={null} />)
     ).toBe('')
   })
+
+  it.each([
+    '/evil.example/escape?next=elsewhere#fragment',
+    'javascript:alert("photo")',
+    'photo%2Freserved café',
+  ])('keeps the reserved slug %s inside one same-origin path segment', (slug) => {
+    const photo = { ...getPostsByNewsletter('tidbits')[0], slug }
+    const html = renderToStaticMarkup(
+      <PhotoPostNavigation older={photo} newer={photo} />
+    )
+    const hrefs = [...html.matchAll(/\bhref="([^"]*)"/g)].map(
+      (match) => match[1]
+    )
+
+    expect(hrefs).toHaveLength(2)
+    for (const href of hrefs) {
+      expect(href).toBe(`/${encodeURIComponent(slug)}#photo`)
+      const destination = new URL(href, 'https://www.philipithomas.com')
+      expect(destination.origin).toBe('https://www.philipithomas.com')
+      expect(destination.pathname.split('/')).toHaveLength(2)
+      expect(decodeURIComponent(destination.pathname.slice(1))).toBe(slug)
+      expect(destination.search).toBe('')
+      expect(destination.hash).toBe('#photo')
+    }
+  })
 })
