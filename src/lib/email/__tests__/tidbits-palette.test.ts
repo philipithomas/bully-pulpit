@@ -18,6 +18,8 @@ describe('Tidbits color from preview through delivery', () => {
     'copenhagen-sunset',
     'cycling',
     'jackknife',
+    'copenhill',
+    'sfmoma',
   ])('%s keeps its issue palette in preview, test send, queue, and retry', async (slug) => {
     const post = getPostBySlug(slug)!
     const palette = tidbitsPaletteForPost(slug)
