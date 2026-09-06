@@ -992,7 +992,24 @@ footer {
 
   body:has([data-home-gallery]) > header nav {
     width: auto;
-    gap: 16px;
+    gap: 8px;
+  }
+
+  body:has([data-home-gallery]) > header nav > button {
+    margin: 0;
+    padding: 12px;
+  }
+
+  body:has([data-home-gallery]) > header .btn-primary {
+    padding-inline: 12px;
+  }
+
+  body:has([data-home-gallery]) > header .btn-primary:hover .btn-text {
+    transform: none;
+  }
+
+  body:has([data-home-gallery]) > header .btn-primary .btn-arrow {
+    display: none;
   }
 
   body:has([data-home-gallery]) > header .wordmark {
