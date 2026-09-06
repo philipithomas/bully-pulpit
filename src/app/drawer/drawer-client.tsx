@@ -12,6 +12,7 @@ import {
   useState,
 } from 'react'
 import {
+  drawerDateReplacementHref,
   drawerHref,
   isDrawerDate,
   MIN_DRAWER_DATE,
@@ -165,9 +166,8 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
   }, [])
 
   useEffect(() => {
-    if (requestedDate !== date) {
-      router.replace(drawerHref(date), { scroll: false })
-    }
+    const replacementHref = drawerDateReplacementHref(requestedDate, date)
+    if (replacementHref) router.replace(replacementHref, { scroll: false })
   }, [date, requestedDate, router])
 
   const navigateToDate = useCallback(

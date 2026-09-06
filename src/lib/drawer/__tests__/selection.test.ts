@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  drawerDateReplacementHref,
   drawerHref,
   isDrawerDate,
   millisecondsUntilNextUtcDay,
@@ -79,6 +80,20 @@ describe('drawer dates', () => {
     expect(resolveDrawerDate('2026-09-05', '2026-09-06')).toBe('2026-09-05')
     expect(resolveDrawerDate('2026-09-07', '2026-09-06')).toBe('2026-09-06')
     expect(resolveDrawerDate('not-a-date', '2026-09-06')).toBe('2026-09-06')
+  })
+
+  it('preserves implicit-today mode while canonicalizing invalid dates', () => {
+    const beforeMidnight = resolveDrawerDate(null, '2026-09-06')
+    const afterMidnight = resolveDrawerDate(null, '2026-09-07')
+
+    expect(beforeMidnight).toBe('2026-09-06')
+    expect(afterMidnight).toBe('2026-09-07')
+    expect(drawerDateReplacementHref(null, beforeMidnight)).toBeNull()
+    expect(drawerDateReplacementHref(null, afterMidnight)).toBeNull()
+    expect(drawerDateReplacementHref('2026-09-07', '2026-09-07')).toBeNull()
+    expect(drawerDateReplacementHref('invalid', '2026-09-07')).toBe(
+      '/drawer?date=2026-09-07'
+    )
   })
 
   it('clamps requests to the known archive window', () => {

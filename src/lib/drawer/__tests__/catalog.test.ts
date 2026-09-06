@@ -153,6 +153,34 @@ describe('buildDrawerCatalog', () => {
     ).toEqual(['Essay 01', 'Essay 02'])
   })
 
+  it('turns raw Markdown fallback excerpts into displayable prose', () => {
+    const catalog = buildDrawerCatalog(
+      [
+        post({
+          slug: 'blockquote',
+          content: '> Absolute devotion to consistent methods.',
+          excerpt: '> Absolute devotion to consistent methods.',
+        }),
+        post({
+          slug: 'list-and-escape',
+          content: '- [Launched Postcard](/launch). Had \\>15k visitors.',
+          excerpt: '- Launched Postcard. Had \\>15k visitors.',
+        }),
+      ],
+      []
+    )
+
+    expect(
+      catalog.collections.writing.find((item) => item.id.endsWith('blockquote'))
+        ?.description
+    ).toBe('Absolute devotion to consistent methods.')
+    expect(
+      catalog.collections.writing.find((item) =>
+        item.id.endsWith('list-and-escape')
+      )?.description
+    ).toBe('Launched Postcard. Had >15k visitors.')
+  })
+
   it('builds the real catalog without a network request', () => {
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)
@@ -168,6 +196,17 @@ describe('buildDrawerCatalog', () => {
       expect(
         selection.items.some((candidate) => candidate.href === '/stargazing')
       ).toBe(false)
+
+      const quotedExcerpt = selectDrawer(catalog, '2020-07-31').items.find(
+        (candidate) => candidate.category === 'writing'
+      )?.description
+      const escapedExcerpt = selectDrawer(catalog, '2021-03-31').items.find(
+        (candidate) => candidate.category === 'writing'
+      )?.description
+      expect(quotedExcerpt).toContain('Absolute devotion')
+      expect(quotedExcerpt).not.toContain('> Absolute devotion')
+      expect(escapedExcerpt).toContain('Had >15k visitors')
+      expect(escapedExcerpt).not.toContain('\\>15k')
     } finally {
       vi.unstubAllGlobals()
     }

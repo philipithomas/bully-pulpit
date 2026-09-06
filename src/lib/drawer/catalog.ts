@@ -62,6 +62,13 @@ function inlinePlaintext(markdown: string): string {
   }
 
   return plaintext
+    .replace(/^(?:import|export)\s[^\n]*$/gm, '')
+    .replace(/<\/?[A-Za-z][^>]*\/?>/g, ' ')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^(?:[-*+]|\d+\.)\s+/gm, '')
+    .replace(/^>\s*/gm, '')
+    .replace(/^---+$/gm, '')
+    .replace(/\\([\p{P}\p{S}])/gu, '$1')
     .replace(/[*_`~]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -133,7 +140,7 @@ function blogrollItems(content: string): DrawerItem[] {
 
 function postDescription(post: Post): string {
   const description =
-    post.frontmatter.subtitle ?? post.frontmatter.description ?? post.excerpt
+    post.frontmatter.subtitle ?? post.frontmatter.description ?? post.content
   const text = inlinePlaintext(description)
   if (text.length <= 180) return text
   return `${text.slice(0, 177).trimEnd()}…`

@@ -103,6 +103,14 @@ export function drawerHref(date: string): string {
   return `/drawer?date=${date}`
 }
 
+export function drawerDateReplacementHref(
+  requestedDate: string | null,
+  resolvedDate: string
+): string | null {
+  if (requestedDate === null || requestedDate === resolvedDate) return null
+  return drawerHref(resolvedDate)
+}
+
 /** FNV-1a gives a small, stable unsigned score in browsers and Node alike. */
 function seedScore(value: string): number {
   let hash = 0x811c9dc5
