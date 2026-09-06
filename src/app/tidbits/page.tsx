@@ -181,7 +181,7 @@ export default function TidbitsPage() {
               <NewsletterWordmark
                 src="/images/tidbits.svg"
                 alt="Tidbits"
-                width={1688}
+                width={1601}
                 height={369}
                 sizes="(max-width: 640px) 52vw, (max-width: 768px) 220px, 240px"
                 className="h-auto w-full max-w-[52vw] sm:max-w-[220px] md:max-w-[240px]"

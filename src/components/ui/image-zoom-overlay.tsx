@@ -584,7 +584,7 @@ export function ImageZoomOverlay({
           href: '/tidbits',
           label: 'Tidbits',
           logo: '/images/tidbits.svg',
-          width: 1688,
+          width: 1601,
           height: 369,
         }
       : {

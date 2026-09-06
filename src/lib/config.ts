@@ -56,7 +56,7 @@ const staticConfig = {
       logo: {
         src: '/images/tidbits.svg',
         height: 13,
-        intrinsicWidth: 1688,
+        intrinsicWidth: 1601,
         intrinsicHeight: 369,
       },
       icon: '/images/tidbits-icon.svg',
