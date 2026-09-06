@@ -15,19 +15,15 @@
   font-display: swap;
 }
 
-/* Italic faces are prose-internal (em inside article bodies) and typically
-   below the fold, so they use font-display: optional — the fallback italic
-   holds for a cold first paint instead of reflowing mid-read. The four
-   preloaded faces (Sohne 400/600, Tiempos Text 400, Sohne Mono 400 — the
-   above-the-fold date labels on cards and the postcard calendar) and Sohne
-   Mono 600 keep swap. */
+/* Use the supplied true italics even when the face arrives after first paint.
+   These are static fonts: there is no optical-size or variable-weight axis. */
 @font-face {
   font-family: "Sohne";
   src: url("https://fonts.philipithomas.com/klim/soehne-buch-kursiv.woff2")
     format("woff2");
   font-weight: 400;
   font-style: italic;
-  font-display: optional;
+  font-display: swap;
 }
 
 @font-face {
@@ -45,7 +41,7 @@
     format("woff2");
   font-weight: 600;
   font-style: italic;
-  font-display: optional;
+  font-display: swap;
 }
 
 @font-face {
@@ -63,7 +59,7 @@
     format("woff2");
   font-weight: 400;
   font-style: italic;
-  font-display: optional;
+  font-display: swap;
 }
 
 @font-face {
@@ -290,6 +286,38 @@ select:focus {
 
 body {
   background-color: var(--color-offwhite);
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures contextual;
+}
+
+@layer base {
+  /* Keep wrapping titles compact without overriding page-specific utilities. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    line-height: 1.2;
+    text-wrap: pretty;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Numbers in tables and controls should align without a monospace face. */
+  table {
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  code,
+  pre {
+    font-variant-numeric: lining-nums slashed-zero;
+    font-variant-ligatures: none;
+  }
+
+  :not(pre) > code {
+    overflow-wrap: anywhere;
+  }
 }
 
 /* Propagate page backgrounds to body so the header matches */
@@ -641,6 +669,67 @@ body:has(> * [data-bg="tidbits"]) {
   --tw-prose-quotes: var(--color-gray-800);
 }
 
+/* Tiempos's oldstyle figures sit naturally within running text. Keep this
+   scoped to editorial copy; dates, code, tables, and controls use lining figures. */
+.prose.font-serif {
+  font-variant-numeric: oldstyle-nums proportional-nums;
+}
+
+.reading-prose {
+  font-size: 1.125rem;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+@media (min-width: 640px) {
+  .reading-prose {
+    font-size: 1.25rem;
+  }
+}
+
+.reading-prose
+  :where(p, ul, ol, blockquote):not(:where(.not-prose, .not-prose *)) {
+  margin-block: 1.2em;
+}
+
+.reading-prose :where(h2, h3, h4):not(:where(.not-prose, .not-prose *)) {
+  margin-top: 1.8em;
+  margin-bottom: 0.65em;
+}
+
+.reading-prose :where(h2):not(:where(.not-prose, .not-prose *)) {
+  font-size: 1.5em;
+}
+
+.reading-prose :where(h3):not(:where(.not-prose, .not-prose *)) {
+  font-size: 1.2em;
+}
+
+.reading-prose
+  :where(h2, h3, h4):not(:where(.not-prose, .not-prose *))
+  + :not(:where(.not-prose, .not-prose *)) {
+  margin-top: 0;
+}
+
+.reading-prose > :first-child:not(:where(.not-prose, .not-prose *)) {
+  margin-top: 0;
+}
+
+.reading-prose > :last-child:not(:where(.not-prose, .not-prose *)) {
+  margin-bottom: 0;
+}
+
+/* The licensed Tiempos files have no bold face. Söhne's real semibold
+   provides emphasis instead of asking the browser to invent a heavier serif. */
+.prose strong:not(:where(.not-prose, .not-prose *)) {
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+.prose :where(table, time, input, button) {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
 .prose h1,
 .prose h2,
 .prose h3,
@@ -649,7 +738,10 @@ body:has(> * [data-bg="tidbits"]) {
 .prose h6 {
   font-family: var(--font-sans);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  text-wrap: pretty;
+  font-variant-numeric: lining-nums proportional-nums;
 }
 
 /* Anchor targets: breathing room above a heading reached via a #fragment
@@ -766,7 +858,9 @@ body:has(> * [data-bg="tidbits"]) {
 
 .prose a {
   text-decoration-color: var(--prose-accent, var(--color-gray-400));
-  text-underline-offset: 2px;
+  text-underline-offset: 0.15em;
+  text-decoration-thickness: 1px;
+  text-decoration-skip-ink: auto;
   transition: color 0.3s ease;
   font-weight: normal;
 }

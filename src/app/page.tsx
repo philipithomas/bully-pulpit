@@ -103,7 +103,7 @@ export default async function HomePage() {
           <div className="mb-6">
             <LatestPostPill />
           </div>
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-gray-950 mb-6">
+          <h1 className="text-4xl sm:text-5xl font-semibold leading-[1.1] tracking-tight text-pretty text-gray-950 mb-6">
             Crafting digital tools
           </h1>
           <div className="font-serif text-lg text-gray-900 leading-relaxed mb-8 lg:mb-12 max-w-prose">
@@ -143,7 +143,7 @@ export default async function HomePage() {
 
           {/* Newsletter directory */}
           <div className="mt-8">
-            <p className="font-serif text-sm text-gray-600 mb-6">
+            <p className="font-serif text-base leading-relaxed text-gray-600 mb-6">
               I publish these newsletters:
             </p>
             <div className="space-y-4">
@@ -168,13 +168,13 @@ export default async function HomePage() {
                       className="w-auto shrink-0"
                     />
                   </span>
-                  <span className="font-serif text-sm text-gray-600 group-hover:text-gray-700 transition-colors duration-300">
+                  <span className="font-serif text-base leading-relaxed text-gray-600 group-hover:text-gray-700 transition-colors duration-300">
                     {nl.tagline}
                   </span>
                 </Link>
               ))}
             </div>
-            <p className="font-serif text-sm text-gray-500 mt-6">
+            <p className="font-serif text-sm leading-relaxed text-gray-500 mt-6">
               Also available via{' '}
               <Link
                 href="/feed/rss.xml"

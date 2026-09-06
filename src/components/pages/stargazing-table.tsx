@@ -130,7 +130,7 @@ function MichelinCell({ restaurant }: { restaurant: StargazingRestaurant }) {
             <Clover aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap border border-gray-700 bg-gray-950 px-2 py-1 font-mono text-[0.6875rem] text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100"
+              className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap border border-gray-700 bg-gray-950 px-2 py-1 font-sans text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100"
             >
               Michelin Green Star
             </span>
@@ -155,8 +155,8 @@ function WorldsBestCell({ restaurant }: { restaurant: StargazingRestaurant }) {
       rel="noopener noreferrer"
       className={
         numberOne
-          ? 'inline-flex border border-indigo/30 bg-indigo/10 px-2 py-1 font-mono text-indigo text-xs no-underline transition-colors hover:border-indigo hover:bg-indigo/15'
-          : 'underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950 hover:decoration-gray-900'
+          ? 'inline-flex border border-indigo/30 bg-indigo/10 px-2 py-1 font-sans tabular-nums text-indigo text-xs no-underline transition-colors hover:border-indigo hover:bg-indigo/15'
+          : 'font-sans tabular-nums underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-950 hover:decoration-gray-900'
       }
     >
       No. {restaurant.worldsBest.rank}
@@ -234,7 +234,10 @@ export function StargazingTable({ restaurants }: StargazingTableProps) {
         </div>
       </div>
 
-      <p aria-live="polite" className="my-4 font-mono text-gray-500 text-xs">
+      <p
+        aria-live="polite"
+        className="my-4 font-sans tabular-nums text-gray-500 text-xs"
+      >
         Showing {visibleRestaurants.length} of {restaurants.length} restaurants
       </p>
 
@@ -366,7 +369,7 @@ export function StargazingTable({ restaurants }: StargazingTableProps) {
                     </div>
                     {restaurant.worldsBest ? (
                       <p className="mt-3 font-sans text-gray-700 text-sm">
-                        <span className="mr-2 font-mono text-gray-400 text-xs uppercase tracking-[0.06em]">
+                        <span className="mr-2 font-sans text-gray-400 text-xs">
                           World
                         </span>
                         <WorldsBestCell restaurant={restaurant} />

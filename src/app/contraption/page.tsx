@@ -44,18 +44,19 @@ function FeaturedCard({ post, large }: { post: Post; large?: boolean }) {
         </div>
       )}
       <div className="p-4 md:p-5">
-        <time className="font-mono text-xs text-gray-500">
+        <time
+          dateTime={post.frontmatter.publishedAt}
+          className="block font-sans text-xs tabular-nums leading-relaxed text-gray-500"
+        >
           {post.frontmatter.publishedAt}
         </time>
         <h2
-          className={`font-semibold tracking-tight text-gray-950 group-hover:text-forest transition-colors duration-500 mt-1 ${large ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
+          className={`font-semibold tracking-tight leading-tight text-pretty text-gray-950 group-hover:text-forest transition-colors duration-500 mt-2 ${large ? 'text-2xl sm:text-3xl' : 'text-lg'}`}
         >
           {post.frontmatter.title}
         </h2>
         {(post.frontmatter.subtitle || post.frontmatter.description) && (
-          <p
-            className={`font-serif text-gray-600 mt-1 ${large ? 'text-base' : 'text-sm'}`}
-          >
+          <p className="font-serif text-base leading-relaxed text-pretty text-gray-600 mt-2">
             {post.frontmatter.subtitle || post.frontmatter.description}
           </p>
         )}

@@ -14,7 +14,7 @@ export function ContactPage({ page }: { page: Page }) {
       label: 'Email',
       value: (
         <a
-          className="underline decoration-gray-300 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
+          className="underline decoration-gray-300 underline-offset-4 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
           href="mailto:mail@philipithomas.com"
         >
           mail@philipithomas.com
@@ -27,7 +27,7 @@ export function ContactPage({ page }: { page: Page }) {
             label: 'Telephone',
             value: (
               <a
-                className="underline decoration-gray-300 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
+                className="underline decoration-gray-300 underline-offset-4 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900"
                 href={`tel:${phoneNumber}`}
               >
                 {phoneDisplayNumber ?? phoneNumber}
@@ -58,7 +58,7 @@ export function ContactPage({ page }: { page: Page }) {
     <article>
       <SetNewsletter newsletter={null} />
       <JsonLd type="webpage" page={page} />
-      <div className="container pt-16 pb-20">
+      <div className="container py-12 md:py-16">
         <div className="max-w-4xl">
           <h1 className="font-sans font-semibold text-4xl text-gray-950 tracking-tight sm:text-5xl lg:text-6xl">
             {page.frontmatter.title}

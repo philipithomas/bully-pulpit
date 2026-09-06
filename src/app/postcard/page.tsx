@@ -110,7 +110,7 @@ export default function PostcardPage() {
             .sort(([a], [b]) => b - a)
             .map(([year, yearMonths]) => (
               <div key={year}>
-                <h2 className="font-serif text-xl text-gray-950 mb-4">
+                <h2 className="font-sans text-xl tabular-nums text-gray-950 mb-4">
                   {year}
                 </h2>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
@@ -130,7 +130,7 @@ export default function PostcardPage() {
                           href={`/${post.slug}`}
                           className="relative flex flex-col items-center justify-center p-3 bg-indigo text-white rounded-sm hover:bg-indigo/90 transition-colors text-center"
                         >
-                          <span className="font-mono text-xs font-semibold">
+                          <span className="font-sans text-sm tabular-nums font-semibold">
                             {m.label}
                           </span>
                         </Link>
@@ -140,7 +140,9 @@ export default function PostcardPage() {
                         key={m.key}
                         className="flex flex-col items-center justify-center p-3 bg-gray-100 text-gray-400 rounded-sm text-center"
                       >
-                        <span className="font-mono text-xs">{m.label}</span>
+                        <span className="font-sans text-sm tabular-nums">
+                          {m.label}
+                        </span>
                       </div>
                     )
                   })}

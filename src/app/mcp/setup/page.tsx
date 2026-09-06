@@ -26,8 +26,8 @@ function CodeBlock({ children }: { children: string }) {
 export default function McpPage() {
   return (
     <article className="bg-gray-050" data-bg="gray-050">
-      <div className="container py-16 md:py-20">
-        <div className="max-w-3xl">
+      <div className="container py-12 md:py-16">
+        <div className="max-w-2xl">
           <header className="mb-14">
             <h1 className="font-sans font-semibold text-4xl text-gray-950 tracking-tight sm:text-5xl lg:text-6xl">
               MCP server
@@ -59,7 +59,7 @@ export default function McpPage() {
               <dl className="mt-6 space-y-8">
                 <div>
                   <dt>
-                    <code className="font-mono text-gray-950 text-sm">
+                    <code className="font-mono text-gray-950 text-sm break-words">
                       search(query: string)
                     </code>
                   </dt>
@@ -73,7 +73,7 @@ export default function McpPage() {
 
                 <div>
                   <dt>
-                    <code className="font-mono text-gray-950 text-sm">
+                    <code className="font-mono text-gray-950 text-sm break-words">
                       fetch(id: string)
                     </code>
                   </dt>
@@ -88,7 +88,7 @@ export default function McpPage() {
 
                 <div>
                   <dt>
-                    <code className="font-mono text-gray-950 text-sm">
+                    <code className="font-mono text-gray-950 text-sm break-words">
                       list_posts(limit?: number, offset?: number, newsletter?:
                       "contraption" | "workshop" | "postcard" | "tidbits" |
                       "tsundoku")

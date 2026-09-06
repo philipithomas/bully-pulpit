@@ -5,7 +5,7 @@ import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
 import { SMS_SUBSCRIBE_CONFIRMATION } from '@/lib/phone/sms-subscription-copy'
 
 const linkClassName =
-  'underline decoration-gray-300 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900'
+  'underline decoration-gray-300 underline-offset-4 transition-colors duration-300 hover:text-gray-900 hover:decoration-gray-900'
 
 export function TextMessagingConsent({
   phoneDisplayNumber,
@@ -52,7 +52,7 @@ export function TextMessagingConsent({
         </div>
       </section>
 
-      <section className="border-gray-200 border-t pt-10">
+      <section>
         <h2 className="font-sans font-semibold text-2xl text-gray-950 tracking-tight sm:text-3xl">
           Bell replies
         </h2>
@@ -63,7 +63,7 @@ export function TextMessagingConsent({
         </p>
       </section>
 
-      <section className="border-gray-200 border-t pt-10">
+      <section>
         <h2 className="font-sans font-semibold text-gray-950 text-lg tracking-tight">
           Confirmation message
         </h2>
@@ -72,7 +72,7 @@ export function TextMessagingConsent({
         </blockquote>
       </section>
 
-      <p className="border-gray-200 border-t pt-10 font-serif text-gray-700 text-lg leading-relaxed">
+      <p className="font-serif text-gray-700 text-lg leading-relaxed">
         Read the{' '}
         <a href="/terms#text-messaging" className={linkClassName}>
           text messaging terms
@@ -95,8 +95,8 @@ export function TextMessagingPage({ page }: { page: Page }) {
     <article>
       <SetNewsletter newsletter={null} />
       <JsonLd type="webpage" page={page} />
-      <div className="container py-16 md:py-20">
-        <div className="max-w-3xl">
+      <div className="container py-12 md:py-16">
+        <div className="max-w-2xl">
           <header className="mb-12">
             <h1 className="font-sans font-semibold text-4xl text-gray-950 tracking-tight sm:text-5xl lg:text-6xl">
               {page.frontmatter.title}

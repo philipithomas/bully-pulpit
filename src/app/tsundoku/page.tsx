@@ -108,7 +108,7 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
           fetchPriority={index === 0 ? 'high' : undefined}
         />
       </button>
-      <figcaption className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-gray-500">
+      <figcaption className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-sans tabular-nums text-xs text-gray-500">
         <time>{post.frontmatter.publishedAt}</time>
         {location ? (
           <>
@@ -145,7 +145,7 @@ export default async function TsundokuPage() {
       <div className="container pt-4 pb-10 sm:pt-6 sm:pb-12 md:pt-6 md:pb-14">
         <div className="mb-10 flex flex-col items-center text-center md:mb-14">
           <div
-            className="mb-4 flex items-center justify-center gap-2 font-mono text-xs text-gray-500"
+            className="mb-4 flex items-center justify-center gap-2 font-sans tabular-nums text-xs text-gray-500"
             aria-label={`Trip dates: ${TRIP_START} to ${TRIP_END}`}
           >
             <time dateTime={TRIP_START}>{TRIP_START}</time>

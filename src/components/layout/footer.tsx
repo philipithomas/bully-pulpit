@@ -9,11 +9,11 @@ export function Footer() {
         <div className="grid gap-y-3 md:grid-cols-[minmax(10rem,1fr)_minmax(0,auto)] md:items-baseline md:gap-x-8">
           <Link
             href="/"
-            className="text-white font-semibold text-sm tracking-[0.04em] uppercase hover:text-gray-300 transition-colors"
+            className="text-white font-semibold text-sm leading-snug hover:text-gray-300 transition-colors"
           >
             {siteIdentity.name}
           </Link>
-          <p className="order-2 text-xs text-gray-500 md:order-none md:col-start-1 md:row-start-2">
+          <p className="order-2 text-xs leading-relaxed text-gray-500 md:order-none md:col-start-1 md:row-start-2">
             &copy; {new Date().getFullYear()}{' '}
             <Link
               href="/contact"
@@ -23,7 +23,7 @@ export function Footer() {
             </Link>
             . All rights reserved.
           </p>
-          <nav className="order-3 mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm md:order-none md:col-start-2 md:row-start-1 md:mt-0 md:justify-end">
+          <nav className="order-3 mt-5 flex flex-wrap gap-x-6 gap-y-3 text-sm leading-relaxed md:order-none md:col-start-2 md:row-start-1 md:mt-0 md:justify-end">
             <Link
               href="/contact"
               className="hover:text-white transition-colors"

@@ -321,11 +321,7 @@ export default async function SlugPage({ params }: Props) {
       : {}
   const postDateline =
     postDate || location ? (
-      <div
-        className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 ${
-          isTidbitsPost ? 'font-sans' : 'font-mono'
-        }`}
-      >
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-sans text-xs tabular-nums text-gray-500">
         {postDate ? <time>{postDate}</time> : null}
         {postDate && location ? <span aria-hidden="true">@</span> : null}
         {location ? (
@@ -497,7 +493,7 @@ export default async function SlugPage({ params }: Props) {
                     className="w-9 h-9 rounded-full"
                   />
                   <span
-                    className={`font-sans text-sm font-medium uppercase tracking-[0.04em] text-gray-600 ${accentHoverText[post.newsletter]} transition-colors duration-300`}
+                    className={`font-sans text-sm font-medium text-gray-600 ${accentHoverText[post.newsletter]} transition-colors duration-300`}
                   >
                     {siteConfig.author}
                   </span>
@@ -516,7 +512,7 @@ export default async function SlugPage({ params }: Props) {
                 ? ''
                 : undefined
             }
-            className={`prose prose-xl max-w-2xl font-serif ${
+            className={`prose prose-lg sm:prose-xl reading-prose max-w-2xl font-serif ${
               isTidbitsPost ? '' : 'mx-auto'
             }`}
           >
