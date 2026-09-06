@@ -1,11 +1,11 @@
 import { type GatewayProviderOptions, gateway } from '@ai-sdk/gateway'
 
-/** Shared GPT-5.6 Sol model for Bell's web and SMS surfaces. */
-export const BELL_MODEL_ID = 'openai/gpt-5.6-sol'
+/** Shared GPT-5.6 Sol fast-serving model for Bell's web and SMS surfaces. */
+export const BELL_MODEL_ID = 'openai/gpt-5.6-sol-fast'
 export const bellModel = gateway(BELL_MODEL_ID)
 
 /** A short greeting choice does not need Bell's flagship model. */
-export const PHONE_GREETING_MODEL_ID = 'openai/gpt-5.6-luna'
+export const PHONE_GREETING_MODEL_ID = 'openai/gpt-5.6-luna-fast'
 export const phoneGreetingModel = gateway(PHONE_GREETING_MODEL_ID)
 
 export type BellGenerationSurface = 'web' | 'sms'
@@ -42,6 +42,9 @@ function getSharedProviderOptions(input: {
       only: ['openai'],
       order: ['openai'],
       sort: 'ttft',
+      // Also covers caller-selected evaluation models. Unsupported models
+      // remain standard-speed; leave automatic base-tier fallback enabled.
+      speed: 'fast',
       // Priority is best-effort: Gateway falls back to the standard service
       // tier when priority is unavailable, without changing the Sol model.
       ...(input.surface === 'web' ? { serviceTier: 'priority' as const } : {}),

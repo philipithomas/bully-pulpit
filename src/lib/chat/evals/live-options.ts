@@ -1,4 +1,16 @@
-export const BELL_EVAL_REFERENCE_MODEL_ID = 'openai/gpt-5.4-mini'
+import { getBellProviderOptions } from '@/lib/chat/bell-model'
+
+export const BELL_EVAL_REFERENCE_MODEL_ID = 'openai/gpt-5.4-mini-fast'
+
+export function getBellEvalProviderOptions(
+  surface: 'web' | 'sms',
+  caseId: string
+) {
+  return getBellProviderOptions({
+    surface,
+    pseudonymousUser: `bell-eval:${caseId}`,
+  })
+}
 
 export interface BellEvalCliOptions {
   models: string[]

@@ -154,6 +154,7 @@ describe('generateGreeting', () => {
       signal: expect.any(AbortSignal),
     })
     const call = mockedGenerateText.mock.calls[0][0]
+    expect(PHONE_GREETING_MODEL_ID).toBe('openai/gpt-5.6-luna-fast')
     expect(call.model).toBe(PHONE_GREETING_MODEL_ID)
     expect(call.reasoning).toBe('none')
     expect(call.providerOptions).toMatchObject({
@@ -161,6 +162,7 @@ describe('generateGreeting', () => {
       gateway: {
         only: ['openai'],
         order: ['openai'],
+        speed: 'fast',
         zeroDataRetention: true,
         tags: [
           'feature:phone-greeting',
