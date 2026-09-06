@@ -8,6 +8,7 @@ import { sendSimpleEmail } from '@/lib/email/ses'
 import {
   sendBellLiveTranscriptNotification,
   sendIncomingSmsNotification,
+  sendSmsSignupNotification,
 } from '@/lib/phone/notifications'
 
 describe('phone notifications', () => {
@@ -43,6 +44,32 @@ describe('phone notifications', () => {
     expect(email.text).toContain('Bell reply:')
     expect(email.text).toContain('[Bell AI] A new Postcard.')
     expect(email.text).toContain('2026-07-13 20:30 UTC')
+  })
+
+  it.each([
+    ['voice-menu', 'voice menu', 'Pressed 2 during a phone call'],
+    [
+      'voice-bell',
+      'Bell AI voice',
+      'Confirmed verbally with Bell AI during a phone call',
+    ],
+    ['sms', 'text', 'Texted SUBSCRIBE'],
+  ] as const)('identifies the %s signup source in the subject and both message parts', async (source, subjectLabel, contentLabel) => {
+    await sendSmsSignupNotification({
+      phoneNumber: '+15551234567',
+      to: '+12123473190',
+      source,
+    })
+    const email = vi.mocked(sendSimpleEmail).mock.calls[0][0]
+    expect(email.subject).toBe(
+      `SMS signup from +15551234567 via ${subjectLabel}`
+    )
+    expect(email.html).toContain(contentLabel)
+    expect(email.text).toContain(contentLabel)
+    if (source === 'voice-bell') {
+      expect(email.html).not.toContain('Pressed 2')
+      expect(email.text).not.toContain('Pressed 2')
+    }
   })
 
   it('emails the complete live transcript to every phone administrator', async () => {

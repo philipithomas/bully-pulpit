@@ -1127,12 +1127,7 @@ describe('POST /api/phone/voice-menu', () => {
     await voiceMenuPost(voiceMenuRequest({ ...form, CallSid: 'CA_SUB_AGAIN' }))
     await flushAfterTasks()
 
-    expect(vi.mocked(sendSms)).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(sendSms)).toHaveBeenCalledWith({
-      from: '+12123473190',
-      to: '+14155551234',
-      body: SMS_SUBSCRIBE_CONFIRMATION,
-    })
+    expect(vi.mocked(sendSms)).not.toHaveBeenCalled()
     expect(vi.mocked(sendSimpleEmail)).not.toHaveBeenCalled()
   })
 

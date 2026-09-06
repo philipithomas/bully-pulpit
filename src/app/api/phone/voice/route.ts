@@ -2,11 +2,13 @@ import { after, NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
 import { findSmsSubscriberByPhoneNumber } from '@/lib/db/queries/sms-subscribers'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
-import { phoneBellLiveConfigured } from '@/lib/phone/bell-live'
+import { bellLiveSipUri } from '@/lib/phone/bell-live'
+import { phoneBellInitialGreeting } from '@/lib/phone/bell-live-greeting'
 import { isE164, sitePhoneNumber } from '@/lib/phone/config'
 import { generateGreeting } from '@/lib/phone/greeting'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 import {
+  bellLiveTwiml,
   twimlResponse,
   voiceMenuTwiml,
   voicemailTwiml,
@@ -29,14 +31,9 @@ async function hasConfirmedSmsSubscription(
 }
 
 /**
- * Twilio voice webhook for incoming calls. Generates a fresh greeting, plays
- * it through the signed AI speech route, and records a voicemail with callbacks
- * into the recording-status and recording-complete routes. The caller, called
- * number, and initial caller metadata ride along on the status callback URL
- * because Twilio's recording callbacks do not include them. Confirmed SMS
- * subscribers bypass the signup menu unless Bell Live is configured; in that
- * case they get the shorter voicemail-or-Bell menu without a redundant signup
- * choice.
+ * Connects configured calls directly to Bell, which speaks its own short
+ * greeting. The existing keypad/voicemail entry remains available if Bell
+ * cannot be configured for this call.
  */
 export async function POST(request: Request) {
   const form = await validatedPhoneWebhookForm(request)
@@ -47,6 +44,29 @@ export async function POST(request: Request) {
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
   const metadata = twilioWebhookMetadataFromForm(form, from)
+  const sipUri = bellLiveSipUri(String(form.get('CallSid') ?? ''))
+
+  if (sipUri) {
+    after(async () => {
+      try {
+        await sendMissedCallNotification({
+          from,
+          to,
+          greeting: phoneBellInitialGreeting(),
+          metadata,
+        })
+      } catch (err) {
+        console.error('Failed to send missed call notification:', err)
+      }
+    })
+
+    return twimlResponse(
+      bellLiveTwiml({
+        sipUri,
+        actionUrl: `${siteConfig.url}/api/phone/bell-complete`,
+      })
+    )
+  }
 
   const publicPhoneNumber = sitePhoneNumber()
   const [greeting, alreadySubscribed] = await Promise.all([
@@ -67,21 +87,14 @@ export async function POST(request: Request) {
   })
 
   const callbackUrls = voicemailCallbackUrls({ from, to, metadata })
-  const bellLiveAvailable = phoneBellLiveConfigured()
-
-  if (!bellLiveAvailable && (!publicPhoneNumber || alreadySubscribed)) {
+  if (!publicPhoneNumber || alreadySubscribed) {
     return twimlResponse(voicemailTwiml({ greeting, ...callbackUrls }))
   }
 
   return twimlResponse(
     voiceMenuTwiml({
       greeting,
-      menuPrompt:
-        bellLiveAvailable && publicPhoneNumber && !alreadySubscribed
-          ? 'menuWithBell'
-          : bellLiveAvailable
-            ? 'bellMenu'
-            : 'menu',
+      menuPrompt: 'menu',
       menuActionUrl: `${siteConfig.url}/api/phone/voice-menu`,
       ...callbackUrls,
     })

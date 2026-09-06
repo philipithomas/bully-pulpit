@@ -10,6 +10,7 @@ import {
   acceptBellLiveCall,
   BellLiveGreetingError,
   type BellLiveLifecycleEvent,
+  hangupBellLiveCall,
   isOpenAiRealtimeCallId,
   OpenAiCallActionError,
   type OpenAiCallActionResult,
@@ -19,6 +20,10 @@ import {
   startBellLiveGreeting,
   verifiedBellLiveSipCallSid,
 } from '@/lib/phone/bell-live'
+import {
+  type BellLiveActionHandler,
+  createBellLiveActionHandler,
+} from '@/lib/phone/bell-live-actions'
 import { sendBellLiveTranscriptNotification } from '@/lib/phone/notifications'
 
 export const dynamic = 'force-dynamic'
@@ -30,8 +35,8 @@ export const maxDuration = 360
 const MAX_WEBHOOK_BYTES = 64 * 1024
 const GREETING_DEADLINE_MS = 15_000
 const GREETING_LEASE_MS = 6_000
-// Once OpenAI accepts the SIP call, the opener is best-effort. Never reclaim
-// it: a late replay is worse than letting the caller begin the conversation.
+// Never reclaim an existing controller: two observers could repeat actions
+// or replay the greeting. Failure falls back to Twilio's keypad instead.
 const GREETING_MAX_ATTEMPTS = 1
 const GREETING_CHECKPOINT_ATTEMPTS = 3
 const GREETING_SOCKET_ATTEMPTS = 2
@@ -86,10 +91,9 @@ async function terminalizeObservedBellLiveGreeting(
     return true
   }
 
-  // Once OpenAI confirms that this response's audio reached the SIP caller,
-  // the irreversible side effect must remain terminal even if its short lease
-  // expired while the provider was speaking or a database acknowledgement was
-  // lost. This unfenced fallback is deliberately never used before audio.
+  // Once greeting audio reaches the caller or their speech consumes the
+  // opening, keep that greeting terminal even if its lease expired or a
+  // database acknowledgement was lost. Replaying it would interrupt the call.
   for (let attempt = 0; attempt < GREETING_CHECKPOINT_ATTEMPTS; attempt += 1) {
     try {
       if (
@@ -120,8 +124,9 @@ function canRetryBellLiveGreeting(
 async function startBellLiveGreetingWithRetry(input: {
   callId: string
   logContext: Record<string, unknown>
-  onAudioStarted: () => Promise<boolean>
+  onGreetingConsumed: () => Promise<boolean>
   onLifecycleEvent: (event: BellLiveLifecycleEvent) => void
+  actions: BellLiveActionHandler
 }): Promise<Awaited<ReturnType<typeof startBellLiveGreeting>>> {
   for (
     let socketAttempt = 1;
@@ -130,8 +135,9 @@ async function startBellLiveGreetingWithRetry(input: {
   ) {
     try {
       return await startBellLiveGreeting(input.callId, {
-        onAudioStarted: input.onAudioStarted,
+        onGreetingConsumed: input.onGreetingConsumed,
         onLifecycleEvent: input.onLifecycleEvent,
+        actions: input.actions,
       })
     } catch (error) {
       if (
@@ -154,6 +160,21 @@ async function startBellLiveGreetingWithRetry(input: {
   }
 
   throw new Error('Bell Live greeting retry loop exhausted')
+}
+
+async function returnBellCallToKeypad(
+  callId: string,
+  logContext: Record<string, unknown>
+): Promise<void> {
+  try {
+    await hangupBellLiveCall(callId)
+  } catch {
+    console.error('[openai/realtime-call]', {
+      event: 'bell_live.keypad_fallback',
+      outcome: 'failed',
+      ...logContext,
+    })
+  }
 }
 
 function isSipHeader(value: unknown): value is OpenAiSipHeader {
@@ -280,7 +301,7 @@ async function runBellLiveGreeting(input: {
   let greetingEvent: Awaited<ReturnType<typeof findOrCreatePhoneWebhookEvent>>
   try {
     greetingEvent = await findOrCreatePhoneWebhookEvent({
-      eventKey: `bell-live-greeting:${twilioCallSid}`,
+      eventKey: `bell-live-greeting:${twilioCallSid}:${callId}`,
       eventType: 'bell-live-greeting',
     })
   } catch {
@@ -289,6 +310,7 @@ async function runBellLiveGreeting(input: {
       outcome: 'claim_error',
       ...logContext,
     })
+    await returnBellCallToKeypad(callId, logContext)
     return
   }
 
@@ -302,6 +324,7 @@ async function runBellLiveGreeting(input: {
       outcome: 'expired',
       ...logContext,
     })
+    await returnBellCallToKeypad(callId, logContext)
     return
   }
 
@@ -320,12 +343,13 @@ async function runBellLiveGreeting(input: {
       outcome: 'claim_error',
       ...logContext,
     })
+    await returnBellCallToKeypad(callId, logContext)
     return
   }
   if (greetingClaim.outcome !== 'claimed') return
 
   const { attemptNumber, processingAt: lease } = greetingClaim
-  const processedStepId = `bell-live-greeting:${twilioCallSid}`
+  const processedStepId = `bell-live-greeting:${twilioCallSid}:${callId}`
   const checkpointGreeting = () =>
     terminalizeObservedBellLiveGreeting(
       greetingEvent.event.id,
@@ -337,8 +361,9 @@ async function runBellLiveGreeting(input: {
     const greeting = await startBellLiveGreetingWithRetry({
       callId,
       logContext,
-      onAudioStarted: checkpointGreeting,
+      onGreetingConsumed: checkpointGreeting,
       onLifecycleEvent: (event) => logBellLiveLifecycle(event, logContext),
+      actions: createBellLiveActionHandler(twilioCallSid),
     })
     if (!greeting.responseCheckpointed) {
       console.error('[openai/realtime-call]', {
@@ -361,6 +386,10 @@ async function runBellLiveGreeting(input: {
     }
 
     const conversation = await greeting.conversation
+    // With no control connection, the model must not keep offering actions.
+    // Ending this SIP leg invokes Twilio's keypad action; a parent call already
+    // redirected to voicemail is independent and continues recording.
+    await returnBellCallToKeypad(callId, logContext)
     const transcriptCharacters = conversation.turns.reduce(
       (total, turn) => total + turn.text.length,
       0
@@ -439,6 +468,7 @@ async function runBellLiveGreeting(input: {
       terminalCheckpointed,
       ...logContext,
     })
+    await returnBellCallToKeypad(callId, logContext)
   }
 }
 
@@ -535,6 +565,7 @@ export async function POST(request: Request): Promise<Response> {
           outcome: 'background_error',
           ...logContext,
         })
+        await returnBellCallToKeypad(incoming.callId, logContext)
       }
     })
   } catch {
@@ -543,10 +574,11 @@ export async function POST(request: Request): Promise<Response> {
       outcome: 'schedule_error',
       ...logContext,
     })
+    await returnBellCallToKeypad(incoming.callId, logContext)
   }
 
   // A successful accept only means OpenAI has begun establishing the SIP
-  // session. Acknowledge the webhook immediately; waiting for the optional
-  // sideband opener here can prevent the session from becoming attachable.
+  // session. Acknowledge immediately; waiting for the control connection here
+  // can prevent the session from becoming attachable.
   return response(204)
 }

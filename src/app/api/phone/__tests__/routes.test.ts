@@ -47,6 +47,7 @@ import {
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
 import { findSmsSubscriberByPhoneNumber } from '@/lib/db/queries/sms-subscribers'
+import { generateGreeting } from '@/lib/phone/greeting'
 import {
   PHONE_IVR_FALLBACK_PROMPTS,
   verifyPhoneIvrAudioToken,
@@ -235,30 +236,38 @@ describe('POST /api/phone/voice', () => {
     expect(xml).not.toContain('/api/phone/voice-menu')
   })
 
-  it('offers Bell to new callers when Realtime is fully configured', async () => {
+  it('connects new callers directly to Bell without waiting for greeting generation or subscriber lookup', async () => {
     enableBellLive()
     const response = await voicePost(
       twilioPost('/api/phone/voice', {
         From: '+15551234567',
         To: '+12123473190',
+        CallSid: 'CA123',
       })
     )
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    const menu = playedTexts(xml)[1]
-    expect(menu).toContain('Press 2 to subscribe')
-    expect(menu).toContain('Press 3 to talk to Bell AI')
-    expect(menu).not.toContain('transcribed')
+    expect(playedTexts(xml)).toEqual([])
+    expect(xml).toContain(
+      '<Sip>sip:proj_test123@sip.api.openai.com;transport=tls?'
+    )
+    expect(xml).toContain('x-bp-call-sid=CA123')
+    expect(xml).toContain('hangupOnStar="true"')
+    expect(xml).toContain('/api/phone/bell-complete')
+    expect(xml).not.toContain('<Gather')
+    expect(generateGreeting).not.toHaveBeenCalled()
+    expect(findSmsSubscriberByPhoneNumber).not.toHaveBeenCalled()
+    expect(sendMissedCallNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: '+15551234567',
+        greeting: expect.stringContaining('this is Bell AI'),
+      })
+    )
   })
 
-  it('offers confirmed subscribers the shorter voicemail-or-Bell menu', async () => {
+  it('falls back to the manual signup menu if the signed form lacks a valid CallSid', async () => {
     enableBellLive()
-    vi.mocked(findSmsSubscriberByPhoneNumber).mockResolvedValueOnce({
-      confirmedAt: new Date('2026-07-21T00:00:00Z'),
-      // biome-ignore lint/suspicious/noExplicitAny: the route only reads confirmedAt
-    } as any)
-
     const response = await voicePost(
       twilioPost('/api/phone/voice', {
         From: '+15551234567',
@@ -267,12 +276,12 @@ describe('POST /api/phone/voice', () => {
     )
 
     const xml = await response.text()
-    expect(playedTexts(xml)[1]).toBe(PHONE_IVR_FALLBACK_PROMPTS.bellMenu)
-    expect(playedTexts(xml)[1]).not.toContain('transcribed')
+    expect(playedTexts(xml)[1]).toBe(PHONE_IVR_FALLBACK_PROMPTS.menu)
     expect(xml).toContain('<Gather')
+    expect(xml).not.toContain('<Sip>')
   })
 
-  it('can offer Bell when SMS signup is unavailable', async () => {
+  it('can connect to Bell when SMS signup is unavailable', async () => {
     enableBellLive()
     delete process.env.PHONE_NUMBER
 
@@ -280,11 +289,13 @@ describe('POST /api/phone/voice', () => {
       twilioPost('/api/phone/voice', {
         From: '+15551234567',
         To: '+12123473190',
+        CallSid: 'CA123',
       })
     )
 
     const xml = await response.text()
-    expect(playedTexts(xml)[1]).toBe(PHONE_IVR_FALLBACK_PROMPTS.bellMenu)
+    expect(playedTexts(xml)).toEqual([])
+    expect(xml).toContain('<Sip>')
     expect(findSmsSubscriberByPhoneNumber).not.toHaveBeenCalled()
   })
 
@@ -335,7 +346,8 @@ describe('POST /api/phone/voice', () => {
 })
 
 describe('POST /api/phone/bell-complete', () => {
-  it('thanks the caller and hangs up after a completed Bell call', async () => {
+  it('opens the keypad after a completed Bell leg, including the star escape', async () => {
+    enableBellLive()
     const response = await bellCompletePost(
       twilioPost('/api/phone/bell-complete', {
         From: '+15551234567',
@@ -346,11 +358,17 @@ describe('POST /api/phone/bell-complete', () => {
 
     expect(response.status).toBe(200)
     const xml = await response.text()
-    expect(playedTexts(xml)).toEqual(['Thank you. Goodbye.'])
-    expect(xml).toContain('<Hangup/>')
+    expect(playedTexts(xml)).toEqual([
+      PHONE_IVR_FALLBACK_PROMPTS.menuWithBell,
+      PHONE_IVR_FALLBACK_PROMPTS.voicemail,
+    ])
+    expect(xml).toContain('<Gather')
+    expect(xml).toContain('/api/phone/voice-menu')
+    expect(xml).not.toContain('<Hangup/>')
   })
 
-  it('returns a failed OpenAI SIP leg directly to voicemail', async () => {
+  it('keeps manual choices and a voicemail timeout after a failed OpenAI SIP leg', async () => {
+    enableBellLive()
     const response = await bellCompletePost(
       twilioPost('/api/phone/bell-complete', {
         From: '+15551234567',
@@ -369,6 +387,7 @@ describe('POST /api/phone/bell-complete', () => {
     const xml = await response.text()
     expect(playedTexts(xml)).toEqual([
       "I couldn't reach Bell.",
+      PHONE_IVR_FALLBACK_PROMPTS.menuWithBell,
       'Leave a message after the tone.',
     ])
     expect(xml).not.toContain('<Dial')
@@ -377,7 +396,7 @@ describe('POST /api/phone/bell-complete', () => {
       '[phone/bell-complete]',
       expect.objectContaining({
         event: 'bell_live.twilio_dial_complete',
-        outcome: 'voicemail',
+        outcome: 'keypad',
         dialCallStatus: 'failed',
         dialSipResponseCode: 400,
         dialBridged: false,
@@ -385,6 +404,27 @@ describe('POST /api/phone/bell-complete', () => {
         dialCallDurationSeconds: 0,
       })
     )
+  })
+
+  it('keeps the keypad available when completion has no caller metadata', async () => {
+    enableBellLive()
+    const response = await bellCompletePost(
+      twilioPost('/api/phone/bell-complete', { DialCallStatus: 'completed' })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('<Gather')
+  })
+
+  it('rejects an unsigned completion', async () => {
+    const response = await bellCompletePost(
+      twilioPost(
+        '/api/phone/bell-complete',
+        { DialCallStatus: 'completed' },
+        { signature: 'invalid' }
+      )
+    )
+    expect(response.status).toBe(401)
   })
 })
 

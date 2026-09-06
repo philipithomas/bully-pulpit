@@ -2,6 +2,7 @@
 // junk-drawer's TwilioClient.send_sms / create_call; dependency-free (plain
 // fetch with HTTP Basic auth and form-encoded params).
 
+import { siteConfig } from '@/lib/config'
 import { twilioSecret } from '@/lib/phone/config'
 
 const TWILIO_REQUEST_TIMEOUT_MS = 30_000
@@ -150,4 +151,66 @@ export async function createCall(input: {
     throw twilioCallError(response.status, data.message)
   }
   return { sid: data.sid, status: data.status ?? 'queued' }
+}
+
+export type TwilioCall = {
+  sid: string
+  from: string
+  to: string
+  status: string
+  direction: string
+}
+
+export function isTwilioCallSid(value: string): boolean {
+  return /^CA[0-9a-fA-F]{32}$/.test(value)
+}
+
+function twilioCallResourceUrl(accountSid: string, callSid: string): string {
+  if (!isTwilioCallSid(callSid)) throw new Error('Invalid Twilio CallSid')
+  return `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Calls/${callSid}.json`
+}
+
+/** Resolve caller identity from Twilio, never from model-supplied arguments. */
+export async function getCall(callSid: string): Promise<TwilioCall> {
+  const { accountSid, authToken } = twilioCredentials()
+  const response = await fetch(twilioCallResourceUrl(accountSid, callSid), {
+    method: 'GET',
+    headers: { Authorization: twilioBasicAuthHeader(accountSid, authToken) },
+    redirect: 'error',
+    signal: AbortSignal.timeout(10_000),
+  })
+  const data = (await response.json().catch(() => ({}))) as Partial<TwilioCall>
+  if (
+    !response.ok ||
+    data.sid !== callSid ||
+    typeof data.from !== 'string' ||
+    typeof data.to !== 'string' ||
+    typeof data.status !== 'string' ||
+    typeof data.direction !== 'string'
+  ) {
+    // Provider error bodies can contain telephone numbers; do not propagate them.
+    throw new TwilioApiError('Twilio call lookup failed', response.status)
+  }
+  return data as TwilioCall
+}
+
+/** Interrupt the parent call's active TwiML with our fixed voicemail route. */
+export async function redirectCallToVoicemail(callSid: string): Promise<void> {
+  const { accountSid, authToken } = twilioCredentials()
+  const response = await fetch(twilioCallResourceUrl(accountSid, callSid), {
+    method: 'POST',
+    headers: {
+      Authorization: twilioBasicAuthHeader(accountSid, authToken),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      Url: new URL('/api/phone/voicemail', siteConfig.url).href,
+      Method: 'POST',
+    }),
+    redirect: 'error',
+    signal: AbortSignal.timeout(10_000),
+  })
+  if (!response.ok) {
+    throw new TwilioApiError('Twilio voicemail handoff failed', response.status)
+  }
 }

@@ -66,12 +66,22 @@ Every inbound webhook must include Twilio's `X-Twilio-Signature` header. The
 app validates the exact public URL and all form parameters with
 `TWILIO_SECRET`, the account auth token. Never put that token in a webhook URL.
 
-When `PHONE_NUMBER` is configured, public subscribe prompts offer SMS and the
-voice webhook plays the generated greeting, then offers "press 1" for
-voicemail and "press 2" to subscribe the caller ID to SMS updates. Before the
-caller chooses, the prompt identifies recurring new-post texts and states the
-frequency, rate, HELP, and STOP disclosures. No input falls through to
-voicemail.
+When `PHONE_NUMBER` is configured, public subscribe prompts offer SMS.
+With `OPENAI_API_KEY`, `OPENAI_PROJECT_ID`, and `OPENAI_WEBHOOK_SECRET`
+configured, calls connect directly to Bell AI. It opens with a short New York
+local greeting, such as “Good evening” or “Happy Labor Day.” Callers can ask
+questions, say “leave a voicemail,” or ask to subscribe to new-post texts.
+Spoken signup reads the disclosures and waits for an explicit yes in a later
+caller turn. The action always uses the verified calling number.
+
+Manual input remains available: press star during Bell to reach the keypad,
+then 1 for voicemail, 2 to subscribe, or 3 to return to Bell. A failed Bell
+connection also opens this menu, and no keypad input falls through to
+voicemail. Without Bell configuration, the existing greeting and keypad entry
+remain available. Before subscription consent, both spoken and keypad paths
+identify recurring new-post texts, the one-time contact card, and the
+frequency, rate, HELP, and STOP disclosures.
+
 The SMS webhook stores inbound replies, handles signup, HELP, and STOP words,
 and emails admins about normal replies. `SUBSCRIBE` replies with a branded
 confirmation that identifies the recurring new-post message type, says that
@@ -85,7 +95,7 @@ subscriber and its history instead of retaining an inactive tombstone. A later
 keyword or voice-menu signup creates fresh local state, although Twilio may
 continue blocking delivery until the handset sends START or UNSTOP.
 
-When a number first becomes active through either a `SUBSCRIBE` text or the
+When a number first becomes active through a `SUBSCRIBE` text, Bell voice, or the
 voice menu, the app also sends one Bell onboarding MMS with the contact card at
 `https://www.philipithomas.com/bell.vcf`. Repeating `SUBSCRIBE` while the number
 is active does not resend the onboarding message. STOP deletes the local SMS
@@ -96,7 +106,7 @@ named Bell with the sending number, the configured site organization and
 website, and an embedded JPEG Bell contact image. On iPhone, Messages opens the
 attachment in the native contact preview, where the person taps Create New
 Contact. The site cannot save the contact silently.
-New SMS opt-ins, whether they come from a `SUBSCRIBE` text or the voice menu,
+New SMS opt-ins, whether they come from a `SUBSCRIBE` text, Bell voice, or the voice menu,
 also email admins with the source path, Twilio webhook metadata such as city,
 state, caller name, message SID, or call SID when Twilio provides it, and an
 area-code hint for common US/Canada numbers.
@@ -136,7 +146,7 @@ WORKFLOW_SMOKE_BASE_URL=https://www.philipithomas.com CRON_SECRET=$CRON_SECRET p
 
 Then confirm the production flag is still off before launch. With the flag on in
 preview, send `SUBSCRIBE`, `HELP`, and `STOP` to `PHONE_NUMBER`, call it and
-press both menu options, and confirm `/printing-press/phone` shows the inbound
+verify Bell voice requests and the star/keypad options, and confirm `/printing-press/phone` shows the inbound
 and outbound thread history. Use a fresh number to verify that both text and
 voice signup paths send the Bell card once. Then send STOP and confirm that a
 fresh voice signup creates a new local subscription. Twilio may reject its

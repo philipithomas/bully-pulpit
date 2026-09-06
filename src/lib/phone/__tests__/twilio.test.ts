@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createCall,
+  getCall,
   isRetryableTwilioError,
+  redirectCallToVoicemail,
   sendSms,
   TwilioApiError,
+  twilioBasicAuthHeader,
 } from '@/lib/phone/twilio'
 
 const smsInput = { from: '+12123473190', to: '+15551234567', body: 'hi' }
@@ -188,5 +191,95 @@ describe('createCall', () => {
     await expect(createCall(callInput)).rejects.toThrow(
       'Twilio call failed (429): call queue full'
     )
+  })
+})
+
+describe('verified live call actions', () => {
+  const sid = 'CA1234567890abcdef1234567890abcdef'
+  const call = {
+    sid,
+    from: '+14155551234',
+    to: '+12123473190',
+    status: 'in-progress',
+    direction: 'inbound',
+  }
+
+  it('fetches the exact call using authentication, a timeout, and no redirects', async () => {
+    const fetchMock = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify(call))
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(getCall(sid)).resolves.toEqual(call)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(
+      `https://api.twilio.com/2010-04-01/Accounts/AC_test/Calls/${sid}.json`
+    )
+    expect(init).toMatchObject({
+      method: 'GET',
+      redirect: 'error',
+      headers: {
+        Authorization: twilioBasicAuthHeader('AC_test', 'token_test'),
+      },
+    })
+    expect(init?.signal).toBeInstanceOf(AbortSignal)
+  })
+
+  it.each([
+    '../Messages',
+    'CA123',
+    '',
+  ])('rejects invalid CallSid %s before sending credentials', async (sid) => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(getCall(sid)).rejects.toThrow('Invalid Twilio CallSid')
+    await expect(redirectCallToVoicemail(sid)).rejects.toThrow(
+      'Invalid Twilio CallSid'
+    )
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('fails closed for an incomplete or mismatched call resource', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () => new Response(JSON.stringify({ ...call, sid: 'CAother' }))
+      )
+    )
+    await expect(getCall(sid)).rejects.toThrow('Twilio call lookup failed')
+  })
+
+  it('redirects only the parent CallSid to the fixed same-origin POST route', async () => {
+    const fetchMock = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify(call))
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await redirectCallToVoicemail(sid)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toContain(`/Calls/${sid}.json`)
+    expect(init).toMatchObject({ method: 'POST', redirect: 'error' })
+    const body = new URLSearchParams(String(init?.body))
+    expect(Object.fromEntries(body)).toEqual({
+      Url: 'https://www.philipithomas.com/api/phone/voicemail',
+      Method: 'POST',
+    })
+  })
+
+  it('does not include provider telephone numbers in action errors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ message: `Invalid number ${call.from}` }),
+            { status: 400 }
+          )
+      )
+    )
+    await expect(redirectCallToVoicemail(sid)).rejects.toThrow(
+      'Twilio voicemail handoff failed'
+    )
+    await expect(getCall(sid)).rejects.toThrow('Twilio call lookup failed')
   })
 })
