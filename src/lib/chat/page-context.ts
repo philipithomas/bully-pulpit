@@ -106,6 +106,10 @@ function plaintextFromMdx(
   const withoutBlockMarkers = stripBlockMarkers
     ? unwrapped
         .replace(/^[\t ]*(?:>[\t ]*)+/gm, '')
+        .replace(
+          /^ {0,3}(?:(?:-[\t ]*){3,}|(?:\*[\t ]*){3,}|(?:_[\t ]*){3,})\r?$/gm,
+          ''
+        )
         .replace(/^[\t ]*(?:[-+*]|\d+[.)])[\t ]+/gm, '')
     : unwrapped
 

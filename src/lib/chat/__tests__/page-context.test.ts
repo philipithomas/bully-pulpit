@@ -265,6 +265,29 @@ describe('getSelectedPassageContext', () => {
     ).toMatchObject({ text: listQuote, path })
   })
 
+  it('matches rendered text selected across a Markdown thematic break', () => {
+    const path = '/software-in-the-ai-era'
+    const text =
+      'The impetus was a desire to add some new features to the site, and led to a reflection on how AI is changing the software industry. A few years ago, I spent the day in the test kitchen and fermentation lab at'
+
+    expect(
+      getSelectedPassageContext(
+        { action: 'context', text, path },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({
+      action: 'context',
+      text,
+      path,
+      source: {
+        type: 'post',
+        title: 'Software in the AI era',
+        url: path,
+      },
+    })
+  })
+
   it('matches rendered text selected across Markdown blockquote lines', () => {
     const path = '/the-next-iteration-of-contraption-company'
     const blockquote =
@@ -374,6 +397,10 @@ describe('getSelectedPassageContext', () => {
 })
 
 describe('toPlaintext', () => {
+  it('preserves thematic breaks outside selection comparison', () => {
+    expect(toPlaintext('Before\n\n---\n\nAfter')).toBe('Before\n\n---\n\nAfter')
+  })
+
   it('unwraps escaped footnote links', () => {
     expect(toPlaintext('Great[\\[1\\]](#fn1)!')).toBe('Great[1]!')
   })
