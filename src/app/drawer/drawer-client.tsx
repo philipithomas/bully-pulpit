@@ -133,7 +133,13 @@ function Compartment({ item, index }: { item: DrawerItem; index: number }) {
   )
 }
 
-export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
+export function DrawerClient({
+  catalog,
+  initialToday,
+}: {
+  catalog: DrawerCatalog
+  initialToday: string
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const dateHeadingId = useId()
@@ -142,7 +148,7 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
     isHydrated,
     isServerRendered
   )
-  const [today, setToday] = useState(() => utcIsoDate(new Date()))
+  const [today, setToday] = useState(initialToday)
   const earliestDate = catalog.earliestDate ?? MIN_DRAWER_DATE
   const requestedDate = hydrated ? searchParams.get('date') : null
   const date = resolveDrawerDate(requestedDate, today, earliestDate)

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { DrawerClient } from '@/app/drawer/drawer-client'
 import { SetNewsletter } from '@/components/layout/newsletter-context'
 import { getDrawerCatalog } from '@/lib/drawer/catalog'
+import { utcIsoDate } from '@/lib/drawer/selection'
 import { publicAppPage } from '@/lib/public-pages'
 import { createPublicPageMetadata } from '@/lib/seo/metadata'
 
@@ -28,6 +29,7 @@ function DrawerFallback() {
 
 export default function DrawerPage() {
   const catalog = getDrawerCatalog()
+  const initialToday = utcIsoDate(new Date())
 
   return (
     <div className="bg-offwhite-warm" data-bg="offwhite-warm">
@@ -48,7 +50,7 @@ export default function DrawerPage() {
         </header>
 
         <Suspense fallback={<DrawerFallback />}>
-          <DrawerClient catalog={catalog} />
+          <DrawerClient catalog={catalog} initialToday={initialToday} />
         </Suspense>
       </div>
     </div>
