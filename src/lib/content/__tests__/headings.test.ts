@@ -26,6 +26,11 @@ describe('stripCodeFences', () => {
     const md = 'a\n```\n~~~\n## inside\n```\nb'
     expect(stripCodeFences(md)).toBe('a\nb')
   })
+
+  it('removes fenced blocks nested inside blockquotes', () => {
+    const md = '> before\n> ```md\n> ## not a heading\n> ```\n> after'
+    expect(stripCodeFences(md)).toBe('> before\n> after')
+  })
 })
 
 describe('extractHeadings', () => {
@@ -66,6 +71,22 @@ describe('extractHeadings', () => {
   it('deduplicates repeated headings with -2 suffixes', () => {
     const md = '## Notes\n\n## Notes'
     expect(extractHeadings(md).map((h) => h.slug)).toEqual(['notes', 'notes-2'])
+  })
+
+  it('extracts headings rendered inside blockquotes', () => {
+    const md =
+      '> Prompt\n>\n> ## Data ingestion\n>\n> Body.\n>\n> ### Querying\n>\n> More.'
+    expect(extractHeadings(md)).toEqual([
+      { depth: 2, text: 'Data ingestion', slug: 'data-ingestion' },
+      { depth: 3, text: 'Querying', slug: 'querying' },
+    ])
+  })
+
+  it('ignores blockquoted headings inside blockquoted code fences', () => {
+    const md = '> ```md\n> ## not a heading\n> ```\n> ## Real'
+    expect(extractHeadings(md)).toEqual([
+      { depth: 2, text: 'Real', slug: 'real' },
+    ])
   })
 
   it('requires whitespace after the hashes', () => {

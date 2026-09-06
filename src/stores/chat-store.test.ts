@@ -236,6 +236,50 @@ describe('Bell chat boundaries', () => {
     expect(rotated.activePassageRequest).toEqual(request)
   })
 
+  it('requeues a consumed passage request when identity rotation interrupts it', () => {
+    useChatSidebar.getState().syncConversationIdentity('subscriber:reader-a')
+    const request = {
+      action: 'explain' as const,
+      text: 'This consumed passage remains canonically grounded after login.',
+      path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
+      headingId: 'technical-details',
+    }
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const passageChatId = useChatSidebar.getState().chatId
+    useChatSidebar.getState().consumeInitialQuery(passageChatId)
+    expect(useChatSidebar.getState().initialQuery).toBe('')
+
+    expect(
+      useChatSidebar.getState().syncConversationIdentity('subscriber:reader-b')
+    ).toBe(true)
+
+    const rotated = useChatSidebar.getState()
+    expect(rotated.chatId).not.toBe(passageChatId)
+    expect(rotated.initialQuery).toContain('Explain this selected passage')
+    expect(rotated.initialQuery).toContain(request.text)
+    expect(rotated.activePassageRequest).toEqual(request)
+  })
+
+  it('does not requeue a consumed passage after its panel closes', () => {
+    useChatSidebar.getState().syncConversationIdentity('subscriber:reader-a')
+    const request = {
+      action: 'context' as const,
+      text: 'This closed passage should not reopen after an identity change.',
+      path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
+    }
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const passageChatId = useChatSidebar.getState().chatId
+    useChatSidebar.getState().consumeInitialQuery(passageChatId)
+    useChatSidebar.getState().closeSidebar()
+
+    expect(
+      useChatSidebar.getState().syncConversationIdentity('subscriber:reader-b')
+    ).toBe(true)
+    expect(useChatSidebar.getState().initialQuery).toBe('')
+  })
+
   it('opens a fresh thread with a local assistant welcome and no query', () => {
     const previousId = useChatSidebar.getState().chatId
     const stoppedChatIds: string[] = []

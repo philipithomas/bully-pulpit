@@ -282,6 +282,32 @@ describe('getSelectedPassageContext', () => {
     ).toMatchObject({ text: blockquote, path })
   })
 
+  it('preserves a rendered heading nested inside a real blockquote', () => {
+    const path = '/chat-with-my-dog'
+    const text =
+      'Use OpenAI o3 model, pass the image in and ask OpenAI to generate a caption'
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'context',
+          text,
+          path,
+          headingId: 'data-ingestion',
+        },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({
+      text,
+      headingId: 'data-ingestion',
+      headingText: 'Data ingestion',
+      source: {
+        url: `${path}#data-ingestion`,
+        section: 'Data ingestion',
+      },
+    })
+  })
+
   it.each([
     {
       path: '/2023-03',

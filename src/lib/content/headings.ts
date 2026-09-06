@@ -12,7 +12,12 @@ export interface PostHeadingSection extends PostHeading {
 }
 
 const FENCE_RE = /^\s{0,3}(`{3,}|~{3,})/
-const HEADING_RE = /^(#{1,6})\s+(.+)$/
+const HEADING_RE = /^\s{0,3}(#{1,6})\s+(.+)$/
+const BLOCKQUOTE_PREFIX_RE = /^(?:[ \t]{0,3}>[ \t]?)*/
+
+function structuralLine(line: string): string {
+  return line.replace(BLOCKQUOTE_PREFIX_RE, '')
+}
 
 /**
  * Removes fenced code blocks (``` or ~~~) so commented # lines inside code
@@ -23,7 +28,7 @@ export function stripCodeFences(markdown: string): string {
   const kept: string[] = []
   let fence: string | null = null
   for (const line of markdown.split('\n')) {
-    const match = line.match(FENCE_RE)
+    const match = structuralLine(line).match(FENCE_RE)
     if (match) {
       const marker = match[1][0]
       if (fence === null) {
@@ -95,7 +100,8 @@ export function extractHeadingSections(markdown: string): PostHeadingSection[] {
   }
 
   for (const line of markdown.split('\n')) {
-    const fenceMatch = line.match(FENCE_RE)
+    const lineStructure = structuralLine(line)
+    const fenceMatch = lineStructure.match(FENCE_RE)
     if (fenceMatch) {
       if (current) current.lines.push(line)
       const marker = fenceMatch[1][0]
@@ -108,7 +114,7 @@ export function extractHeadingSections(markdown: string): PostHeadingSection[] {
       continue
     }
 
-    const match = line.match(HEADING_RE)
+    const match = lineStructure.match(HEADING_RE)
     if (match) {
       const depth = match[1].length
       const text = cleanHeadingText(match[2])

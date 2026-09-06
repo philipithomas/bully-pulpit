@@ -202,17 +202,30 @@ export const useChatSidebar = create<ChatSidebarState>()(
         }
       },
       syncConversationIdentity: (identity: string) => {
-        const previous = get().conversationIdentity
+        const state = get()
+        const previous = state.conversationIdentity
         if (previous === identity) return false
         if (previous === null) {
           set({ conversationIdentity: identity })
           return false
         }
+        const passageRequest = state.open ? state.activePassageRequest : null
         set({
           conversationIdentity: identity,
           savedMessages: [],
           pendingLocalMessage: null,
           chatId: generateChatId(),
+          ...(passageRequest
+            ? {
+                // The old Chat instance may already have consumed its query
+                // before auth hydration interrupts the request. Requeue the
+                // same canonically grounded passage for the rotated instance.
+                initialQuery: selectedPassageUserMessage(
+                  passageRequest.action,
+                  passageRequest.text
+                ),
+              }
+            : {}),
         })
         return true
       },
