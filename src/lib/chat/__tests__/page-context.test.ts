@@ -282,6 +282,29 @@ describe('getSelectedPassageContext', () => {
     ).toMatchObject({ text: blockquote, path })
   })
 
+  it.each([
+    {
+      path: '/2023-03',
+      text: 'One Contraption Co. client went from an idea to >$7m in seed funding within five weeks.',
+    },
+    {
+      path: '/2022-12',
+      text: 'Had >15k visitors on the first day and hundreds of signups',
+    },
+  ])('matches real rendered comparisons in $path', ({ path, text }) => {
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'explain',
+          text,
+          path,
+        },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({ text, path })
+  })
+
   it('validates a selected collection entry before preserving its anchor', () => {
     const path = '/diction'
     const collection = getCollection('diction')
@@ -339,5 +362,11 @@ describe('toPlaintext', () => {
     const plaintext = toPlaintext('Visible prose <scr*ipt')
     expect(plaintext.toLocaleLowerCase('en-US')).not.toContain('<script')
     expect(plaintext).toBe('Visible prose script')
+  })
+
+  it('preserves standalone greater-than signs in rendered comparisons', () => {
+    expect(
+      toPlaintext('Funding was \\>$7m and launch traffic was \\>15k.')
+    ).toBe('Funding was >$7m and launch traffic was >15k.')
   })
 })

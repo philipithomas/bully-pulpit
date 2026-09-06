@@ -38,7 +38,7 @@ function stripMarkupTags(value: string): string {
       index = tagEnd === -1 ? index + 1 : tagEnd + 1
       continue
     }
-    if (value[index] !== '>') plaintext += value[index]
+    plaintext += value[index]
     index += 1
   }
 
