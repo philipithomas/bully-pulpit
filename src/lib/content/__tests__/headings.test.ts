@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { extractHeadings, stripCodeFences } from '@/lib/content/headings'
+import {
+  extractHeadingSections,
+  extractHeadings,
+  stripCodeFences,
+} from '@/lib/content/headings'
 import { getAllPosts } from '@/lib/content/loader'
 
 describe('stripCodeFences', () => {
@@ -71,6 +75,41 @@ describe('extractHeadings', () => {
   it('skips headings whose text slugs to nothing', () => {
     expect(extractHeadings('## ✨\n\n## Real')).toEqual([
       { depth: 2, text: 'Real', slug: 'real' },
+    ])
+  })
+})
+
+describe('extractHeadingSections', () => {
+  it('bounds each stable heading at the next h2 or h3', () => {
+    const sections = extractHeadingSections(
+      '## First\n\nFirst body.\n\n#### Detail\n\nStill first.\n\n### Second\n\nSecond body.'
+    )
+    expect(sections).toEqual([
+      {
+        depth: 2,
+        text: 'First',
+        slug: 'first',
+        markdown: 'First\n\nFirst body.\n\n#### Detail\n\nStill first.',
+      },
+      {
+        depth: 3,
+        text: 'Second',
+        slug: 'second',
+        markdown: 'Second\n\nSecond body.',
+      },
+    ])
+  })
+
+  it('lets an unusable heading end the prior stable section', () => {
+    expect(
+      extractHeadingSections('## Stable\n\nBefore.\n\n## ✨\n\nAfter.')
+    ).toEqual([
+      {
+        depth: 2,
+        text: 'Stable',
+        slug: 'stable',
+        markdown: 'Stable\n\nBefore.',
+      },
     ])
   })
 })

@@ -93,15 +93,25 @@ export interface AnalyticsEventProperties {
     newsletter: AnalyticsNewsletter
   }
   'Bell opened': {
-    entry_source: 'header' | 'search' | 'onboarding' | 'explore' | 'other'
+    entry_source:
+      | 'header'
+      | 'search'
+      | 'onboarding'
+      | 'explore'
+      | 'passage'
+      | 'other'
     signed_in: boolean
     page_type: AnalyticsPageType
   }
   'Bell message submitted': {
     surface: 'web'
-    source: 'composer' | 'search_handoff' | 'suggestion'
+    source: 'composer' | 'search_handoff' | 'suggestion' | 'passage'
     signed_in: boolean
     turn: TurnBucket
+  }
+  'Bell passage action selected': {
+    action: 'explain' | 'connect' | 'context'
+    page_type: AnalyticsPageType
   }
   'Bell suggestion selected': {
     page_type: AnalyticsPageType
@@ -286,6 +296,7 @@ export function analyticsPageType(pathname: string): AnalyticsPageType {
       '/contraptions',
       '/diction',
       '/drawer',
+      '/find-ai',
       '/media',
       '/policies',
       '/privacy',

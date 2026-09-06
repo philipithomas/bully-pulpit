@@ -6,6 +6,11 @@ export interface PostHeading {
   slug: string
 }
 
+export interface PostHeadingSection extends PostHeading {
+  /** Raw markdown from this heading through the next h2/h3 boundary. */
+  markdown: string
+}
+
 const FENCE_RE = /^\s{0,3}(`{3,}|~{3,})/
 const HEADING_RE = /^(#{1,6})\s+(.+)$/
 
@@ -59,18 +64,72 @@ function cleanHeadingText(raw: string): string {
  * so it must stay in lockstep with the MDX heading components.
  */
 export function extractHeadings(markdown: string): PostHeading[] {
+  return extractHeadingSections(markdown).map(
+    ({ markdown: _markdown, ...heading }) => heading
+  )
+}
+
+/**
+ * Returns the canonical markdown governed by each stable h2/h3. Empty-slug
+ * headings still end the previous section, matching the browser's nearest
+ * usable heading behavior without becoming link targets themselves.
+ */
+export function extractHeadingSections(markdown: string): PostHeadingSection[] {
   const slug = createSlugger()
-  const headings: PostHeading[] = []
-  for (const line of stripCodeFences(markdown).split('\n')) {
-    const match = line.match(HEADING_RE)
-    if (!match) continue
-    const depth = match[1].length
-    const text = cleanHeadingText(match[2])
-    const id = slug(text)
-    if (!id) continue
-    if (depth === 2 || depth === 3) {
-      headings.push({ depth, text, slug: id })
-    }
+  const sections: PostHeadingSection[] = []
+  let current:
+    | (PostHeading & {
+        lines: string[]
+      })
+    | null = null
+  let fence: string | null = null
+
+  const finishCurrent = () => {
+    if (!current) return
+    sections.push({
+      depth: current.depth,
+      text: current.text,
+      slug: current.slug,
+      markdown: current.lines.join('\n').trim(),
+    })
   }
-  return headings
+
+  for (const line of markdown.split('\n')) {
+    const fenceMatch = line.match(FENCE_RE)
+    if (fenceMatch) {
+      if (current) current.lines.push(line)
+      const marker = fenceMatch[1][0]
+      if (fence === null) fence = marker
+      else if (marker === fence) fence = null
+      continue
+    }
+    if (fence !== null) {
+      if (current) current.lines.push(line)
+      continue
+    }
+
+    const match = line.match(HEADING_RE)
+    if (match) {
+      const depth = match[1].length
+      const text = cleanHeadingText(match[2])
+      const id = slug(text)
+      if (depth === 2 || depth === 3) {
+        finishCurrent()
+        current = id
+          ? {
+              depth,
+              text,
+              slug: id,
+              // Use the rendered heading text for quote matching, then retain
+              // the raw body so the shared plaintext path handles Markdown.
+              lines: [text],
+            }
+          : null
+        continue
+      }
+    }
+    if (current) current.lines.push(line)
+  }
+  finishCurrent()
+  return sections
 }

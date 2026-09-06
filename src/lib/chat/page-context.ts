@@ -1,3 +1,11 @@
+import {
+  collapsePlainTextWhitespace,
+  isPassageSelectableContent,
+  isSelectedPassageAction,
+  normalizeSelectedPassage,
+  type SelectedPassageAction,
+} from '@/lib/chat/selected-passage'
+import { extractHeadingSections } from '@/lib/content/headings'
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
 import { photoMetadataLabeledText } from '@/lib/content/photo-metadata'
 import {
@@ -12,6 +20,7 @@ import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 
 /** Character budget for injected page content. Roughly 1k tokens. */
 export const PAGE_CONTENT_MAX_CHARS = 4000
+const MARKDOWN_ESCAPABLE_PUNCTUATION = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
 
 export interface PageContextSource {
   type: 'post' | 'page'
@@ -30,6 +39,19 @@ export interface PageContextContent {
   source: PageContextSource
   /** App pages use fetchPage, rather than fetchPost, for trusted provenance. */
   fetchPath?: string
+}
+
+export interface SelectedPassageSource extends PageContextSource {
+  section?: string
+}
+
+export interface SelectedPassageContext {
+  action: SelectedPassageAction
+  text: string
+  path: string
+  headingId?: string
+  headingText?: string
+  source: SelectedPassageSource
 }
 
 function appPageNewsletter(path: string): Newsletter | 'page' {
@@ -54,7 +76,10 @@ export function toPlaintext(mdx: string): string {
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/<[^>]+>/g, '')
     .replace(/^#{1,6}\s+/gm, '')
-    .replace(/[*_`~]/g, '')
+    .replace(/(?<!\\)[*_`~]/g, '')
+    .replace(/\\(.)/g, (match, character: string) =>
+      MARKDOWN_ESCAPABLE_PUNCTUATION.includes(character) ? character : match
+    )
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
@@ -136,6 +161,80 @@ export function getPageContextContent(
       url: `/${slug}`,
       publishedAt: item.frontmatter.publishedAt ?? null,
       newsletter: post?.newsletter ?? 'page',
+    },
+  }
+}
+
+function selectedPassageRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+/**
+ * Resolves client passage metadata back to the canonical content corpus. The
+ * selected text remains untrusted prompt input, but it receives a source only
+ * when its page, quote, and optional stable heading all match server data.
+ */
+export function getSelectedPassageContext(
+  value: unknown,
+  currentPath: string | undefined,
+  pageContent: PageContextContent | null
+): SelectedPassageContext | null {
+  const request = selectedPassageRecord(value)
+  if (
+    !request ||
+    !currentPath ||
+    !pageContent ||
+    pageContent.fetchPath ||
+    request.path !== currentPath ||
+    pageContent.source.url !== currentPath ||
+    !isSelectedPassageAction(request.action)
+  ) {
+    return null
+  }
+
+  const text = normalizeSelectedPassage(request.text)
+  if (!text) return null
+
+  const post = getPostBySlug(pageContent.slug)
+  const page = post ? null : getPageBySlug(pageContent.slug)
+  const item = post ?? page
+  if (
+    !item ||
+    !isPassageSelectableContent(item.slug, post ? 'post' : 'page') ||
+    !collapsePlainTextWhitespace(toPagePlaintext(item)).includes(text)
+  ) {
+    return null
+  }
+
+  const rawHeadingId = request.headingId
+  const headingSection =
+    typeof rawHeadingId === 'string' && rawHeadingId.length <= 200
+      ? extractHeadingSections(item.content).find(
+          (candidate) => candidate.slug === rawHeadingId
+        )
+      : undefined
+  const heading =
+    headingSection &&
+    collapsePlainTextWhitespace(toPlaintext(headingSection.markdown)).includes(
+      text
+    )
+      ? headingSection
+      : undefined
+  const sourceUrl = heading
+    ? `${pageContent.source.url}#${heading.slug}`
+    : pageContent.source.url
+
+  return {
+    action: request.action,
+    text,
+    path: currentPath,
+    ...(heading ? { headingId: heading.slug, headingText: heading.text } : {}),
+    source: {
+      ...pageContent.source,
+      url: sourceUrl,
+      ...(heading ? { section: heading.text } : {}),
     },
   }
 }

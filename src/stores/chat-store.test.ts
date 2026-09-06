@@ -39,6 +39,35 @@ beforeEach(() => {
 })
 
 describe('Bell chat boundaries', () => {
+  it('waits for an explicit passage action before creating a fresh handoff', () => {
+    const previousId = useChatSidebar.getState().chatId
+    const request = {
+      action: 'context' as const,
+      text: 'This selected passage is long enough to ask Bell about.',
+      path: '/colophon',
+      headingId: 'technical-details',
+    }
+
+    expect(useChatSidebar.getState().activePassageRequest).toBeNull()
+    expect(useChatSidebar.getState().open).toBe(false)
+
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const handoff = useChatSidebar.getState()
+    expect(handoff.open).toBe(true)
+    expect(handoff.entrySource).toBe('passage')
+    expect(handoff.chatId).not.toBe(previousId)
+    expect(handoff.initialQuery).toContain('Give me the surrounding context')
+    expect(handoff.initialQuery).toContain(request.text)
+    expect(handoff.activePassageRequest).toEqual(request)
+
+    handoff.consumeInitialQuery(handoff.chatId)
+    expect(useChatSidebar.getState().initialQuery).toBe('')
+    expect(useChatSidebar.getState().activePassageRequest).toEqual(request)
+
+    handoff.clearPassageRequest()
+    expect(useChatSidebar.getState().activePassageRequest).toBeNull()
+  })
+
   it('starts every search handoff with a fresh durable conversation', () => {
     const previousId = useChatSidebar.getState().chatId
     useChatSidebar.setState({

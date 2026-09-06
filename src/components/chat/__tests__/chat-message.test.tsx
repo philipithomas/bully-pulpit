@@ -123,6 +123,28 @@ describe('ChatMessage feedback', () => {
     expect(html).toContain('Contact')
   })
 
+  it('renders a deterministic selected-passage section source', () => {
+    const html = renderMessage({
+      id: 'passage-answer',
+      role: 'assistant',
+      metadata: {
+        selectedPassageSource: {
+          type: 'page',
+          title: 'Colophon',
+          url: '/colophon#technical',
+          publishedAt: null,
+          newsletter: 'page',
+          section: 'Technical',
+        },
+      },
+      parts: [{ type: 'text', text: 'Here is the surrounding context.' }],
+    })
+
+    expect(html).toContain('Sources')
+    expect(html).toContain('href="/colophon#technical"')
+    expect(html).toContain('Technical')
+  })
+
   it('keeps scripted messages free of fallback sources', () => {
     const html = renderMessage({
       id: 'local-welcome-with-source',

@@ -59,6 +59,7 @@ describe('analytics dimensions', () => {
     expect(analyticsPageType('/explore')).toBe('explore')
     expect(analyticsPageType('/privacy')).toBe('content_page')
     expect(analyticsPageType('/drawer')).toBe('content_page')
+    expect(analyticsPageType('/find-ai')).toBe('content_page')
     expect(analyticsPageType('/a-post')).toBe('post')
     expect(analyticsPageType('/api/search')).toBe('other')
   })

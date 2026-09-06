@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   getPageContextContent,
+  getSelectedPassageContext,
   PAGE_CONTENT_MAX_CHARS,
   toPlaintext,
 } from '@/lib/chat/page-context'
@@ -122,8 +123,139 @@ describe('getPageContextContent', () => {
   })
 })
 
+describe('getSelectedPassageContext', () => {
+  const quote =
+    'The site is a Next.js application with MDX content, statically generated at build time'
+
+  it('resolves the page, quote, and heading against canonical content', () => {
+    const pageContent = getPageContextContent('/colophon')
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'context',
+          text: ` ${quote}\n`,
+          path: '/colophon',
+          headingId: 'technical',
+        },
+        '/colophon',
+        pageContent
+      )
+    ).toEqual({
+      action: 'context',
+      text: quote,
+      path: '/colophon',
+      headingId: 'technical',
+      headingText: 'Technical',
+      source: {
+        type: 'page',
+        title: 'Colophon',
+        url: '/colophon#technical',
+        publishedAt: null,
+        newsletter: 'page',
+        section: 'Technical',
+      },
+    })
+  })
+
+  it('rejects spoofed paths, noncanonical quotes, and utility pages', () => {
+    const validRequest = {
+      action: 'explain',
+      text: quote,
+      path: '/colophon',
+      headingId: 'technical',
+    }
+    expect(
+      getSelectedPassageContext(
+        { ...validRequest, path: '/privacy' },
+        '/colophon',
+        getPageContextContent('/colophon')
+      )
+    ).toBeNull()
+    expect(
+      getSelectedPassageContext(
+        { ...validRequest, text: 'This fabricated quotation is long enough.' },
+        '/colophon',
+        getPageContextContent('/colophon')
+      )
+    ).toBeNull()
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'explain',
+          text: 'This Privacy Policy describes how your personal information',
+          path: '/privacy',
+        },
+        '/privacy',
+        getPageContextContent('/privacy')
+      )
+    ).toBeNull()
+  })
+
+  it('drops a spoofed heading while retaining valid page provenance', () => {
+    const context = getSelectedPassageContext(
+      {
+        action: 'explain',
+        text: quote,
+        path: '/colophon',
+        headingId: 'not-a-real-heading',
+      },
+      '/colophon',
+      getPageContextContent('/colophon')
+    )
+    expect(context?.headingId).toBeUndefined()
+    expect(context?.source.url).toBe('/colophon')
+    expect(context?.source.section).toBeUndefined()
+  })
+
+  it('drops a real but incorrect heading for the canonical quote', () => {
+    const context = getSelectedPassageContext(
+      {
+        action: 'explain',
+        text: quote,
+        path: '/colophon',
+        headingId: 'typographical',
+      },
+      '/colophon',
+      getPageContextContent('/colophon')
+    )
+    expect(context?.headingId).toBeUndefined()
+    expect(context?.source.url).toBe('/colophon')
+  })
+
+  it('matches escaped Markdown punctuation to rendered passage text', () => {
+    const path = '/how-to-host-web-apps-on-a-mac-mini'
+    const escapedQuote = '*(When I build this, the scripts will be in Github!)'
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'context',
+          text: escapedQuote,
+          path,
+          headingId: 'disaster-recovery',
+        },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({
+      text: escapedQuote,
+      headingId: 'disaster-recovery',
+      headingText: 'Disaster recovery',
+      source: {
+        url: `${path}#disaster-recovery`,
+        section: 'Disaster recovery',
+      },
+    })
+  })
+})
+
 describe('toPlaintext', () => {
   it('unwraps escaped footnote links', () => {
     expect(toPlaintext('Great[\\[1\\]](#fn1)!')).toBe('Great[1]!')
+  })
+
+  it('preserves escaped Markdown punctuation as rendered text', () => {
+    expect(toPlaintext('A \\*literal star and \\_underscore.')).toBe(
+      'A *literal star and _underscore.'
+    )
   })
 })

@@ -7,6 +7,7 @@ import { AuthProvider } from '@/components/auth/auth-provider'
 import { LazyNewSubscriberOnboarding } from '@/components/auth/new-subscriber-onboarding-lazy'
 import { LazySignInModal } from '@/components/auth/sign-in-modal-lazy'
 import { SignInToast } from '@/components/auth/sign-in-toast'
+import { PassageSelection } from '@/components/chat/passage-selection'
 import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
 import { NewsletterProvider } from '@/components/layout/newsletter-context'
@@ -146,6 +147,7 @@ export default function RootLayout({
             <Toaster />
             <CoverPreload />
             <ImageZoom />
+            <PassageSelection />
             <PublicAnalytics />
             <PwaLifecycle />
           </NewsletterProvider>

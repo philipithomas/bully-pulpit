@@ -28,7 +28,10 @@ import {
   isClientConversationId,
   networkIdentityForRequest,
 } from '@/lib/chat/bell-identity'
-import { getPageContextContent } from '@/lib/chat/page-context'
+import {
+  getPageContextContent,
+  getSelectedPassageContext,
+} from '@/lib/chat/page-context'
 import { sanitizeChatMessages } from '@/lib/chat/sanitize-messages'
 import { sanitizePageTitle } from '@/lib/chat/sanitize-title'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
@@ -69,6 +72,9 @@ const chatBodySchema = z.strictObject({
   // Context is optional UX metadata, not request authority. Keep its
   // long-standing fail-open behavior and sanitize recognized values below.
   pageContext: z.unknown().optional(),
+  // Passage data is untrusted UX context. It is resolved against canonical
+  // server content below before it can affect provenance or instructions.
+  selectedPassage: z.unknown().optional(),
 })
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -223,9 +229,15 @@ export async function POST(request: Request) {
   // successful stream, so the client has deterministic provenance even when
   // the model does not call the requested fetch tool.
   const pageContent = getPageContextContent(path)
+  const selectedPassage = getSelectedPassageContext(
+    body.selectedPassage,
+    path,
+    pageContent
+  )
   const system = getSystemPrompt({
     pageContext: { path, title },
     pageContent,
+    selectedPassage,
     // Only the server-verified display name reaches the prompt. Email is not a
     // conversational attribute, and the client-supplied userName is ignored.
     userName: sanitizePageTitle(subscriber?.name),
@@ -353,7 +365,12 @@ export async function POST(request: Request) {
       ) {
         return undefined
       }
-      return { currentPageSource: pageContent.source }
+      return {
+        currentPageSource: pageContent.source,
+        ...(selectedPassage
+          ? { selectedPassageSource: selectedPassage.source }
+          : {}),
+      }
     },
     onEnd: async ({ responseMessage, isAborted }) => {
       const messageStatus =
