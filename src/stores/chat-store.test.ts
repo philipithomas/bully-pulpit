@@ -9,6 +9,7 @@ import {
   vi,
 } from 'vitest'
 import { createBellChat } from '@/lib/chat/bell-chat'
+import { selectedPassageRequestOptions } from '@/lib/chat/selected-passage'
 import {
   isScriptedChatMessage,
   SUBSCRIBER_WELCOME_MESSAGE,
@@ -66,6 +67,43 @@ describe('Bell chat boundaries', () => {
     expect(useChatSidebar.getState().activePassageRequest).toEqual(request)
 
     handoff.clearPassageRequest()
+    expect(useChatSidebar.getState().activePassageRequest).toBeNull()
+  })
+
+  it('preserves a consumed passage request when reopening the same thread', () => {
+    const request = {
+      action: 'explain' as const,
+      text: 'This failed passage request remains available for a retry.',
+      path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
+      headingId: 'technical-details',
+    }
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const passageChatId = useChatSidebar.getState().chatId
+    useChatSidebar.getState().consumeInitialQuery(passageChatId)
+    useChatSidebar.getState().closeSidebar()
+
+    useChatSidebar.getState().openSidebar()
+
+    const reopened = useChatSidebar.getState()
+    expect(reopened.open).toBe(true)
+    expect(reopened.chatId).toBe(passageChatId)
+    expect(reopened.initialQuery).toBe('')
+    expect(reopened.activePassageRequest).toEqual(request)
+    expect(
+      selectedPassageRequestOptions(reopened.activePassageRequest)
+    ).toEqual({
+      body: {
+        selectedPassage: request,
+        pageContext: {
+          path: request.path,
+          title: request.pageTitle,
+        },
+      },
+    })
+
+    reopened.openSidebar('A new search question')
+    expect(useChatSidebar.getState().chatId).not.toBe(passageChatId)
     expect(useChatSidebar.getState().activePassageRequest).toBeNull()
   })
 

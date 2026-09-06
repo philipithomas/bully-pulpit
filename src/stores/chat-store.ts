@@ -120,12 +120,12 @@ export const useChatSidebar = create<ChatSidebarState>()(
           entrySource: searchHandoff
             ? 'search'
             : (options?.entrySource ?? 'header'),
-          activePassageRequest: null,
           // Asking Bell from search deliberately presents a fresh thread.
           // Rotate the durable ID and clear both persisted and in-memory
           // history before the handoff can send its first message.
           ...(searchHandoff
             ? {
+                activePassageRequest: null,
                 savedMessages: [],
                 pendingLocalMessage: null,
                 chatId: generateChatId(),

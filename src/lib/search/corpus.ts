@@ -1,7 +1,7 @@
+import { extractRenderedHeadings } from '@/lib/content/headings'
 import { getAllPosts, getPages } from '@/lib/content/loader'
 import type { Frontmatter, Page, Post } from '@/lib/content/types'
 import { type PublicAppPage, publicAppPages } from '@/lib/public-pages'
-import { createHeadingSlugger } from '@/lib/search/heading-anchor'
 import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 
 /**
@@ -160,24 +160,11 @@ export interface PostHeading {
  * anchors the agent cites always agree.
  */
 export function extractHeadings(markdown: string): PostHeading[] {
-  const headings: PostHeading[] = []
-  const slugger = createHeadingSlugger()
-  let inFence = false
-
-  const lines = markdown.split('\n')
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    if (/^\s*(```|~~~)/.test(line)) {
-      inFence = !inFence
-      continue
-    }
-    if (inFence || !HEADING_RE.test(line)) continue
-    const text = stripToPlaintext(line)
-    if (text.length === 0) continue
-    headings.push({ text, anchor: slugger(text), line: i })
-  }
-
-  return headings
+  return extractRenderedHeadings(markdown).map(({ text, slug, line }) => ({
+    text,
+    anchor: slug,
+    line,
+  }))
 }
 
 export interface CorpusOptions {
