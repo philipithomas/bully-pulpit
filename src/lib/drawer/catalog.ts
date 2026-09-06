@@ -56,8 +56,11 @@ function inlinePlaintext(markdown: string): string {
       break
     }
 
+    const destination = markdown.slice(labelEnd + 2, destinationEnd).trim()
     plaintext += markdown.slice(cursor, start)
-    plaintext += markdown.slice(bracket + 1, labelEnd)
+    if (!/^#fn(?:ref)?\d+$/i.test(destination)) {
+      plaintext += markdown.slice(bracket + 1, labelEnd)
+    }
     cursor = destinationEnd + 1
   }
 

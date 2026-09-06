@@ -166,6 +166,11 @@ describe('buildDrawerCatalog', () => {
           content: '- [Launched Postcard](/launch). Had \\>15k visitors.',
           excerpt: '- Launched Postcard. Had \\>15k visitors.',
         }),
+        post({
+          slug: 'footnote',
+          content:
+            'Keep an [ordinary anchor](#section), but drop this footnote[\\[1\\]](#fn1).',
+        }),
       ],
       []
     )
@@ -179,6 +184,10 @@ describe('buildDrawerCatalog', () => {
         item.id.endsWith('list-and-escape')
       )?.description
     ).toBe('Launched Postcard. Had >15k visitors.')
+    expect(
+      catalog.collections.writing.find((item) => item.id.endsWith('footnote'))
+        ?.description
+    ).toBe('Keep an ordinary anchor, but drop this footnote.')
   })
 
   it('builds the real catalog without a network request', () => {
@@ -203,10 +212,15 @@ describe('buildDrawerCatalog', () => {
       const escapedExcerpt = selectDrawer(catalog, '2021-03-31').items.find(
         (candidate) => candidate.category === 'writing'
       )?.description
+      const footnoteExcerpt = selectDrawer(catalog, '2020-07-12').items.find(
+        (candidate) => candidate.category === 'writing'
+      )?.description
       expect(quotedExcerpt).toContain('Absolute devotion')
       expect(quotedExcerpt).not.toContain('> Absolute devotion')
       expect(escapedExcerpt).toContain('Had >15k visitors')
       expect(escapedExcerpt).not.toContain('\\>15k')
+      expect(footnoteExcerpt).toContain('this site')
+      expect(footnoteExcerpt).not.toContain('[1]')
     } finally {
       vi.unstubAllGlobals()
     }
