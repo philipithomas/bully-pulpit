@@ -224,7 +224,7 @@ export function Header() {
         </div>
         <nav
           aria-label="Primary"
-          className="flex w-full items-center justify-between border-gray-200 border-t pt-2 sm:w-auto sm:justify-start sm:gap-3 sm:border-0 sm:pt-0 md:gap-5"
+          className="flex w-full items-center justify-between sm:w-auto sm:justify-start sm:gap-3 md:gap-5"
         >
           <ExploreNavigationLink active={pathname === '/explore'} />
           <button
