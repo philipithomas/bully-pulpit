@@ -170,7 +170,10 @@ export function CollectionIndex({
       </div>
 
       {groups.length > 0 ? (
-        <div className="mt-10 space-y-12 md:mt-14 md:space-y-16">
+        <div
+          data-bell-selectable=""
+          className="mt-10 space-y-12 md:mt-14 md:space-y-16"
+        >
           {groups.map((group) => (
             <section
               key={group.letter}

@@ -22,6 +22,23 @@ import { stargazingPageContent } from '@/lib/stargazing/restaurants'
 export const PAGE_CONTENT_MAX_CHARS = 4000
 const MARKDOWN_ESCAPABLE_PUNCTUATION = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
 
+function stripMarkupTags(value: string): string {
+  let plaintext = ''
+  let index = 0
+
+  while (index < value.length) {
+    if (value[index] === '<') {
+      const tagEnd = value.indexOf('>', index + 1)
+      index = tagEnd === -1 ? index + 1 : tagEnd + 1
+      continue
+    }
+    if (value[index] !== '>') plaintext += value[index]
+    index += 1
+  }
+
+  return plaintext
+}
+
 export interface PageContextSource {
   type: 'post' | 'page'
   title: string
@@ -77,7 +94,6 @@ function plaintextFromMdx(
       text.replace(/\\([[\]])/g, '$1')
     )
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/<[^>]+>/g, '')
     .replace(/^#{1,6}\s+/gm, '')
 
   const withoutBlockMarkers = stripBlockMarkers
@@ -86,13 +102,15 @@ function plaintextFromMdx(
         .replace(/^[\t ]*(?:[-+*]|\d+[.)])[\t ]+/gm, '')
     : unwrapped
 
-  return withoutBlockMarkers
-    .replace(/(?<!\\)[*_`~]/g, '')
-    .replace(/\\(.)/g, (match, character: string) =>
-      MARKDOWN_ESCAPABLE_PUNCTUATION.includes(character) ? character : match
-    )
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+  return stripMarkupTags(
+    withoutBlockMarkers
+      .replace(/(?<!\\)[*_`~]/g, '')
+      .replace(/\\(.)/g, (match, character: string) =>
+        MARKDOWN_ESCAPABLE_PUNCTUATION.includes(character) ? character : match
+      )
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  )
 }
 
 export function toPlaintext(mdx: string): string {

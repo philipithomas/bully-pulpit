@@ -292,4 +292,10 @@ describe('toPlaintext', () => {
       'A *literal star and _underscore.'
     )
   })
+
+  it('does not let Markdown normalization reconstruct an HTML tag', () => {
+    const plaintext = toPlaintext('Visible prose <scr*ipt')
+    expect(plaintext.toLocaleLowerCase('en-US')).not.toContain('<script')
+    expect(plaintext).toBe('Visible prose script')
+  })
 })
