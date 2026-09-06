@@ -85,11 +85,6 @@ function appPageNewsletter(path: string): Newsletter | 'page' {
     : 'page'
 }
 
-function imageDescription(alt: string): string {
-  const description = alt.trim()
-  return description ? `\n\nImage description: ${description}\n\n` : ''
-}
-
 /** Skip one complete quoted value or balanced JSX expression. */
 function delimitedValueEnd(value: string, start: number): number {
   let quote = ''
@@ -139,7 +134,10 @@ function staticImageAlt(tag: string): string {
   return ''
 }
 
-function replaceImageTags(mdx: string, includeDescriptions: boolean): string {
+function replaceImageTags(
+  mdx: string,
+  preserveDescription: (alt: string) => string
+): string {
   const starts = /<(?:img|Image)\b/g
   let result = ''
   let copiedThrough = 0
@@ -151,9 +149,7 @@ function replaceImageTags(mdx: string, includeDescriptions: boolean): string {
     if (end === mdx.length) break
     end += 1
     result += mdx.slice(copiedThrough, match.index)
-    if (includeDescriptions) {
-      result += imageDescription(staticImageAlt(mdx.slice(match.index, end)))
-    }
+    result += preserveDescription(staticImageAlt(mdx.slice(match.index, end)))
     copiedThrough = end
     starts.lastIndex = end
   }
@@ -168,12 +164,29 @@ function plaintextFromMdx(
     includeImageDescriptions = false,
   }: { stripBlockMarkers?: boolean; includeImageDescriptions?: boolean } = {}
 ): string {
-  const unwrapped = replaceImageTags(mdx, includeImageDescriptions)
+  const descriptions: string[] = []
+  // Extracted alt is literal text, not MDX. Hold it outside the markup pass so
+  // comparisons and other authored punctuation survive exactly as written.
+  let placeholderPrefix = '\u0000bell-image-'
+  while (mdx.includes(placeholderPrefix)) placeholderPrefix += '-'
+  const preserveDescription = (alt: string): string => {
+    const description = alt.trim()
+    if (!includeImageDescriptions || !description) return ''
+    const index = descriptions.push(description) - 1
+    return `\n\n${placeholderPrefix}${index}\u0000\n\n`
+  }
+  const unwrapped = replaceImageTags(mdx, preserveDescription)
     .replace(/^(import|export)\s[^\n]*$/gm, '')
     .replace(
       /!\[((?:\\.|[^\]\\])*)\]\((?:\\.|[^()\\]|\([^()]*\))*\)/g,
       (_match, alt: string) =>
-        includeImageDescriptions ? imageDescription(alt) : ''
+        preserveDescription(
+          alt.replace(/\\(.)/g, (match, character: string) =>
+            MARKDOWN_ESCAPABLE_PUNCTUATION.includes(character)
+              ? character
+              : match
+          )
+        )
     )
     .replace(/\[((?:\\.|[^\]\\])*)\]\(#[^)]*\)/g, (_match, text: string) =>
       text.replace(/\\([[\]])/g, '$1')
@@ -191,13 +204,18 @@ function plaintextFromMdx(
         .replace(/^[\t ]*(?:[-+*]|\d+[.)])[\t ]+/gm, '')
     : unwrapped
 
-  return stripMarkupTags(
+  const plaintext = stripMarkupTags(
     withoutBlockMarkers
       .replace(/(?<!\\)[*_`~]/g, '')
       .replace(/\\(.)/g, (match, character: string) =>
         MARKDOWN_ESCAPABLE_PUNCTUATION.includes(character) ? character : match
       )
   )
+  return plaintext
+    .replace(
+      new RegExp(`${placeholderPrefix}(\\d+)\u0000`, 'g'),
+      (_, index) => `Image description: ${descriptions[Number(index)]}`
+    )
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
@@ -232,8 +250,8 @@ function pagePlaintext(
 export function toPagePlaintext(
   item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>
 ): string {
-  const coverAlt = toPlaintext(item.frontmatter.coverImageAlt ?? '')
-  const location = toPlaintext(item.frontmatter.location?.name ?? '')
+  const coverAlt = item.frontmatter.coverImageAlt?.trim()
+  const location = item.frontmatter.location?.name.trim()
   const photo = photoMetadataLabeledText(item.frontmatter.photo)
   return [
     coverAlt ? `Cover image description: ${coverAlt}` : '',

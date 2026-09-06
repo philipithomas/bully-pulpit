@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { getAllPostsWithoutImages } from '@/lib/content/loader-without-images'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as contentLoader from '@/lib/content/loader-without-images'
 import {
   fetchInputSchema,
   fetchOutputSchema,
@@ -15,6 +15,8 @@ import {
   searchPublicContent,
 } from '@/lib/mcp/content-tools'
 import { buildCorpus } from '@/lib/search/corpus'
+
+afterEach(() => vi.restoreAllMocks())
 
 describe('MCP content schemas', () => {
   it('trims search input and rejects short, oversized, or unknown fields', () => {
@@ -123,9 +125,9 @@ describe('MCP public content helpers', () => {
   })
 
   it('uses cover alt text to describe photo posts without an excerpt', () => {
-    const posts = getAllPostsWithoutImages().filter(
-      (post) => post.newsletter === 'tidbits'
-    )
+    const posts = contentLoader
+      .getAllPostsWithoutImages()
+      .filter((post) => post.newsletter === 'tidbits')
     const offset = posts.findIndex((post) => post.slug === 'cooking-class')
     const photo = posts[offset]
     expect(photo?.excerpt).toBe('')
@@ -139,6 +141,32 @@ describe('MCP public content helpers', () => {
     expect(() => listPostsOutputSchema.parse(output)).not.toThrow()
   })
 
+  it.each([
+    { alt: '  \n  ', expected: 'Photo title' },
+    {
+      alt: '  A meaningful description.  ',
+      expected: 'A meaningful description.',
+    },
+  ])('trims photo-only listing descriptions before fallback: $alt', ({
+    alt,
+    expected,
+  }) => {
+    const post = contentLoader.getAllPostsWithoutImages()[0]
+    vi.spyOn(contentLoader, 'getAllPostsWithoutImages').mockReturnValueOnce([
+      {
+        ...post,
+        excerpt: '',
+        frontmatter: {
+          ...post.frontmatter,
+          title: 'Photo title',
+          coverImageAlt: alt,
+        },
+      },
+    ])
+    const output = listPublicPosts({ limit: 1, offset: 0 })
+    expect(output.posts[0]?.description).toBe(expected)
+  })
+
   it('keeps every searchable content ID valid and fetchable', () => {
     for (const { slug: id } of buildCorpus()) {
       expect(fetchInputSchema.safeParse({ id }).success, id).toBe(true)
@@ -147,7 +175,7 @@ describe('MCP public content helpers', () => {
   })
 
   it('lists posts in canonical newest-first order with pagination', () => {
-    const expected = getAllPostsWithoutImages()
+    const expected = contentLoader.getAllPostsWithoutImages()
     const output = listPublicPosts({ limit: 3, offset: 1 })
 
     expect(output.posts.map((post) => post.id)).toEqual(
@@ -167,9 +195,9 @@ describe('MCP public content helpers', () => {
   })
 
   it('filters posts by newsletter before paginating', () => {
-    const workshopPosts = getAllPostsWithoutImages().filter(
-      (post) => post.newsletter === 'workshop'
-    )
+    const workshopPosts = contentLoader
+      .getAllPostsWithoutImages()
+      .filter((post) => post.newsletter === 'workshop')
     const output = listPublicPosts({
       limit: 2,
       offset: 1,

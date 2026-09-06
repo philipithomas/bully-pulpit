@@ -447,6 +447,16 @@ describe('getSelectedPassageContext', () => {
 })
 
 describe('toPlaintext', () => {
+  it.each([
+    '<Image src="/images/chart.jpg" alt={"A diagram showing 1 < 2 > 0"} />',
+    '<img src="/images/chart.jpg" alt="A diagram showing 1 < 2 > 0" />',
+    '![A diagram showing 1 < 2 > 0](/images/chart.jpg)',
+  ])('preserves literal comparisons from extracted alt: %s', (markup) => {
+    expect(toPlaintext(`Before\n\n${markup}\n\nAfter`)).toBe(
+      'Before\n\nImage description: A diagram showing 1 < 2 > 0\n\nAfter'
+    )
+  })
+
   it('keeps Markdown image descriptions without image paths or link syntax', () => {
     expect(
       toPlaintext(
@@ -537,6 +547,21 @@ describe('toPlaintext', () => {
 })
 
 describe('toPagePlaintext', () => {
+  it('preserves literal comparisons in authored cover descriptions', () => {
+    expect(
+      toPagePlaintext({
+        slug: 'comparison',
+        content: '',
+        frontmatter: {
+          title: 'Comparison',
+          coverImageAlt: 'A diagram showing 1 < 2 > 0',
+          draft: false,
+          featured: false,
+        },
+      })
+    ).toBe('Cover image description: A diagram showing 1 < 2 > 0')
+  })
+
   it('omits empty frontmatter labels', () => {
     expect(
       toPagePlaintext({
