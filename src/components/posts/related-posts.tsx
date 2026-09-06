@@ -57,16 +57,19 @@ export function RelatedPosts({ posts }: RelatedPostsProps) {
 
               {/* Content area */}
               <div className="flex flex-col flex-grow p-5 relative">
-                <time className="font-mono text-xs text-gray-500 mb-2">
+                <time
+                  dateTime={post.frontmatter.publishedAt}
+                  className="font-sans text-xs tabular-nums leading-relaxed text-gray-500 mb-2"
+                >
                   {post.frontmatter.publishedAt}
                 </time>
                 <h4
-                  className={`font-sans text-lg font-semibold text-gray-950 ${accentHoverText[post.newsletter]} transition-colors duration-500 mb-2`}
+                  className={`font-sans text-lg font-semibold leading-tight text-pretty text-gray-950 ${accentHoverText[post.newsletter]} transition-colors duration-500 mb-2`}
                 >
                   {post.frontmatter.title}
                 </h4>
                 {post.excerpt && (
-                  <p className="font-serif text-sm text-gray-600 line-clamp-3">
+                  <p className="font-serif text-base leading-relaxed text-pretty text-gray-600 line-clamp-3">
                     {post.excerpt}
                   </p>
                 )}

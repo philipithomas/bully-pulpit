@@ -32,7 +32,9 @@ export function PostcardLatestLink({ href, latestKey, label }: Props) {
       {!seen && (
         <span className="absolute -top-1 -right-1 inline-flex h-2.5 w-2.5 rounded-full bg-red" />
       )}
-      <span className="font-mono text-xs font-semibold">{label}</span>
+      <span className="font-sans text-sm tabular-nums font-semibold">
+        {label}
+      </span>
     </Link>
   )
 }

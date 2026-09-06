@@ -75,15 +75,15 @@ export function StargazingPage({ page }: { page: Page }) {
 
         <p className="my-12 max-w-4xl font-serif text-2xl text-gray-950 leading-snug sm:text-3xl md:my-16 md:text-4xl">
           I have eaten at{' '}
-          <span className="font-mono font-semibold text-forest tabular-nums">
+          <span className="font-sans font-semibold text-forest tabular-nums">
             {stargazingStats.starredRestaurants}
           </span>{' '}
           Michelin-starred restaurants, totaling{' '}
-          <span className="font-mono font-semibold text-walnut tabular-nums">
+          <span className="font-sans font-semibold text-walnut tabular-nums">
             {stargazingStats.stars}
           </span>{' '}
           stars.{' '}
-          <span className="font-mono font-semibold text-indigo tabular-nums">
+          <span className="font-sans font-semibold text-indigo tabular-nums">
             {stargazingStats.numberOneRestaurants}
           </span>{' '}
           were ranked No. 1 in the world when I visited.
@@ -103,7 +103,7 @@ export function StargazingPage({ page }: { page: Page }) {
             <ol className="space-y-5">
               {countingRules.map((rule, index) => (
                 <li key={rule.id} className="flex gap-4">
-                  <span className="mt-1 shrink-0 font-mono text-brass text-xs">
+                  <span className="mt-1 shrink-0 font-sans tabular-nums text-brass text-xs">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <p className="font-serif text-gray-700 text-lg leading-relaxed">
@@ -131,7 +131,7 @@ export function StargazingPage({ page }: { page: Page }) {
           <ol className="mt-6 grid gap-x-12 gap-y-4 sm:grid-cols-2">
             {stargazingFavorites.map((restaurant, index) => (
               <li key={restaurant} className="flex items-baseline gap-3">
-                <span className="font-mono text-brass text-xs">
+                <span className="font-sans tabular-nums text-brass text-xs">
                   {String(index + 1).padStart(2, '0')}
                 </span>
                 <span className="font-serif text-gray-700 text-lg">

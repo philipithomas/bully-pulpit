@@ -147,7 +147,7 @@ function DialogTitle({
       ref={ref}
       data-slot="dialog-title"
       className={cn(
-        'font-sans text-xl font-semibold tracking-tight text-gray-950',
+        'font-sans text-xl font-semibold leading-tight tracking-tight text-pretty text-gray-950',
         className
       )}
       {...props}
@@ -164,7 +164,10 @@ function DialogDescription({
     <DialogPrimitive.Description
       ref={ref}
       data-slot="dialog-description"
-      className={cn('text-sm text-muted-foreground', className)}
+      className={cn(
+        'text-sm leading-relaxed text-pretty text-muted-foreground',
+        className
+      )}
       {...props}
     />
   )

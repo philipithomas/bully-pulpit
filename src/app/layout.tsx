@@ -22,7 +22,7 @@ import { PWA_THEME_COLOR } from '@/lib/pwa/config'
 import { DEFAULT_SOCIAL_IMAGE } from '@/lib/seo/metadata'
 
 // The above-the-fold faces (Sohne 400/600, Tiempos Text 400, Sohne Mono 400
-// for date labels on cards and the postcard calendar) — otherwise the browser
+// for camera metadata and code) — otherwise the browser
 // discovers them only after downloading and parsing the CSS. Emitted via
 // ReactDOM.preload so React hoists each resource exactly once (literal
 // <link> tags get duplicated into both the head and the RSC Float hints).

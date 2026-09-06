@@ -48,16 +48,19 @@ export function PostCard({
           </div>
         )}
         <div className="p-4 md:p-5">
-          <time className="font-mono text-xs text-gray-500">
+          <time
+            dateTime={post.frontmatter.publishedAt}
+            className="block font-sans text-xs tabular-nums leading-relaxed text-gray-500"
+          >
             {post.frontmatter.publishedAt}
           </time>
           <h2
-            className={`text-lg font-semibold text-gray-950 ${accentHoverText[post.newsletter]} transition-colors duration-500 mt-1`}
+            className={`text-lg font-semibold leading-tight text-pretty text-gray-950 ${accentHoverText[post.newsletter]} transition-colors duration-500 mt-2`}
           >
             {post.frontmatter.title}
           </h2>
           {(post.frontmatter.subtitle || post.frontmatter.description) && (
-            <p className="font-serif text-sm text-gray-600 mt-1">
+            <p className="font-serif text-base leading-relaxed text-pretty text-gray-600 mt-2">
               {post.frontmatter.subtitle || post.frontmatter.description}
             </p>
           )}

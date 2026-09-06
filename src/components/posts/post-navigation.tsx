@@ -70,7 +70,7 @@ function NavCell({
         )}
       </span>
       <span
-        className={`font-sans text-lg font-semibold text-gray-950 text-pretty ${accentHoverText[post.newsletter]} transition-colors duration-500`}
+        className={`font-sans text-lg font-semibold leading-tight text-gray-950 text-pretty ${accentHoverText[post.newsletter]} transition-colors duration-500`}
       >
         {post.frontmatter.title}
       </span>

@@ -44,14 +44,14 @@ export function PreferencesPageSkeleton({ title }: { title?: string }) {
         )}
 
         <section className="mb-6">
-          <h2 className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-3">
+          <h2 className="font-sans text-xs font-medium text-gray-500 mb-3">
             Email
           </h2>
           <Skeleton className="h-5 w-56" />
         </section>
 
         <section className="mb-10">
-          <h2 className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-4">
+          <h2 className="font-sans text-xs font-medium text-gray-500 mb-4">
             Newsletters
           </h2>
           <NewsletterRowsSkeleton />

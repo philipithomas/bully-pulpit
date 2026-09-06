@@ -28,7 +28,7 @@ export function LatestPostPill() {
       className={`inline-flex items-center gap-2 px-3 py-1.5 bg-offwhite-dark rounded-full text-xs group ${accentHoverBg[latest.newsletter]} transition-colors duration-300`}
     >
       <span
-        className={`font-sans text-[10px] font-medium tracking-[0.06em] uppercase text-gray-500 ${accentText} transition-colors duration-300`}
+        className={`font-sans text-xs font-medium text-gray-500 ${accentText} transition-colors duration-300`}
       >
         New
       </span>

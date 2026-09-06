@@ -56,7 +56,7 @@ function SignedOutControls({ className }: { className?: string }) {
         onClick={openModal}
         onMouseEnter={prefetchSignInModal}
         onFocus={prefetchSignInModal}
-        className="hidden sm:inline-block px-3 py-2 font-sans text-[13px] font-medium tracking-[0.04em] uppercase text-gray-700 hover:text-gray-900 transition-colors duration-300"
+        className="hidden sm:inline-block px-3 py-2 font-sans text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors duration-300"
       >
         Sign in
       </button>
