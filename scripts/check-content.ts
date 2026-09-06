@@ -10,6 +10,7 @@ import {
 } from '@/lib/content/image-policy'
 import { imageHasEmbeddedLocationMetadata } from '@/lib/content/image-privacy'
 import { getAllPosts, getPages } from '@/lib/content/loader'
+import { getPhotoPosts } from '@/lib/content/photo-navigation'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 import { renderFullNewsletter } from '@/lib/email/send'
 import { isPhotoNewsletter } from '@/lib/newsletters'
@@ -18,6 +19,8 @@ import { EMBEDDING_DIMS, EMBEDDING_MODEL } from '@/lib/search/embedding'
 import { publicImageDigest } from '@/lib/search/image-source'
 import { loadSearchIndex, SEARCH_INDEX_VERSION } from '@/lib/search/index-file'
 import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
+import { validateTidbitsPaletteAssignments } from '@/lib/tidbits/assign-palettes'
+import { TIDBITS_PALETTE_ASSIGNMENTS } from '@/lib/tidbits/palette'
 
 /**
  * Fast, offline validation that the content pipeline's generated artifacts are
@@ -39,6 +42,8 @@ import { buildMerkleTree, diffMerkleTrees } from '@/lib/search/merkle'
  *      with non-empty alt text — a missing or empty alt fails the build.
  *   7. The rendered email HTML for every non-exempt post stays under Gmail's
  *      clipping threshold (warn near the line, fail over it).
+ *   8. Published Tidbits photos have valid saved palettes, with no adjacent
+ *      repetitions including the circular oldest-to-newest transition.
  */
 
 const IMAGES = path.join(process.cwd(), 'public/images')
@@ -106,6 +111,13 @@ async function main() {
   const posts = getAllPosts()
   const pages = getPages()
   const referencedPhotoCovers = new Set<string>()
+
+  errors.push(
+    ...validateTidbitsPaletteAssignments(
+      getPhotoPosts('tidbits').map((post) => post.slug),
+      TIDBITS_PALETTE_ASSIGNMENTS
+    )
+  )
 
   // 1: cover images referenced by frontmatter must exist
   for (const post of posts) {

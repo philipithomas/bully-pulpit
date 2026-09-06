@@ -32,12 +32,18 @@ describe('Tidbits issue palettes', () => {
     ['copenhagen-sunset', 'cobalt'],
     ['cycling', 'aubergine'],
     ['jackknife', 'persimmon'],
+    ['copenhill', 'cobalt'],
+    ['sfmoma', 'cobalt'],
   ])('keeps %s assigned to %s across builds, readers, and email retries', (slug, id) => {
     expect(tidbitsPaletteForPost(slug).id).toBe(id)
   })
 
   it('has a stable fallback when there are no issues', () => {
     expect(tidbitsPaletteForPost().id).toBe('verdigris')
+  })
+
+  it('keeps the legacy hash for drafts without a saved assignment', () => {
+    expect(tidbitsPaletteForPost('draft-photo').id).toBe('persimmon')
   })
 
   // WCAG 2.2 SC 1.4.3 and 1.4.11: compare unrounded values.

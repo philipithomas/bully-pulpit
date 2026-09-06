@@ -1,6 +1,9 @@
+import savedAssignments from '@/lib/tidbits/palette-assignments.json'
+
 /**
- * The five Tidbits color studies, PRs #431–#435. Keep this order and the hash
- * stable: a photo's slug is its permanent color seed, including in email.
+ * The five Tidbits color studies, PRs #431–#435. Published photos have saved
+ * assignments shared by the website and email. Keep this order and the hash
+ * stable for drafts and unknown slugs that do not yet have an assignment.
  * Accent is for marks/decoration; ink is for normal-size text.
  */
 export const TIDBITS_PALETTES = [
@@ -47,10 +50,18 @@ export const TIDBITS_PALETTES = [
 ] as const
 
 export type TidbitsPalette = (typeof TIDBITS_PALETTES)[number]
+export type TidbitsPaletteId = TidbitsPalette['id']
 
-/** FNV-1a gives each issue a repeatable draw without clocks or browser state. */
+export const TIDBITS_PALETTE_ASSIGNMENTS: Readonly<Record<string, string>> =
+  savedAssignments
+
+/** Saved issue identity, with the original FNV-1a fallback for unpublished slugs. */
 export function tidbitsPaletteForPost(slug?: string): TidbitsPalette {
   if (!slug) return TIDBITS_PALETTES[0]
+  const saved = TIDBITS_PALETTES.find(
+    (palette) => palette.id === TIDBITS_PALETTE_ASSIGNMENTS[slug]
+  )
+  if (saved) return saved
   let hash = 2166136261
   for (let index = 0; index < slug.length; index++) {
     hash = Math.imul(hash ^ slug.charCodeAt(index), 16777619)

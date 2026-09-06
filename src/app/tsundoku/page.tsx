@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
-import { getPostsByNewsletter } from '@/lib/content/loader'
+import { getPhotoPosts } from '@/lib/content/photo-navigation'
 import { markdownToPlaintext } from '@/lib/content/render-html'
 import type { Post } from '@/lib/content/types'
 import {
@@ -76,6 +76,7 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
         aria-label={coverImageAlt ?? title}
         data-zoomable=""
         data-zoom-group="tsundoku"
+        data-zoom-caption-collection="tsundoku"
         data-zoom-caption-href={`/${post.slug}`}
         data-zoom-caption-title={title}
         data-zoom-caption-description={photoViewerDescription(post)}
@@ -135,7 +136,7 @@ function PhotoTile({ post, index }: { post: Post; index: number }) {
 }
 
 export default async function TsundokuPage() {
-  const posts = getPostsByNewsletter('tsundoku')
+  const posts = getPhotoPosts('tsundoku')
   const smsSignupPhoneNumber = sitePhoneNumber()
   const smsSignupDisplayNumber = sitePhoneDisplayNumber()
 
