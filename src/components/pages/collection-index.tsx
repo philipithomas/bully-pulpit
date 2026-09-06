@@ -6,6 +6,7 @@ import {
   useCallback,
   useDeferredValue,
   useId,
+  useRef,
   useState,
 } from 'react'
 import {
@@ -38,7 +39,7 @@ function CollectionEntryRow({ entry }: { entry: CollectionEntry }) {
           <EntryTerm entry={entry} />
           <span
             aria-hidden="true"
-            className="font-mono text-gray-300 text-xs opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+            className="font-sans text-gray-300 text-xs opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
           >
             #
           </span>
@@ -72,12 +73,16 @@ export function CollectionIndex({
 }) {
   const inputId = useId()
   const resultsId = useId()
+  const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const handleQueryChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value),
     []
   )
-  const clearQuery = useCallback(() => setQuery(''), [])
+  const clearQuery = useCallback(() => {
+    setQuery('')
+    inputRef.current?.focus()
+  }, [])
   const deferredQuery = useDeferredValue(query)
   const visibleEntries = filterCollectionEntries(
     collection.entries,
@@ -107,6 +112,7 @@ export function CollectionIndex({
                 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-500"
               />
               <input
+                ref={inputRef}
                 id={inputId}
                 type="search"
                 value={query}
@@ -115,14 +121,14 @@ export function CollectionIndex({
                 autoComplete="off"
                 spellCheck={false}
                 placeholder="Search words and definitions"
-                className="w-full border border-gray-300 bg-white py-2.5 pr-10 pl-10 font-serif text-base text-gray-950 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-900"
+                className="w-full border border-gray-300 bg-white py-2.5 pr-10 pl-10 font-serif text-base text-gray-950 outline-none transition-colors placeholder:text-gray-400"
               />
               {query ? (
                 <button
                   type="button"
                   onClick={clearQuery}
                   aria-label="Clear filter"
-                  className="absolute top-1/2 right-2 flex size-8 -translate-y-1/2 items-center justify-center text-gray-500 transition-colors hover:text-gray-950 focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-1"
+                  className="absolute top-1/2 right-2 flex size-8 -translate-y-1/2 items-center justify-center text-gray-500 transition-colors hover:text-gray-950"
                 >
                   <X aria-hidden="true" className="size-4" />
                 </button>
@@ -134,7 +140,7 @@ export function CollectionIndex({
             id={resultsId}
             aria-live="polite"
             aria-atomic="true"
-            className="shrink-0 font-mono text-gray-500 text-xs tabular-nums"
+            className="shrink-0 font-sans text-gray-500 text-xs tabular-nums"
           >
             {resultLabel}
           </p>
@@ -149,7 +155,7 @@ export function CollectionIndex({
               <a
                 key={letter}
                 href={`#letter-${letter.toLocaleLowerCase('en-US')}`}
-                className="flex size-7 items-center justify-center font-mono text-gray-700 text-xs no-underline transition-colors hover:bg-gray-900 hover:text-white focus-visible:outline-2 focus-visible:outline-gray-900 focus-visible:outline-offset-2"
+                className="flex size-7 items-center justify-center font-sans font-medium text-gray-700 text-xs no-underline transition-colors hover:bg-gray-900 hover:text-white"
               >
                 {letter}
               </a>
@@ -157,7 +163,7 @@ export function CollectionIndex({
               <span
                 key={letter}
                 aria-hidden="true"
-                className="flex size-7 items-center justify-center font-mono text-gray-300 text-xs"
+                className="flex size-7 items-center justify-center font-sans text-gray-300 text-xs"
               >
                 {letter}
               </span>
@@ -176,7 +182,7 @@ export function CollectionIndex({
             >
               <h2
                 id={`letter-${group.letter.toLocaleLowerCase('en-US')}`}
-                className="scroll-mt-6 font-mono font-semibold text-2xl text-brass md:text-3xl"
+                className="scroll-mt-6 font-sans font-semibold text-2xl text-brass md:text-3xl"
               >
                 {group.letter}
               </h2>

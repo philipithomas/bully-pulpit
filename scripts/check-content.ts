@@ -1,7 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
-import { collectionValidationProblems } from '@/lib/collections'
+import {
+  COLLECTION_SLUGS,
+  collectionValidationProblems,
+} from '@/lib/collections'
 import { siteConfig } from '@/lib/config'
 import {
   formatImageBytes,
@@ -110,6 +113,18 @@ async function main() {
 
   for (const problem of collectionValidationProblems()) {
     errors.push(`structured collection: ${problem}`)
+  }
+  for (const slug of COLLECTION_SLUGS) {
+    const legacySource = path.join(
+      process.cwd(),
+      'content/pages',
+      `${slug}.mdx`
+    )
+    if (fs.existsSync(legacySource)) {
+      errors.push(
+        `${path.relative(process.cwd(), legacySource)} duplicates the canonical structured source in src/lib/collections/data.json`
+      )
+    }
   }
 
   // 1: cover images referenced by frontmatter must exist

@@ -18,7 +18,7 @@ export function CollectionPage({
 
       <div className="container py-12 md:py-16 lg:py-20">
         <header className="max-w-4xl">
-          <p className="font-mono text-brass text-xs uppercase tracking-[0.14em]">
+          <p className="font-sans font-medium text-brass text-sm">
             Collected vocabulary
           </p>
           <h1 className="mt-3 font-sans font-semibold text-4xl text-gray-950 tracking-tight sm:text-5xl lg:text-7xl">

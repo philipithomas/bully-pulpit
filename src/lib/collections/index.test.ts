@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   COLLECTION_SLUGS,
@@ -60,6 +62,14 @@ describe('structured collections', () => {
     expect(pages[0].content).toBe(
       collectionPageMarkdown(getCollection('diction'))
     )
+  })
+
+  it('does not retain competing MDX collection sources', () => {
+    for (const slug of COLLECTION_SLUGS) {
+      expect(
+        fs.existsSync(path.join(process.cwd(), 'content/pages', `${slug}.mdx`))
+      ).toBe(false)
+    }
   })
 
   it('preserves term emphasis and trailing marks', () => {
