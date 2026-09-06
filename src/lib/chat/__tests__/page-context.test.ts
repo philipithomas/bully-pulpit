@@ -246,6 +246,40 @@ describe('getSelectedPassageContext', () => {
       },
     })
   })
+
+  it('matches rendered text selected across Markdown list items', () => {
+    const path = '/digital-quiet'
+    const listQuote =
+      'Elevate the threshold for initiating conversations, discouraging trivial interruptions. Promote well-considered, clear communication to reduce the need for follow-up clarifications.'
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'explain',
+          text: listQuote,
+          path,
+        },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({ text: listQuote, path })
+  })
+
+  it('matches rendered text selected across Markdown blockquote lines', () => {
+    const path = '/the-next-iteration-of-contraption-company'
+    const blockquote =
+      'In most cases the recipe for doing great work is simply: work hard on excitingly ambitious projects, and something good will come of it. - Paul Graham in "How to Do Great Work"'
+    expect(
+      getSelectedPassageContext(
+        {
+          action: 'context',
+          text: blockquote,
+          path,
+        },
+        path,
+        getPageContextContent(path)
+      )
+    ).toMatchObject({ text: blockquote, path })
+  })
 })
 
 describe('toPlaintext', () => {

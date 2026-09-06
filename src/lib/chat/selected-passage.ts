@@ -72,8 +72,23 @@ export function selectedPassageUserMessage(
 
 export function selectedPassageRequestOptions(
   request: SelectedPassageRequest | null
-): { body?: { selectedPassage: SelectedPassageRequest } } {
-  return request ? { body: { selectedPassage: request } } : {}
+): {
+  body?: {
+    selectedPassage: SelectedPassageRequest
+    pageContext: { path: string }
+  }
+} {
+  return request
+    ? {
+        body: {
+          selectedPassage: request,
+          // Request-specific body fields override the transport defaults.
+          // Keep retries bound to the page where the passage was selected,
+          // even if the visitor navigated before choosing Try again.
+          pageContext: { path: request.path },
+        },
+      }
+    : {}
 }
 
 export function isPassageSelectableContent(

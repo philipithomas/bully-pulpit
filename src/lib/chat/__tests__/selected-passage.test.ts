@@ -40,7 +40,10 @@ describe('selected passage request', () => {
       headingId: 'technical',
     }
     expect(selectedPassageRequestOptions(request)).toEqual({
-      body: { selectedPassage: request },
+      body: {
+        selectedPassage: request,
+        pageContext: { path: '/colophon' },
+      },
     })
     expect(selectedPassageRequestOptions(null)).toEqual({})
   })

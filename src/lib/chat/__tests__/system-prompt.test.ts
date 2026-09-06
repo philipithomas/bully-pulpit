@@ -55,6 +55,35 @@ describe('getSystemPrompt page context', () => {
     )
   })
 
+  it('reuses the full fetchPost provenance call for content-page passages', () => {
+    const pageSource = {
+      type: 'page',
+      title: 'Colophon',
+      url: '/colophon',
+      publishedAt: null,
+      newsletter: 'page',
+    } as const
+    const prompt = getSystemPrompt({
+      pageContext: { path: '/colophon' },
+      pageContent: {
+        slug: 'colophon',
+        title: 'Colophon',
+        content: 'Canonical content.',
+        truncated: false,
+        source: pageSource,
+      },
+      selectedPassage: {
+        action: 'explain',
+        text: 'A canonical selected passage long enough to send.',
+        path: '/colophon',
+        source: pageSource,
+      },
+    })
+
+    expect(prompt.match(/call fetchPost with slug "colophon"/g)).toHaveLength(2)
+    expect(prompt).not.toContain('call fetchPage with path "/colophon"')
+  })
+
   it('points fetchPage at the homepage path', () => {
     const prompt = getSystemPrompt({ pageContext: { path: '/' } })
     expect(prompt).toContain('The visitor is currently on /')

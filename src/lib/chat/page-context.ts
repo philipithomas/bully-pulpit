@@ -66,8 +66,11 @@ function appPageNewsletter(path: string): Newsletter | 'page' {
  * strips imports, JSX/HTML tags, images, and markdown syntax while keeping
  * the prose intact.
  */
-export function toPlaintext(mdx: string): string {
-  return mdx
+function plaintextFromMdx(
+  mdx: string,
+  { stripBlockMarkers = false }: { stripBlockMarkers?: boolean } = {}
+): string {
+  const unwrapped = mdx
     .replace(/^(import|export)\s[^\n]*$/gm, '')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
     .replace(/\[((?:\\.|[^\]\\])*)\]\(#[^)]*\)/g, (_match, text: string) =>
@@ -76,6 +79,14 @@ export function toPlaintext(mdx: string): string {
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/<[^>]+>/g, '')
     .replace(/^#{1,6}\s+/gm, '')
+
+  const withoutBlockMarkers = stripBlockMarkers
+    ? unwrapped
+        .replace(/^[\t ]*(?:>[\t ]*)+/gm, '')
+        .replace(/^[\t ]*(?:[-+*]|\d+[.)])[\t ]+/gm, '')
+    : unwrapped
+
+  return withoutBlockMarkers
     .replace(/(?<!\\)[*_`~]/g, '')
     .replace(/\\(.)/g, (match, character: string) =>
       MARKDOWN_ESCAPABLE_PUNCTUATION.includes(character) ? character : match
@@ -84,17 +95,26 @@ export function toPlaintext(mdx: string): string {
     .trim()
 }
 
+export function toPlaintext(mdx: string): string {
+  return plaintextFromMdx(mdx)
+}
+
+function toRenderedPlaintext(mdx: string): string {
+  return plaintextFromMdx(mdx, { stripBlockMarkers: true })
+}
+
 /**
  * Converts a post or page to the text Bell may quote. The contact page keeps
  * its environment-specific phone number out of the committed content corpus,
  * then adds the active number here for live page reads.
  */
-export function toPagePlaintext(
-  item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>
+function pagePlaintext(
+  item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>,
+  convertMdx: (mdx: string) => string
 ): string {
-  const plain = toPlaintext(item.content)
+  const plain = convertMdx(item.content)
   if (item.slug === 'stargazing') {
-    return toPlaintext(stargazingPageContent(item.content))
+    return convertMdx(stargazingPageContent(item.content))
   }
   const photo = photoMetadataLabeledText(item.frontmatter.photo)
   const content = [photo ? `Photo metadata: ${photo}` : '', plain]
@@ -104,6 +124,18 @@ export function toPagePlaintext(
 
   const phoneNumber = sitePhoneDisplayNumber()
   return phoneNumber ? `${content}\n\nTelephone: ${phoneNumber}` : content
+}
+
+export function toPagePlaintext(
+  item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>
+): string {
+  return pagePlaintext(item, toPlaintext)
+}
+
+function toRenderedPagePlaintext(
+  item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>
+): string {
+  return pagePlaintext(item, toRenderedPlaintext)
 }
 
 /**
@@ -203,7 +235,7 @@ export function getSelectedPassageContext(
   if (
     !item ||
     !isPassageSelectableContent(item.slug, post ? 'post' : 'page') ||
-    !collapsePlainTextWhitespace(toPagePlaintext(item)).includes(text)
+    !collapsePlainTextWhitespace(toRenderedPagePlaintext(item)).includes(text)
   ) {
     return null
   }
@@ -217,9 +249,9 @@ export function getSelectedPassageContext(
       : undefined
   const heading =
     headingSection &&
-    collapsePlainTextWhitespace(toPlaintext(headingSection.markdown)).includes(
-      text
-    )
+    collapsePlainTextWhitespace(
+      toRenderedPlaintext(headingSection.markdown)
+    ).includes(text)
       ? headingSection
       : undefined
   const sourceUrl = heading

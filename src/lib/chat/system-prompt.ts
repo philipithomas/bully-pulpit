@@ -21,6 +21,14 @@ function escapePromptSourceText(value: string): string {
     .replaceAll('>', '&gt;')
 }
 
+function pageContentProvenanceFetch(
+  pageContent: NonNullable<SystemPromptOptions['pageContent']>
+): string {
+  return pageContent.fetchPath
+    ? `call fetchPage with path "${pageContent.fetchPath}"`
+    : `call fetchPost with slug "${pageContent.slug}"`
+}
+
 export function getSystemPrompt(options?: SystemPromptOptions) {
   const isSms = options?.surface === 'sms'
   const smsOrigin = smsSiteOrigin()
@@ -144,9 +152,7 @@ Reply in one compact plain-text paragraph. Aim for 240 characters, including any
     const page = options.pageContext
     if (options.pageContent) {
       const pc = options.pageContent
-      const provenanceFetch = pc.fetchPath
-        ? `call fetchPage with path "${pc.fetchPath}"`
-        : `call fetchPost with slug "${pc.slug}"`
+      const provenanceFetch = pageContentProvenanceFetch(pc)
       const truncation = pc.truncated
         ? ' The injected content is truncated, so use the fetched content for any omitted details.'
         : ''
@@ -162,10 +168,9 @@ Reply in one compact plain-text paragraph. Aim for 240 characters, including any
 
   if (options?.selectedPassage) {
     const passage = options.selectedPassage
-    const provenanceFetch =
-      passage.source.type === 'post'
-        ? `call fetchPost with slug "${passage.source.url.slice(1).split('#')[0]}"`
-        : `call fetchPage with path "${passage.path}"`
+    const provenanceFetch = options.pageContent
+      ? pageContentProvenanceFetch(options.pageContent)
+      : `call fetchPost with slug "${passage.source.url.slice(1).split('#')[0]}"`
     const actionInstruction = {
       explain:
         'Explain what the passage means and why it matters within this source.',
