@@ -15,21 +15,28 @@ describe('Explore page', () => {
     for (const group of groups) {
       expect(html).toContain(`aria-labelledby="explore-${group.id}"`)
       for (const destination of group.destinations) {
-        expect(html).toContain(`href="${destination.href}"`)
-        expect(html).toContain(
-          `aria-describedby="explore-${destination.id}-description"`
-        )
+        expect(html).toContain(`data-explore-destination="${destination.id}"`)
+        if (destination.kind === 'link') {
+          expect(html).toContain(`href="${destination.href}"`)
+        }
         expect(html).toContain(destination.title)
       }
     }
+    expect(html).toContain('<button type="button"')
+    expect(html).not.toContain('aria-describedby')
+    expect(html).not.toContain('border-t')
+    expect(html).not.toContain('divide-y')
+    expect(html).not.toContain('uppercase')
   })
 
   it('keeps destination links in the typed keyboard and reading order', () => {
     const html = renderToStaticMarkup(<ExplorePage />)
-    const hrefs = getExploreGroups().flatMap((group) =>
-      group.destinations.map((destination) => destination.href)
+    const destinationIds = getExploreGroups().flatMap((group) =>
+      group.destinations.map((destination) => destination.id)
     )
-    const positions = hrefs.map((href) => html.indexOf(`href="${href}"`))
+    const positions = destinationIds.map((id) =>
+      html.indexOf(`data-explore-destination="${id}"`)
+    )
 
     expect(positions.every((position) => position >= 0)).toBe(true)
     expect(positions).toEqual([...positions].sort((a, b) => a - b))

@@ -136,13 +136,14 @@ export const EXPLORE_GROUP_DEFINITIONS = [
   },
 ] as const satisfies readonly ExploreGroupDefinition[]
 
-export type ExploreDestination = {
+type ExploreDestinationBase = {
   id: ExploreDestinationId
-  kind: 'link' | 'bell'
-  href: `/${string}` | '#bell'
   title: string
   description: string
 }
+
+export type ExploreDestination = ExploreDestinationBase &
+  ({ kind: 'link'; href: `/${string}` } | { id: 'bell'; kind: 'bell' })
 
 export type ExploreGroup = {
   id: ExploreGroupId
@@ -219,7 +220,6 @@ export function getExploreGroups(): readonly ExploreGroup[] {
         {
           id: destination.id,
           kind: 'bell',
-          href: '#bell',
           title: destination.title,
           description: destination.description,
         },

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ExploreBellLink } from '@/components/discovery/explore-bell-link'
+import { ExploreBellButton } from '@/components/discovery/explore-bell-button'
 import { type ExploreAccent, getExploreGroups } from '@/lib/discovery/explore'
 import { publicAppPage } from '@/lib/public-pages'
 import { createPublicPageMetadata } from '@/lib/seo/metadata'
@@ -20,17 +20,15 @@ const accentClasses: Record<ExploreAccent, string> = {
 }
 
 const destinationClassName =
-  'group block py-4 transition-colors hover:text-gray-950 sm:py-5'
+  'group block w-full cursor-pointer py-4 text-left transition-colors hover:text-gray-950 sm:py-5'
 
 function DestinationContents({
   title,
   description,
-  descriptionId,
   action,
 }: {
   title: string
   description: string
-  descriptionId: string
   action?: string
 }) {
   return (
@@ -46,14 +44,11 @@ function DestinationContents({
           &rarr;
         </span>
       </span>
-      <span
-        id={descriptionId}
-        className="mt-1.5 block max-w-prose font-serif text-sm text-gray-600 leading-relaxed sm:text-[15px]"
-      >
+      <span className="mt-1.5 block max-w-prose font-serif text-sm text-gray-600 leading-relaxed sm:text-[15px]">
         {description}
       </span>
       {action ? (
-        <span className="mt-2 block font-mono text-[10px] text-gray-500 uppercase tracking-[0.1em]">
+        <span className="mt-2 block font-sans text-gray-500 text-xs">
           {action}
         </span>
       ) : null}
@@ -69,7 +64,7 @@ export default function ExplorePage() {
       <div className="container py-10 sm:py-14 md:py-20">
         <div className="mx-auto max-w-5xl">
           <header className="max-w-2xl">
-            <p className="mb-4 font-mono text-[10px] text-gray-500 uppercase tracking-[0.15em]">
+            <p className="mb-4 font-sans font-medium text-gray-500 text-sm">
               A map of the archive
             </p>
             <h1 className="font-semibold text-4xl text-gray-950 tracking-tight sm:text-5xl">
@@ -85,11 +80,7 @@ export default function ExplorePage() {
             {groups.map((group) => {
               const headingId = `explore-${group.id}`
               return (
-                <section
-                  key={group.id}
-                  aria-labelledby={headingId}
-                  className="border-gray-200 border-t pt-5"
-                >
+                <section key={group.id} aria-labelledby={headingId}>
                   <div className="flex items-start justify-between gap-6">
                     <div>
                       <h2
@@ -108,36 +99,29 @@ export default function ExplorePage() {
                     />
                   </div>
 
-                  <ul className="mt-5 divide-y divide-gray-200">
+                  <ul className="mt-5 space-y-1">
                     {group.destinations.map((destination) => {
-                      const descriptionId = `explore-${destination.id}-description`
                       return (
                         <li
                           key={destination.id}
-                          id={destination.kind === 'bell' ? 'bell' : undefined}
+                          data-explore-destination={destination.id}
                         >
                           {destination.kind === 'bell' ? (
-                            <ExploreBellLink
-                              className={destinationClassName}
-                              describedBy={descriptionId}
-                            >
+                            <ExploreBellButton className={destinationClassName}>
                               <DestinationContents
                                 title={destination.title}
                                 description={destination.description}
-                                descriptionId={descriptionId}
                                 action="Open the assistant"
                               />
-                            </ExploreBellLink>
+                            </ExploreBellButton>
                           ) : (
                             <Link
                               href={destination.href}
                               className={destinationClassName}
-                              aria-describedby={descriptionId}
                             >
                               <DestinationContents
                                 title={destination.title}
                                 description={destination.description}
-                                descriptionId={descriptionId}
                               />
                             </Link>
                           )}
@@ -150,7 +134,7 @@ export default function ExplorePage() {
             })}
           </div>
 
-          <aside className="mt-14 border-gray-200 border-t pt-6 text-sm text-gray-600 leading-relaxed md:mt-20">
+          <aside className="mt-14 text-sm text-gray-600 leading-relaxed md:mt-20">
             Looking for a particular post? The{' '}
             <Link
               href="/sitemap"

@@ -82,16 +82,16 @@ describe('Explore discovery groups', () => {
     const destinations = getExploreGroups().flatMap(
       (group) => group.destinations
     )
-    const hrefs = destinations.map((destination) => destination.href)
+    const hrefs = destinations.flatMap((destination) =>
+      destination.kind === 'link' ? [destination.href] : []
+    )
 
     expect(new Set(hrefs).size).toBe(hrefs.length)
-    expect(
-      hrefs.every((href) => href.startsWith('/') || href === '#bell')
-    ).toBe(true)
+    expect(hrefs.every((href) => href.startsWith('/'))).toBe(true)
     expect(
       destinations.filter((destination) => destination.kind === 'bell')
     ).toEqual([
-      expect.objectContaining({ id: 'bell', href: '#bell', title: 'Bell' }),
+      expect.objectContaining({ id: 'bell', kind: 'bell', title: 'Bell' }),
     ])
   })
 })
