@@ -285,6 +285,7 @@ export function analyticsPageType(pathname: string): AnalyticsPageType {
       '/contact',
       '/contraptions',
       '/diction',
+      '/drawer',
       '/media',
       '/policies',
       '/privacy',

@@ -16,12 +16,19 @@ export default function NotFound() {
         <p className="font-serif text-xl text-white/60 mt-6 leading-relaxed">
           Page not found.
         </p>
-        <div className="mt-10">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
           <Link
             href="/"
             className="no-underline font-sans text-sm text-white/60 hover:text-white transition-colors duration-300 inline-flex items-center"
           >
             <span>Back to home</span>
+            <ArrowRight className="ml-2" size={16} />
+          </Link>
+          <Link
+            href="/drawer"
+            className="no-underline font-sans text-sm text-white/60 hover:text-white transition-colors duration-300 inline-flex items-center"
+          >
+            <span>Open the Drawer</span>
             <ArrowRight className="ml-2" size={16} />
           </Link>
         </div>
