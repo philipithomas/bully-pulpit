@@ -8,6 +8,7 @@ import {
   drawerHref,
   isDrawerDate,
   MIN_DRAWER_DATE,
+  resolveDrawerDate,
   selectDrawer,
   shiftDrawerDate,
   surpriseDrawerDate,
@@ -25,13 +26,6 @@ const categoryLabels: Record<DrawerCategory, string> = {
   diction: 'Diction',
   contraption: 'Contraptions',
   blogroll: 'Elsewhere',
-}
-
-function formatDrawerDate(date: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'full',
-    timeZone: 'UTC',
-  }).format(new Date(`${date}T00:00:00.000Z`))
 }
 
 function ItemLink({
@@ -97,16 +91,16 @@ function Compartment({ item, index }: { item: DrawerItem; index: number }) {
                 {item.publishedAt ? (
                   <time
                     dateTime={item.publishedAt}
-                    className="mb-2 block font-mono text-xs text-gray-500"
+                    className="mb-2 block font-sans text-xs text-gray-500"
                   >
                     {item.publishedAt}
                   </time>
                 ) : null}
-                <h2
+                <h3
                   className={`${item.category === 'diction' || item.category === 'contraption' ? 'font-serif text-3xl sm:text-4xl' : 'font-sans text-xl sm:text-2xl'} font-semibold tracking-tight text-gray-950 transition-colors duration-300 group-hover:text-forest`}
                 >
                   {item.title}
-                </h2>
+                </h3>
                 <p className="mt-3 max-w-2xl font-serif text-base leading-relaxed text-gray-600 sm:text-lg">
                   {item.description}
                 </p>
@@ -130,10 +124,11 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
   const searchParams = useSearchParams()
   const dateHeadingId = useId()
   const today = useMemo(() => utcIsoDate(new Date()), [])
+  const earliestDate = catalog.earliestDate ?? MIN_DRAWER_DATE
   const requestedDate = searchParams.get('date')
-  const date = isDrawerDate(requestedDate) ? requestedDate : today
+  const date = resolveDrawerDate(requestedDate, today, earliestDate)
   const selection = useMemo(() => selectDrawer(catalog, date), [catalog, date])
-  const canGoPrevious = date > MIN_DRAWER_DATE
+  const canGoPrevious = date > earliestDate
   const previousDate = canGoPrevious ? shiftDrawerDate(date, -1) : null
   const canGoNext = date < today
   const nextDate = canGoNext ? shiftDrawerDate(date, 1) : null
@@ -178,7 +173,7 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
               href={drawerHref(previousDate)}
               scroll={false}
               className="font-sans text-sm font-semibold text-gray-700 transition-colors hover:text-gray-950"
-              aria-label={`Previous drawer, ${formatDrawerDate(previousDate)}`}
+              aria-label={`Previous drawer, ${previousDate}`}
             >
               ← Previous
             </Link>
@@ -195,7 +190,7 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
               href={drawerHref(nextDate)}
               scroll={false}
               className="font-sans text-sm font-semibold text-gray-700 transition-colors hover:text-gray-950"
-              aria-label={`Next drawer, ${formatDrawerDate(nextDate)}`}
+              aria-label={`Next drawer, ${nextDate}`}
             >
               Next →
             </Link>
@@ -215,10 +210,10 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
             <input
               type="date"
               value={date}
-              min={catalog.earliestDate ?? undefined}
+              min={earliestDate}
               max={today}
               onChange={handleDateChange}
-              className="h-10 border border-gray-300 bg-offwhite-light px-3 font-mono text-sm text-gray-900"
+              className="h-10 border border-gray-300 bg-offwhite-light px-3 font-sans text-sm text-gray-900"
             />
           </label>
           <button
@@ -236,17 +231,12 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
         aria-live="polite"
         data-drawer-date={date}
       >
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <h2
-            id={dateHeadingId}
-            className="font-serif text-2xl text-gray-950 sm:text-3xl"
-          >
-            {formatDrawerDate(date)}
-          </h2>
-          <span className="hidden font-mono text-xs text-gray-500 sm:block">
-            {date}
-          </span>
-        </div>
+        <h2
+          id={dateHeadingId}
+          className="mb-5 font-serif text-2xl text-gray-950 sm:text-3xl"
+        >
+          <time dateTime={date}>{date}</time>
+        </h2>
 
         <ol className="grid grid-cols-1 border-gray-300 border-t border-l md:grid-cols-6">
           {selection.items.map((item, index) => (

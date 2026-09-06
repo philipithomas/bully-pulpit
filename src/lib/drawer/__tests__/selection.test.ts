@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   drawerHref,
   isDrawerDate,
+  resolveDrawerDate,
   selectDrawer,
   shiftDrawerDate,
   surpriseDrawerDate,
@@ -59,6 +60,21 @@ describe('drawer dates', () => {
       'outside the supported range'
     )
     expect(drawerHref('2026-09-06')).toBe('/drawer?date=2026-09-06')
+  })
+
+  it('normalizes invalid and future requests to today', () => {
+    expect(resolveDrawerDate('2026-09-05', '2026-09-06')).toBe('2026-09-05')
+    expect(resolveDrawerDate('2026-09-07', '2026-09-06')).toBe('2026-09-06')
+    expect(resolveDrawerDate('not-a-date', '2026-09-06')).toBe('2026-09-06')
+  })
+
+  it('clamps requests to the known archive window', () => {
+    expect(resolveDrawerDate('2019-12-31', '2026-09-06', '2020-06-07')).toBe(
+      '2020-06-07'
+    )
+    expect(resolveDrawerDate('2020-06-07', '2026-09-06', '2020-06-07')).toBe(
+      '2020-06-07'
+    )
   })
 })
 

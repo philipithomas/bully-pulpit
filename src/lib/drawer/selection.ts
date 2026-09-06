@@ -67,6 +67,20 @@ export function utcIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
+export function resolveDrawerDate(
+  requestedDate: string | null | undefined,
+  today: string,
+  earliestDate = MIN_DRAWER_DATE
+): string {
+  if (!isDrawerDate(today)) throw new Error(`Invalid current date: ${today}`)
+  if (!isDrawerDate(earliestDate)) {
+    throw new Error(`Invalid earliest date: ${earliestDate}`)
+  }
+  const minimumDate = earliestDate <= today ? earliestDate : today
+  if (!isDrawerDate(requestedDate) || requestedDate > today) return today
+  return requestedDate < minimumDate ? minimumDate : requestedDate
+}
+
 export function shiftDrawerDate(date: string, days: number): string {
   if (!isDrawerDate(date)) throw new Error(`Invalid drawer date: ${date}`)
   const shifted = new Date(utcTime(date) + days * DAY_MS)
