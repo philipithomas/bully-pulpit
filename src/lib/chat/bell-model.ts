@@ -37,7 +37,9 @@ function getSharedProviderOptions(input: {
       reasoningSummary: null,
     },
     gateway: {
-      // Keep the model on OpenAI and prefer the fastest available endpoint.
+      // Ordering alone allows other providers as fallbacks; restrict the
+      // allowed set so every surface stays on direct OpenAI endpoints.
+      only: ['openai'],
       order: ['openai'],
       sort: 'ttft',
       // Priority is best-effort: Gateway falls back to the standard service

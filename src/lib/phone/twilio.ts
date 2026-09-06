@@ -137,6 +137,7 @@ export async function createCall(input: {
         To: input.to,
         Url: input.twimlUrl,
       }),
+      signal: AbortSignal.timeout(TWILIO_REQUEST_TIMEOUT_MS),
     }
   )
 

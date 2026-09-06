@@ -24,23 +24,28 @@ export async function GET(request: Request) {
   }
 
   await recordCronStarted('suppression-sync')
+  let operation: 'list' | 'upsert' | 'prune' = 'list'
   try {
     const destinations = await listSuppressedDestinations()
+    operation = 'upsert'
     for (const { email, reason } of destinations) {
       await upsertSuppression(email, reason, 'ses_suppression_list')
     }
     // Authoritative for this source: drop rows SES no longer suppresses. Safe
     // on an empty list because listSuppressedDestinations throws on API errors
     // (a failed fetch lands in the catch and never reaches this delete).
+    operation = 'prune'
     const removed = await deleteBySourceNotIn(
       'ses_suppression_list',
       destinations.map((d) => d.email)
     )
     await recordCronSucceeded('suppression-sync')
     return NextResponse.json({ synced: destinations.length, removed })
-  } catch (err) {
+  } catch {
     await recordCronFailed('suppression-sync')
-    console.error('[cron/suppression-sync] error:', err)
+    // Database/provider errors can include SQL parameters and email addresses.
+    // Keep only the bounded operation label in runtime logs.
+    console.error('[cron/suppression-sync] failed:', { operation })
     return NextResponse.json({ error: 'Sync failed' }, { status: 500 })
   }
 }

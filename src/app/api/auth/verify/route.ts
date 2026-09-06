@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   // Rate limit: 5 attempts per email per 15 minutes
   const emailKey = `email:${email.toLowerCase()}`
   if (!(await checkRateLimit('auth-verify', emailKey, request))) {
-    console.warn(`[auth/verify] Rate limited: ${emailKey}`)
+    console.warn('[auth/verify] Rate limited')
     return NextResponse.json(
       { error: 'Too many attempts. Please try again later.' },
       { status: 429 }

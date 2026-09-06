@@ -8,8 +8,10 @@ export const OPTIMIZED_IMAGE_WIDTHS = [
 const IMAGE_QUALITY = 100
 
 export const PLAIN_ZOOM_IMAGE_SIZES = '90vw'
+// The caption rail uses the same clamp on desktop and landscape phones.
+// Portrait phones keep the stacked, full-width image presentation.
 export const CAPTIONED_ZOOM_IMAGE_SIZES =
-  '(max-width: 767px) 100vw, calc(100vw - 26rem)'
+  '(min-width: 768px) calc(100vw - clamp(14rem, 32vw, 26rem)), (orientation: landscape) calc(100vw - clamp(14rem, 32vw, 26rem)), 100vw'
 export const IMMERSIVE_ZOOM_IMAGE_SIZES = '100vw'
 
 interface ZoomImageSource {

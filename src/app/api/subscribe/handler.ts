@@ -63,7 +63,7 @@ export async function handleSubscribeRequest(
   // Rate limit: 3 subscribe requests per email per 15 minutes
   const emailKey = `email:${email.toLowerCase()}`
   if (!(await checkRateLimit('subscribe', emailKey, request))) {
-    console.warn(`[subscribe] Rate limited: ${emailKey}`)
+    console.warn('[subscribe] Rate limited')
     return NextResponse.json(
       { error: 'Too many attempts. Please try again later.' },
       { status: 429 }

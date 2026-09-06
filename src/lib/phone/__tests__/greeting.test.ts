@@ -159,6 +159,7 @@ describe('generateGreeting', () => {
     expect(call.providerOptions).toMatchObject({
       openai: { reasoningSummary: null },
       gateway: {
+        only: ['openai'],
         order: ['openai'],
         zeroDataRetention: true,
         tags: [
