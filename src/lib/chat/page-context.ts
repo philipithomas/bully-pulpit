@@ -85,18 +85,96 @@ function appPageNewsletter(path: string): Newsletter | 'page' {
     : 'page'
 }
 
-/**
- * Converts MDX source to plain text suitable for system-prompt injection:
- * strips imports, JSX/HTML tags, images, and markdown syntax while keeping
- * the prose intact.
- */
+function imageDescription(alt: string): string {
+  const description = alt.trim()
+  return description ? `\n\nImage description: ${description}\n\n` : ''
+}
+
+/** Skip one complete quoted value or balanced JSX expression. */
+function delimitedValueEnd(value: string, start: number): number {
+  let quote = ''
+  let depth = 0
+  for (let index = start; index < value.length; index += 1) {
+    const character = value[index]
+    if (quote) {
+      if (character === '\\') index += 1
+      else if (character === quote) {
+        quote = ''
+        if (depth === 0) return index + 1
+      }
+    } else if ('"\'`'.includes(character)) quote = character
+    else if (character === '{') depth += 1
+    else if (character === '}' && --depth === 0) return index + 1
+  }
+  return value.length
+}
+
+function staticImageAlt(tag: string): string {
+  // Only inspect top-level attributes. Unsupported expressions must still be
+  // consumed whole so a string inside another attribute cannot supply alt.
+  let index = 0
+  while (index < tag.length) {
+    const attribute = /^\s+([\w:-]+)\s*=\s*/.exec(tag.slice(index))
+    if (!attribute) {
+      index = '"\'{'.includes(tag[index])
+        ? delimitedValueEnd(tag, index)
+        : index + 1
+      continue
+    }
+    index += attribute[0].length
+    const start = index
+    if ('"\'{'.includes(tag[index])) index = delimitedValueEnd(tag, index)
+    else while (index < tag.length && !/[\s>]/.test(tag[index])) index += 1
+    if (attribute[1] !== 'alt') continue
+    const literal =
+      /^(?:"([^"]*)"|'([^']*)'|\{\s*"((?:\\.|[^"\\])*)"\s*\}|\{\s*'((?:\\.|[^'\\])*)'\s*\})$/.exec(
+        tag.slice(start, index)
+      )
+    if (!literal) return ''
+    return (literal[1] ?? literal[2] ?? literal[3] ?? literal[4] ?? '').replace(
+      /\\(["'\\])/g,
+      '$1'
+    )
+  }
+  return ''
+}
+
+function replaceImageTags(mdx: string, includeDescriptions: boolean): string {
+  const starts = /<(?:img|Image)\b/g
+  let result = ''
+  let copiedThrough = 0
+  for (let match = starts.exec(mdx); match; match = starts.exec(mdx)) {
+    let end = starts.lastIndex
+    while (end < mdx.length && mdx[end] !== '>') {
+      end = '"\'{'.includes(mdx[end]) ? delimitedValueEnd(mdx, end) : end + 1
+    }
+    if (end === mdx.length) break
+    end += 1
+    result += mdx.slice(copiedThrough, match.index)
+    if (includeDescriptions) {
+      result += imageDescription(staticImageAlt(mdx.slice(match.index, end)))
+    }
+    copiedThrough = end
+    starts.lastIndex = end
+  }
+  return result + mdx.slice(copiedThrough)
+}
+
+/** Strip MDX syntax, optionally retaining authored image descriptions for Bell. */
 function plaintextFromMdx(
   mdx: string,
-  { stripBlockMarkers = false }: { stripBlockMarkers?: boolean } = {}
+  {
+    stripBlockMarkers = false,
+    includeImageDescriptions = false,
+  }: { stripBlockMarkers?: boolean; includeImageDescriptions?: boolean } = {}
 ): string {
-  const unwrapped = mdx
+  const unwrapped = replaceImageTags(mdx, includeImageDescriptions)
     .replace(/^(import|export)\s[^\n]*$/gm, '')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(
+      /!\[((?:\\.|[^\]\\])*)\]\((?:\\.|[^()\\]|\([^()]*\))*\)/g,
+      (_match, alt: string) =>
+        includeImageDescriptions ? imageDescription(alt) : ''
+    )
     .replace(/\[((?:\\.|[^\]\\])*)\]\(#[^)]*\)/g, (_match, text: string) =>
       text.replace(/\\([[\]])/g, '$1')
     )
@@ -119,13 +197,13 @@ function plaintextFromMdx(
       .replace(/\\(.)/g, (match, character: string) =>
         MARKDOWN_ESCAPABLE_PUNCTUATION.includes(character) ? character : match
       )
-      .replace(/\n{3,}/g, '\n\n')
-      .trim()
   )
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 export function toPlaintext(mdx: string): string {
-  return plaintextFromMdx(mdx)
+  return plaintextFromMdx(mdx, { includeImageDescriptions: true })
 }
 
 function toRenderedPlaintext(mdx: string): string {
@@ -145,25 +223,33 @@ function pagePlaintext(
   if (item.slug === 'stargazing') {
     return convertMdx(stargazingPageContent(item.content))
   }
-  const photo = photoMetadataLabeledText(item.frontmatter.photo)
-  const content = [photo ? `Photo metadata: ${photo}` : '', plain]
-    .filter(Boolean)
-    .join('\n\n')
-  if (item.slug !== 'contact') return content
+  if (item.slug !== 'contact') return plain
 
   const phoneNumber = sitePhoneDisplayNumber()
-  return phoneNumber ? `${content}\n\nTelephone: ${phoneNumber}` : content
+  return phoneNumber ? `${plain}\n\nTelephone: ${phoneNumber}` : plain
 }
 
 export function toPagePlaintext(
   item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>
 ): string {
-  return pagePlaintext(item, toPlaintext)
+  const coverAlt = toPlaintext(item.frontmatter.coverImageAlt ?? '')
+  const location = toPlaintext(item.frontmatter.location?.name ?? '')
+  const photo = photoMetadataLabeledText(item.frontmatter.photo)
+  return [
+    coverAlt ? `Cover image description: ${coverAlt}` : '',
+    location ? `Location: ${location}` : '',
+    photo ? `Photo metadata: ${photo}` : '',
+    pagePlaintext(item, toPlaintext),
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 function toRenderedPagePlaintext(
   item: Pick<Page | Post, 'slug' | 'content' | 'frontmatter'>
 ): string {
+  // Selection validation must compare with visible prose, without the cover
+  // description or other labeled frontmatter injected into Bell's context.
   return pagePlaintext(item, toRenderedPlaintext)
 }
 

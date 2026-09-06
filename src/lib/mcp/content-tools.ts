@@ -197,7 +197,8 @@ export function listPublicPosts({
     url: absoluteUrl(`/${post.slug}`),
     newsletter: post.newsletter,
     publishedAt: post.frontmatter.publishedAt,
-    description: post.excerpt || post.frontmatter.title,
+    description:
+      post.excerpt || post.frontmatter.coverImageAlt || post.frontmatter.title,
   }))
   const nextOffset = offset + posts.length
 

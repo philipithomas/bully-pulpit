@@ -111,6 +111,34 @@ describe('MCP public content helpers', () => {
     )
   })
 
+  it('gives image-only photo posts their authored description and location', () => {
+    const output = fetchPublicContent('cooking-class')
+
+    expect(output.text).toContain(
+      'Cover image description: Mette Søberg demonstrating how to use liquid nitrogen with parsley.'
+    )
+    expect(output.text).toContain('Location: Noma test kitchen')
+    expect(output.text).toContain('Camera: Leica M11-P')
+    expect(() => fetchOutputSchema.parse(output)).not.toThrow()
+  })
+
+  it('uses cover alt text to describe photo posts without an excerpt', () => {
+    const posts = getAllPostsWithoutImages().filter(
+      (post) => post.newsletter === 'tidbits'
+    )
+    const offset = posts.findIndex((post) => post.slug === 'cooking-class')
+    const photo = posts[offset]
+    expect(photo?.excerpt).toBe('')
+    const output = listPublicPosts({ limit: 1, offset, newsletter: 'tidbits' })
+
+    expect(output.posts[0]).toMatchObject({
+      id: 'cooking-class',
+      description:
+        'Mette Søberg demonstrating how to use liquid nitrogen with parsley.',
+    })
+    expect(() => listPostsOutputSchema.parse(output)).not.toThrow()
+  })
+
   it('keeps every searchable content ID valid and fetchable', () => {
     for (const { slug: id } of buildCorpus()) {
       expect(fetchInputSchema.safeParse({ id }).success, id).toBe(true)

@@ -230,6 +230,24 @@ describe('POST /mcp', () => {
     expect(mockedCheckRateLimitStatus).not.toHaveBeenCalled()
   })
 
+  it('includes photo descriptions in the text payload Bell Live receives', async () => {
+    const { response, payload } = await postJson(
+      toolCallRequest(4, 'fetch', { id: 'cooking-class' })
+    )
+    const structured = expectStructuredTextResult(resultObject(payload))
+
+    expect(response.status).toBe(200)
+    expect(structured.text).toEqual(
+      expect.stringContaining(
+        'Mette Søberg demonstrating how to use liquid nitrogen with parsley.'
+      )
+    )
+    expect(structured.text).toEqual(
+      expect.stringContaining('Location: Noma test kitchen')
+    )
+    expect(structured.metadata).toMatchObject({ newsletter: 'tidbits' })
+  })
+
   it('lists newsletter posts with structured and text output', async () => {
     const { payload } = await postJson(
       toolCallRequest(5, 'list_posts', {
