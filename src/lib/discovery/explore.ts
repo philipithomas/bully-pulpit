@@ -1,5 +1,9 @@
 import { getPages } from '@/lib/content/loader'
-import { type PublicAppPagePath, publicAppPage } from '@/lib/public-pages'
+import {
+  findPublicAppPage,
+  type PublicAppPagePath,
+  publicAppPage,
+} from '@/lib/public-pages'
 
 export const EXPLORE_GROUP_IDS = [
   'writing',
@@ -31,15 +35,24 @@ export type ExploreDestinationId =
   | 'tidbits'
   | 'tsundoku'
   | 'photography'
+  | 'drawer'
   | ExploreContentPageSlug
   | 'bell'
   | 'mcp'
 
 type ExploreDestinationReference =
   | {
-      id: Exclude<ExploreDestinationId, ExploreContentPageSlug | 'bell'>
+      id: Exclude<
+        ExploreDestinationId,
+        ExploreContentPageSlug | 'bell' | 'drawer'
+      >
       source: 'app'
       path: PublicAppPagePath
+    }
+  | {
+      id: 'drawer'
+      source: 'optional-app'
+      path: '/drawer'
     }
   | {
       id: ExploreContentPageSlug
@@ -95,6 +108,7 @@ export const EXPLORE_GROUP_DEFINITIONS = [
     description: 'Lists and collections assembled for repeat wandering.',
     accent: 'walnut',
     destinations: [
+      { id: 'drawer', source: 'optional-app', path: '/drawer' },
       { id: 'diction', source: 'content', slug: 'diction' },
       { id: 'contraptions', source: 'content', slug: 'contraptions' },
       { id: 'blogroll', source: 'content', slug: 'blogroll' },
@@ -144,16 +158,38 @@ export function getExploreGroups(): readonly ExploreGroup[] {
 
   return EXPLORE_GROUP_DEFINITIONS.map((group) => ({
     ...group,
-    destinations: group.destinations.map((destination) => {
+    destinations: (
+      group.destinations as readonly ExploreDestinationReference[]
+    ).flatMap((destination): ExploreDestination[] => {
       if (destination.source === 'app') {
         const page = publicAppPage(destination.path)
-        return {
-          id: destination.id,
-          kind: 'link' as const,
-          href: page.path,
-          title: page.title,
-          description: page.description,
-        }
+        return [
+          {
+            id: destination.id,
+            kind: 'link',
+            href: page.path,
+            title: page.title,
+            description: page.description,
+          },
+        ]
+      }
+
+      // Parallel feature branches can register a public destination without
+      // making Explore link to a route that has not landed yet. Once the
+      // Drawer registry entry is present, this group picks it up automatically.
+      if (destination.source === 'optional-app') {
+        const page = findPublicAppPage(destination.path)
+        return page
+          ? [
+              {
+                id: destination.id,
+                kind: 'link',
+                href: page.path,
+                title: page.title,
+                description: page.description,
+              },
+            ]
+          : []
       }
 
       if (destination.source === 'content') {
@@ -168,22 +204,26 @@ export function getExploreGroups(): readonly ExploreGroup[] {
             `Explore content page needs a description: ${destination.slug}`
           )
         }
-        return {
-          id: destination.id,
-          kind: 'link' as const,
-          href: `/${destination.slug}` as const,
-          title: page.frontmatter.title,
-          description: page.frontmatter.description,
-        }
+        return [
+          {
+            id: destination.id,
+            kind: 'link',
+            href: `/${destination.slug}` as const,
+            title: page.frontmatter.title,
+            description: page.frontmatter.description,
+          },
+        ]
       }
 
-      return {
-        id: destination.id,
-        kind: 'bell' as const,
-        href: '#bell' as const,
-        title: destination.title,
-        description: destination.description,
-      }
+      return [
+        {
+          id: destination.id,
+          kind: 'bell',
+          href: '#bell',
+          title: destination.title,
+          description: destination.description,
+        },
+      ]
     }),
   }))
 }
