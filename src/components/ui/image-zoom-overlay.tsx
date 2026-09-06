@@ -11,8 +11,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import {
+  type CSSProperties,
   type MouseEvent,
-  type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
   useId,
@@ -23,6 +23,7 @@ import { PhotoMetadata } from '@/components/posts/photo-metadata'
 import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { preloadZoomGalleryNeighbors } from '@/components/ui/image-zoom-preload'
+import { usePhotoSwipe } from '@/components/ui/use-photo-swipe'
 import type { PhotoMetadata as PhotoMetadataValue } from '@/lib/content/types'
 import { tidbitsPaletteForPost } from '@/lib/tidbits/palette'
 
@@ -75,6 +76,12 @@ export interface ZoomedImage {
   caption?: ZoomCaption | null
   /** Viewport rect of the clicked image: where the zoom starts and ends. */
   rect: { top: number; left: number; width: number; height: number } | null
+  photoNeighbors?: {
+    newer: ZoomGalleryItem | null
+    older: ZoomGalleryItem | null
+    total: number
+    index: number
+  }
   gallery?: {
     items: ZoomGalleryItem[]
     index: number
@@ -213,11 +220,13 @@ export function ImageZoomOverlay({
   onClose,
   onNavigate,
   onNavigateTo,
+  navigationError,
 }: {
   image: ZoomedImage
   onClose: () => void
   onNavigate?: (direction: -1 | 1) => void
   onNavigateTo?: (href: string) => void
+  navigationError?: string
 }) {
   const [phase, setPhase] = useState<'opening' | 'open' | 'closing'>('opening')
   const [hdSize, setHdSize] = useState<{
@@ -235,29 +244,28 @@ export function ImageZoomOverlay({
   const detailsToggleRef = useRef<HTMLButtonElement>(null)
   const detailsCloseRef = useRef<HTMLButtonElement>(null)
   const closingRef = useRef(false)
-  const swipeRef = useRef<{
-    pointerId: number
-    x: number
-    y: number
-  } | null>(null)
-  const didSwipeRef = useRef(false)
-  const swipeClickResetTimerRef = useRef<number | null>(null)
   const wheelDeltaRef = useRef(0)
   const wheelLockedUntilRef = useRef(0)
   const gallery = image.gallery ?? null
   const isImmersive = image.caption?.presentation === 'immersive'
-  const hasGallery = Boolean(gallery && gallery.items.length > 1)
-  const canPrevious = Boolean(gallery && gallery.index > 0)
-  const canNext = Boolean(gallery && gallery.index < gallery.items.length - 1)
-
-  useEffect(
-    () => () => {
-      if (swipeClickResetTimerRef.current !== null) {
-        window.clearTimeout(swipeClickResetTimerRef.current)
-      }
+  const isTidbits = image.caption?.collection === 'tidbits'
+  const isPhotoCollection =
+    isTidbits || image.caption?.collection === 'tsundoku'
+  const galleryTotal = gallery?.items.length ?? image.photoNeighbors?.total ?? 0
+  const galleryIndex = gallery?.index ?? image.photoNeighbors?.index ?? 0
+  const hasGallery = galleryTotal > 1
+  const canPrevious = hasGallery && (isPhotoCollection || galleryIndex > 0)
+  const canNext =
+    hasGallery && (isPhotoCollection || galleryIndex < galleryTotal - 1)
+  const palette = isTidbits
+    ? tidbitsPaletteForPost(image.caption?.href?.replace(/^\//, ''))
+    : null
+  const swipeHandlers = usePhotoSwipe({
+    enabled: isPhotoCollection && hasGallery,
+    onSwipe: (direction) => {
+      if (direction === -1 ? canPrevious : canNext) onNavigate?.(direction)
     },
-    []
-  )
+  })
 
   // Open: animate the image from its on-page rect to the centered layout
   // position. Reduced motion, a missing rect, or a not-yet-measurable layout
@@ -383,6 +391,16 @@ export function ImageZoomOverlay({
   useEffect(() => {
     if (isImmersive) {
       const navigate = (e: WheelEvent) => {
+        // Trackpads report pinch zoom as ctrl+wheel. Leave both the pinch and
+        // subsequent panning of its enlarged viewport to the browser.
+        if (
+          isPhotoCollection &&
+          (e.ctrlKey || (window.visualViewport?.scale ?? 1) > 1)
+        ) {
+          wheelDeltaRef.current = 0
+          wheelLockedUntilRef.current = 0
+          return
+        }
         const target = e.target
         if (
           target instanceof Element &&
@@ -418,6 +436,13 @@ export function ImageZoomOverlay({
     }
 
     const close = (e: Event) => {
+      if (
+        isPhotoCollection &&
+        ((e instanceof WheelEvent && e.ctrlKey) ||
+          (window.visualViewport?.scale ?? 1) > 1)
+      ) {
+        return
+      }
       const target = e.target
       if (
         target instanceof Element &&
@@ -428,12 +453,21 @@ export function ImageZoomOverlay({
       handleClose()
     }
     window.addEventListener('wheel', close, { passive: true })
-    window.addEventListener('touchmove', close, { passive: true })
+    if (!isPhotoCollection) {
+      window.addEventListener('touchmove', close, { passive: true })
+    }
     return () => {
       window.removeEventListener('wheel', close)
       window.removeEventListener('touchmove', close)
     }
-  }, [canNext, canPrevious, handleClose, isImmersive, onNavigate])
+  }, [
+    canNext,
+    canPrevious,
+    handleClose,
+    isImmersive,
+    isPhotoCollection,
+    onNavigate,
+  ])
 
   // Move focus into the overlay on mount; the opener restores it on close
   useEffect(() => {
@@ -458,8 +492,8 @@ export function ImageZoomOverlay({
   // Keep adjacent gallery items warm while the viewer is open. This removes
   // the blank/loading flash when moving through photo-heavy galleries.
   useEffect(() => {
-    preloadZoomGalleryNeighbors(gallery)
-  }, [gallery])
+    preloadZoomGalleryNeighbors(gallery, isPhotoCollection)
+  }, [gallery, isPhotoCollection])
 
   // Preload the viewer source set, letting the browser pick the right Vercel
   // optimized rendition for this viewport instead of fetching the raw source.
@@ -635,75 +669,6 @@ export function ImageZoomOverlay({
     },
     [canNext, onNavigate]
   )
-  const handleBackdropClick = useCallback(
-    (e: MouseEvent<HTMLDivElement>) => {
-      if (didSwipeRef.current) {
-        didSwipeRef.current = false
-        if (swipeClickResetTimerRef.current !== null) {
-          window.clearTimeout(swipeClickResetTimerRef.current)
-          swipeClickResetTimerRef.current = null
-        }
-        e.stopPropagation()
-        return
-      }
-      handleClose()
-    },
-    [handleClose]
-  )
-  const handlePointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (!isImmersive || e.pointerType === 'mouse') return
-      const target = e.target
-      if (
-        target instanceof Element &&
-        target.closest('a, button, [data-zoom-caption-panel]')
-      ) {
-        return
-      }
-      swipeRef.current = {
-        pointerId: e.pointerId,
-        x: e.clientX,
-        y: e.clientY,
-      }
-      e.currentTarget.setPointerCapture(e.pointerId)
-    },
-    [isImmersive]
-  )
-  const handlePointerUp = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      const start = swipeRef.current
-      swipeRef.current = null
-      if (!start || start.pointerId !== e.pointerId) return
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId)
-      }
-
-      const deltaX = e.clientX - start.x
-      const deltaY = e.clientY - start.y
-      if (Math.abs(deltaX) < 48 || Math.abs(deltaX) <= Math.abs(deltaY)) return
-
-      didSwipeRef.current = true
-      if (swipeClickResetTimerRef.current !== null) {
-        window.clearTimeout(swipeClickResetTimerRef.current)
-      }
-      // A swipe's synthetic click arrives before the next task. If the browser
-      // suppresses that click entirely, release the guard immediately so the
-      // visitor's next ordinary tap still closes the viewer.
-      swipeClickResetTimerRef.current = window.setTimeout(() => {
-        didSwipeRef.current = false
-        swipeClickResetTimerRef.current = null
-      }, 0)
-      if (deltaX > 0 && canPrevious) onNavigate?.(-1)
-      if (deltaX < 0 && canNext) onNavigate?.(1)
-    },
-    [canNext, canPrevious, onNavigate]
-  )
-  const handlePointerCancel = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (swipeRef.current?.pointerId === e.pointerId) swipeRef.current = null
-    },
-    []
-  )
 
   return (
     <div
@@ -715,22 +680,47 @@ export function ImageZoomOverlay({
           ? 'tidbits photo viewer'
           : image.alt || 'Image viewer'
       }
-      aria-describedby={isImmersive && caption ? statusId : undefined}
+      aria-describedby={isPhotoCollection && caption ? statusId : undefined}
       data-image-zoom-overlay=""
       tabIndex={-1}
       className={`fixed inset-0 z-60 cursor-zoom-out bg-[#0A0A0A] ${
         phase === 'closing' ? 'image-zoom-closing' : 'image-zoom-opening'
       }`}
       style={{
-        touchAction: isImmersive
+        ...(palette
+          ? ({
+              '--photo-viewer-paper': palette.paper,
+              '--photo-viewer-ink': palette.ink,
+              '--photo-viewer-accent': palette.accent,
+              '--photo-viewer-body': '#292926',
+              '--photo-viewer-muted': '#55554f',
+              '--photo-viewer-hover': '#0000000d',
+            } as CSSProperties)
+          : {}),
+        touchAction: isPhotoCollection
           ? 'pan-y pinch-zoom'
           : hasCaption
             ? 'auto'
             : 'none',
       }}
-      onClick={handleBackdropClick}
+      onClick={handleClose}
     >
-      {isImmersive && caption ? (
+      {isTidbits ? (
+        <div
+          aria-hidden="true"
+          data-zoom-tidbits-accent=""
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-40 h-1 bg-[var(--photo-viewer-accent)] transition-colors duration-300 motion-reduce:transition-none"
+        />
+      ) : null}
+      {navigationError ? (
+        <p
+          role="status"
+          className="pointer-events-none absolute inset-x-16 bottom-16 z-40 mx-auto w-fit max-w-[calc(100vw-8rem)] rounded-sm bg-black/80 px-3 py-2 text-center font-sans text-sm text-white"
+        >
+          {navigationError}
+        </p>
+      ) : null}
+      {isPhotoCollection && caption ? (
         <p
           id={statusId}
           role="status"
@@ -739,10 +729,7 @@ export function ImageZoomOverlay({
           className="sr-only"
         >
           {image.alt || caption.title}
-          {hasGallery && gallery
-            ? `, image ${gallery.index + 1} of ${gallery.items.length}`
-            : ''}
-          .
+          {hasGallery ? `, image ${galleryIndex + 1} of ${galleryTotal}` : ''}.
         </p>
       ) : null}
       {!caption ? (
@@ -767,9 +754,7 @@ export function ImageZoomOverlay({
         }
       >
         <div
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerCancel}
+          {...swipeHandlers}
           className={
             isImmersive
               ? 'immersive-zoom-stage group relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden bg-[#0A0A0A]'
@@ -923,17 +908,17 @@ export function ImageZoomOverlay({
             role="region"
             aria-label="Photo details"
             tabIndex={0}
-            className="min-h-0 min-w-0 max-h-[min(42dvh,20rem)] w-full cursor-auto overflow-y-auto overscroll-contain bg-[#171717] px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white landscape:h-full landscape:max-h-none landscape:py-6 landscape:pr-[max(1.5rem,env(safe-area-inset-right))] landscape:pl-6 md:h-full md:max-h-none md:py-8 md:pr-8 md:pl-8"
+            className={`photo-zoom-details ${isTidbits ? 'tidbits-zoom-details' : ''} min-h-0 min-w-0 max-h-[min(42dvh,20rem)] w-full cursor-auto overflow-y-auto overscroll-contain bg-[var(--photo-viewer-paper,#171717)] px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-[var(--photo-viewer-ink,#ffffff)] transition-colors duration-300 motion-reduce:transition-none landscape:h-full landscape:max-h-none landscape:py-6 landscape:pr-[max(1.5rem,env(safe-area-inset-right))] landscape:pl-6 md:h-full md:max-h-none md:py-8 md:pr-8 md:pl-8`}
             onClick={handleCaptionPanelClick}
           >
             <div className="flex min-h-full flex-col">
               <div className="flex min-h-12 shrink-0 items-start justify-end gap-1">
-                {hasGallery && gallery ? (
+                {hasGallery ? (
                   <span
                     aria-hidden="true"
-                    className="pt-3.5 font-sans text-[11px] leading-5 text-white/55"
+                    className="pt-3.5 font-sans text-[11px] leading-5 text-[var(--photo-viewer-muted,rgba(255,255,255,0.55))]"
                   >
-                    {gallery.index + 1} / {gallery.items.length}
+                    {galleryIndex + 1} / {galleryTotal}
                   </span>
                 ) : null}
                 <button
@@ -942,7 +927,7 @@ export function ImageZoomOverlay({
                   aria-label="Collapse photo details"
                   title="Collapse photo details"
                   onClick={handleDetailsClose}
-                  className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
+                  className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-[var(--photo-viewer-ink,rgba(255,255,255,0.7))] transition-colors duration-300 hover:bg-[var(--photo-viewer-hover,rgba(255,255,255,0.1))] hover:text-[var(--photo-viewer-ink,#ffffff)] focus-visible:bg-[var(--photo-viewer-hover,rgba(255,255,255,0.1))] focus-visible:text-[var(--photo-viewer-ink,#ffffff)] motion-reduce:transition-none"
                 >
                   <ChevronDown
                     aria-hidden="true"
@@ -958,14 +943,14 @@ export function ImageZoomOverlay({
                   aria-label="Close image viewer"
                   title="Close image viewer"
                   onClick={handleCloseButton}
-                  className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
+                  className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-[var(--photo-viewer-ink,rgba(255,255,255,0.7))] transition-colors duration-300 hover:bg-[var(--photo-viewer-hover,rgba(255,255,255,0.1))] hover:text-[var(--photo-viewer-ink,#ffffff)] focus-visible:bg-[var(--photo-viewer-hover,rgba(255,255,255,0.1))] focus-visible:text-[var(--photo-viewer-ink,#ffffff)] motion-reduce:transition-none"
                 >
                   <X aria-hidden="true" className="h-4 w-4" />
                 </button>
               </div>
               <div className="flex min-w-0 flex-col pt-3 landscape:min-h-0 landscape:flex-1 landscape:pt-6 md:min-h-0 md:flex-1 md:pt-8">
                 {hasDateLocationMetadata ? (
-                  <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-sans text-[11px] leading-5 text-white/65">
+                  <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-sans text-[11px] leading-5 text-[var(--photo-viewer-muted,rgba(255,255,255,0.65))]">
                     {caption.date ? <time>{caption.date}</time> : null}
                     {caption.date && caption.locationName ? (
                       <span aria-hidden="true">@</span>
@@ -976,7 +961,7 @@ export function ImageZoomOverlay({
                           href={caption.locationUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="break-words underline decoration-white/35 underline-offset-2 transition-colors hover:text-white"
+                          className="break-words underline decoration-current underline-offset-2 transition-colors hover:text-[var(--photo-viewer-ink,#ffffff)]"
                           onClick={handleCaptionClick}
                         >
                           {caption.locationName}
@@ -987,18 +972,18 @@ export function ImageZoomOverlay({
                     ) : null}
                   </div>
                 ) : null}
-                <h2 className="break-words font-serif text-lg font-normal leading-snug text-white sm:text-xl">
+                <h2 className="break-words font-serif text-lg font-normal leading-snug text-[var(--photo-viewer-ink,#ffffff)] transition-colors duration-300 motion-reduce:transition-none sm:text-xl">
                   {caption.title}
                 </h2>
                 {caption.description ? (
-                  <p className="mt-4 break-words font-serif text-sm leading-6 text-white/80 sm:text-base sm:leading-7">
+                  <p className="mt-4 break-words font-serif text-sm leading-6 text-[var(--photo-viewer-body,rgba(255,255,255,0.8))] sm:text-base sm:leading-7">
                     {caption.description}
                   </p>
                 ) : null}
                 <PhotoMetadata
                   photo={caption.photo}
-                  tone="dark"
-                  className="mt-4 shrink-0 landscape:mt-auto landscape:pt-8 md:mt-auto md:pt-8"
+                  tone={isTidbits ? 'light' : 'dark'}
+                  className={`mt-4 shrink-0 landscape:mt-auto landscape:pt-8 md:mt-auto md:pt-8 ${isTidbits ? 'text-[#55554f]' : ''}`}
                 />
               </div>
               <footer className="mt-6 flex shrink-0 flex-wrap items-end justify-between gap-x-5 gap-y-3">
@@ -1009,13 +994,11 @@ export function ImageZoomOverlay({
                   onClick={handleLogoClick}
                 >
                   <NewsletterWordmark
-                    tone="dark"
+                    tone={isTidbits ? 'light' : 'dark'}
                     style={
                       caption.collection === 'tidbits'
                         ? {
-                            color: tidbitsPaletteForPost(
-                              caption.href?.replace(/^\//, '')
-                            ).dark,
+                            color: 'var(--photo-viewer-ink)',
                           }
                         : undefined
                     }
@@ -1023,13 +1006,13 @@ export function ImageZoomOverlay({
                     alt={collection.label}
                     width={collection.width}
                     height={collection.height}
-                    className="h-[16px] w-auto"
+                    className="h-[16px] w-auto transition-colors duration-300 motion-reduce:transition-none"
                   />
                 </Link>
                 {caption.href ? (
                   <Link
                     href={caption.href}
-                    className="inline-flex min-h-11 items-center font-sans text-sm text-white/85 underline decoration-white/35 underline-offset-4 transition-colors hover:text-white"
+                    className="inline-flex min-h-11 items-center font-sans text-sm text-[var(--photo-viewer-ink,rgba(255,255,255,0.85))] underline decoration-current underline-offset-4 transition-colors hover:text-[var(--photo-viewer-ink,#ffffff)]"
                     onClick={handlePostClick}
                   >
                     Open post&nbsp;→

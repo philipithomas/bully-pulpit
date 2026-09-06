@@ -8,6 +8,18 @@ function tagForCover(tags: string[], cover: string): string | undefined {
 }
 
 describe('TsundokuPage image loading', () => {
+  it('opts every gallery photo into the Tsundoku viewer collection', async () => {
+    const html = renderToStaticMarkup(await TsundokuPage())
+    const photoButtons =
+      html.match(/<button\b[^>]*data-zoomable=""[^>]*>/g) ?? []
+
+    expect(photoButtons.length).toBeGreaterThan(1)
+    for (const button of photoButtons) {
+      expect(button).toContain('data-zoom-caption-collection="tsundoku"')
+      expect(button).toContain('data-zoom-group="tsundoku"')
+    }
+  })
+
   it('gives only the first photo an LCP preload', async () => {
     const html = renderToStaticMarkup(await TsundokuPage())
     const covers = getPostsByNewsletter('tsundoku')

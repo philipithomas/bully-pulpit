@@ -239,7 +239,7 @@
   :focus-visible:not([data-input-otp]):not([data-no-focus-ring]):not(
     input:not([type="checkbox"]):not([type="radio"])
   ):not(textarea):not(select) {
-  outline: 2px solid white;
+  outline: 2px solid var(--photo-viewer-focus, white);
   outline-offset: 2px;
 }
 
@@ -909,6 +909,12 @@ body.dark-viewport header .btn-primary .btn-arrow {
 
 .image-zoom-hd-out {
   animation: image-zoom-fade-out 300ms ease forwards;
+}
+
+/* The photo canvas stays dark while Tidbits details follow the active photo.
+   These variables live on the viewer, independently of the underlying page. */
+.tidbits-zoom-details {
+  --photo-viewer-focus: var(--photo-viewer-ink);
 }
 
 /* Tidbits's viewer keeps its controls visible on touch screens, including

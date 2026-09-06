@@ -73,11 +73,14 @@ export function preloadZoomItemSources(
 }
 
 export function preloadZoomGalleryNeighbors(
-  gallery: ZoomedImage['gallery'] | null | undefined
+  gallery: ZoomedImage['gallery'] | null | undefined,
+  circular = false
 ) {
-  if (!gallery) return
-
-  preloadZoomItemSources(gallery.items[gallery.index - 1])
-  preloadZoomItemSources(gallery.items[gallery.index + 1])
-  preloadZoomItemSources(gallery.items[gallery.index + 2])
+  if (!gallery || gallery.items.length < 2) return
+  for (const offset of [-1, 1, 2]) {
+    const index = circular
+      ? (gallery.index + offset + gallery.items.length) % gallery.items.length
+      : gallery.index + offset
+    if (index !== gallery.index) preloadZoomItemSources(gallery.items[index])
+  }
 }
