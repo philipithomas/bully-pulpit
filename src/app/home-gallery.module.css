@@ -79,6 +79,7 @@
 
 .photoTitle {
   display: block;
+  overflow-wrap: anywhere;
   font-weight: 500;
 }
 
@@ -101,6 +102,7 @@
 }
 
 .drawer {
+  min-width: 0;
   border-top: 1px solid var(--color-gray-200);
   padding-top: 13px;
 }
@@ -160,6 +162,7 @@
 }
 
 .discovery h3 {
+  overflow-wrap: anywhere;
   font-family: var(--font-serif);
   font-size: 21px;
   font-weight: 400;
@@ -177,6 +180,7 @@
 }
 
 .definition {
+  overflow-wrap: anywhere;
   max-width: 48ch;
   margin-top: 6px;
   color: var(--color-gray-600);
