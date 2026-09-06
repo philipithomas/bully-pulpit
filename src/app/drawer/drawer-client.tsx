@@ -7,6 +7,7 @@ import { type ChangeEvent, useCallback, useEffect, useId, useMemo } from 'react'
 import {
   drawerHref,
   isDrawerDate,
+  MIN_DRAWER_DATE,
   selectDrawer,
   shiftDrawerDate,
   surpriseDrawerDate,
@@ -40,8 +41,7 @@ function ItemLink({
   item: DrawerItem
   children: React.ReactNode
 }) {
-  const className =
-    'group block h-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-gray-950'
+  const className = 'group block h-full'
 
   if (!item.href) return <div className="h-full">{children}</div>
   if (item.external) {
@@ -86,7 +86,7 @@ function Compartment({ item, index }: { item: DrawerItem; index: number }) {
             <div
               className={`flex flex-1 flex-col ${isLarge ? 'p-6 sm:p-8' : 'p-6'}`}
             >
-              <div className="mb-8 flex items-baseline justify-between gap-4 font-mono text-[0.7rem] text-gray-500 tracked-caps">
+              <div className="mb-8 flex items-baseline justify-between gap-4 font-sans text-xs text-gray-500">
                 <span>{categoryLabels[item.category]}</span>
                 <span aria-hidden="true">
                   {String(index + 1).padStart(2, '0')}
@@ -133,9 +133,10 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
   const requestedDate = searchParams.get('date')
   const date = isDrawerDate(requestedDate) ? requestedDate : today
   const selection = useMemo(() => selectDrawer(catalog, date), [catalog, date])
-  const previousDate = shiftDrawerDate(date, -1)
-  const nextDate = shiftDrawerDate(date, 1)
+  const canGoPrevious = date > MIN_DRAWER_DATE
+  const previousDate = canGoPrevious ? shiftDrawerDate(date, -1) : null
   const canGoNext = date < today
+  const nextDate = canGoNext ? shiftDrawerDate(date, 1) : null
 
   useEffect(() => {
     if (requestedDate !== date) {
@@ -172,15 +173,24 @@ export function DrawerClient({ catalog }: { catalog: DrawerCatalog }) {
           aria-label="Drawer date navigation"
           className="flex items-center gap-4"
         >
-          <Link
-            href={drawerHref(previousDate)}
-            scroll={false}
-            className="font-sans text-sm font-semibold text-gray-700 transition-colors hover:text-gray-950"
-            aria-label={`Previous drawer, ${formatDrawerDate(previousDate)}`}
-          >
-            ← Previous
-          </Link>
-          {canGoNext ? (
+          {previousDate ? (
+            <Link
+              href={drawerHref(previousDate)}
+              scroll={false}
+              className="font-sans text-sm font-semibold text-gray-700 transition-colors hover:text-gray-950"
+              aria-label={`Previous drawer, ${formatDrawerDate(previousDate)}`}
+            >
+              ← Previous
+            </Link>
+          ) : (
+            <span
+              className="font-sans text-sm font-semibold text-gray-400"
+              aria-label="Previous drawer unavailable"
+            >
+              ← Previous
+            </span>
+          )}
+          {nextDate ? (
             <Link
               href={drawerHref(nextDate)}
               scroll={false}

@@ -43,6 +43,7 @@ describe('drawer dates', () => {
   it('accepts only real ISO calendar dates', () => {
     expect(isDrawerDate('2026-09-06')).toBe(true)
     expect(isDrawerDate('2026-02-29')).toBe(false)
+    expect(isDrawerDate('0000-01-01')).toBe(false)
     expect(isDrawerDate('09/06/2026')).toBe(false)
     expect(isDrawerDate(null)).toBe(false)
   })
@@ -51,6 +52,12 @@ describe('drawer dates', () => {
     expect(utcIsoDate(new Date('2026-03-08T23:30:00-07:00'))).toBe('2026-03-09')
     expect(shiftDrawerDate('2026-03-08', 1)).toBe('2026-03-09')
     expect(shiftDrawerDate('2024-02-28', 1)).toBe('2024-02-29')
+    expect(() => shiftDrawerDate('0001-01-01', -1)).toThrow(
+      'outside the supported range'
+    )
+    expect(() => shiftDrawerDate('9999-12-31', 1)).toThrow(
+      'outside the supported range'
+    )
     expect(drawerHref('2026-09-06')).toBe('/drawer?date=2026-09-06')
   })
 })

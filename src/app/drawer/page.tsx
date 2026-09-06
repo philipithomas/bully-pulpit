@@ -34,11 +34,11 @@ export default function DrawerPage() {
       <SetNewsletter newsletter={null} />
       <div className="container py-12 md:py-16 lg:py-20">
         <header className="mb-10 max-w-3xl">
-          <p className="mb-4 font-mono text-xs text-gray-500 tracked-caps">
+          <p className="mb-4 font-sans text-sm text-gray-500">
             A daily cabinet of curiosities
           </p>
           <h1 className="font-serif text-5xl tracking-tight text-gray-950 sm:text-6xl lg:text-7xl">
-            The Drawer
+            The drawer
           </h1>
           <p className="mt-5 max-w-2xl font-serif text-lg leading-relaxed text-gray-600 sm:text-xl">
             Five things pulled from the corners of this site: something to read,

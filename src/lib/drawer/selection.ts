@@ -6,8 +6,10 @@ import {
   type DrawerSelection,
 } from '@/lib/drawer/types'
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+const ISO_DATE = /^(?!0000)\d{4}-\d{2}-\d{2}$/
 const DAY_MS = 24 * 60 * 60 * 1000
+
+export const MIN_DRAWER_DATE = '0001-01-01'
 
 const FALLBACKS: Record<DrawerCategory, DrawerItem> = {
   writing: {
@@ -67,7 +69,13 @@ export function utcIsoDate(date: Date): string {
 
 export function shiftDrawerDate(date: string, days: number): string {
   if (!isDrawerDate(date)) throw new Error(`Invalid drawer date: ${date}`)
-  return new Date(utcTime(date) + days * DAY_MS).toISOString().slice(0, 10)
+  const shifted = new Date(utcTime(date) + days * DAY_MS)
+    .toISOString()
+    .slice(0, 10)
+  if (!isDrawerDate(shifted)) {
+    throw new Error(`Drawer date is outside the supported range: ${shifted}`)
+  }
+  return shifted
 }
 
 export function drawerHref(date: string): string {

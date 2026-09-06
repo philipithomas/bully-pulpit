@@ -19,18 +19,57 @@ const newsletterNames = {
 } as const
 
 function inlinePlaintext(markdown: string): string {
-  return markdown
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+  let plaintext = ''
+  let cursor = 0
+
+  while (cursor < markdown.length) {
+    const bracket = markdown.indexOf('[', cursor)
+    if (bracket === -1) {
+      plaintext += markdown.slice(cursor)
+      break
+    }
+
+    const start = markdown[bracket - 1] === '!' ? bracket - 1 : bracket
+    const labelEnd = markdown.indexOf('](', bracket + 1)
+    if (labelEnd === -1) {
+      plaintext += markdown.slice(cursor)
+      break
+    }
+
+    let depth = 1
+    let destinationEnd = labelEnd + 2
+    for (; destinationEnd < markdown.length; destinationEnd += 1) {
+      const character = markdown[destinationEnd]
+      if (character === '\\') {
+        destinationEnd += 1
+      } else if (character === '(') {
+        depth += 1
+      } else if (character === ')') {
+        depth -= 1
+        if (depth === 0) break
+      }
+    }
+
+    if (depth !== 0) {
+      plaintext += markdown.slice(cursor)
+      break
+    }
+
+    plaintext += markdown.slice(cursor, start)
+    plaintext += markdown.slice(bracket + 1, labelEnd)
+    cursor = destinationEnd + 1
+  }
+
+  return plaintext
     .replace(/[*_`~]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
 }
 
 function tidyDefinition(markdown: string): string {
-  return inlinePlaintext(markdown)
-    .replace(/\s+Wikipedia\.?$/i, '')
-    .trim()
+  return inlinePlaintext(
+    markdown.replace(/\s*\[Wikipedia]\((?:[^()]|\([^()]*\))*\)/gi, '')
+  ).trim()
 }
 
 function uniqueItems(items: DrawerItem[]): DrawerItem[] {
@@ -71,7 +110,7 @@ function definitionItems(
 function blogrollItems(content: string): DrawerItem[] {
   const items: DrawerItem[] = []
   const entryPattern =
-    /^\s*[-*+]\s+\[([^\]]+)]\((https?:\/\/[^)]+)\)(?:\s+[—–-]\s+(.+))?\s*$/gm
+    /^[\t ]*[-*+][\t ]+\[([^\]]+)]\((https?:\/\/(?:[^()\s]|\([^()\r\n]*\))+)\)(?:[\t ]+[—–-][\t ]+(.+))?[\t ]*$/gm
   for (const match of content.matchAll(entryPattern)) {
     const title = inlinePlaintext(match[1] ?? '')
     const href = match[2]?.trim()

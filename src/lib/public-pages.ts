@@ -111,12 +111,12 @@ The newsletters are available by email, RSS, and SMS, and the homepage has a sig
   {
     id: 'app-drawer',
     path: '/drawer',
-    title: 'The Drawer',
+    title: 'The drawer',
     description: 'A daily cabinet of curiosities from across the archive.',
     searchText:
-      'The Drawer. A daily cabinet of curiosities from across the archive. Each ISO date reveals the same deterministic assortment: an older essay or journal entry, a photograph, a Diction word, a Contraptions term, and a Blogroll destination.',
+      'The drawer. A daily cabinet of curiosities from across the archive. Each ISO date reveals the same deterministic assortment: an older essay or journal entry, a photograph, a Diction word, a Contraptions term, and a Blogroll destination.',
     bellText: () =>
-      'The Drawer is a daily cabinet of curiosities at /drawer. Each date reveals a deterministic assortment from the published archive: an older essay or journal entry, a photograph, a Diction word, a Contraptions term, and a Blogroll destination. Use the previous, next, date, or Surprise me controls to open another drawer. The ordinary page does not ask Bell or another model to make its selections.',
+      'The drawer is a daily cabinet of curiosities at /drawer. Each date reveals a deterministic assortment from the published archive: an older essay or journal entry, a photograph, a Diction word, a Contraptions term, and a Blogroll destination. Use the previous, next, date, or Surprise me controls to open another drawer. The ordinary page does not ask Bell or another model to make its selections.',
     humanSitemap: true,
     xmlSitemap: true,
   },

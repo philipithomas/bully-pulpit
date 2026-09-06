@@ -56,11 +56,11 @@ describe('buildDrawerCatalog', () => {
         ),
         page(
           'contraptions',
-          "- **Binnacle** — a housing for a ship's compass."
+          "- **Binnacle** — a housing for a ship's compass.\n- **Epigraph** — a quotation. [Wikipedia](https://en.wikipedia.org/wiki/Epigraph_(literature))\n- **Manicule** — a pointing hand. [Wikipedia](https://en.wikipedia.org/wiki/Manicule) 👉🏻"
         ),
         page(
           'blogroll',
-          '- [Craig Mod](https://craigmod.com) — Essays and newsletters'
+          '- [Stratechery](https://stratechery.com)\n- [Cal Newport](https://calnewport.com)\n- [Craig Mod](https://craigmod.com) — Essays and newsletters'
         ),
       ]
     )
@@ -75,7 +75,16 @@ describe('buildDrawerCatalog', () => {
       description: 'something bearing traces of an earlier form.',
     })
     expect(catalog.collections.contraption[0]?.title).toBe('Binnacle')
-    expect(catalog.collections.blogroll[0]).toMatchObject({
+    expect(catalog.collections.contraption[1]).toMatchObject({
+      title: 'Epigraph',
+      description: 'a quotation.',
+    })
+    expect(catalog.collections.contraption[2]).toMatchObject({
+      title: 'Manicule',
+      description: 'a pointing hand. 👉🏻',
+    })
+    expect(catalog.collections.blogroll).toHaveLength(3)
+    expect(catalog.collections.blogroll[1]).toMatchObject({
       title: 'Craig Mod',
       href: 'https://craigmod.com',
       external: true,
