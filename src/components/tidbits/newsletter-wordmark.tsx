@@ -11,8 +11,8 @@ export function NewsletterWordmark({
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 1601 369"
-      width={1601}
+      viewBox="0 0 1688 369"
+      width={1688}
       height={369}
       role="img"
       aria-label={props.alt}

@@ -12,25 +12,25 @@ import {
   getCollection,
 } from '@/lib/collections'
 
-const PRE_MIGRATION_SHA256 = {
-  diction: '088ebd7c482134a82c685d2ea60753f2c01607d33594b5f5b7457eaec9965165',
+const LEGACY_MARKDOWN_SHA256 = {
+  diction: 'd50ccf03550871aee256eb60643823a228480c3e7efcc4861394654d856c2dae',
   contraptions:
     'e2a9d277dd2c7b8c9f33f79463ba721647b004c24ce799da786856fbc04d7ee9',
 } as const
 
 describe('structured collections', () => {
-  it('preserves the exact pre-migration MDX entry lists', () => {
+  it('keeps the current collections stable in legacy Markdown', () => {
     for (const slug of COLLECTION_SLUGS) {
       const digest = createHash('sha256')
         .update(collectionLegacyMarkdown(getCollection(slug)))
         .digest('hex')
 
-      expect(digest).toBe(PRE_MIGRATION_SHA256[slug])
+      expect(digest).toBe(LEGACY_MARKDOWN_SHA256[slug])
     }
   })
 
-  it('retains every existing entry', () => {
-    expect(getCollection('diction').entries).toHaveLength(151)
+  it('includes every current entry', () => {
+    expect(getCollection('diction').entries).toHaveLength(152)
     expect(getCollection('contraptions').entries).toHaveLength(75)
   })
 

@@ -189,12 +189,12 @@ describe('POST /api/auth/google', () => {
     const optInNotifications = vi
       .mocked(sendSimpleEmail)
       .mock.calls.filter(([message]) =>
-        message.subject.startsWith('Existing subscriber opted into tidbits:')
+        message.subject.startsWith('Existing subscriber opted into Tidbits:')
       )
     expect(optInNotifications).toHaveLength(1)
     expect(optInNotifications[0][0]).toMatchObject({
       to: siteConfig.adminEmails,
-      subject: 'Existing subscriber opted into tidbits: bar@gmail.com',
+      subject: 'Existing subscriber opted into Tidbits: bar@gmail.com',
     })
   })
 
@@ -219,7 +219,7 @@ describe('POST /api/auth/google', () => {
       vi
         .mocked(sendSimpleEmail)
         .mock.calls.filter(([message]) =>
-          message.subject.startsWith('Existing subscriber opted into tidbits:')
+          message.subject.startsWith('Existing subscriber opted into Tidbits:')
         )
     ).toHaveLength(0)
     const marker = response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value

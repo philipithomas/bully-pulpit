@@ -119,9 +119,11 @@ describe('newsletter shell dark mode', () => {
       '<td class="content-cell content-cell-tidbits" style="padding: 0 32px 32px;'
     )
     expect(html).toContain(
-      'class="email-brand-light" src="https://www.philipithomas.com/images/tidbits-palettes/verdigris-email.png" alt="tidbits"'
+      'class="email-brand-light" src="https://www.philipithomas.com/images/tidbits-palettes/verdigris-email-v2.png" alt="Tidbits"'
     )
-    expect(html).toContain('/images/tidbits-palettes/verdigris-email-dark.png')
+    expect(html).toContain(
+      '/images/tidbits-palettes/verdigris-email-dark-v2.png'
+    )
     expect(extractDarkBlock(html)).toContain(
       '.email-card-tidbits { background-color: #121110 !important; }'
     )

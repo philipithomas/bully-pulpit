@@ -207,9 +207,9 @@ describe('getSystemPrompt chronology routing', () => {
   it('describes tidbits with its current public positioning', () => {
     const prompt = getSystemPrompt()
 
-    expect(prompt).toContain('- tidbits (/tidbits): Photo journal.')
+    expect(prompt).toContain('- Tidbits (/tidbits): Photo journal.')
     expect(prompt).not.toContain(
-      '- tidbits (/tidbits): Ongoing photography newsletter.'
+      '- Tidbits (/tidbits): Ongoing photography newsletter.'
     )
   })
 

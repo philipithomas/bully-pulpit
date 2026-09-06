@@ -49,14 +49,14 @@ const staticConfig = {
       icon: '/images/workshop-icon.svg',
     },
     tidbits: {
-      name: 'tidbits',
+      name: 'Tidbits',
       tagline: 'Photo journal.',
       slug: 'tidbits',
       color: 'tidbits',
       logo: {
         src: '/images/tidbits.svg',
         height: 13,
-        intrinsicWidth: 1601,
+        intrinsicWidth: 1688,
         intrinsicHeight: 369,
       },
       icon: '/images/tidbits-icon.svg',

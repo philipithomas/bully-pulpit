@@ -244,7 +244,7 @@ export function phoneBellRealtimeSession() {
           model: PHONE_BELL_LIVE_TRANSCRIPTION_MODEL_ID,
           languages: ['en'],
           prompt:
-            'A telephone conversation with Bell AI about Philip Ilic Thomas, pronounced Eelitch, philipithomas.com, Postcard, Contraption, Workshop, tidbits, and Tsundoku.',
+            'A telephone conversation with Bell AI about Philip Ilic Thomas, pronounced Eelitch, philipithomas.com, Postcard, Contraption, Workshop, Tidbits, and Tsundoku.',
           keywords: [
             'Bell AI',
             'Philip Ilic Thomas',
@@ -253,7 +253,7 @@ export function phoneBellRealtimeSession() {
             'Postcard',
             'Contraption',
             'Workshop',
-            'tidbits',
+            'Tidbits',
             'Tsundoku',
           ],
         },

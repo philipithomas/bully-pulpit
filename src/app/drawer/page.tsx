@@ -40,7 +40,7 @@ export default function DrawerPage() {
             A daily cabinet of curiosities
           </p>
           <h1 className="font-serif text-5xl tracking-tight text-gray-950 sm:text-6xl lg:text-7xl">
-            The drawer
+            Drawer
           </h1>
           <p className="mt-5 max-w-2xl font-serif text-lg leading-relaxed text-gray-600 sm:text-xl">
             Five things pulled from the corners of this site: something to read,

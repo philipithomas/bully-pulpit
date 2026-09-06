@@ -55,7 +55,7 @@ const NEWSLETTER_LABELS = {
   contraption: 'Contraption',
   workshop: 'Workshop',
   postcard: 'Postcard',
-  tidbits: 'tidbits',
+  tidbits: 'Tidbits',
   tsundoku: 'Tsundoku',
 } satisfies Record<Post['newsletter'], string>
 

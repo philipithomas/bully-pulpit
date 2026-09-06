@@ -136,10 +136,10 @@ describe('POST /api/subscribe', () => {
       'Confirm your subscription to philipithomas.com'
     )
     expect(message.html).toContain(
-      'Thanks for subscribing to Contraption, Workshop, Postcard, and tidbits at'
+      'Thanks for subscribing to Contraption, Workshop, Postcard, and Tidbits at'
     )
     expect(message.text).toContain(
-      'Thanks for subscribing to Contraption, Workshop, Postcard, and tidbits at philipithomas.com.'
+      'Thanks for subscribing to Contraption, Workshop, Postcard, and Tidbits at philipithomas.com.'
     )
     expect(message.html).toContain(codeLogin?.token)
     expect(message.text).toContain(codeLogin?.token)
@@ -210,7 +210,7 @@ describe('POST /api/subscribe', () => {
       'Confirm your subscription to philipithomas.com'
     )
     expect(message.text).toContain(
-      'Thanks for subscribing to Contraption, Workshop, Postcard, and tidbits at philipithomas.com.'
+      'Thanks for subscribing to Contraption, Workshop, Postcard, and Tidbits at philipithomas.com.'
     )
   })
 

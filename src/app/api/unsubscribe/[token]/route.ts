@@ -100,7 +100,7 @@ export async function PATCH(
     !resolved.subscriber.subscribedTidbits
   ) {
     return NextResponse.json(
-      { error: 'Sign in to subscribe to tidbits.' },
+      { error: 'Sign in to subscribe to Tidbits.' },
       { status: 403 }
     )
   }

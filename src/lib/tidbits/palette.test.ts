@@ -74,9 +74,13 @@ describe('Tidbits issue palettes', () => {
     }
   })
 
-  it('preserves the original letterforms for web and generated assets', async () => {
+  it('shares the capitalized letterforms between web and generated assets', async () => {
     const original = await readFile(
-      join(process.cwd(), 'public/images/tidbits.svg'),
+      join(
+        process.cwd(),
+        'public',
+        tidbitsAsset(TIDBITS_PALETTES[0], 'wordmark')
+      ),
       'utf8'
     )
     expect(
@@ -93,7 +97,7 @@ describe('Tidbits issue palettes', () => {
         .ensureAlpha()
         .raw()
         .toBuffer({ resolveWithObject: true })
-      expect(info).toMatchObject({ width: 416, height: 96, channels: 4 })
+      expect(info).toMatchObject({ width: 416, height: 91, channels: 4 })
       const color = kind === 'email' ? palette.accent : palette.dark
       const expected = color
         .slice(1)

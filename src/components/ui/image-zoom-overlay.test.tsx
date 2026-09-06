@@ -100,7 +100,7 @@ describe('ImageZoomOverlay', () => {
 
     expect(html).toContain('role="dialog"')
     expect(html).toContain('aria-modal="true"')
-    expect(html).toContain('aria-label="tidbits photo viewer"')
+    expect(html).toContain('aria-label="Tidbits photo viewer"')
     expect(html).toContain('aria-describedby=')
     expect(html).toContain('aria-label="Close image viewer"')
     expect(html).toContain('aria-label="Previous image"')
