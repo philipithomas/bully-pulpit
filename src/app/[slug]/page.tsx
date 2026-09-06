@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import remarkGfm from 'remark-gfm'
 import { SetNewsletter } from '@/components/layout/newsletter-context'
+import { CollectionPage } from '@/components/pages/collection-page'
 import { ContactPage } from '@/components/pages/contact-page'
 import { StargazingPage } from '@/components/pages/stargazing-page'
 import { TextMessagingPage } from '@/components/pages/text-messaging-page'
@@ -20,6 +21,7 @@ import { SubscribeCta } from '@/components/posts/subscribe-cta'
 import { JsonLd } from '@/components/seo/json-ld'
 import { SpotifyEmbed } from '@/components/ui/spotify-embed'
 import { YouTubeEmbed } from '@/components/ui/youtube-embed'
+import { getCollection, isCollectionSlug } from '@/lib/collections'
 import { siteConfig } from '@/lib/config'
 import {
   isPortraitTidbitsCover,
@@ -230,6 +232,10 @@ export default async function SlugPage({ params }: Props) {
 
   if (page?.slug === 'text-messaging') {
     return <TextMessagingPage page={page} />
+  }
+
+  if (page && isCollectionSlug(page.slug)) {
+    return <CollectionPage collection={getCollection(page.slug)} page={page} />
   }
 
   // Build-time syntax highlighting; the singleton resolves once per worker.

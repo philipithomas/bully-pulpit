@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
+import { collectionValidationProblems } from '@/lib/collections'
 import { siteConfig } from '@/lib/config'
 import {
   formatImageBytes,
@@ -106,6 +107,10 @@ async function main() {
   const posts = getAllPosts()
   const pages = getPages()
   const referencedPhotoCovers = new Set<string>()
+
+  for (const problem of collectionValidationProblems()) {
+    errors.push(`structured collection: ${problem}`)
+  }
 
   // 1: cover images referenced by frontmatter must exist
   for (const post of posts) {

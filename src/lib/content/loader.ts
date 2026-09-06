@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import matter from 'gray-matter'
+import { collectionPages } from '@/lib/collections'
 import { comparePostsNewestFirst } from '@/lib/content/post-order'
 import type {
   ImageDimensions,
@@ -167,9 +168,9 @@ export function getAdjacentPosts(slug: string): AdjacentPosts {
 
 export function getPages(): Page[] {
   const dir = path.join(CONTENT_DIR, 'pages')
-  if (!fs.existsSync(dir)) return []
+  if (!fs.existsSync(dir)) return collectionPages()
 
-  return fs
+  const mdxPages = fs
     .readdirSync(dir)
     .filter((f) => /\.mdx?$/.test(f))
     .map((filename) => {
@@ -192,6 +193,8 @@ export function getPages(): Page[] {
       } satisfies Page
     })
     .filter((p): p is Page => p !== null)
+
+  return [...mdxPages, ...collectionPages()]
 }
 
 export function getPageBySlug(slug: string): Page | null {
