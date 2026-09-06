@@ -213,6 +213,27 @@ describe('Bell chat boundaries', () => {
     expect(useChatSidebar.getState().savedMessages).toEqual([])
   })
 
+  it('preserves a pending passage request through identity rotation', () => {
+    useChatSidebar.getState().syncConversationIdentity('subscriber:reader-a')
+    const request = {
+      action: 'connect' as const,
+      text: 'This selected passage remains canonically grounded after login.',
+      path: '/colophon',
+      headingId: 'technical-details',
+    }
+    useChatSidebar.getState().openSidebarWithPassage(request)
+    const passageChatId = useChatSidebar.getState().chatId
+
+    expect(
+      useChatSidebar.getState().syncConversationIdentity('subscriber:reader-b')
+    ).toBe(true)
+
+    const rotated = useChatSidebar.getState()
+    expect(rotated.chatId).not.toBe(passageChatId)
+    expect(rotated.initialQuery).toContain(request.text)
+    expect(rotated.activePassageRequest).toEqual(request)
+  })
+
   it('opens a fresh thread with a local assistant welcome and no query', () => {
     const previousId = useChatSidebar.getState().chatId
     const stoppedChatIds: string[] = []

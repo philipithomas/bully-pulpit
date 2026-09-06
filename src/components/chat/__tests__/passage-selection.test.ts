@@ -128,6 +128,8 @@ describe('selected-passage interaction inputs', () => {
     })
     const askButton = askBellButton()
     expect(askButton).toBeDefined()
+    expect(askButton?.className).not.toContain('rounded-')
+    expect(askButton?.className).not.toContain('focus-visible:')
     expect(useChatSidebar.getState().open).toBe(false)
     expect(trackClientEvent).not.toHaveBeenCalled()
 
@@ -142,6 +144,10 @@ describe('selected-passage interaction inputs', () => {
       'Connect this to other writing',
       'Give me the surrounding context',
     ])
+    for (const action of actions) {
+      expect(action.className).not.toContain('rounded-')
+      expect(action.className).not.toContain('focus-visible:')
+    }
     expect(document.activeElement).toBe(actions[0])
     expect(useChatSidebar.getState().open).toBe(false)
 

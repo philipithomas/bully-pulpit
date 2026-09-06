@@ -212,7 +212,6 @@ export const useChatSidebar = create<ChatSidebarState>()(
           conversationIdentity: identity,
           savedMessages: [],
           pendingLocalMessage: null,
-          activePassageRequest: null,
           chatId: generateChatId(),
         })
         return true

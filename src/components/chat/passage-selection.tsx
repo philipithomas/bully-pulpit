@@ -249,7 +249,7 @@ export function PassageSelection() {
                   data-passage-action={action.id}
                   onClick={handleActionClick}
                   className={cn(
-                    'whitespace-nowrap rounded-lg px-3 py-2 text-left text-xs font-medium text-gray-700 transition-colors hover:bg-gray-050 hover:text-gray-950 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-gray-950',
+                    'whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-gray-700 transition-colors hover:bg-gray-050 hover:text-gray-950',
                     PASSAGE_REDUCED_MOTION_CLASS
                   )}
                 >
@@ -264,7 +264,7 @@ export function PassageSelection() {
               aria-haspopup="true"
               onClick={expandActions}
               className={cn(
-                'flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-gray-800 transition-colors hover:bg-gray-050 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-gray-950',
+                'flex items-center gap-2 px-3 py-2 text-xs font-semibold text-gray-800 transition-colors hover:bg-gray-050',
                 PASSAGE_REDUCED_MOTION_CLASS
               )}
             >
