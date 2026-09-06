@@ -3,6 +3,7 @@ import { accentHoverText } from '@/components/posts/newsletter-accent'
 import { ArrowIcon } from '@/components/ui/arrow-icon'
 import { getAllPosts } from '@/lib/content/loader'
 import type { Newsletter } from '@/lib/content/types'
+import { isPhotoNewsletter } from '@/lib/newsletters'
 
 // Quiet accent wash on hover, matching the linked post's newsletter.
 const accentHoverBg: Record<Newsletter, string> = {
@@ -14,8 +15,9 @@ const accentHoverBg: Record<Newsletter, string> = {
 }
 
 export function LatestPostPill() {
-  const posts = getAllPosts()
-  const latest = posts[0]
+  const latest = getAllPosts().find(
+    (post) => !isPhotoNewsletter(post.newsletter)
+  )
   if (!latest) return null
 
   const accentText = accentHoverText[latest.newsletter]

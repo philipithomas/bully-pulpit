@@ -71,11 +71,6 @@ export const PUBLIC_ROUTE_BUDGETS: RouteBudget[] = [
     route: '/photography',
     maximumBytes: 315 * 1024,
   },
-  {
-    label: '/drawer',
-    route: '/drawer',
-    maximumBytes: 270 * 1024,
-  },
 ]
 
 export function formatBytes(bytes: number): string {

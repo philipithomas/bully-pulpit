@@ -29,7 +29,6 @@ export type AnalyticsPageType =
   | 'newsletter'
   | 'content_page'
   | 'photography'
-  | 'explore'
   | 'other'
 
 export type QueryLengthBucket = '2-9' | '10-24' | '25-49' | '50+'
@@ -93,13 +92,7 @@ export interface AnalyticsEventProperties {
     newsletter: AnalyticsNewsletter
   }
   'Bell opened': {
-    entry_source:
-      | 'header'
-      | 'search'
-      | 'onboarding'
-      | 'explore'
-      | 'passage'
-      | 'other'
+    entry_source: 'header' | 'search' | 'onboarding' | 'passage' | 'other'
     signed_in: boolean
     page_type: AnalyticsPageType
   }
@@ -277,7 +270,6 @@ export function parseAnalyticsNewsletter(value: unknown): AnalyticsNewsletter {
 export function analyticsPageType(pathname: string): AnalyticsPageType {
   if (pathname === '/') return 'home'
   if (pathname === '/photography') return 'photography'
-  if (pathname === '/explore') return 'explore'
   if (
     pathname === '/contraption' ||
     pathname === '/workshop' ||
@@ -295,7 +287,6 @@ export function analyticsPageType(pathname: string): AnalyticsPageType {
       '/contact',
       '/contraptions',
       '/diction',
-      '/drawer',
       '/find-ai',
       '/media',
       '/policies',

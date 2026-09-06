@@ -8,6 +8,17 @@ function findRedirect(source: string) {
 }
 
 describe('redirects', () => {
+  it.each([
+    '/drawer',
+    '/explore',
+  ])('keeps old %s links useful with a permanent homepage redirect', (source) => {
+    expect(findRedirect(source)).toEqual({
+      source,
+      destination: '/',
+      permanent: true,
+    })
+  })
+
   it('all redirects are permanent except the temporary /admin rename', () => {
     for (const r of redirects) {
       // The /admin → /printing-press redirects are intentionally temporary

@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MemberMenu } from '@/components/auth/member-menu'
-import { ExploreNavigationLink } from '@/components/layout/explore-navigation-link'
 import { Logo } from '@/components/layout/logo'
 import { useNewsletter } from '@/components/layout/newsletter-context'
 import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
@@ -197,9 +196,8 @@ export function Header() {
         </div>
         <nav
           aria-label="Primary"
-          className="flex w-full items-center justify-between sm:w-auto sm:justify-start sm:gap-3 md:gap-5"
+          className="flex w-full items-center justify-end gap-6 sm:w-auto sm:gap-5"
         >
-          <ExploreNavigationLink active={pathname === '/explore'} />
           <button
             type="button"
             onClick={handleOpenSearch}

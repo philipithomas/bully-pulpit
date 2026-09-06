@@ -4,14 +4,12 @@ import type { Newsletter } from '@/lib/content/types'
 
 export const PUBLIC_APP_PAGE_PATHS = [
   '/',
-  '/drawer',
   '/contraption',
   '/workshop',
   '/postcard',
   '/tidbits',
   '/tsundoku',
   '/photography',
-  '/explore',
   '/mcp/setup',
   '/print',
   '/sitemap',
@@ -96,7 +94,7 @@ export const publicAppPages = [
     description: siteConfig.description,
     searchText: `${siteConfig.author} crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He writes about software, projects, urbanism, coffee, and photography.`,
     bellText:
-      () => `The homepage of philipithomas.com, the personal website and blog of ${siteConfig.author}. Philip crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He is interested in urbanism, coffee, and photography. This website contains his writing and media. Visitors can connect with him on GitHub and LinkedIn.
+      () => `The homepage of philipithomas.com, the personal website and blog of ${siteConfig.author}. Philip crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He is interested in urbanism, coffee, and photography. Visitors can connect with him on GitHub and LinkedIn.
 
 He currently publishes four newsletters:
 - Contraption (/contraption): ${siteConfig.newsletters.contraption.tagline}
@@ -105,18 +103,6 @@ He currently publishes four newsletters:
 - Tidbits (/tidbits): ${siteConfig.newsletters.tidbits.tagline}
 
 The newsletters are available by email, RSS, and SMS, and the homepage has a signup form. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
-    humanSitemap: true,
-    xmlSitemap: true,
-  },
-  {
-    id: 'app-drawer',
-    path: '/drawer',
-    title: 'Drawer',
-    description: 'A daily cabinet of curiosities from across the archive.',
-    searchText:
-      'Drawer. A daily cabinet of curiosities from across the archive. Each ISO date reveals the same deterministic assortment: an older essay or journal entry, a photograph, a Diction word, a Contraptions term, and a Blogroll destination.',
-    bellText: () =>
-      'Drawer is a daily cabinet of curiosities at /drawer. Each date reveals a deterministic assortment from the published archive: an older essay or journal entry, a photograph, a Diction word, a Contraptions term, and a Blogroll destination. Use the previous, next, date, or Surprise me controls to open another drawer. The ordinary page does not ask Bell or another model to make its selections.',
     humanSitemap: true,
     xmlSitemap: true,
   },
@@ -137,19 +123,6 @@ The newsletters are available by email, RSS, and SMS, and the homepage has a sig
       'Photography. Philip takes and edits all photos on the site. This page gathers post cover photography into a searchable gallery. Visitors can search the photographs by subject and open each image to see the posts where it appeared.',
     bellText: () =>
       "The Photography page gathers the cover photographs from Philip's posts into a gallery. Philip takes and edits all photos on the site. Visitors can search the photographs by subject and open a photo to see the posts where it appeared. Bell can search the same collection with image search.",
-    humanSitemap: true,
-    xmlSitemap: true,
-  },
-  {
-    id: 'app-explore',
-    path: '/explore',
-    title: 'Explore',
-    description:
-      "A curated guide to the site's writing, photography, curiosities, tools, and about pages.",
-    searchText:
-      "Explore. A curated editorial map of Philip Ilic Thomas's writing, photography, curiosities, tools, and about pages. Use the human sitemap for the exhaustive chronological directory of every page and post.",
-    bellText: () =>
-      "The Explore page is a curated editorial map of Philip Ilic Thomas's writing, photography, curiosities, tools, and about pages. It complements the exhaustive human sitemap, which lists every public page and published post chronologically.",
     humanSitemap: true,
     xmlSitemap: true,
   },

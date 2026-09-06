@@ -152,16 +152,6 @@ describe('Bell chat boundaries', () => {
     expect(useChatSidebar.getState().chatId).toBe(handoffId)
   })
 
-  it('keeps Explore as a fixed Bell entry source', () => {
-    useChatSidebar.getState().openSidebar(undefined, { entrySource: 'explore' })
-
-    const state = useChatSidebar.getState()
-    expect(state.open).toBe(true)
-    expect(state.hasOpened).toBe(true)
-    expect(state.entrySource).toBe('explore')
-    expect(state.initialQuery).toBe('')
-  })
-
   it('keeps an in-flight finish bound to its originating chat', async () => {
     let releaseStream: () => void = () => {}
     const streamReady = new Promise<void>((resolve) => {

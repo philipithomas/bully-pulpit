@@ -23,7 +23,6 @@ export const metadata: Metadata = {
 const HOMEPAGE_NEWSLETTER_ORDER = [
   'postcard',
   'contraption',
-  'workshop',
   'tidbits',
 ] as const satisfies readonly Newsletter[]
 
@@ -113,7 +112,6 @@ export default async function HomePage() {
               of math, software, and business. I am interested in urbanism,
               coffee, and photography.
             </p>
-            <p className="mb-4">This website contains my writing and media.</p>
           </div>
 
           {/* Horizontal portrait (mobile only) */}

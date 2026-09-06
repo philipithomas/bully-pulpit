@@ -45,7 +45,7 @@ interface ChatSidebarState {
   hasOpened: boolean
   pinned: boolean
   initialQuery: string
-  entrySource: 'header' | 'search' | 'onboarding' | 'explore' | 'passage'
+  entrySource: 'header' | 'search' | 'onboarding' | 'passage'
   savedMessages: UIMessage[]
   pendingLocalMessage: UIMessage | null
   // Kept for retries of the selected-passage turn, then cleared when the
@@ -59,10 +59,7 @@ interface ChatSidebarState {
   // this beside the persisted chat ID so a sign-out or account switch cannot
   // replay one person's transcript into another person's conversation.
   conversationIdentity: string | null
-  openSidebar: (
-    query?: string,
-    options?: { entrySource?: 'header' | 'explore' }
-  ) => void
+  openSidebar: (query?: string) => void
   openSidebarWithPassage: (request: SelectedPassageRequest) => void
   openSidebarWithLocalMessage: (
     message: string,
@@ -108,17 +105,12 @@ export const useChatSidebar = create<ChatSidebarState>()(
       activeChatStop: null,
       chatId: generateChatId(),
       conversationIdentity: null,
-      openSidebar: (
-        query?: string,
-        options?: { entrySource?: 'header' | 'explore' }
-      ) => {
+      openSidebar: (query?: string) => {
         const searchHandoff = Boolean(query)
         set({
           open: true,
           hasOpened: true,
-          entrySource: searchHandoff
-            ? 'search'
-            : (options?.entrySource ?? 'header'),
+          entrySource: searchHandoff ? 'search' : 'header',
           // A query-less open resumes the existing conversation. Preserve a
           // passage/search handoff that was closed before its send timer ran.
           ...(query === undefined ? {} : { initialQuery: query }),
