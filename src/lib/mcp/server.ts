@@ -94,7 +94,7 @@ export function createSiteMcpServer(
     {
       title: 'Fetch a public post or page',
       description:
-        'Use this when a user wants the text of one public post or page, capped at 50,000 characters. Pass the stable ID returned by search or list_posts; this tool does not fetch arbitrary URLs.',
+        'Use this when a user wants the text of one public post or page, including image descriptions from alt text, authored location, and photo metadata, capped at 50,000 characters. Pass the stable ID returned by search or list_posts; this tool does not fetch arbitrary URLs.',
       inputSchema: fetchInputSchema,
       outputSchema: fetchOutputSchema,
       annotations: readOnlyAnnotations,

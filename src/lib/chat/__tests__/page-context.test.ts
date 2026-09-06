@@ -3,6 +3,7 @@ import {
   getPageContextContent,
   getSelectedPassageContext,
   PAGE_CONTENT_MAX_CHARS,
+  toPagePlaintext,
   toPlaintext,
 } from '@/lib/chat/page-context'
 import { collectionEntryAnchor, getCollection } from '@/lib/collections'
@@ -40,6 +41,16 @@ describe('getPageContextContent', () => {
       publishedAt: page?.frontmatter.publishedAt ?? null,
       newsletter: 'page',
     })
+  })
+
+  it('includes a photo-only post description and location before camera details', () => {
+    const result = getPageContextContent('/cooking-class')
+    expect(result?.content).toMatch(
+      /^Cover image description: Mette Søberg demonstrating how to use liquid nitrogen with parsley\.\n\nLocation: Noma test kitchen\n\nPhoto metadata: /
+    )
+    expect(result?.content).not.toContain('/images/')
+    expect(result?.content).not.toContain('maps.app.goo.gl')
+    expect(result?.truncated).toBe(false)
   })
 
   it('injects the public Stargazing ledger into current-page context', () => {
@@ -288,6 +299,45 @@ describe('getSelectedPassageContext', () => {
     })
   })
 
+  it('validates visible prose across an image while rejecting its hidden alt text', () => {
+    const path = '/chroma'
+    const pageContent = getPageContextContent(path)
+    const text =
+      'And, the original implementation of AI and vector search on Booklet utilized one database. Traditional SQL databases are efficient at filtering.'
+    const alt =
+      'Naive implementation of vector search for Booklet involves putting all searchable content in the same table.'
+
+    expect(pageContent?.content).toContain(`Image description: ${alt}`)
+    expect(
+      getSelectedPassageContext(
+        { action: 'context', text, path },
+        path,
+        pageContent
+      )
+    ).toMatchObject({ text, path })
+    expect(
+      getSelectedPassageContext(
+        { action: 'context', text: alt, path },
+        path,
+        pageContent
+      )
+    ).toBeNull()
+  })
+
+  it.each([
+    'Mette Søberg demonstrating how to use liquid nitrogen with parsley.',
+    'Location: Noma test kitchen',
+  ])('rejects hidden cover descriptions and synthetic labels: %s', (text) => {
+    const path = '/cooking-class'
+    expect(
+      getSelectedPassageContext(
+        { action: 'context', text, path },
+        path,
+        getPageContextContent(path)
+      )
+    ).toBeNull()
+  })
+
   it('matches rendered text selected across Markdown blockquote lines', () => {
     const path = '/the-next-iteration-of-contraption-company'
     const blockquote =
@@ -397,6 +447,78 @@ describe('getSelectedPassageContext', () => {
 })
 
 describe('toPlaintext', () => {
+  it.each([
+    '<Image src="/images/chart.jpg" alt={"A diagram showing 1 < 2 > 0"} />',
+    '<img src="/images/chart.jpg" alt="A diagram showing 1 < 2 > 0" />',
+    '![A diagram showing 1 < 2 > 0](/images/chart.jpg)',
+  ])('preserves literal comparisons from extracted alt: %s', (markup) => {
+    expect(toPlaintext(`Before\n\n${markup}\n\nAfter`)).toBe(
+      'Before\n\nImage description: A diagram showing 1 < 2 > 0\n\nAfter'
+    )
+  })
+
+  it('keeps Markdown image descriptions without image paths or link syntax', () => {
+    expect(
+      toPlaintext(
+        'Before\n\n![A chef with a \\[steel\\] bowl.](/images/cooking-(test).jpg)\n\nAfter'
+      )
+    ).toBe('Before\n\nImage description: A chef with a [steel] bowl.\n\nAfter')
+  })
+
+  it.each([
+    '<img src="/images/chef.jpg" alt="A chef in the kitchen." />',
+    "<Image src='/images/chef.jpg' alt='A chef in the kitchen.' />",
+    '<Image src="/images/chef.jpg" alt={"A chef in the kitchen."} />',
+    "<Image src='/images/chef.jpg' alt={ 'A chef in the kitchen.' } />",
+  ])('keeps static image alt text from %s', (markup) => {
+    expect(toPlaintext(`Before\n\n${markup}\n\nAfter`)).toBe(
+      'Before\n\nImage description: A chef in the kitchen.\n\nAfter'
+    )
+  })
+
+  it('handles quoted angle brackets and escaped quotes inside static JSX alt text', () => {
+    expect(
+      toPlaintext(
+        '<Image src="/images/chart.jpg" alt={"A chart labeled \\"profit > cost\\"."} />'
+      )
+    ).toBe('Image description: A chart labeled "profit > cost".')
+  })
+
+  it('reads only the top-level alt after an unsupported JSX attribute expression', () => {
+    expect(
+      toPlaintext(
+        '<Image title={condition ? " alt=\'Not the description\'" : ""} alt="The actual description" />'
+      )
+    ).toBe('Image description: The actual description')
+  })
+
+  it('does not substitute text inside another attribute for a dynamic alt', () => {
+    expect(
+      toPlaintext(
+        '<Image title={condition ? " alt=\'Not the description\'" : ""} alt={image.alt} />'
+      )
+    ).toBe('')
+  })
+
+  it('skips nested expressions and comparison operators before the authored alt', () => {
+    expect(
+      toPlaintext(
+        '<Image {...{ title: count > 0 ? " alt=\'Wrong\'" : "" }} alt="The actual description" />'
+      )
+    ).toBe('Image description: The actual description')
+  })
+
+  it.each([
+    '![](/images/decorative.jpg)',
+    '<img src="/images/decorative.jpg" alt="" />',
+    '<Image src="/images/decorative.jpg" alt={"  "} />',
+    '<Image src="/images/decorative.jpg" />',
+    '<Image src="/images/decorative.jpg" alt={image.alt} />',
+    '<img data-note=" alt=\'Not the description\'" src="/images/decorative.jpg" />',
+  ])('omits decorative, missing, and nonstatic descriptions: %s', (markup) => {
+    expect(toPlaintext(`Before\n\n${markup}\n\nAfter`)).toBe('Before\n\nAfter')
+  })
+
   it('preserves thematic breaks outside selection comparison', () => {
     expect(toPlaintext('Before\n\n---\n\nAfter')).toBe('Before\n\n---\n\nAfter')
   })
@@ -421,5 +543,38 @@ describe('toPlaintext', () => {
     expect(
       toPlaintext('Funding was \\>$7m and launch traffic was \\>15k.')
     ).toBe('Funding was >$7m and launch traffic was >15k.')
+  })
+})
+
+describe('toPagePlaintext', () => {
+  it('preserves literal comparisons in authored cover descriptions', () => {
+    expect(
+      toPagePlaintext({
+        slug: 'comparison',
+        content: '',
+        frontmatter: {
+          title: 'Comparison',
+          coverImageAlt: 'A diagram showing 1 < 2 > 0',
+          draft: false,
+          featured: false,
+        },
+      })
+    ).toBe('Cover image description: A diagram showing 1 < 2 > 0')
+  })
+
+  it('omits empty frontmatter labels', () => {
+    expect(
+      toPagePlaintext({
+        slug: 'plain-post',
+        content: 'Only prose.',
+        frontmatter: {
+          title: 'Plain post',
+          coverImageAlt: ' ',
+          location: { name: ' ', url: 'https://example.com' },
+          draft: false,
+          featured: false,
+        },
+      })
+    ).toBe('Only prose.')
   })
 })

@@ -41,6 +41,21 @@ describe('fetchPage tool provenance', () => {
     expect(result.publishedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
+  it('returns the authored description and location for photo-only posts', async () => {
+    const result = await run('/cooking-class')
+    expect(result).toMatchObject({
+      type: 'post',
+      title: 'Cooking class',
+      url: '/cooking-class',
+      newsletter: 'tidbits',
+    })
+    expect(result.content).toContain(
+      'Cover image description: Mette Søberg demonstrating how to use liquid nitrogen with parsley.'
+    )
+    expect(result.content).toContain('Location: Noma test kitchen')
+    expect(result.content).toContain('Photo metadata:')
+  })
+
   it('does not create provenance for missing pages', async () => {
     const result = await run('/missing-page-for-bell-test')
     expect(result.error).toContain('No page exists')
