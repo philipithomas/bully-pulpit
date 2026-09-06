@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-06T19:26:57.452Z",
+  "generatedAt": "2026-09-06T19:30:35.053Z",
   "posts": {
     "cooking-class": {
       "related": [
@@ -24,12 +24,12 @@
           "score": 0.2795891
         },
         {
-          "slug": "2026-08",
-          "score": 0.2930863
+          "slug": "2026-09",
+          "score": 0.279876
         },
         {
-          "slug": "2023-10",
-          "score": 0.3015639
+          "slug": "2026-08",
+          "score": 0.2930863
         }
       ]
     },
@@ -68,37 +68,41 @@
     "lamps": {
       "related": [
         {
+          "slug": "2026-09",
+          "score": 0.29278
+        },
+        {
           "slug": "fresh-coat-of-paint",
           "score": 0.3050992
         },
         {
           "slug": "2023-10",
           "score": 0.3085178
-        },
-        {
-          "slug": "maintenance",
-          "score": 0.3101676
         }
       ]
     },
     "2026-09": {
       "related": [
         {
-          "slug": "2026-04",
-          "score": 0.0424976
+          "slug": "2026-08",
+          "score": 0.0479285
         },
         {
           "slug": "2025-10",
-          "score": 0.0475427
+          "score": 0.056573
         },
         {
-          "slug": "2024-09",
-          "score": 0.0481096
+          "slug": "2026-04",
+          "score": 0.0583419
         }
       ]
     },
     "copenhagen-sunset": {
       "related": [
+        {
+          "slug": "2026-09",
+          "score": 0.1696262
+        },
         {
           "slug": "2023-10",
           "score": 0.2254377
@@ -106,10 +110,6 @@
         {
           "slug": "2026-08",
           "score": 0.2415702
-        },
-        {
-          "slug": "2024-11",
-          "score": 0.2553533
         }
       ]
     },
@@ -197,7 +197,7 @@
       "related": [
         {
           "slug": "2026-09",
-          "score": 0.0493109
+          "score": 0.0479285
         },
         {
           "slug": "2025-08",
@@ -1188,16 +1188,16 @@
     "tacit-knowledge-in-software": {
       "related": [
         {
+          "slug": "2026-09",
+          "score": 0.0992049
+        },
+        {
           "slug": "2026-04",
           "score": 0.1035368
         },
         {
           "slug": "build-and-tinker",
           "score": 0.1036427
-        },
-        {
-          "slug": "code-as-content-and-digital-proprioception",
-          "score": 0.1041842
         }
       ]
     },
@@ -1453,7 +1453,7 @@
         },
         {
           "slug": "2026-09",
-          "score": 0.1896843
+          "score": 0.1879625
         }
       ]
     },
@@ -1540,16 +1540,16 @@
     "my-favorite-tool-for-making-email-less-stressful": {
       "related": [
         {
+          "slug": "2026-09",
+          "score": 0.1496412
+        },
+        {
           "slug": "2023-10",
           "score": 0.1546333
         },
         {
           "slug": "launching-booklet",
           "score": 0.1574966
-        },
-        {
-          "slug": "2026-09",
-          "score": 0.1577066
         }
       ]
     },
@@ -2648,12 +2648,12 @@
           "score": 0.0958219
         },
         {
-          "slug": "2026-08",
-          "score": 0.1285595
+          "slug": "2026-09",
+          "score": 0.12322
         },
         {
-          "slug": "2023-10",
-          "score": 0.1332184
+          "slug": "2026-08",
+          "score": 0.1285595
         }
       ]
     },
