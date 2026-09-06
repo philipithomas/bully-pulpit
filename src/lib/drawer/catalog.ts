@@ -1,3 +1,4 @@
+import { collectionEntryAnchor } from '@/lib/collections'
 import { getAllPosts, getPages } from '@/lib/content/loader'
 import type { Page, Post } from '@/lib/content/types'
 import type {
@@ -99,7 +100,7 @@ function definitionItems(
       category,
       title,
       description,
-      href,
+      href: `${href}#${collectionEntryAnchor({ term: title, definition: description })}`,
       sourceLabel:
         category === 'diction' ? 'Browse Diction' : 'Browse Contraptions',
     })

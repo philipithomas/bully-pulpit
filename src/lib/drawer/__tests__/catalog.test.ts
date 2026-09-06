@@ -118,6 +118,21 @@ describe('buildDrawerCatalog', () => {
     expect(catalog.earliestDate).toBeNull()
   })
 
+  it('links definition cards to their stable collection entry anchors', () => {
+    const catalog = buildDrawerCatalog(
+      [],
+      [
+        page('diction', '- **Nut graf** — the central point of a story.'),
+        page('contraptions', '- **Epigraph** — a quotation.'),
+      ]
+    )
+
+    expect(catalog.collections.diction[0]?.href).toBe('/diction#nut-graf')
+    expect(catalog.collections.contraption[0]?.href).toBe(
+      '/contraptions#epigraph'
+    )
+  })
+
   it('keeps the newest writing out of the older archive compartment', () => {
     const posts = Array.from({ length: 10 }, (_, index) => {
       const day = String(index + 1).padStart(2, '0')
