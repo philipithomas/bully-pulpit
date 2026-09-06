@@ -126,6 +126,7 @@
   margin-bottom: 10px;
 }
 .marginalia h3 {
+  overflow-wrap: anywhere;
   font-family: var(--font-serif);
   font-weight: 400;
   font-size: 29px;
