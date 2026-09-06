@@ -36,7 +36,7 @@ const EXPECTED = {
     background: latestTidbitsPalette().paper,
     logoPath: tidbitsAsset(latestTidbitsPalette(), 'wordmark'),
     logoWidth: 504,
-    logoHeight: 110,
+    logoHeight: 116,
   },
   tsundoku: {
     alt: 'Tsundoku wordmark',

@@ -92,7 +92,7 @@ const newsletterLogos: Record<
   },
   tidbits: {
     src: '/images/tidbits.svg',
-    width: 1688,
+    width: 1601,
     height: 369,
     className: 'h-[19px] w-auto',
   },

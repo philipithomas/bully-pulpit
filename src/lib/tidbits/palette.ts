@@ -74,7 +74,7 @@ export function tidbitsAsset(
   kind: 'wordmark' | 'icon' | 'email' | 'email-dark'
 ): string {
   const extension = kind.startsWith('email') ? 'png' : 'svg'
-  return `/images/tidbits-palettes/${palette.id}-${kind}-v2.${extension}`
+  return `/images/tidbits-palettes/${palette.id}-${kind}.${extension}`
 }
 
 function paletteVariables(palette: TidbitsPalette): string {

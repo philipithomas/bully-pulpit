@@ -48,7 +48,7 @@ const wordmarks: Record<
   },
   workshop: { name: 'Workshop', file: 'workshop-brand', width: 87, height: 24 },
   postcard: { name: 'Postcard', file: 'postcard', width: 79, height: 18 },
-  tidbits: { name: 'Tidbits', file: 'tidbits', width: 104, height: 23 },
+  tidbits: { name: 'Tidbits', file: 'tidbits', width: 104, height: 24 },
   tsundoku: { name: 'Tsundoku', file: 'tsundoku', width: 157, height: 24 },
 }
 
