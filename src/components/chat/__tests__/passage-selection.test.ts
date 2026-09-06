@@ -36,6 +36,22 @@ const ARTICLE_HTML = `
   </main>
 `
 
+const COLLECTION_HTML = `
+  <main>
+    <div data-bell-selectable>
+      <section>
+        <h2 id="letter-n">N</h2>
+        <dl>
+          <div id="nut-graf" data-bell-source-anchor>
+            <dt><a href="#nut-graf">Nut graf</a></dt>
+            <dd id="nut-graf-definition">a paragraph that explains the significance or context of a story.</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  </main>
+`
+
 let root: Root | null = null
 
 function eventWith(type: string, properties: Record<string, string>): Event {
@@ -78,6 +94,7 @@ function askBellButton(): HTMLButtonElement | undefined {
 beforeEach(() => {
   vi.clearAllMocks()
   navigation.pathname = '/article'
+  document.title = 'Article | Philip Ilic Thomas'
   sessionStorage.clear()
   useChatSidebar.setState({
     ...useChatSidebar.getInitialState(),
@@ -157,6 +174,7 @@ describe('selected-passage interaction inputs', () => {
       action: 'explain',
       text: selectedText,
       path: '/article',
+      pageTitle: 'Article | Philip Ilic Thomas',
       headingId: 'second-section',
     })
     expect(trackClientEvent).toHaveBeenCalledWith(
@@ -164,6 +182,30 @@ describe('selected-passage interaction inputs', () => {
       { action: 'explain', page_type: 'post' }
     )
     expect(window.getSelection()?.rangeCount).toBe(0)
+  })
+
+  it('carries the original title and closest collection entry anchor', async () => {
+    navigation.pathname = '/diction'
+    document.title = 'Diction | Philip Ilic Thomas'
+    await renderSelectionUi(COLLECTION_HTML)
+    const selectedText = selectElementText('#nut-graf-definition')
+
+    await act(async () => {
+      document.dispatchEvent(new Event('selectionchange'))
+    })
+    await act(async () => askBellButton()?.click())
+    const explain = document.querySelector<HTMLButtonElement>(
+      '[data-passage-action="explain"]'
+    )
+    await act(async () => explain?.click())
+
+    expect(useChatSidebar.getState().activePassageRequest).toEqual({
+      action: 'explain',
+      text: selectedText,
+      path: '/diction',
+      pageTitle: 'Diction | Philip Ilic Thomas',
+      entryAnchor: 'nut-graf',
+    })
   })
 
   it('suppresses selections in links, code, and nonselectable utility content', async () => {

@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
 const SELECTABLE_SELECTOR = '[data-bell-selectable]'
+const SOURCE_ANCHOR_SELECTOR = '[data-bell-source-anchor][id]'
 const BLOCKED_SELECTION_SELECTOR = [
   'a',
   'button',
@@ -123,7 +124,8 @@ function nearestHeading(
 
 export function readPassageSelection(
   selection: Selection | null,
-  path: string
+  path: string,
+  pageTitle: string
 ): PassageSelectionSnapshot | null {
   if (selection?.rangeCount !== 1 || selection.isCollapsed) {
     return null
@@ -148,11 +150,22 @@ export function readPassageSelection(
     return null
   }
 
-  const heading = nearestHeading(container, startElement)
+  const startAnchor = startElement.closest<HTMLElement>(SOURCE_ANCHOR_SELECTOR)
+  const endAnchor = endElement.closest<HTMLElement>(SOURCE_ANCHOR_SELECTOR)
+  const entryAnchor =
+    startAnchor &&
+    startAnchor === endAnchor &&
+    container.contains(startAnchor) &&
+    startAnchor.id
+      ? startAnchor.id
+      : undefined
+  const heading = entryAnchor ? null : nearestHeading(container, startElement)
   return {
     text,
     path,
+    pageTitle,
     ...(heading?.id ? { headingId: heading.id } : {}),
+    ...(entryAnchor ? { entryAnchor } : {}),
   }
 }
 
@@ -177,7 +190,9 @@ export function PassageSelection() {
     // Moving focus into the action group can collapse a visual selection. Do
     // not dismiss the group while the visitor is choosing an explicit action.
     if (popoverRef.current?.contains(document.activeElement)) return
-    setSelection(readPassageSelection(window.getSelection(), pathname))
+    setSelection(
+      readPassageSelection(window.getSelection(), pathname, document.title)
+    )
     setExpanded(false)
   }, [pathname])
 

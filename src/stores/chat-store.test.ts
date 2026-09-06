@@ -45,6 +45,7 @@ describe('Bell chat boundaries', () => {
       action: 'context' as const,
       text: 'This selected passage is long enough to ask Bell about.',
       path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
       headingId: 'technical-details',
     }
 
@@ -219,6 +220,7 @@ describe('Bell chat boundaries', () => {
       action: 'connect' as const,
       text: 'This selected passage remains canonically grounded after login.',
       path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
       headingId: 'technical-details',
     }
     useChatSidebar.getState().openSidebarWithPassage(request)

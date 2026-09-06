@@ -26,7 +26,9 @@ export interface SelectedPassageRequest {
   action: SelectedPassageAction
   text: string
   path: string
+  pageTitle: string
   headingId?: string
+  entryAnchor?: string
 }
 
 const PASSAGE_DISABLED_PAGE_SLUGS = new Set([
@@ -75,7 +77,7 @@ export function selectedPassageRequestOptions(
 ): {
   body?: {
     selectedPassage: SelectedPassageRequest
-    pageContext: { path: string }
+    pageContext: { path: string; title: string }
   }
 } {
   return request
@@ -83,9 +85,9 @@ export function selectedPassageRequestOptions(
         body: {
           selectedPassage: request,
           // Request-specific body fields override the transport defaults.
-          // Keep retries bound to the page where the passage was selected,
+          // Keep retries bound to the document where the passage was selected,
           // even if the visitor navigated before choosing Try again.
-          pageContext: { path: request.path },
+          pageContext: { path: request.path, title: request.pageTitle },
         },
       }
     : {}

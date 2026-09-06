@@ -37,12 +37,16 @@ describe('selected passage request', () => {
       action: 'explain' as const,
       text: 'A selected passage long enough to send to Bell.',
       path: '/colophon',
+      pageTitle: 'Colophon | Philip Ilic Thomas',
       headingId: 'technical',
     }
     expect(selectedPassageRequestOptions(request)).toEqual({
       body: {
         selectedPassage: request,
-        pageContext: { path: '/colophon' },
+        pageContext: {
+          path: '/colophon',
+          title: 'Colophon | Philip Ilic Thomas',
+        },
       },
     })
     expect(selectedPassageRequestOptions(null)).toEqual({})

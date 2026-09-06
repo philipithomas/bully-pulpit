@@ -27,7 +27,7 @@ function CollectionEntryRow({ entry }: { entry: CollectionEntry }) {
   const anchor = collectionEntryAnchor(entry)
 
   return (
-    <div id={anchor} className="scroll-mt-6">
+    <div id={anchor} data-bell-source-anchor="" className="scroll-mt-6">
       <dt className="font-sans font-semibold text-gray-950 text-lg leading-snug tracking-tight">
         <a
           href={`#${anchor}`}

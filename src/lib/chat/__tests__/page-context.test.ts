@@ -5,6 +5,7 @@ import {
   PAGE_CONTENT_MAX_CHARS,
   toPlaintext,
 } from '@/lib/chat/page-context'
+import { collectionEntryAnchor, getCollection } from '@/lib/collections'
 import { siteConfig } from '@/lib/config'
 import { getAllPosts, getPageBySlug } from '@/lib/content/loader'
 
@@ -279,6 +280,47 @@ describe('getSelectedPassageContext', () => {
         getPageContextContent(path)
       )
     ).toMatchObject({ text: blockquote, path })
+  })
+
+  it('validates a selected collection entry before preserving its anchor', () => {
+    const path = '/diction'
+    const collection = getCollection('diction')
+    const entry = collection.entries.find(
+      (candidate) => candidate.term === 'Nut graf'
+    )
+    if (!entry) throw new Error('Expected the Nut graf entry')
+    const entryAnchor = collectionEntryAnchor(entry)
+    const request = {
+      action: 'context',
+      text: entry.definition,
+      path,
+      headingId: 'letter-n',
+      entryAnchor,
+    }
+
+    expect(
+      getSelectedPassageContext(request, path, getPageContextContent(path))
+    ).toMatchObject({
+      text: entry.definition,
+      entryAnchor,
+      source: {
+        type: 'page',
+        title: 'Diction',
+        url: '/diction#nut-graf',
+        publishedAt: null,
+        newsletter: 'page',
+        section: 'Nut graf',
+      },
+    })
+
+    const mismatchedEntry = getSelectedPassageContext(
+      { ...request, entryAnchor: 'lindy-effect' },
+      path,
+      getPageContextContent(path)
+    )
+    expect(mismatchedEntry?.entryAnchor).toBeUndefined()
+    expect(mismatchedEntry?.source.url).toBe('/diction')
+    expect(mismatchedEntry?.source.section).toBeUndefined()
   })
 })
 

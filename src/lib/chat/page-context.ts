@@ -5,6 +5,12 @@ import {
   normalizeSelectedPassage,
   type SelectedPassageAction,
 } from '@/lib/chat/selected-passage'
+import {
+  type CollectionEntry,
+  collectionEntryAnchor,
+  getCollection,
+  isCollectionSlug,
+} from '@/lib/collections'
 import { extractHeadingSections } from '@/lib/content/headings'
 import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
 import { photoMetadataLabeledText } from '@/lib/content/photo-metadata'
@@ -68,6 +74,7 @@ export interface SelectedPassageContext {
   path: string
   headingId?: string
   headingText?: string
+  entryAnchor?: string
   source: SelectedPassageSource
 }
 
@@ -221,6 +228,12 @@ function selectedPassageRecord(value: unknown): Record<string, unknown> | null {
     : null
 }
 
+function collectionEntryPlaintext(entry: CollectionEntry): string {
+  return [entry.term, entry.definition, entry.reference?.label, entry.suffix]
+    .filter(Boolean)
+    .join(' ')
+}
+
 /**
  * Resolves client passage metadata back to the canonical content corpus. The
  * selected text remains untrusted prompt input, but it receives a source only
@@ -259,8 +272,27 @@ export function getSelectedPassageContext(
   }
 
   const rawHeadingId = request.headingId
+  const rawEntryAnchor = request.entryAnchor
+  const collection = isCollectionSlug(item.slug)
+    ? getCollection(item.slug)
+    : null
+  const candidateEntry =
+    collection &&
+    typeof rawEntryAnchor === 'string' &&
+    rawEntryAnchor.length <= 200
+      ? collection.entries.find(
+          (entry) => collectionEntryAnchor(entry) === rawEntryAnchor
+        )
+      : undefined
+  const entry =
+    candidateEntry &&
+    collapsePlainTextWhitespace(
+      collectionEntryPlaintext(candidateEntry)
+    ).includes(text)
+      ? candidateEntry
+      : undefined
   const headingSection =
-    typeof rawHeadingId === 'string' && rawHeadingId.length <= 200
+    !entry && typeof rawHeadingId === 'string' && rawHeadingId.length <= 200
       ? extractHeadingSections(item.content).find(
           (candidate) => candidate.slug === rawHeadingId
         )
@@ -272,19 +304,24 @@ export function getSelectedPassageContext(
     ).includes(text)
       ? headingSection
       : undefined
-  const sourceUrl = heading
-    ? `${pageContent.source.url}#${heading.slug}`
-    : pageContent.source.url
+  const entryAnchor = entry ? collectionEntryAnchor(entry) : undefined
+  const sourceUrl = entryAnchor
+    ? `${pageContent.source.url}#${entryAnchor}`
+    : heading
+      ? `${pageContent.source.url}#${heading.slug}`
+      : pageContent.source.url
+  const sourceSection = entry?.term ?? heading?.text
 
   return {
     action: request.action,
     text,
     path: currentPath,
     ...(heading ? { headingId: heading.slug, headingText: heading.text } : {}),
+    ...(entryAnchor ? { entryAnchor } : {}),
     source: {
       ...pageContent.source,
       url: sourceUrl,
-      ...(heading ? { section: heading.text } : {}),
+      ...(sourceSection ? { section: sourceSection } : {}),
     },
   }
 }

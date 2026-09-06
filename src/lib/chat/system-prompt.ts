@@ -179,8 +179,8 @@ Reply in one compact plain-text paragraph. Aim for 240 characters, including any
       context:
         'Explain the canonical material immediately around the passage and how it fits into this source.',
     }[passage.action]
-    const section = passage.headingText
-      ? ` The nearest server-validated section is "${escapePromptSourceText(passage.headingText)}".`
+    const section = passage.source.section
+      ? ` The nearest server-validated section is "${escapePromptSourceText(passage.source.section)}".`
       : ''
 
     parts.push(
