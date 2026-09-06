@@ -21,8 +21,8 @@ afterEach(() => {
 })
 
 describe('Bell Gateway metadata', () => {
-  it('uses GPT-5.6 Sol with surface-specific reasoning', () => {
-    expect(BELL_MODEL_ID).toBe('openai/gpt-5.6-sol')
+  it('uses GPT-5.6 Sol fast serving with surface-specific reasoning', () => {
+    expect(BELL_MODEL_ID).toBe('openai/gpt-5.6-sol-fast')
     expect(getBellReasoning('web')).toBe('high')
     expect(getBellReasoning('web', 2)).toBe('high')
     expect(getBellReasoning('web', 8)).toBe('high')
@@ -83,6 +83,18 @@ describe('Bell Gateway metadata', () => {
     const gateway = getBellProviderOptions({ surface: 'sms' }).gateway
     expect(gateway.only).toEqual(['openai'])
     expect('serviceTier' in gateway).toBe(false)
+  })
+
+  it.each([
+    'web',
+    'sms',
+  ] as const)('requests fast serving on %s while retaining automatic base-tier fallback', (surface) => {
+    const options = getBellProviderOptions({ surface })
+    expect(options.gateway.speed).toBe('fast')
+    expect(options.gateway.only).toEqual(['openai'])
+    expect(options.gateway.zeroDataRetention).toBe(true)
+    expect('allowFallbackFromFast' in options.gateway).toBe(false)
+    expect('models' in options.gateway).toBe(false)
   })
 
   it('does not manufacture a user when no attribution is available', () => {

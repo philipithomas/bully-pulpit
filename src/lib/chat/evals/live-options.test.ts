@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BELL_EVAL_REFERENCE_MODEL_ID,
   bellEvalUsage,
+  getBellEvalProviderOptions,
   parseBellEvalArgs,
 } from '@/lib/chat/evals/live-options'
 
@@ -16,6 +17,7 @@ describe('parseBellEvalArgs', () => {
       BELL_EVAL_REFERENCE_MODEL_ID,
     ])
     expect(options.modelSelection).toBe('production-vs-reference')
+    expect(BELL_EVAL_REFERENCE_MODEL_ID).toBe('openai/gpt-5.4-mini-fast')
   })
 
   it('does not run the same model twice if it becomes the production model', () => {
@@ -64,6 +66,26 @@ describe('parseBellEvalArgs', () => {
       'Unknown option: --wat'
     )
   })
+})
+
+it.each([
+  'web',
+  'sms',
+] as const)('requests fast serving for %s evaluations, including explicit model overrides', (surface) => {
+  const options = parseBellEvalArgs(
+    ['--models', 'openai/gpt-5.6-luna'],
+    PRODUCTION_MODEL
+  )
+  expect(options.models).toEqual(['openai/gpt-5.6-luna'])
+  const providerOptions = getBellEvalProviderOptions(surface, 'test-case')
+  expect(providerOptions.gateway).toMatchObject({
+    speed: 'fast',
+    only: ['openai'],
+    zeroDataRetention: true,
+    user: 'bell-eval:test-case',
+  })
+  expect('allowFallbackFromFast' in providerOptions.gateway).toBe(false)
+  expect('models' in providerOptions.gateway).toBe(false)
 })
 
 it('documents that an explicit model list replaces the default pair', () => {

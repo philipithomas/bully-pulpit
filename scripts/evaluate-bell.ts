@@ -7,7 +7,6 @@ import {
   bellSmsStopWhen,
   bellTools,
   bellWebStopWhen,
-  getBellProviderOptions,
   getBellReasoning,
   prepareBellSmsStep,
   prepareBellWebStep,
@@ -17,18 +16,12 @@ import { runDeterministicBellEvals } from '@/lib/chat/evals/deterministic'
 import {
   BELL_EVAL_REFERENCE_MODEL_ID,
   bellEvalUsage,
+  getBellEvalProviderOptions,
   parseBellEvalArgs,
 } from '@/lib/chat/evals/live-options'
 import { getPageContextContent } from '@/lib/chat/page-context'
 import { getSystemPrompt } from '@/lib/chat/system-prompt'
 import { formatBellSmsBody } from '@/lib/phone/bell-sms'
-
-function exactModelProviderOptions(surface: 'web' | 'sms', caseId: string) {
-  return getBellProviderOptions({
-    surface,
-    pseudonymousUser: `bell-eval:${caseId}`,
-  })
-}
 
 function quoted(text: string): string {
   return text
@@ -123,7 +116,7 @@ async function main() {
         const result = await generateText({
           model: gateway(modelId),
           reasoning: getBellReasoning(testCase.surface),
-          providerOptions: exactModelProviderOptions(
+          providerOptions: getBellEvalProviderOptions(
             testCase.surface,
             testCase.id
           ),
