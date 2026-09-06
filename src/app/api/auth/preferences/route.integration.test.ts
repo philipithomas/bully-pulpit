@@ -67,6 +67,34 @@ describe('without a session cookie', () => {
     expect(await response.json()).toEqual({ error: 'Unauthorized' })
   })
 
+  it('rejects an unsupported media type before session verification', async () => {
+    const response = await PATCH(
+      new Request('http://localhost/api/auth/preferences', {
+        method: 'PATCH',
+        headers: { 'content-type': 'text/plain' },
+        body: '{}',
+      })
+    )
+    expect(response.status).toBe(415)
+    expect(await response.json()).toEqual({
+      error: 'Content-Type must be application/json',
+    })
+  })
+
+  it('rejects an oversized body before session verification', async () => {
+    const response = await PATCH(
+      new Request('http://localhost/api/auth/preferences', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: 'x'.repeat(20_000) }),
+      })
+    )
+    expect(response.status).toBe(413)
+    expect(await response.json()).toEqual({
+      error: 'Request body is too large',
+    })
+  })
+
   it('DELETE returns 401', async () => {
     const response = await DELETE()
     expect(response.status).toBe(401)
@@ -298,6 +326,28 @@ describe('PATCH', () => {
       .from(subscribers)
       .where(eq(subscribers.uuid, subscriber.uuid))
     expect(row.subscribedWorkshop).toBe(true)
+  })
+
+  it('rejects names and analytics placements beyond their persisted limits', async () => {
+    const subscriber = await seedSubscriber()
+    await signIn(subscriber)
+
+    for (const body of [
+      { name: 'x'.repeat(201) },
+      { analytics_placement: 'x'.repeat(101) },
+    ]) {
+      const response = await PATCH(patchRequest(body))
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({
+        error: 'Invalid preferences in request body',
+      })
+    }
+
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.uuid, subscriber.uuid))
+    expect(row.name).toBe('Reader')
   })
 })
 
