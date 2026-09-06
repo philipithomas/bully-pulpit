@@ -9,6 +9,7 @@ import { LazySignInModal } from '@/components/auth/sign-in-modal-lazy'
 import { SignInToast } from '@/components/auth/sign-in-toast'
 import { PassageSelection } from '@/components/chat/passage-selection'
 import { Footer } from '@/components/layout/footer'
+import { FooterPlacement } from '@/components/layout/footer-placement'
 import { Header } from '@/components/layout/header'
 import { NewsletterProvider } from '@/components/layout/newsletter-context'
 import { CoverPreload } from '@/components/posts/cover-preload'
@@ -140,7 +141,9 @@ export default function RootLayout({
             <main id="content" className="flex-1">
               {children}
             </main>
-            <Footer />
+            <FooterPlacement>
+              <Footer />
+            </FooterPlacement>
             <LazySignInModal />
             <LazyNewSubscriberOnboarding />
             <SignInToast />

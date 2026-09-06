@@ -980,3 +980,22 @@ footer {
     transition: none;
   }
 }
+
+/* A single quiet masthead leaves room for the photographic study on
+   standard phones. Narrow screens retain the roomy two-line header. */
+@media (min-width: 375px) and (max-width: 639px) {
+  body:has([data-home-gallery]) > header > .container {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  body:has([data-home-gallery]) > header nav {
+    width: auto;
+    gap: 16px;
+  }
+
+  body:has([data-home-gallery]) > header .wordmark {
+    height: 11px;
+  }
+}

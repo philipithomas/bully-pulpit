@@ -1,198 +1,88 @@
 import type { Metadata } from 'next'
-import { getImageProps } from 'next/image'
 import Link from 'next/link'
-import { InlineSignupForm } from '@/components/auth/inline-signup-form'
-import { SmsSubscribePrompt } from '@/components/auth/sms-subscribe-prompt'
+import styles from '@/app/home-gallery.module.css'
+import { DailyDrawer } from '@/components/home/daily-drawer'
+import { PhotographStudy } from '@/components/home/photograph-study'
 import { LatestPostPill } from '@/components/posts/latest-post-pill'
 import { JsonLd } from '@/components/seo/json-ld'
-import { NewsletterWordmark } from '@/components/tidbits/newsletter-wordmark'
-import { siteConfig } from '@/lib/config'
-import type { Newsletter } from '@/lib/content/types'
-import { zoomImageDataAttrs } from '@/lib/content/zoom-image'
-import { countActive } from '@/lib/db/queries/subscribers'
 import { feedDiscovery } from '@/lib/feeds/discovery'
-import { isNewsletterAcceptingSubscriptions } from '@/lib/newsletters'
-import { sitePhoneDisplayNumber, sitePhoneNumber } from '@/lib/phone/config'
+import { getHomeDrawer } from '@/lib/home/drawer'
 
-// Auth redirects land on /?signed-in=1 and /?error=invalid-token; the
-// canonical collapses those variants.
+// The daily selection is assembled from local content during static
+// generation. ISR refreshes it without a browser request or model call.
+export const revalidate = 3600
+
 export const metadata: Metadata = {
   alternates: { canonical: '/', types: feedDiscovery() },
 }
 
-const HOMEPAGE_NEWSLETTER_ORDER = [
-  'postcard',
-  'contraption',
-  'tidbits',
-] as const satisfies readonly Newsletter[]
-
-const HOMEPAGE_NEWSLETTER_LOGO_HEIGHTS: Partial<Record<Newsletter, number>> = {
-  // The solid geometric letterforms carry more visual weight than the other
-  // wordmarks at their nominal height.
-  tidbits: 12,
-}
-
-async function buildTimeSubscriberCount(): Promise<number | null> {
-  try {
-    return await countActive()
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.warn(`[home] build-time subscriber count unavailable: ${message}`)
-    return null
-  }
-}
-
-export default async function HomePage() {
-  const newsletters = HOMEPAGE_NEWSLETTER_ORDER.filter(
-    isNewsletterAcceptingSubscriptions
-  ).map((newsletter) => siteConfig.newsletters[newsletter])
-
-  // Art-directed portraits: each layout slot renders a <picture> carrying
-  // both srcSets, so the hidden slot resolves to the same URL as the visible
-  // one (a single fetch per device) instead of two priority preloads.
-  const { props: desktopPortrait } = getImageProps({
-    alt: siteConfig.author,
-    src: '/images/portrait.jpg',
-    width: 600,
-    height: 750,
-    sizes: '448px',
-    priority: true,
-    fetchPriority: 'high',
-  })
-  const subscriberCount = await buildTimeSubscriberCount()
-  const smsSignupPhoneNumber = sitePhoneNumber()
-  const smsSignupDisplayNumber = sitePhoneDisplayNumber()
-  const { props: mobilePortrait } = getImageProps({
-    alt: siteConfig.author,
-    src: '/images/philip-horizontal.jpg',
-    width: 1024,
-    height: 656,
-    sizes: '100vw',
-    priority: true,
-    fetchPriority: 'high',
-  })
+export default function HomePage() {
+  const drawer = getHomeDrawer()
+  const discoveries = [
+    drawer.word && { ...drawer.word, label: 'Word of the day', tab: 'Word' },
+    drawer.contraption && {
+      ...drawer.contraption,
+      label: 'Contraption of the day',
+      tab: 'Contraption',
+    },
+    drawer.writing && { ...drawer.writing, tab: 'Archive' },
+  ].filter((item) => item !== null)
 
   return (
-    <div className="container pt-6 pb-12 sm:pt-8 sm:pb-14 md:pt-10 md:pb-16 lg:pt-12 lg:pb-20">
+    <div className={styles.home} data-home-gallery="">
       <JsonLd type="website" />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-        {/* Left: Portrait (desktop only) */}
-        <div className="hidden lg:block">
-          <picture>
-            {/* 1023.98px closes the fractional-zoom gap below the 1024px lg
-                breakpoint — if neither source matched, both portraits load. */}
-            <source
-              media="(max-width: 1023.98px)"
-              srcSet={mobilePortrait.srcSet}
-              sizes={mobilePortrait.sizes}
-            />
-            <img
-              {...desktopPortrait}
-              className="w-full max-w-md h-auto cursor-zoom-in"
-              data-zoomable=""
-              {...zoomImageDataAttrs({
-                src: '/images/portrait.jpg',
-                dimensions: { width: 4000, height: 5000 },
-              })}
-            />
-          </picture>
-        </div>
-
-        {/* Right: Bio + Newsletter signup */}
-        <div>
-          <div className="mb-6">
+      <div className={styles.study}>
+        <div className={styles.introduction}>
+          <div className={styles.newWriting}>
             <LatestPostPill />
           </div>
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-gray-950 mb-6">
-            Crafting digital tools
-          </h1>
-          <div className="font-serif text-lg text-gray-900 leading-relaxed mb-8 lg:mb-12 max-w-prose">
-            <p className="mb-4">
-              I am an engineer living in New York, working at the intersection
-              of math, software, and business. I am interested in urbanism,
-              coffee, and photography.
-            </p>
-          </div>
-
-          {/* Horizontal portrait (mobile only) */}
-          <div className="lg:hidden mb-8">
-            <picture>
-              <source
-                media="(min-width: 1024px)"
-                srcSet={desktopPortrait.srcSet}
-                sizes={desktopPortrait.sizes}
-              />
-              <img
-                {...mobilePortrait}
-                className="w-full h-auto cursor-zoom-in"
-                data-zoomable=""
-                {...zoomImageDataAttrs({
-                  src: '/images/portrait.jpg',
-                  dimensions: { width: 4000, height: 5000 },
-                })}
-              />
-            </picture>
-          </div>
-
-          {/* Subscribe (hidden when logged in) */}
-          <InlineSignupForm
-            analyticsPlacement="homepage"
-            hideWhenLoggedIn
-            initialSubscriberCount={subscriberCount}
-          />
-
-          {/* Newsletter directory */}
-          <div className="mt-8">
-            <p className="font-serif text-sm text-gray-600 mb-6">
-              I publish these newsletters:
-            </p>
-            <div className="space-y-4">
-              {newsletters.map((nl) => (
-                <Link
-                  key={nl.slug}
-                  href={`/${nl.slug}`}
-                  className="flex items-center gap-3 group"
-                >
-                  <span className="w-[76px] shrink-0 flex items-center">
-                    <NewsletterWordmark
-                      src={nl.logo.src}
-                      alt={nl.name}
-                      width={nl.logo.intrinsicWidth}
-                      height={nl.logo.intrinsicHeight}
-                      style={{
-                        height:
-                          HOMEPAGE_NEWSLETTER_LOGO_HEIGHTS[nl.slug] ??
-                          nl.logo.height,
-                        width: 'auto',
-                      }}
-                      className="w-auto shrink-0"
-                    />
-                  </span>
-                  <span className="font-serif text-sm text-gray-600 group-hover:text-gray-700 transition-colors duration-300">
-                    {nl.tagline}
-                  </span>
-                </Link>
-              ))}
-            </div>
-            <p className="font-serif text-sm text-gray-500 mt-6">
-              Also available via{' '}
-              <Link
-                href="/feed/rss.xml"
-                className="underline decoration-forest underline-offset-2 hover:text-forest transition-colors duration-300"
-              >
-                RSS
-              </Link>
-              <SmsSubscribePrompt
-                analyticsPlacement="homepage"
-                newsletter="all"
-                phoneDisplayNumber={smsSignupDisplayNumber}
-                phoneNumber={smsSignupPhoneNumber}
-                variant="homepage"
-              />
-              .
-            </p>
-          </div>
+          <h1>Crafting digital tools</h1>
+          <p>
+            I am an engineer in New York, interested in cities, coffee, and
+            photography.
+          </p>
         </div>
+
+        <PhotographStudy photos={drawer.photos} />
+
+        <DailyDrawer date={drawer.date} items={discoveries} />
+      </div>
+
+      <div className={styles.colophon}>
+        <nav
+          aria-label="Writing and photography"
+          className={styles.collections}
+        >
+          <Link href="/contraption" prefetch={false}>
+            Contraption
+          </Link>
+          <Link href="/postcard" prefetch={false}>
+            Postcard
+          </Link>
+          <Link href="/photography" prefetch={false}>
+            Photographs
+          </Link>
+        </nav>
+        <nav aria-label="Site information" className={styles.information}>
+          <Link href="/contact" prefetch={false}>
+            Contact
+          </Link>
+          <Link href="/feed/rss.xml" prefetch={false}>
+            RSS
+          </Link>
+          <Link href="/colophon" prefetch={false}>
+            Colophon
+          </Link>
+          <Link href="/sitemap" prefetch={false}>
+            Index
+          </Link>
+          <Link href="/privacy" prefetch={false}>
+            Privacy
+          </Link>
+          <Link href="/terms" prefetch={false}>
+            Terms
+          </Link>
+        </nav>
       </div>
     </div>
   )

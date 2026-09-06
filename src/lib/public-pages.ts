@@ -92,7 +92,7 @@ export const publicAppPages = [
     path: '/',
     title: 'Home',
     description: siteConfig.description,
-    searchText: `${siteConfig.author} crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He writes about software, projects, urbanism, coffee, and photography.`,
+    searchText: `${siteConfig.author} crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He writes about software, projects, urbanism, coffee, and photography. His homepage pairs the latest writing with photographs from Tidbits and Tsundoku, plus a daily drawer of words, contraptions, and archive discoveries.`,
     bellText:
       () => `The homepage of philipithomas.com, the personal website and blog of ${siteConfig.author}. Philip crafts digital tools. He is an engineer living in New York City, working at the intersection of math, software, and business. He is interested in urbanism, coffee, and photography. Visitors can connect with him on GitHub and LinkedIn.
 
@@ -102,7 +102,7 @@ He currently publishes four newsletters:
 - Postcard (/postcard): ${siteConfig.newsletters.postcard.tagline}
 - Tidbits (/tidbits): ${siteConfig.newsletters.tidbits.tagline}
 
-The newsletters are available by email, RSS, and SMS, and the homepage has a signup form. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
+The homepage is a photographic study. It opens with the latest published photograph from Tidbits or Tsundoku; Another photograph browses a small daily selection without leaving the page. The New link shows writing rather than photo posts. An inline drawer offers a daily word from Diction, a contraption, and older writing, with anniversary labels only for real date matches. The page links to Contraption, Postcard, photography, contact, RSS, the colophon, and the site index. Visitors can subscribe through the header. The newsletters are available by email, RSS, and SMS. Tsundoku (/tsundoku) is an archived pop-up photography newsletter whose historical posts and feeds remain available.`,
     humanSitemap: true,
     xmlSitemap: true,
   },
