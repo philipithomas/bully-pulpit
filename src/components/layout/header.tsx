@@ -22,63 +22,36 @@ import { siteConfig } from '@/lib/config'
 import type { Newsletter } from '@/lib/content/types'
 import { useChatSidebar } from '@/stores/chat-store'
 
+// The deferred components own focus and modal behavior once loaded. Until
+// then, keep these fallbacks non-interactive and non-modal so the activating
+// control retains focus and the page remains truthfully available.
 export function ChatSidebarLoading() {
   return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/50 sm:hidden" aria-hidden />
-      <div
-        role="dialog"
-        aria-label="Bell chat"
-        aria-busy="true"
-        className="fixed top-0 right-0 z-50 flex h-full w-full flex-col bg-offwhite-light shadow-xl sm:w-[420px]"
-      >
-        <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
-          <BellIcon className="h-5 w-5 text-gray-950" aria-hidden="true" />
-          <span className="font-sans text-sm font-semibold text-gray-950">
-            Bell
-          </span>
-        </div>
-        <div
-          role="status"
-          className="flex flex-1 items-center justify-center gap-2 px-6 font-sans text-sm text-gray-500"
-        >
-          <Spinner className="h-4 w-4" />
-          <span>Opening Bell…</span>
-        </div>
-      </div>
-    </>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      className="pointer-events-none fixed right-4 top-4 z-50 flex items-center gap-2 bg-offwhite-light px-4 py-3 font-sans text-sm text-gray-600 shadow-xl"
+    >
+      <BellIcon className="h-5 w-5 text-gray-950" aria-hidden="true" />
+      <span>Opening Bell…</span>
+      <Spinner className="h-4 w-4" />
+    </div>
   )
 }
 
 export function SearchDialogLoading() {
   return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/50" aria-hidden />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Search"
-        aria-busy="true"
-        className="fixed top-[15vh] left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 bg-card shadow-xl"
-      >
-        <div className="flex items-center border-b border-gray-100 px-4">
-          <Search
-            className="h-4 w-4 shrink-0 text-gray-400"
-            aria-hidden="true"
-          />
-          <span className="flex-1 px-3 py-3 font-sans text-sm text-gray-400 pointer-coarse:text-base">
-            Search site…
-          </span>
-          <Spinner className="h-4 w-4 text-gray-400" />
-        </div>
-        <p
-          role="status"
-          className="px-4 py-6 text-center font-sans text-sm text-gray-500"
-        >
-          Loading search…
-        </p>
-      </div>
-    </>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      className="pointer-events-none fixed top-[15vh] left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 items-center gap-3 bg-card px-4 py-3 font-sans text-sm text-gray-600 shadow-xl"
+    >
+      <Search className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+      <span className="flex-1">Loading search…</span>
+      <Spinner className="h-4 w-4 text-gray-400" />
+    </div>
   )
 }
 
