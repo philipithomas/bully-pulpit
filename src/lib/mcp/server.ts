@@ -41,7 +41,7 @@ export function createSiteMcpServer(
       title: "Philip Ilic Thomas's writing",
       version: '1.0.0',
       description:
-        "Search, list, and read the public writing and pages on Philip Ilic Thomas's website.",
+        "Search, list, and read the writing and pages on Philip Ilic Thomas's website.",
       websiteUrl: `${siteIdentity.productionUrl}/mcp/setup`,
       icons: [
         {
@@ -53,16 +53,16 @@ export function createSiteMcpServer(
     },
     {
       instructions:
-        "Use search to find Philip Ilic Thomas's public writing and pages by subject, person, place, project, phrase, title, or relevance, then fetch a returned ID for complete text and a citation URL. Use list_posts only when the user explicitly asks to list or browse the latest, recent, chronological, or newsletter-filtered archive. All tools are public, read-only, and require no authentication.",
+        "Use search to find Philip Ilic Thomas's writing and pages by subject, person, place, project, phrase, title, or relevance. Read the returned excerpts to select useful sources, then fetch their IDs for complete text and citation URLs. For broad questions, compare sources that add distinct evidence instead of relying on one result. Use list_posts only when the user explicitly asks to list or browse the latest, recent, chronological, or newsletter-filtered archive. All tools are public, read-only, and require no authentication.",
     }
   )
 
   server.registerTool(
     'search',
     {
-      title: 'Search public writing',
+      title: "Search Philip's writing",
       description:
-        "Use this when a user wants to find Philip Ilic Thomas's public writing or site pages by subject, person, place, project, phrase, title, topic, or relevance. Returns up to ten citable matches; call fetch with a returned ID for complete text.",
+        "Find Philip Ilic Thomas's writing or site pages by subject, person, place, project, phrase, title, topic, or relevance. Use a short focused query such as 'noma' or 'snail-mail print edition'; omit Philip's name and generic question wording because this index only covers his site. Returns up to ten matches with dates, content type, and relevant excerpts. Inspect excerpts across the full result set to distinguish useful sources from incidental mentions, then call fetch for complete text before interpreting or comparing posts.",
       inputSchema: searchInputSchema,
       outputSchema: searchOutputSchema,
       annotations: readOnlyAnnotations,
@@ -92,9 +92,9 @@ export function createSiteMcpServer(
   server.registerTool(
     'fetch',
     {
-      title: 'Fetch a public post or page',
+      title: 'Read a post or page',
       description:
-        'Use this when a user wants the text of one public post or page, including image descriptions from alt text, authored location, and photo metadata, capped at 50,000 characters. Pass the stable ID returned by search or list_posts; this tool does not fetch arbitrary URLs.',
+        'Read the full text of a post or page, including image descriptions from alt text, authored location, and photo metadata, capped at 50,000 characters. For synthesis or comparisons, fetch the distinct relevant sources identified by search. Pass the stable ID returned by search or list_posts; this tool does not fetch arbitrary URLs.',
       inputSchema: fetchInputSchema,
       outputSchema: fetchOutputSchema,
       annotations: readOnlyAnnotations,

@@ -986,319 +986,173 @@ describe('Bell Live Realtime session', () => {
     })
   })
 
-  it('allows a bounded multi-tool chain before forcing a spoken answer', async () => {
+  it('allows two searches and ten post reads before forcing a spoken synthesis', async () => {
     const lifecycle: BellLiveLifecycleEvent[] = []
-    FakeOpenAiRealtimeWebSocket.afterContinuationEventBatches = [
-      [
-        {
-          type: 'response.created',
-          event_id: 'evt_continuation_one_created',
-          response: {
-            id: 'resp_continuation_one',
-            status: 'in_progress',
-            metadata: {
-              purpose: 'bell_tool_continuation',
-              tool_continuation_hop: '1',
-              tool_result_ready: 'true',
-            },
-          },
-        },
-        {
-          type: 'response.output_item.added',
-          event_id: 'evt_search_added',
-          response_id: 'resp_continuation_one',
-          output_index: 0,
-          item: {
-            id: 'item_search',
-            type: 'mcp_call',
-            name: 'search',
-          },
-        },
-        {
-          type: 'response.done',
-          event_id: 'evt_continuation_one_done',
-          response: {
-            id: 'resp_continuation_one',
-            status: 'completed',
-            metadata: {
-              purpose: 'bell_tool_continuation',
-              tool_continuation_hop: '1',
-              tool_result_ready: 'true',
-            },
-            output: [
-              {
-                id: 'item_search',
-                type: 'mcp_call',
-                name: 'search',
-              },
-            ],
-          },
-        },
-        {
-          type: 'response.mcp_call.in_progress',
-          event_id: 'evt_search_started',
-          item_id: 'item_search',
-          output_index: 0,
-        },
-        {
-          type: 'response.mcp_call.completed',
-          event_id: 'evt_search_completed',
-          item_id: 'item_search',
-          output_index: 0,
-        },
-        {
-          type: 'response.output_item.done',
-          event_id: 'evt_search_done',
-          response_id: 'resp_continuation_one',
-          output_index: 0,
-          item: {
-            id: 'item_search',
-            type: 'mcp_call',
-            name: 'search',
-            output: 'search result',
-          },
-        },
-      ],
-      [
-        {
-          type: 'response.created',
-          event_id: 'evt_continuation_two_created',
-          response: {
-            id: 'resp_continuation_two',
-            status: 'in_progress',
-            metadata: {
-              purpose: 'bell_tool_continuation',
-              tool_continuation_hop: '2',
-              tool_result_ready: 'true',
-            },
-          },
-        },
-        {
-          type: 'response.output_item.added',
-          event_id: 'evt_fetch_added',
-          response_id: 'resp_continuation_two',
-          output_index: 0,
-          item: {
-            id: 'item_fetch',
-            type: 'mcp_call',
-            name: 'fetch',
-          },
-        },
-        {
-          type: 'response.done',
-          event_id: 'evt_continuation_two_done',
-          response: {
-            id: 'resp_continuation_two',
-            status: 'completed',
-            metadata: {
-              purpose: 'bell_tool_continuation',
-              tool_continuation_hop: '2',
-              tool_result_ready: 'true',
-            },
-            output: [
-              {
-                id: 'item_fetch',
-                type: 'mcp_call',
-                name: 'fetch',
-              },
-            ],
-          },
-        },
-        {
-          type: 'response.mcp_call.in_progress',
-          event_id: 'evt_fetch_started',
-          item_id: 'item_fetch',
-          output_index: 0,
-        },
-        {
-          type: 'response.mcp_call.completed',
-          event_id: 'evt_fetch_completed',
-          item_id: 'item_fetch',
-          output_index: 0,
-        },
-        {
-          type: 'response.output_item.done',
-          event_id: 'evt_fetch_done',
-          response_id: 'resp_continuation_two',
-          output_index: 0,
-          item: {
-            id: 'item_fetch',
-            type: 'mcp_call',
-            name: 'fetch',
-            output: 'full post',
-          },
-        },
-      ],
-      [
-        {
-          type: 'response.created',
-          event_id: 'evt_final_created',
-          response: {
-            id: 'resp_final',
-            status: 'in_progress',
-            metadata: {
-              purpose: 'bell_tool_final_answer',
-              tool_continuation_hop: '3',
-              tool_result_ready: 'true',
-            },
-          },
-        },
-        {
-          type: 'output_audio_buffer.started',
-          event_id: 'evt_final_audio',
-          response_id: 'resp_final',
-        },
-        {
-          type: 'response.done',
-          event_id: 'evt_final_done',
-          response: {
-            id: 'resp_final',
-            status: 'completed',
-            metadata: {
-              purpose: 'bell_tool_final_answer',
-              tool_continuation_hop: '3',
-              tool_result_ready: 'true',
-            },
-            output: [
-              {
-                id: 'item_final_answer',
-                type: 'message',
-                role: 'assistant',
-                content: [
-                  {
-                    type: 'output_audio',
-                    transcript: 'Here is the complete answer.',
-                  },
-                ],
-              },
-            ],
-          },
-        },
-      ],
-    ]
-    FakeOpenAiRealtimeWebSocket.afterGreetingEvents = [
-      {
-        type: 'response.created',
-        event_id: 'evt_initial_tool_created',
-        response: { id: 'resp_initial_tool', status: 'in_progress' },
-      },
-      {
-        type: 'response.output_item.added',
-        event_id: 'evt_list_posts_added',
-        response_id: 'resp_initial_tool',
-        output_index: 0,
-        item: {
-          id: 'item_list_posts',
-          type: 'mcp_call',
-          name: 'list_posts',
-        },
-      },
-      {
-        type: 'response.done',
-        event_id: 'evt_initial_tool_done',
-        response: {
-          id: 'resp_initial_tool',
-          status: 'completed',
-          output: [
-            {
-              id: 'item_list_posts',
-              type: 'mcp_call',
-              name: 'list_posts',
-            },
-          ],
-        },
-      },
-      {
-        type: 'response.mcp_call.in_progress',
-        event_id: 'evt_list_posts_started',
-        item_id: 'item_list_posts',
-        output_index: 0,
-      },
-      {
-        type: 'response.mcp_call.completed',
-        event_id: 'evt_list_posts_completed',
-        item_id: 'item_list_posts',
-        output_index: 0,
-      },
-      {
-        type: 'response.output_item.done',
-        event_id: 'evt_list_posts_done',
-        response_id: 'resp_initial_tool',
-        output_index: 0,
-        item: {
-          id: 'item_list_posts',
-          type: 'mcp_call',
-          name: 'list_posts',
-          output: 'post list',
-        },
-      },
-    ]
-
     const greeting = await startBellLiveGreeting('rtc_call_greeting', {
       onLifecycleEvent: (event) => lifecycle.push(event),
     })
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    const toolSteps = [
+      { name: 'search', arguments: { query: 'independent software' } },
+      {
+        name: 'search',
+        arguments: { query: 'small durable software businesses' },
+      },
+      ...Array.from({ length: 10 }, (_, index) => ({
+        name: 'fetch',
+        arguments: { id: `post-${index + 1}` },
+      })),
+    ]
 
-    await vi.waitFor(() => {
-      expect(sentResponseEvents()).toHaveLength(4)
-    })
+    for (const [hop, step] of toolSteps.entries()) {
+      const responseId = `resp_lookup_${hop}`
+      const itemId = `item_lookup_${hop}`
+      const metadata =
+        hop === 0
+          ? undefined
+          : {
+              purpose: 'bell_tool_continuation',
+              tool_continuation_hop: String(hop),
+              tool_result_ready: 'true',
+            }
+      const item = {
+        id: itemId,
+        type: 'mcp_call',
+        name: step.name,
+        arguments: JSON.stringify(step.arguments),
+      }
+      const eventsBeforeOutput = [
+        {
+          type: 'response.created',
+          event_id: `evt_lookup_${hop}_created`,
+          response: { id: responseId, status: 'in_progress', metadata },
+        },
+        {
+          type: 'response.output_item.added',
+          event_id: `evt_lookup_${hop}_added`,
+          response_id: responseId,
+          output_index: 0,
+          item,
+        },
+        {
+          type: 'response.done',
+          event_id: `evt_lookup_${hop}_response_done`,
+          response: {
+            id: responseId,
+            status: 'completed',
+            metadata,
+            output: [item],
+          },
+        },
+        {
+          type: 'response.mcp_call.in_progress',
+          event_id: `evt_lookup_${hop}_started`,
+          item_id: itemId,
+          output_index: 0,
+        },
+        {
+          type: 'response.mcp_call.completed',
+          event_id: `evt_lookup_${hop}_completed`,
+          item_id: itemId,
+          output_index: 0,
+        },
+      ]
+      for (const event of eventsBeforeOutput) socket?.emitServerEvent(event)
+
+      // Completion alone must not let the next response race the tool output.
+      expect(sentResponseEvents()).toHaveLength(hop + 1)
+      socket?.emitServerEvent({
+        type: 'response.output_item.done',
+        event_id: `evt_lookup_${hop}_output_done`,
+        response_id: responseId,
+        output_index: 0,
+        item: { ...item, output: `Source material for lookup ${hop}` },
+      })
+      expect(sentResponseEvents()).toHaveLength(hop + 2)
+    }
+
     const continuationResponses = sentResponseEvents().slice(1) as Array<{
       response: Record<string, unknown>
     }>
     expect(
       continuationResponses.map(({ response }) => response.metadata)
-    ).toEqual([
-      {
-        purpose: 'bell_tool_continuation',
-        tool_continuation_hop: '1',
+    ).toEqual(
+      Array.from({ length: 12 }, (_, index) => index + 1).map((hop) => ({
+        purpose:
+          hop === 12 ? 'bell_tool_final_answer' : 'bell_tool_continuation',
+        tool_continuation_hop: String(hop),
         tool_result_ready: 'true',
-      },
-      {
-        purpose: 'bell_tool_continuation',
-        tool_continuation_hop: '2',
-        tool_result_ready: 'true',
-      },
-      {
-        purpose: 'bell_tool_final_answer',
-        tool_continuation_hop: '3',
-        tool_result_ready: 'true',
-      },
-    ])
-    expect(continuationResponses[0]?.response).toMatchObject({
-      tool_choice: 'auto',
-    })
-    expect(continuationResponses[0]?.response).not.toHaveProperty('tools')
-    expect(continuationResponses[1]?.response).toMatchObject({
-      tool_choice: 'auto',
-    })
-    expect(continuationResponses[1]?.response).not.toHaveProperty('tools')
+      }))
+    )
+    for (const { response } of continuationResponses.slice(0, 11)) {
+      expect(response).toMatchObject({ tool_choice: 'auto' })
+      expect(response).not.toHaveProperty('tools')
+    }
+    for (const { response } of continuationResponses) {
+      expect(response).toMatchObject({ reasoning: { effort: 'high' } })
+    }
+    // A refined search and one fetched post must leave room to read other posts.
     expect(continuationResponses[2]?.response).toMatchObject({
+      metadata: { tool_continuation_hop: '3' },
+      tool_choice: 'auto',
+    })
+    expect(continuationResponses[5]?.response).toMatchObject({
+      metadata: { tool_continuation_hop: '6' },
+      tool_choice: 'auto',
+    })
+    expect(continuationResponses[11]?.response).toMatchObject({
       tool_choice: 'none',
       tools: [],
     })
     expect(
       lifecycle.filter((event) => event.event === 'bell_live.tool_continuation')
-    ).toEqual([
-      {
+    ).toEqual(
+      Array.from({ length: 12 }, (_, index) => index + 1).map((hop) => ({
         event: 'bell_live.tool_continuation',
-        hop: 1,
+        hop,
         outcome: 'requested',
-        toolsAllowed: true,
-      },
-      {
-        event: 'bell_live.tool_continuation',
-        hop: 2,
-        outcome: 'requested',
-        toolsAllowed: true,
-      },
-      {
-        event: 'bell_live.tool_continuation',
-        hop: 3,
-        outcome: 'requested',
-        toolsAllowed: false,
-      },
-    ])
+        toolsAllowed: hop < 12,
+      }))
+    )
 
-    FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
+    socket?.emitServerEvent({
+      type: 'response.created',
+      event_id: 'evt_final_created',
+      response: {
+        id: 'resp_final',
+        status: 'in_progress',
+        metadata: continuationResponses[11]?.response.metadata,
+      },
+    })
+    socket?.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      event_id: 'evt_final_audio',
+      response_id: 'resp_final',
+    })
+    socket?.emitServerEvent({
+      type: 'response.done',
+      event_id: 'evt_final_done',
+      response: {
+        id: 'resp_final',
+        status: 'completed',
+        metadata: continuationResponses[11]?.response.metadata,
+        output: [
+          {
+            id: 'item_final_answer',
+            type: 'message',
+            role: 'assistant',
+            content: [
+              {
+                type: 'output_audio',
+                transcript: 'Here is how the ten posts connect.',
+              },
+            ],
+          },
+        ],
+      },
+    })
+    expect(sentResponseEvents()).toHaveLength(13)
+    socket?.closeFromServer()
     await greeting.conversation
   })
 
@@ -1390,7 +1244,7 @@ describe('Bell Live Realtime session', () => {
       response: {
         metadata: {
           purpose: 'bell_tool_final_answer',
-          tool_continuation_hop: '3',
+          tool_continuation_hop: '12',
           tool_result_ready: 'true',
         },
         tool_choice: 'none',

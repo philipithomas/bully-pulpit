@@ -8,6 +8,9 @@ import { hybridSearchPosts } from '@/lib/search/hybrid'
 import { siteIdentity } from '@/lib/site-identity'
 
 export const MCP_SEARCH_MAX_CHARACTERS = 300
+export const MCP_SEARCH_MAX_RESULTS = 10
+export const MCP_SEARCH_MAX_EXCERPTS = 2
+export const MCP_SEARCH_EXCERPT_MAX_CHARACTERS = 600
 export const MCP_FETCH_MAX_CHARACTERS = 50_000
 export const MCP_LIST_MAX_POSTS = 10
 
@@ -26,15 +29,36 @@ export const searchInputSchema = z
 
 export const searchOutputSchema = z
   .object({
-    results: z.array(
-      z
-        .object({
-          id: z.string(),
-          title: z.string(),
-          url: z.url(),
-        })
-        .strict()
-    ),
+    results: z
+      .array(
+        z
+          .object({
+            id: z.string(),
+            title: z.string(),
+            url: z.url(),
+            type: z.enum(['post', 'page', 'image']),
+            newsletter: z.string(),
+            publishedAt: z.string().nullable(),
+            excerpts: z
+              .array(
+                z
+                  .object({
+                    text: z
+                      .string()
+                      .min(1)
+                      .max(MCP_SEARCH_EXCERPT_MAX_CHARACTERS),
+                    section: z
+                      .object({ heading: z.string(), url: z.url() })
+                      .strict()
+                      .optional(),
+                  })
+                  .strict()
+              )
+              .max(MCP_SEARCH_MAX_EXCERPTS),
+          })
+          .strict()
+      )
+      .max(MCP_SEARCH_MAX_RESULTS),
   })
   .strict()
 
@@ -129,16 +153,40 @@ export async function searchPublicContent(
 ): Promise<SearchOutput> {
   const search = await hybridSearchPosts(query, {
     scope: 'posts',
-    limit: 10,
+    limit: MCP_SEARCH_MAX_RESULTS,
+    maxExcerpts: MCP_SEARCH_MAX_EXCERPTS,
     maxImages: 0,
     useVector: options.useVector,
   })
 
   return {
-    results: search.results.map((result) => ({
+    results: search.results.slice(0, MCP_SEARCH_MAX_RESULTS).map((result) => ({
       id: result.id,
       title: result.title,
       url: absoluteUrl(result.url),
+      type: result.type,
+      newsletter: result.newsletter,
+      publishedAt: result.publishedAt ?? null,
+      excerpts: result.excerpts
+        .filter((excerpt) => excerpt.text.trim())
+        .slice(0, MCP_SEARCH_MAX_EXCERPTS)
+        .map((excerpt) => {
+          const text = excerpt.text.trim()
+          return {
+            text:
+              text.length > MCP_SEARCH_EXCERPT_MAX_CHARACTERS
+                ? `${text.slice(0, MCP_SEARCH_EXCERPT_MAX_CHARACTERS - 1).trimEnd()}…`
+                : text,
+            ...(excerpt.section
+              ? {
+                  section: {
+                    heading: excerpt.section.heading,
+                    url: absoluteUrl(excerpt.section.url),
+                  },
+                }
+              : {}),
+          }
+        }),
     })),
   }
 }
