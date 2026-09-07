@@ -30,6 +30,7 @@ export class FakeOpenAiRealtimeWebSocket {
 
   readonly options: FakeWebSocketOptions
   readonly url: string
+  acknowledgeSessionUpdates = true
   closed = false
   private readonly listeners = new Map<string, WebSocketListener[]>()
 
@@ -84,6 +85,17 @@ export class FakeOpenAiRealtimeWebSocket {
       throw new Error('WebSocket send failed')
     }
     FakeOpenAiRealtimeWebSocket.sentEvents.push(event)
+    if ((event as { type?: string }).type === 'session.update') {
+      if (this.acknowledgeSessionUpdates) {
+        queueMicrotask(() => {
+          this.emitServerEvent({
+            type: 'session.updated',
+            session: (event as { session: unknown }).session,
+          })
+        })
+      }
+      return
+    }
     if (purpose !== 'bell_initial_greeting') {
       if (
         purpose === 'bell_tool_continuation' ||

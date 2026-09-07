@@ -319,8 +319,10 @@ export function phoneBellRealtimeSession() {
         turn_detection: {
           type: 'semantic_vad' as const,
           eagerness: 'high' as const,
-          create_response: true,
-          interrupt_response: true,
+          // Keep listening while the short opener plays, but do not let
+          // connection noise or an early hello cancel its first audio.
+          create_response: false,
+          interrupt_response: false,
         },
       },
       output: {
@@ -727,7 +729,7 @@ export type BellLiveLifecycleEvent =
       outcome: 'failed'
       providerCode: string | null
       providerType: string | null
-      reason: 'provider_error' | 'socket_error'
+      reason: 'audio_not_started' | 'provider_error' | 'socket_error'
       socketHttpStatus: number | null
     }
   | {
@@ -861,6 +863,7 @@ export interface BellLiveGreetingResult {
   audioStarted: boolean
   conversation: Promise<BellLiveConversationResult>
   durationMs: number
+  outcome: 'delivered' | 'interrupted'
   responseCheckpointed: boolean
   responseCreated: boolean
 }
@@ -925,6 +928,11 @@ export async function startBellLiveGreeting(
     let observerHadError = false
     let observerErrorGeneration = 0
     let callerSpeechGeneration = 0
+    let callerSpeaking = false
+    let pendingOpeningCallerTurn = false
+    let turnDetectionRestoreRequested = false
+    let turnDetectionRestored = false
+    let completedGreeting: BellLiveGreetingResult | null = null
     let audioStarted = false
     let greetingInterruptedByCaller = false
     let audioBufferFinished = false
@@ -936,6 +944,7 @@ export async function startBellLiveGreeting(
     let checkpointPromise: Promise<void> | null = null
     let completing = false
     let greetingTimeout: ReturnType<typeof setTimeout> | null = null
+    let firstAudioTimeout: ReturnType<typeof setTimeout> | null = null
     let observerTimeout: ReturnType<typeof setTimeout> | null = null
     const actionCallIds = new Set<string>()
     let actionQueue = Promise.resolve()
@@ -1278,6 +1287,7 @@ export async function startBellLiveGreeting(
       conversationSettled = true
       cancelSubscriptionDisclosure()
       if (observerTimeout) clearTimeout(observerTimeout)
+      if (firstAudioTimeout) clearTimeout(firstAudioTimeout)
       const now = Date.now()
       for (const discovery of mcpDiscoveries.values()) {
         if (discovery.terminal) continue
@@ -1372,13 +1382,50 @@ export async function startBellLiveGreeting(
           )
           return
         }
-        finish({
+        completedGreeting = {
           audioStarted,
           conversation,
           durationMs: Date.now() - startedAt,
+          outcome: greetingInterruptedByCaller ? 'interrupted' : 'delivered',
           responseCheckpointed,
           responseCreated,
-        })
+        }
+        if (conversationSettled) {
+          finish(completedGreeting)
+          return
+        }
+        // Wait for the server acknowledgement before responding to a turn
+        // recorded during the opener. Switching VAD on does not respond to
+        // an already committed input turn by itself.
+        turnDetectionRestoreRequested = true
+        try {
+          connection.send({
+            type: 'session.update',
+            session: {
+              type: 'realtime',
+              audio: {
+                input: {
+                  turn_detection: {
+                    type: 'semantic_vad',
+                    eagerness: 'high',
+                    create_response: true,
+                    interrupt_response: true,
+                  },
+                },
+              },
+            },
+          })
+        } catch {
+          finish(
+            new BellLiveGreetingError({
+              audioStarted,
+              durationMs: Date.now() - startedAt,
+              reason: 'socket_error',
+              responseCreated,
+              responseRequested,
+            })
+          )
+        }
       })()
     }
     greetingTimeout = setTimeout(() => {
@@ -1391,6 +1438,22 @@ export async function startBellLiveGreeting(
           responseRequested,
         })
       )
+    }, OPENAI_REALTIME_GREETING_TIMEOUT_MS)
+    // An interrupted opener is not proof that the caller heard anything.
+    // Keep a separate deadline until any response actually starts playback.
+    firstAudioTimeout = setTimeout(() => {
+      if (conversationSettled) return
+      observerHadError = true
+      emitLifecycle({
+        event: 'bell_live.observer',
+        outcome: 'failed',
+        providerCode: null,
+        providerType: null,
+        reason: 'audio_not_started',
+        socketHttpStatus: null,
+      })
+      finishConversation(false)
+      connection.close()
     }, OPENAI_REALTIME_GREETING_TIMEOUT_MS)
     observerTimeout = setTimeout(() => {
       observerHadError = true
@@ -1486,9 +1549,52 @@ export async function startBellLiveGreeting(
     })
     connection.on('input_audio_buffer.speech_started', () => {
       callerSpeechGeneration += 1
+      callerSpeaking = true
+      pendingOpeningCallerTurn = false
       cancelSubscriptionDisclosure()
       for (const responseId of pendingToolContinuations.keys()) {
         finishPendingToolContinuation(responseId, 'superseded')
+      }
+    })
+    connection.on('input_audio_buffer.speech_stopped', () => {
+      callerSpeaking = false
+    })
+    connection.on('input_audio_buffer.committed', () => {
+      if (!turnDetectionRestored) pendingOpeningCallerTurn = true
+    })
+    connection.on('session.updated', (event) => {
+      if (
+        conversationSettled ||
+        !turnDetectionRestoreRequested ||
+        turnDetectionRestored ||
+        event.session.type !== 'realtime'
+      )
+        return
+      const detection = event.session.audio?.input?.turn_detection
+      if (!detection?.create_response || !detection.interrupt_response) return
+      turnDetectionRestored = true
+      if (completedGreeting) finish(completedGreeting)
+      if (
+        !pendingOpeningCallerTurn ||
+        callerSpeaking ||
+        responseStartedAt.size > 0
+      ) {
+        pendingOpeningCallerTurn = false
+        return
+      }
+      pendingOpeningCallerTurn = false
+      try {
+        connection.send({
+          type: 'response.create',
+          response: {
+            metadata: { purpose: 'bell_opening_caller_turn' },
+            output_modalities: ['audio'],
+          },
+        })
+      } catch {
+        observerHadError = true
+        finishConversation(false)
+        connection.close()
       }
     })
 
@@ -1600,6 +1706,7 @@ export async function startBellLiveGreeting(
         subscriptionDisclosure.responseId = event.response.id ?? null
       }
       if (purpose !== PHONE_BELL_GREETING_PURPOSE) {
+        pendingOpeningCallerTurn = false
         if (event.response.id) {
           for (const pendingResponseId of pendingToolContinuations.keys()) {
             if (pendingResponseId !== event.response.id) {
@@ -1661,6 +1768,10 @@ export async function startBellLiveGreeting(
         })
     }
     connection.on('output_audio_buffer.started', (event) => {
+      if (firstAudioTimeout) {
+        clearTimeout(firstAudioTimeout)
+        firstAudioTimeout = null
+      }
       if (subscriptionDisclosure?.responseId === event.response_id) {
         subscriptionDisclosure.audioStarted = true
       }
@@ -1976,6 +2087,12 @@ export async function startBellLiveGreeting(
         socketCloseCode: closeCode,
       })
       finishConversation(normallyClosed)
+      // Playback already finished; a call ending during the VAD-update
+      // handshake needs no acknowledgement before its transcript can settle.
+      if (completedGreeting) {
+        finish(completedGreeting)
+        return
+      }
       // A very short call can close while the successful greeting checkpoint
       // is still settling. Let that already-complete opener resolve normally.
       if (completing || (responseCompleted && audioBufferFinished)) {
@@ -2002,6 +2119,8 @@ export async function startBellLiveGreeting(
             max_output_tokens: 512,
             metadata: { purpose: PHONE_BELL_GREETING_PURPOSE },
             output_modalities: ['audio'],
+            tool_choice: 'none',
+            tools: [],
           },
         })
         responseRequested = true

@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { startBellLiveGreeting } from '@/lib/phone/bell-live'
+import {
+  type BellLiveLifecycleEvent,
+  startBellLiveGreeting,
+} from '@/lib/phone/bell-live'
 import type {
   BellLiveActionHandler,
   BellLiveActionResult,
@@ -181,6 +184,251 @@ afterEach(() => {
 })
 
 describe('Bell Live private action dispatch', () => {
+  it('plays the opener before enabling interruption and answers buffered input only after acknowledgement', async () => {
+    vi.useFakeTimers()
+    FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 60_000
+    const pendingGreeting = startBellLiveGreeting('rtc_buffered_opening')
+    await vi.advanceTimersByTimeAsync(0)
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket.acknowledgeSessionUpdates = false
+    const response = {
+      id: 'resp_greeting',
+      metadata: { purpose: 'bell_initial_greeting' },
+    }
+    socket.emitServerEvent({
+      type: 'response.created',
+      response: { ...response, status: 'in_progress' },
+    })
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_stopped' })
+    socket.emitServerEvent({ type: 'input_audio_buffer.committed' })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: 'resp_greeting',
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed' },
+    })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(
+      sentEvents().filter((event) => event.type === 'session.update')
+    ).toHaveLength(0)
+    expect(continuations()).toHaveLength(0)
+
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: 'resp_greeting',
+    })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(
+      sentEvents().filter((event) => event.type === 'session.update')
+    ).toEqual([
+      {
+        type: 'session.update',
+        session: {
+          type: 'realtime',
+          audio: {
+            input: {
+              turn_detection: {
+                type: 'semantic_vad',
+                eagerness: 'high',
+                create_response: true,
+                interrupt_response: true,
+              },
+            },
+          },
+        },
+      },
+    ])
+    expect(continuations()).toHaveLength(0)
+
+    const acknowledgement = {
+      type: 'session.updated',
+      session: {
+        type: 'realtime',
+        audio: {
+          input: {
+            turn_detection: {
+              type: 'semantic_vad',
+              create_response: true,
+              interrupt_response: true,
+            },
+          },
+        },
+      },
+    }
+    socket.emitServerEvent(acknowledgement)
+    socket.emitServerEvent(acknowledgement)
+    await expect(pendingGreeting).resolves.toMatchObject({
+      audioStarted: true,
+      outcome: 'delivered',
+    })
+    expect(continuations()).toEqual([
+      {
+        type: 'response.create',
+        response: {
+          metadata: { purpose: 'bell_opening_caller_turn' },
+          output_modalities: ['audio'],
+        },
+      },
+    ])
+    // Later input is handled by the server's restored automatic turn detection.
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_stopped' })
+    socket.emitServerEvent({ type: 'input_audio_buffer.committed' })
+    expect(continuations()).toHaveLength(1)
+  })
+
+  it.each([
+    'still speaking',
+    'response already started',
+  ])('does not duplicate an opening caller response when %s', async (state) => {
+    vi.useFakeTimers()
+    FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 60_000
+    const pendingGreeting = startBellLiveGreeting('rtc_opening_race')
+    await vi.advanceTimersByTimeAsync(0)
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_stopped' })
+    socket.emitServerEvent({ type: 'input_audio_buffer.committed' })
+    if (state === 'still speaking') {
+      socket.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    } else {
+      socket.emitServerEvent({
+        type: 'response.created',
+        response: { id: 'response_auto', status: 'in_progress' },
+      })
+    }
+    const response = {
+      id: 'resp_greeting',
+      metadata: { purpose: 'bell_initial_greeting' },
+    }
+    socket.emitServerEvent({
+      type: 'response.created',
+      response: { ...response, status: 'in_progress' },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed' },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    await pendingGreeting
+    expect(continuations()).toHaveLength(0)
+  })
+
+  it('bounds a missing acknowledgement when restoring normal conversation', async () => {
+    vi.useFakeTimers()
+    FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 1
+    const pendingGreeting = startBellLiveGreeting('rtc_missing_restore_ack')
+    const failure = pendingGreeting.catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(0)
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket.acknowledgeSessionUpdates = false
+    const close = vi.spyOn(socket, 'close')
+
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    expect(await failure).toMatchObject({
+      audioStarted: true,
+      reason: 'timeout',
+    })
+    expect(close).toHaveBeenCalledTimes(1)
+    expect(continuations()).toHaveLength(0)
+  })
+
+  it('settles a call that closes while normal conversation is being restored', async () => {
+    vi.useFakeTimers()
+    FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 1
+    const pendingGreeting = startBellLiveGreeting('rtc_close_during_restore')
+    await vi.advanceTimersByTimeAsync(0)
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket.acknowledgeSessionUpdates = false
+    await vi.advanceTimersByTimeAsync(1)
+
+    socket.closeFromServer(1006)
+
+    const greeting = await pendingGreeting
+    expect(greeting.outcome).toBe('delivered')
+    await expect(greeting.conversation).resolves.toMatchObject({
+      observerCompleted: false,
+    })
+    expect(continuations()).toHaveLength(0)
+  })
+
+  it.each([
+    false,
+    true,
+  ])('keeps the first-audio deadline after an unheard interrupted opener (later audio: %s)', async (laterAudio) => {
+    vi.useFakeTimers()
+    FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 60_000
+    const lifecycle: BellLiveLifecycleEvent[] = []
+    const pendingGreeting = startBellLiveGreeting('rtc_silent_opening', {
+      onLifecycleEvent: (event) => lifecycle.push(event),
+    })
+    await vi.advanceTimersByTimeAsync(0)
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    const close = vi.spyOn(socket, 'close')
+    const response = {
+      id: 'resp_greeting',
+      metadata: { purpose: 'bell_initial_greeting' },
+    }
+    socket.emitServerEvent({
+      type: 'response.created',
+      response: { ...response, status: 'in_progress' },
+    })
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'cancelled' },
+    })
+    const greeting = await pendingGreeting
+    expect(greeting).toMatchObject({
+      audioStarted: false,
+      outcome: 'interrupted',
+    })
+    socket.emitServerEvent({
+      type: 'response.created',
+      response: { id: 'response_cancelled', status: 'in_progress' },
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { id: 'response_cancelled', status: 'cancelled', output: [] },
+    })
+    if (laterAudio) {
+      socket.emitServerEvent({
+        type: 'output_audio_buffer.started',
+        response_id: 'response_later',
+      })
+    }
+    await vi.advanceTimersByTimeAsync(10_000)
+    if (laterAudio) {
+      expect(close).not.toHaveBeenCalled()
+      expect(lifecycle).not.toContainEqual(
+        expect.objectContaining({ reason: 'audio_not_started' })
+      )
+    } else {
+      expect(close).toHaveBeenCalledTimes(1)
+      expect(lifecycle).toContainEqual(
+        expect.objectContaining({
+          event: 'bell_live.observer',
+          outcome: 'failed',
+          reason: 'audio_not_started',
+        })
+      )
+      await expect(greeting.conversation).resolves.toMatchObject({
+        observerCompleted: false,
+      })
+    }
+  })
+
   it.each([
     'cancelled before audio',
     'cleared before playback',
