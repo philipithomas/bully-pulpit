@@ -296,6 +296,31 @@ describe('getSystemPrompt research scope', () => {
     )
   })
 
+  it.each([
+    'web',
+    'sms',
+  ] as const)('starts named-subject research with the name itself on %s', (surface) => {
+    const prompt = getSystemPrompt({ surface })
+
+    expect(prompt).toContain('first search its name alone')
+    expect(prompt).toContain(
+      "Do not pad this first query with Philip's name or a paraphrase of the question"
+    )
+    expect(prompt).toContain(
+      'research each material gap after this initial search'
+    )
+    expect(prompt).toContain('Use additional targeted searches')
+    expect(prompt).not.toContain(
+      'Begin with a broad searchPosts query that reflects the whole question'
+    )
+    expect(prompt).toContain(
+      'Do not claim that the archive contains no review, experience, or other kind of coverage'
+    )
+    expect(prompt).toContain(
+      'something you did not find in the sources reviewed'
+    )
+  })
+
   it('allows deep SMS research while keeping only the final answer compact', () => {
     const prompt = getSystemPrompt({ surface: 'sms' })
 
