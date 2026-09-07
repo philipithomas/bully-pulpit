@@ -24,6 +24,8 @@ import {
   type BellLiveActionHandler,
   createBellLiveActionHandler,
 } from '@/lib/phone/bell-live-actions'
+import { bellLiveCallerSubscriptionStatus } from '@/lib/phone/bell-live-caller'
+import type { CallerSubscriptionStatus } from '@/lib/phone/caller-subscription'
 import { sendBellLiveTranscriptNotification } from '@/lib/phone/notifications'
 import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 
@@ -128,6 +130,7 @@ async function startBellLiveGreetingWithRetry(input: {
   onGreetingConsumed: () => Promise<boolean>
   onLifecycleEvent: (event: BellLiveLifecycleEvent) => void
   actions: BellLiveActionHandler
+  subscriptionStatus: CallerSubscriptionStatus
 }): Promise<Awaited<ReturnType<typeof startBellLiveGreeting>>> {
   for (
     let socketAttempt = 1;
@@ -139,6 +142,7 @@ async function startBellLiveGreetingWithRetry(input: {
         onGreetingConsumed: input.onGreetingConsumed,
         onLifecycleEvent: input.onLifecycleEvent,
         actions: input.actions,
+        subscriptionStatus: input.subscriptionStatus,
       })
     } catch (error) {
       if (
@@ -297,6 +301,7 @@ async function runBellLiveGreeting(input: {
   logContext: Record<string, unknown>
   twilioCallSid: string
   metadata: TwilioWebhookMetadata
+  subscriptionStatus: CallerSubscriptionStatus
 }): Promise<void> {
   const { callId, logContext: baseLogContext, twilioCallSid } = input
   const logContext = { ...baseLogContext, callSid: twilioCallSid }
@@ -366,6 +371,7 @@ async function runBellLiveGreeting(input: {
       onGreetingConsumed: checkpointGreeting,
       onLifecycleEvent: (event) => logBellLiveLifecycle(event, logContext),
       actions: createBellLiveActionHandler(twilioCallSid, input.metadata),
+      subscriptionStatus: input.subscriptionStatus,
     })
     if (!greeting.responseCheckpointed) {
       console.error('[openai/realtime-call]', {
@@ -536,9 +542,13 @@ export async function POST(request: Request): Promise<Response> {
     return response(204)
   }
 
+  // Resolve only from the authenticated parent call, never a model argument
+  // or the SIP From header. A short deadline keeps lookup outages answerable.
+  const subscriptionStatus =
+    await bellLiveCallerSubscriptionStatus(twilioCallSid)
   let result: OpenAiCallActionResult
   try {
-    result = await acceptBellLiveCall(incoming.callId)
+    result = await acceptBellLiveCall(incoming.callId, subscriptionStatus)
     console.info('[openai/realtime-call]', {
       event: 'bell_live.openai_call_action',
       action: result.action,
@@ -562,6 +572,7 @@ export async function POST(request: Request): Promise<Response> {
           logContext,
           twilioCallSid,
           metadata,
+          subscriptionStatus,
         })
       } catch {
         console.error('[openai/realtime-call]', {

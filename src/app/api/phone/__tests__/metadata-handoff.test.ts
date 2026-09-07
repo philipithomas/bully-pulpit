@@ -17,7 +17,12 @@ vi.mock('@/lib/phone/voice-subscription', () => ({
 import { POST as bellCompletePost } from '@/app/api/phone/bell-complete/route'
 import { POST as voicePost } from '@/app/api/phone/voice/route'
 import { POST as voiceMenuPost } from '@/app/api/phone/voice-menu/route'
+import { findSmsSubscriberByPhoneNumber } from '@/lib/db/queries/sms-subscribers'
 import { verifiedBellLiveSipMetadata } from '@/lib/phone/bell-live'
+import {
+  PHONE_IVR_FALLBACK_PROMPTS,
+  verifyPhoneIvrAudioToken,
+} from '@/lib/phone/ivr-audio'
 import { subscribeVoiceCaller } from '@/lib/phone/voice-subscription'
 import { phoneHandoffCallbackUrl } from '@/lib/phone/webhook-metadata'
 import { twilioPostRequest } from '@/test/twilio'
@@ -91,6 +96,49 @@ afterEach(() => {
 })
 
 describe('signed caller metadata across Bell and keypad', () => {
+  it('refreshes membership on each keypad entry around a Bell reconnection', async () => {
+    vi.mocked(findSmsSubscriberByPhoneNumber)
+      .mockResolvedValueOnce({
+        confirmedAt: new Date(),
+      } as NonNullable<
+        Awaited<ReturnType<typeof findSmsSubscriberByPhoneNumber>>
+      >)
+      .mockResolvedValueOnce(null)
+
+    const { keypadXml } = await enterKeypad()
+    const firstMenuAudio = keypadXml.match(/<Play>([^<]+)<\/Play>/)?.[1]
+    const firstMenuToken = new URL(
+      (firstMenuAudio ?? '').replaceAll('&amp;', '&')
+    ).searchParams.get('token')
+    expect(verifyPhoneIvrAudioToken(firstMenuToken)?.text).toBe(
+      PHONE_IVR_FALLBACK_PROMPTS.bellMenu
+    )
+
+    const reconnected = await voiceMenuPost(
+      request(actionUrl(keypadXml, 'Gather'), { ...CALL, Digits: '3' })
+    )
+    const reconnectedXml = await reconnected.text()
+    const returned = await bellCompletePost(
+      request(actionUrl(reconnectedXml, 'Dial'), {
+        ...CALL,
+        DialCallStatus: 'completed',
+      })
+    )
+    const returnedXml = await returned.text()
+    const secondMenuAudio = returnedXml.match(/<Play>([^<]+)<\/Play>/)?.[1]
+    const secondMenuToken = new URL(
+      (secondMenuAudio ?? '').replaceAll('&amp;', '&')
+    ).searchParams.get('token')
+    expect(verifyPhoneIvrAudioToken(secondMenuToken)?.text).toBe(
+      PHONE_IVR_FALLBACK_PROMPTS.menuWithBell
+    )
+    expect(findSmsSubscriberByPhoneNumber).toHaveBeenCalledTimes(2)
+    expect(sipMetadata(reconnectedXml)).toMatchObject({
+      callerName: ORIGINAL.CallerName,
+      fromCity: ORIGINAL.FromCity,
+    })
+  })
+
   it('preserves the initial metadata across star and a new Bell SIP leg', async () => {
     const { voiceXml, keypadXml } = await enterKeypad()
     const reconnected = await voiceMenuPost(

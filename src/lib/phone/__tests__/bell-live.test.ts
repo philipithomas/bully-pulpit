@@ -158,6 +158,21 @@ describe('Bell Live SIP invitation', () => {
 })
 
 describe('Bell Live Realtime session', () => {
+  it.each([
+    ['subscribed', 'Do not offer to subscribe it again'],
+    ['not_subscribed', 'You may offer signup when relevant'],
+    ['unknown', 'Do not claim it is subscribed or unsubscribed'],
+  ] as const)('adapts instructions to %s without treating caller ID as identity', (status, instruction) => {
+    const session = phoneBellRealtimeSession(status)
+    expect(session.instructions).toContain(instruction)
+    expect(session.instructions).toContain(
+      "not proof of the caller's identity or email subscription"
+    )
+    expect(session.instructions).toContain(
+      'A later subscription tool result supersedes'
+    )
+  })
+
   it('uses full Realtime at low reasoning with native audio and read-only archive MCP', () => {
     const session = phoneBellRealtimeSession()
     expect(session).toMatchObject({
@@ -457,6 +472,7 @@ describe('Bell Live Realtime session', () => {
 
     const greeting = await startBellLiveGreeting('rtc_call_greeting', {
       onLifecycleEvent: (event) => lifecycle.push(event),
+      subscriptionStatus: 'subscribed',
     })
     const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
     socket?.emitServerEvent({
@@ -558,7 +574,9 @@ describe('Bell Live Realtime session', () => {
       event_id: expect.stringMatching(/^evt_bell_tool_/),
       type: 'response.create',
       response: {
-        instructions: expect.stringContaining('You are Bell AI'),
+        instructions: expect.stringContaining(
+          'Do not offer to subscribe it again'
+        ),
         max_output_tokens: 'inf',
         metadata: {
           purpose: 'bell_tool_continuation',

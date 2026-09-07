@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('@/lib/db/queries/phone-webhook-events', () => ({
   claimPhoneWebhookEvent: vi.fn(),
   findOrCreatePhoneWebhookEvent: vi.fn(),
+  findPhoneWebhookEventByKey: vi.fn(),
   markPhoneWebhookEventSideEffectObserved: vi.fn(),
   releasePhoneWebhookEvent: vi.fn(),
 }))
@@ -14,17 +15,23 @@ vi.mock('@/lib/phone/twilio', async (importOriginal) => ({
 vi.mock('@/lib/phone/voice-subscription', () => ({
   subscribeVoiceCaller: vi.fn(),
 }))
+vi.mock('@/lib/phone/caller-subscription', () => ({
+  callerSubscriptionStatus: vi.fn(),
+}))
 
 import {
   claimPhoneWebhookEvent,
   findOrCreatePhoneWebhookEvent,
+  findPhoneWebhookEventByKey,
   markPhoneWebhookEventSideEffectObserved,
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
+import type { PhoneWebhookEvent } from '@/lib/db/schema'
 import {
   BELL_VOICE_SUBSCRIPTION_DISCLOSURE,
   createBellLiveActionHandler,
 } from '@/lib/phone/bell-live-actions'
+import { callerSubscriptionStatus } from '@/lib/phone/caller-subscription'
 import {
   getCall,
   redirectCallToVoicemail,
@@ -42,6 +49,22 @@ const call = {
 }
 const lease = new Date()
 
+function pendingSignupEvent(
+  overrides: Partial<PhoneWebhookEvent> = {}
+): PhoneWebhookEvent {
+  return {
+    id: 1,
+    eventKey: `voice-menu:${callSid}:2`,
+    eventType: 'voice-menu',
+    attemptCount: 0,
+    processingAt: null,
+    processedAt: null,
+    processedStepId: null,
+    createdAt: new Date(),
+    ...overrides,
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   vi.stubEnv('PHONE_NUMBER', call.to)
@@ -54,6 +77,8 @@ beforeEach(() => {
   } as Awaited<ReturnType<typeof findOrCreatePhoneWebhookEvent>>)
   vi.mocked(markPhoneWebhookEventSideEffectObserved).mockResolvedValue(true)
   vi.mocked(subscribeVoiceCaller).mockResolvedValue('subscribed')
+  vi.mocked(callerSubscriptionStatus).mockResolvedValue('not_subscribed')
+  vi.mocked(findPhoneWebhookEventByKey).mockResolvedValue(null)
 })
 afterEach(() => vi.unstubAllEnvs())
 
@@ -79,6 +104,7 @@ describe('private Bell Live actions', () => {
     { from: 'anonymous' },
     { to: '+15551112222' },
     { status: 'completed' },
+    { status: 'ringing' },
     { direction: 'outbound-api' },
     { sid: 'CAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
   ])('rejects a call that is no longer the verified inbound caller: %j', async (override) => {
@@ -149,6 +175,214 @@ describe('private Bell Live actions', () => {
       await actions.execute('subscribe_caller', { confirmed: true }, 2)
     ).toMatchObject({ status: 'unavailable' })
     expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it('recognizes an active subscription without disclosure, signup, or webhook mutation', async () => {
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('subscribed')
+    const actions = createBellLiveActionHandler(callSid)
+    const result = await actions.execute(
+      'subscribe_caller',
+      { confirmed: false },
+      1
+    )
+    expect(result).toMatchObject({ status: 'already_subscribed' })
+    expect(result.disclosure).toBeUndefined()
+    expect(JSON.stringify(result)).not.toContain(call.from)
+    expect(callerSubscriptionStatus).toHaveBeenCalledExactlyOnceWith(call.from)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    await actions.execute('subscribe_caller', { confirmed: true }, 2)
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    expect(findOrCreatePhoneWebhookEvent).not.toHaveBeenCalled()
+    expect(claimPhoneWebhookEvent).not.toHaveBeenCalled()
+  })
+
+  it('preserves a failed signup retry after reconnecting with a fresh controller', async () => {
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('subscribed')
+    vi.mocked(findPhoneWebhookEventByKey).mockResolvedValue(
+      pendingSignupEvent()
+    )
+    const actions = createBellLiveActionHandler(callSid)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    ).toMatchObject({
+      status: 'confirmation_required',
+      disclosure: BELL_VOICE_SUBSCRIPTION_DISCLOSURE,
+    })
+    expect(findPhoneWebhookEventByKey).toHaveBeenCalledExactlyOnceWith(
+      `voice-menu:${callSid}:2`
+    )
+    expect(findOrCreatePhoneWebhookEvent).not.toHaveBeenCalled()
+    expect(claimPhoneWebhookEvent).not.toHaveBeenCalled()
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(true)
+    await actions.execute('subscribe_caller', { confirmed: true }, 1)
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    await actions.execute('subscribe_caller', { confirmed: true }, 2)
+    expect(subscribeVoiceCaller).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ callSid, from: call.from })
+    )
+  })
+
+  it.each([
+    { processedAt: new Date() },
+    { eventType: 'voice-menu-existing' },
+    { eventType: 'bell-live-action' },
+  ])('does not disclose again when the prior event is not a pending signup: %j', async (override) => {
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('subscribed')
+    vi.mocked(findPhoneWebhookEventByKey).mockResolvedValue(
+      pendingSignupEvent(override)
+    )
+    const actions = createBellLiveActionHandler(callSid)
+    const result = await actions.execute(
+      'subscribe_caller',
+      { confirmed: false },
+      1
+    )
+    expect(result.status).toBe('already_subscribed')
+    expect(result.disclosure).toBeUndefined()
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    expect(findOrCreatePhoneWebhookEvent).not.toHaveBeenCalled()
+  })
+
+  it('does not retry an unfinished signup belonging to another parent call', async () => {
+    const earlierSignup = pendingSignupEvent({
+      eventKey: 'voice-menu:CAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:2',
+    })
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('subscribed')
+    vi.mocked(findPhoneWebhookEventByKey).mockImplementationOnce(async (key) =>
+      key === earlierSignup.eventKey ? earlierSignup : null
+    )
+    const actions = createBellLiveActionHandler(callSid)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    ).toMatchObject({ status: 'already_subscribed' })
+    expect(findPhoneWebhookEventByKey).toHaveBeenCalledExactlyOnceWith(
+      `voice-menu:${callSid}:2`
+    )
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it('does not arm a pending signup retry if interrupted during its event lookup', async () => {
+    let current = true
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('subscribed')
+    vi.mocked(findPhoneWebhookEventByKey).mockImplementationOnce(async () => {
+      current = false
+      return pendingSignupEvent()
+    })
+    const actions = createBellLiveActionHandler(callSid)
+    expect(
+      await actions.execute(
+        'subscribe_caller',
+        { confirmed: false },
+        1,
+        () => current
+      )
+    ).toMatchObject({ status: 'cancelled' })
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    expect(claimPhoneWebhookEvent).not.toHaveBeenCalled()
+  })
+
+  it('never queries a subscription for an unverified caller', async () => {
+    vi.mocked(getCall).mockResolvedValue({ ...call, to: '+15551112222' })
+    const actions = createBellLiveActionHandler(callSid)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    ).toMatchObject({ status: 'unavailable' })
+    expect(callerSubscriptionStatus).not.toHaveBeenCalled()
+    expect(findPhoneWebhookEventByKey).not.toHaveBeenCalled()
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it('keeps signup unavailable while the authenticated parent is still ringing', async () => {
+    vi.mocked(getCall).mockResolvedValue({ ...call, status: 'ringing' })
+    const actions = createBellLiveActionHandler(callSid)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    ).toMatchObject({ status: 'unavailable' })
+    expect(callerSubscriptionStatus).not.toHaveBeenCalled()
+    expect(findPhoneWebhookEventByKey).not.toHaveBeenCalled()
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it('leaves unknown subscription status unavailable without arming consent', async () => {
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('unknown')
+    const actions = createBellLiveActionHandler(callSid)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    ).toMatchObject({ status: 'unavailable' })
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    await actions.execute('subscribe_caller', { confirmed: true }, 2)
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    expect(findOrCreatePhoneWebhookEvent).not.toHaveBeenCalled()
+  })
+
+  it('requires fresh disclosure and consent if an active caller later needs reactivation', async () => {
+    vi.mocked(callerSubscriptionStatus)
+      .mockResolvedValueOnce('subscribed')
+      .mockResolvedValueOnce('not_subscribed')
+    const actions = createBellLiveActionHandler(callSid)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    ).toMatchObject({ status: 'already_subscribed' })
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: false }, 2)
+    ).toMatchObject({ status: 'confirmation_required' })
+    expect(actions.markSubscriptionDisclosureDelivered(2)).toBe(true)
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: true }, 3)
+    ).toMatchObject({ status: 'subscribed' })
+    expect(callerSubscriptionStatus).toHaveBeenCalledTimes(2)
+    expect(subscribeVoiceCaller).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears prior consent when a fresh lookup finds the caller already subscribed', async () => {
+    const actions = createBellLiveActionHandler(callSid)
+    await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(true)
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('subscribed')
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: false }, 2)
+    ).toMatchObject({ status: 'already_subscribed' })
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    expect(actions.markSubscriptionDisclosureDelivered(2)).toBe(false)
+    await actions.execute('subscribe_caller', { confirmed: true }, 3)
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it('lets the existing signup helper recheck changes after disclosure without claiming another signup', async () => {
+    const actions = createBellLiveActionHandler(callSid)
+    await actions.execute('subscribe_caller', { confirmed: false }, 1)
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(true)
+    vi.mocked(subscribeVoiceCaller).mockResolvedValue('already_subscribed')
+    expect(
+      await actions.execute('subscribe_caller', { confirmed: true }, 2)
+    ).toMatchObject({ status: 'already_subscribed' })
+    expect(subscribeVoiceCaller).toHaveBeenCalledTimes(1)
+    await actions.execute('subscribe_caller', { confirmed: true }, 3)
+    expect(subscribeVoiceCaller).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not arm consent when interrupted during subscription lookup', async () => {
+    let current = true
+    vi.mocked(callerSubscriptionStatus).mockImplementationOnce(async () => {
+      current = false
+      return 'not_subscribed'
+    })
+    const actions = createBellLiveActionHandler(callSid)
+    expect(
+      await actions.execute(
+        'subscribe_caller',
+        { confirmed: false },
+        1,
+        () => current
+      )
+    ).toMatchObject({ status: 'cancelled' })
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    expect(findOrCreatePhoneWebhookEvent).not.toHaveBeenCalled()
   })
 
   it('marks handoff before redirecting and never repeats a successful redirect', async () => {

@@ -172,6 +172,15 @@ describe('missed call email', () => {
     expect(text).toContain('Call SID: CA456')
     expect(text).toContain('Greeting played:')
   })
+
+  it('omits the greeting when Bell will select and speak it later', () => {
+    const bellCall = { ...input, greeting: undefined }
+    expect(renderMissedCallEmail(bellCall)).not.toContain('Greeting played')
+    const text = renderMissedCallText(bellCall)
+    expect(text).toContain('Incoming call')
+    expect(text).not.toContain('Greeting played')
+    expect(text).not.toContain('undefined')
+  })
 })
 
 describe('incoming sms email', () => {

@@ -67,7 +67,7 @@ export async function POST(request: Request): Promise<Response> {
   // hangupOnStar ends the SIP leg with "completed", too. Keep the parent
   // call alive for manual choices; no keypad input still leads to voicemail.
   return twimlResponse(
-    phoneKeypadTwiml(form, {
+    await phoneKeypadTwiml(form, {
       bellUnavailable: dialCallStatus !== 'completed',
       requestUrl: request.url,
     })

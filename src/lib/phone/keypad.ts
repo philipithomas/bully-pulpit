@@ -1,5 +1,6 @@
 import { siteConfig } from '@/lib/config'
 import { phoneBellLiveConfigured } from '@/lib/phone/bell-live'
+import { callerSubscriptionStatus } from '@/lib/phone/caller-subscription'
 import { sitePhoneNumber } from '@/lib/phone/config'
 import { PHONE_IVR_FALLBACK_PROMPTS } from '@/lib/phone/ivr-audio'
 import { voiceMenuTwiml, voicemailTwiml } from '@/lib/phone/twiml'
@@ -11,10 +12,10 @@ import {
 } from '@/lib/phone/webhook-metadata'
 
 /** Used only after validating Twilio's signature on the complete form. */
-export function phoneKeypadTwiml(
+export async function phoneKeypadTwiml(
   form: FormData,
   options: { bellUnavailable?: boolean; requestUrl?: string } = {}
-): string {
+): Promise<string> {
   const from = String(form.get('From') ?? 'Unknown')
   const to = String(form.get('To') ?? 'Unknown')
   const metadata = options.requestUrl
@@ -23,11 +24,15 @@ export function phoneKeypadTwiml(
   const callbackUrls = voicemailCallbackUrls({ from, to, metadata })
   const bellAvailable = phoneBellLiveConfigured()
   const smsAvailable = Boolean(sitePhoneNumber())
+  const subscriptionStatus = smsAvailable
+    ? await callerSubscriptionStatus(from)
+    : 'unknown'
+  const offerSignup = smsAvailable && subscriptionStatus !== 'subscribed'
   const greeting = options.bellUnavailable
     ? PHONE_IVR_FALLBACK_PROMPTS.bellUnavailable
     : undefined
 
-  if (!bellAvailable && !smsAvailable) {
+  if (!bellAvailable && !offerSignup) {
     return voicemailTwiml({
       greeting,
       greetingFallback: 'bellUnavailable',
@@ -39,7 +44,7 @@ export function phoneKeypadTwiml(
     greeting,
     greetingFallback: 'bellUnavailable',
     menuPrompt: bellAvailable
-      ? smsAvailable
+      ? offerSignup
         ? 'menuWithBell'
         : 'bellMenu'
       : 'menu',

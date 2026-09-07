@@ -3,11 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from '@/app/api/openai/realtime-call/route'
 import { bellLiveSipUri } from '@/lib/phone/bell-live'
 import * as bellLiveActions from '@/lib/phone/bell-live-actions'
+import { bellLiveCallerSubscriptionStatus } from '@/lib/phone/bell-live-caller'
+import { phoneBellInitialGreeting } from '@/lib/phone/bell-live-greeting'
 import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 import { FakeOpenAiRealtimeWebSocket } from '@/test/fake-openai-realtime-websocket'
 
 const afterTasks = vi.hoisted(() => [] as Array<() => Promise<void>>)
 const afterControl = vi.hoisted(() => ({ throwOnSchedule: false }))
+
+vi.mock('@/lib/phone/bell-live-caller', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/phone/bell-live-caller')>()),
+  bellLiveCallerSubscriptionStatus: vi.fn(),
+}))
 
 vi.mock('next/server', async (importOriginal) => {
   const actual = await importOriginal<typeof import('next/server')>()
@@ -130,6 +137,8 @@ function greetingRequests() {
 }
 
 beforeEach(() => {
+  vi.mocked(bellLiveCallerSubscriptionStatus).mockReset()
+  vi.mocked(bellLiveCallerSubscriptionStatus).mockResolvedValue('unknown')
   afterTasks.length = 0
   afterControl.throwOnSchedule = false
   FakeOpenAiRealtimeWebSocket.afterContinuationEventBatches = []
@@ -193,6 +202,49 @@ afterEach(() => {
 })
 
 describe('POST /api/openai/realtime-call', () => {
+  it.each([
+    'subscribed',
+    'not_subscribed',
+    'unknown',
+  ] as const)('uses the verified caller status %s in both the accepted session and opening', async (status) => {
+    vi.mocked(bellLiveCallerSubscriptionStatus).mockResolvedValue(status)
+    const fetchMock = vi.fn(
+      async (_url: unknown, _init?: RequestInit) =>
+        new Response(null, { status: 200 })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await postAndFlush(signedRequest(incomingEvent()))).status).toBe(
+      204
+    )
+    expect(bellLiveCallerSubscriptionStatus).toHaveBeenCalledExactlyOnceWith(
+      CALL_SID
+    )
+    const session = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+    const statusText =
+      status === 'subscribed'
+        ? 'has a confirmed subscription'
+        : status === 'not_subscribed'
+          ? 'has no confirmed subscription'
+          : 'could not be determined'
+    expect(session.instructions).toContain(statusText)
+    expect(greetingRequests()).toEqual([
+      expect.objectContaining({
+        response: expect.objectContaining({
+          instructions: `Say exactly: "${phoneBellInitialGreeting(new Date(), status)}" Do not add anything else.`,
+        }),
+      }),
+    ])
+  })
+
+  it('does not look up caller status for an unauthenticated webhook or SIP invitation', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await POST(signedRequest(incomingEvent(), false))).status).toBe(401)
+    expect((await POST(signedRequest(incomingEvent([])))).status).toBe(204)
+    expect(bellLiveCallerSubscriptionStatus).not.toHaveBeenCalled()
+    expect(greetingRequests()).toHaveLength(0)
+  })
+
   it('returns a silently interrupted call to the keypad within the first-audio deadline', async () => {
     vi.useFakeTimers()
     const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))

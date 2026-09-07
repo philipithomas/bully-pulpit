@@ -6,6 +6,7 @@ import {
   claimPhoneWebhookEvent,
   claimPhoneWebhookEventAttempt,
   findOrCreatePhoneWebhookEvent,
+  findPhoneWebhookEventByKey,
   markPhoneWebhookEventProcessed,
   markPhoneWebhookEventSideEffectObserved,
   releasePhoneWebhookEvent,
@@ -14,6 +15,43 @@ import { phoneWebhookEvents } from '@/lib/db/schema'
 import { db, resetDb } from '@/test/integration/db'
 
 afterEach(() => vi.useRealTimers())
+
+describe('read-only phone webhook lookup', () => {
+  it('returns null without creating an event when its exact key is absent', async () => {
+    await resetDb()
+    expect(await findPhoneWebhookEventByKey('voice-menu:CA123:2')).toBeNull()
+    expect(await db.select().from(phoneWebhookEvents)).toEqual([])
+  })
+
+  it('reads exact per-call retry state without changing leases or completion', async () => {
+    await resetDb()
+    const events = await db
+      .insert(phoneWebhookEvents)
+      .values([
+        {
+          eventKey: 'voice-menu:CA123:2',
+          eventType: 'voice-menu',
+          processingAt: new Date('2026-09-07T12:00:00Z'),
+        },
+        {
+          eventKey: 'voice-menu:CA123:3',
+          eventType: 'voice-menu',
+          processedAt: new Date('2026-09-07T12:01:00Z'),
+        },
+        {
+          eventKey: 'voice-menu:CA456:2',
+          eventType: 'voice-menu-existing',
+        },
+      ])
+      .returning()
+
+    for (const event of events) {
+      expect(await findPhoneWebhookEventByKey(event.eventKey)).toEqual(event)
+    }
+    expect(await findPhoneWebhookEventByKey('voice-menu:CA789:2')).toBeNull()
+    expect(await db.select().from(phoneWebhookEvents)).toEqual(events)
+  })
+})
 
 describe('phone webhook event completion', () => {
   it('replays a lost step acknowledgement without admitting another run', async () => {
