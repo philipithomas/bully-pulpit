@@ -48,6 +48,7 @@ describe('cronHealthSnapshot', () => {
       'pending',
       'pending',
       'pending',
+      'pending',
     ])
   })
 
@@ -75,6 +76,7 @@ describe('cronHealthSnapshot', () => {
       'healthy',
       'running',
       'failing',
+      'missing',
     ])
     expect(snapshot.jobs[2].lastFailureCode).toBe('subscriber_backup_failed')
   })

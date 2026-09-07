@@ -15,7 +15,7 @@ import {
 // Bump this only when intentionally activating a changed fixed-job roster.
 // A stable key ensures an accidentally deleted heartbeat row remains missing
 // and fails health checks rather than receiving a fresh grace period.
-const CRON_HEALTH_ACTIVATION_KEY = 'fixed-jobs-v1'
+const CRON_HEALTH_ACTIVATION_KEY = 'fixed-jobs-v2'
 
 function greatestTimestamp(column: typeof cronJobHealth.updatedAt, at: Date) {
   return sql<Date>`GREATEST(${column}, ${at})`

@@ -33,6 +33,33 @@ describe('cron job health persistence', () => {
     expect(activationsCreatedByMigrations).toEqual([])
   })
 
+  it('activates the new report while preserving the previous roster grace periods', async () => {
+    const old = new Date('2026-09-01T12:00:00Z')
+    await db
+      .insert(cronJobHealthActivations)
+      .values({ activationKey: 'fixed-jobs-v1', activatedAt: old })
+    await db
+      .insert(cronJobHealth)
+      .values(
+        ['suppression-sync', 'bell-retention', 'subscriber-backup'].map(
+          (jobName) => ({ jobName, monitoringStartedAt: old, updatedAt: old })
+        )
+      )
+    const rows = await listCronJobHealth()
+    expect(rows).toHaveLength(4)
+    expect(
+      rows
+        .find((row) => row.jobName === 'morning-report')!
+        .monitoringStartedAt.getTime()
+    ).toBeGreaterThan(old.getTime())
+    expect(
+      rows
+        .filter((row) => row.jobName !== 'morning-report')
+        .every((row) => row.monitoringStartedAt.getTime() === old.getTime())
+    ).toBe(true)
+    expect(await db.select().from(cronJobHealthActivations)).toHaveLength(2)
+  })
+
   it('keeps preview health reads read-only', async () => {
     vi.stubEnv('VERCEL_ENV', 'preview')
 
@@ -92,6 +119,7 @@ describe('cron job health persistence', () => {
     const rows = await listCronJobHealth()
     expect(rows.map((row) => row.jobName)).toEqual([
       'bell-retention',
+      'morning-report',
       'subscriber-backup',
       'suppression-sync',
     ])
@@ -113,10 +141,11 @@ describe('cron job health persistence', () => {
     const activations = await db.select().from(cronJobHealthActivations)
 
     expect(activations).toEqual([
-      expect.objectContaining({ activationKey: 'fixed-jobs-v1' }),
+      expect.objectContaining({ activationKey: 'fixed-jobs-v2' }),
     ])
     expect(rows.map((row) => row.jobName)).toEqual([
       'bell-retention',
+      'morning-report',
       'subscriber-backup',
       'suppression-sync',
     ])
@@ -141,10 +170,10 @@ describe('cron job health persistence', () => {
       .from(cronJobHealth)
       .orderBy(cronJobHealth.jobName)
 
-    expect(first).toHaveLength(3)
-    expect(second).toHaveLength(3)
+    expect(first).toHaveLength(4)
+    expect(second).toHaveLength(4)
     expect(activations).toHaveLength(1)
-    expect(storedRows).toHaveLength(3)
+    expect(storedRows).toHaveLength(4)
     for (const row of storedRows) {
       expect(row.monitoringStartedAt).toEqual(activations[0]?.activatedAt)
     }
@@ -162,7 +191,7 @@ describe('cron job health persistence', () => {
     const rows = await listCronJobHealth()
     const suppression = rows.find((row) => row.jobName === 'suppression-sync')
 
-    expect(rows).toHaveLength(3)
+    expect(rows).toHaveLength(4)
     expect(suppression).toEqual(
       expect.objectContaining({ monitoringStartedAt, lastSucceededAt })
     )
@@ -179,6 +208,7 @@ describe('cron job health persistence', () => {
 
     expect(rows.map((row) => row.jobName)).toEqual([
       'bell-retention',
+      'morning-report',
       'suppression-sync',
     ])
     expect(snapshot.ok).toBe(false)
@@ -198,7 +228,7 @@ describe('cron job health persistence', () => {
     await markCronJobStarted('subscriber-backup', startedAt)
 
     const rows = await listCronJobHealth()
-    expect(rows).toHaveLength(3)
+    expect(rows).toHaveLength(4)
     expect(rows.find((row) => row.jobName === 'subscriber-backup')).toEqual(
       expect.objectContaining({
         monitoringStartedAt: startedAt,

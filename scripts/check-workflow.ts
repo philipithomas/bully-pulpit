@@ -222,4 +222,23 @@ if (process.env.CHECK_VERCEL_WORKFLOW_OUTPUT === '1') {
   }
 }
 
+assertExport(
+  manifest.workflows,
+  'src/workflows/morning-report.ts',
+  'morningReportWorkflow',
+  'workflows'
+)
+for (const name of [
+  'acceptReport',
+  'prepareReport',
+  'composeReport',
+  'persistReport',
+  'sendReport',
+  'recordDelivery',
+  'finishReport',
+  'failReport',
+]) {
+  assertExport(manifest.steps, 'src/workflows/morning-report.ts', name, 'steps')
+}
+
 console.log('[workflow:check] Workflow handlers and queue triggers are present')
