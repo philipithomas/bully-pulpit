@@ -63,7 +63,7 @@ describe('deleteSuppressedDestination', () => {
 })
 
 describe('sendNewsletterEmail', () => {
-  it('appends the unsubscribe link and postal address to the text part', async () => {
+  it('appends token-preserving management and unsubscribe links to the text part', async () => {
     await sendNewsletterEmail({
       to: 'reader@example.com',
       subject: 'Hello',
@@ -76,6 +76,9 @@ describe('sendNewsletterEmail', () => {
     const command = sesSend.mock.calls[0][0] as SendEmailCommand
     const text = command.input.Content?.Simple?.Body?.Text?.Data ?? ''
     expect(text).toContain('Hello\n\n--\n')
+    expect(text).toContain(
+      'Manage subscriptions: https://www.philipithomas.com/unsubscribe?token=abc#newsletters'
+    )
     expect(text).toContain(
       'Unsubscribe: https://www.philipithomas.com/unsubscribe?token=abc'
     )

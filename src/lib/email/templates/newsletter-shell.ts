@@ -1,6 +1,7 @@
 import { siteConfig } from '@/lib/config'
 import type { NewsletterSlug } from '@/lib/db/queries/subscribers'
 import { escapeHtml } from '@/lib/email/escape'
+import { emailPreferencesUrl } from '@/lib/email/preferences-link'
 import { isPhotoNewsletter } from '@/lib/newsletters'
 import {
   type TidbitsPalette,
@@ -125,6 +126,7 @@ export function renderNewsletterShell(input: {
       : DEFAULT_DARK_ACCENT
   const year = new Date().getFullYear()
   const unsubscribeUrl = escapeHtml(input.unsubscribeUrl)
+  const preferencesUrl = escapeHtml(emailPreferencesUrl(input.unsubscribeUrl))
   const previewText = input.previewText ? escapeHtml(input.previewText) : ''
 
   const preheader = previewText
@@ -224,6 +226,8 @@ ${preheader}
         <tr>
           <td class="email-footer" style="text-align: center; padding: 16px 0;">
             <p style="margin: 0 0 8px; font-size: 11px; color: ${footerColor};">
+              <a href="${preferencesUrl}" style="color: ${footerColor}; text-decoration: underline;">Manage subscriptions</a>
+              &nbsp;&middot;&nbsp;
               <a href="${unsubscribeUrl}" style="color: ${footerColor}; text-decoration: underline;">Unsubscribe</a>
             </p>
             <p style="margin: 0; font-size: 11px; line-height: 1.5; color: ${footerColor};">
