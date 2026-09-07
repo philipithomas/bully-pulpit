@@ -15,7 +15,7 @@ import {
 const LEGACY_MARKDOWN_SHA256 = {
   diction: 'd50ccf03550871aee256eb60643823a228480c3e7efcc4861394654d856c2dae',
   contraptions:
-    'e2a9d277dd2c7b8c9f33f79463ba721647b004c24ce799da786856fbc04d7ee9',
+    '2ae79f2fe3f10ccfd62e617628831b367859933ddb06235c6e952f73dd8ccb0e',
 } as const
 
 describe('structured collections', () => {
@@ -31,7 +31,7 @@ describe('structured collections', () => {
 
   it('includes every current entry', () => {
     expect(getCollection('diction').entries).toHaveLength(152)
-    expect(getCollection('contraptions').entries).toHaveLength(75)
+    expect(getCollection('contraptions').entries).toHaveLength(76)
   })
 
   it('has valid, unique terms and durable anchors', () => {

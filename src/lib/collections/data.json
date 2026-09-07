@@ -1504,6 +1504,14 @@
           "label": "Wikipedia",
           "href": "https://en.wikipedia.org/wiki/Ansatz"
         }
+      },
+      {
+        "term": "Stencil",
+        "definition": "a thin template with cut-out openings used to reproduce a design by applying pigment to another surface.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Stencil"
+        }
       }
     ]
   }
