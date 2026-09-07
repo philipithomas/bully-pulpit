@@ -8,13 +8,17 @@ import {
   listPostsOutputSchema,
   listPublicPosts,
   MCP_LIST_MAX_POSTS,
+  MCP_SEARCH_EXCERPT_MAX_CHARACTERS,
   MCP_SEARCH_MAX_CHARACTERS,
+  MCP_SEARCH_MAX_EXCERPTS,
+  MCP_SEARCH_MAX_RESULTS,
   McpContentNotFoundError,
   searchInputSchema,
   searchOutputSchema,
   searchPublicContent,
 } from '@/lib/mcp/content-tools'
 import { buildCorpus } from '@/lib/search/corpus'
+import * as hybridSearch from '@/lib/search/hybrid'
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -74,6 +78,98 @@ describe('MCP public content helpers', () => {
         url: 'https://www.philipithomas.com/mcp-and-the-future-of-ai',
       })
     )
+    expect(() => searchOutputSchema.parse(output)).not.toThrow()
+  })
+
+  it.each([
+    {
+      query: 'noma',
+      sources: [
+        { id: 'stargazing', evidence: 'My personal top list Noma' },
+        { id: '2024-05', evidence: 'Noma pop-up in NYC' },
+      ],
+    },
+    {
+      query: 'Stripe',
+      sources: [
+        { id: 'stripe-projects-launch', evidence: 'Stripe Projects' },
+        { id: 'bts-find-api', evidence: 'usage-based billing' },
+      ],
+    },
+  ])('exposes distinct source evidence for a $query synthesis', async ({
+    query,
+    sources,
+  }) => {
+    const output = await searchPublicContent(query, { useVector: false })
+
+    for (const { id, evidence } of sources) {
+      const result = output.results.find((candidate) => candidate.id === id)
+      expect(result, id).toBeDefined()
+      expect(
+        result?.excerpts
+          .map((excerpt) => excerpt.text)
+          .join('\n')
+          .replace(/\s+/g, ' ')
+      ).toContain(evidence)
+      expect(result?.type).toBe(id === 'stargazing' ? 'page' : 'post')
+      expect(result?.newsletter).toBeTruthy()
+    }
+    expect(() => searchOutputSchema.parse(output)).not.toThrow()
+  })
+
+  it('retains dates and absolute section URLs with source excerpts', async () => {
+    const output = await searchPublicContent('noma', { useVector: false })
+    const post = output.results.find((result) => result.id === '2026-09')
+    const page = output.results.find((result) => result.id === 'stargazing')
+
+    expect(post?.publishedAt).toMatch(/^2026-09-\d{2}$/)
+    expect(post?.excerpts).toContainEqual(
+      expect.objectContaining({
+        section: {
+          heading: 'What I did in August',
+          url: 'https://www.philipithomas.com/2026-09#what-i-did-in-august',
+        },
+      })
+    )
+    expect(page?.publishedAt).toBeNull()
+  })
+
+  it('bounds retrieval context and marks shortened excerpts', async () => {
+    const result: hybridSearch.HybridSearchResult = {
+      type: 'post',
+      id: 'example',
+      slug: 'example',
+      title: 'Example',
+      url: '/example',
+      newsletter: 'workshop',
+      publishedAt: '2026-09-01',
+      coverImage: '',
+      images: [],
+      score: 1,
+      excerpts: [
+        { text: '  \n  ' },
+        ...Array.from({ length: MCP_SEARCH_MAX_EXCERPTS + 1 }, () => ({
+          text: 'x'.repeat(MCP_SEARCH_EXCERPT_MAX_CHARACTERS + 1),
+          section: { heading: 'Details', url: '/example#details' },
+        })),
+      ],
+    }
+    vi.spyOn(hybridSearch, 'hybridSearchPosts').mockResolvedValueOnce({
+      mode: 'hybrid',
+      results: Array.from({ length: MCP_SEARCH_MAX_RESULTS + 1 }, () => result),
+    })
+
+    const output = await searchPublicContent('example')
+
+    expect(output.results).toHaveLength(MCP_SEARCH_MAX_RESULTS)
+    expect(output.results[0]?.excerpts).toHaveLength(MCP_SEARCH_MAX_EXCERPTS)
+    expect(output.results[0]?.excerpts[0]).toEqual({
+      text: `${'x'.repeat(MCP_SEARCH_EXCERPT_MAX_CHARACTERS - 1)}…`,
+      section: {
+        heading: 'Details',
+        url: 'https://www.philipithomas.com/example#details',
+      },
+    })
     expect(() => searchOutputSchema.parse(output)).not.toThrow()
   })
 
