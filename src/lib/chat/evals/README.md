@@ -63,7 +63,9 @@ WORKFLOW_SMOKE_MODE=bell WORKFLOW_SMOKE_BASE_URL=https://<deployment> pnpm workf
 This manual, CRON_SECRET-protected check executes the actual SMS model configuration
 and a homepage tool read through Vercel Workflow. It requires a complete answer
 and zero data retention on every model step. It sends no messages and reads no
-stored conversations. The default smoke command remains a no-op queue check.
+stored conversations. The existing GitHub production-health job runs this Bell
+check after successful production deployments when PRODUCTION_CRON_SECRET is
+configured. The default smoke command remains a no-op queue check.
 
 Research evaluations use the production retry, token, step, and time budgets.
 The last step or final 90 seconds are reserved for synthesis; SMS formatting

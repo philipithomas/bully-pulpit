@@ -38,15 +38,15 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run Workflow smoke test
+      - name: Verify Bell generation through Workflow
         if: steps.config.outputs.configured == 'true'
         env:
           CRON_SECRET: ${{ secrets.PRODUCTION_CRON_SECRET }}
         run: |
-          curl --silent --show-error --fail-with-body --max-time 30 \
+          curl --silent --show-error --fail-with-body --max-time 175 \
             --request POST \
             --header "Authorization: Bearer $CRON_SECRET" \
-            "$PRODUCTION_URL/api/cron/workflow-smoke"
+            "$PRODUCTION_URL/api/cron/workflow-smoke?mode=bell"
 
   cron-dead-man:
     name: Scheduled cron dead-man check

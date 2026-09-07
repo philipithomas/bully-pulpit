@@ -156,8 +156,10 @@ export const bellEvalCases: readonly BellEvalCase[] = [
       expectedUrls: ['/stargazing', '/2024-05'],
     },
     review: [
-      'Searches the archive even though the current page contains one answer.',
+      'Starts with a short search for noma itself, even though the current page contains one answer.',
+      'Reads /stargazing and /2024-05 as well as relevant craft coverage; does not stop with only craft essays.',
       'Reads multiple sources that add distinct perspectives on noma.',
+      'Does not assert that the archive has no restaurant review or food opinions; uses the retrieved restaurant entry and visit account.',
       "Synthesizes Philip's craft ideas, personal experiences, and preferences.",
     ],
   },
@@ -177,7 +179,7 @@ export const bellEvalCases: readonly BellEvalCase[] = [
       expectedUrls: ['/stripe-projects-launch', '/agent-experience'],
     },
     review: [
-      'Uses one broad archive search rather than redundant rephrasings.',
+      'Starts with the name Stripe, then researches material gaps with distinct targeted searches as needed.',
       'Reads multiple sources covering both Stripe Projects and earlier uses.',
       'Produces a coherent synthesis instead of an unfiltered mention dump.',
     ],
