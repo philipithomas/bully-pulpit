@@ -32,7 +32,10 @@ const ORIGINAL_OPENAI_BASE_URL = process.env.OPENAI_BASE_URL
 
 function sentResponseEvents() {
   return FakeOpenAiRealtimeWebSocket.sentEvents.filter(
-    (event) => (event as { type?: string }).type === 'response.create'
+    (event) =>
+      (event as { type?: string }).type === 'response.create' &&
+      (event as { response?: { metadata?: { purpose?: string } } }).response
+        ?.metadata?.purpose !== 'bell_opening_caller_turn'
   )
 }
 

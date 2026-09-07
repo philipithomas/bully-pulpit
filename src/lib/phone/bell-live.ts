@@ -738,6 +738,10 @@ export type BellLiveLifecycleEvent =
       outcome: 'completed' | 'failed'
       socketCloseCode: number | null
     }
+  | {
+      event: 'bell_live.opening_recovery'
+      outcome: 'superseded'
+    }
 
 interface BellLiveResponseProfile {
   hasPostToolAudio: boolean
@@ -930,7 +934,11 @@ export async function startBellLiveGreeting(
     let observerErrorGeneration = 0
     let callerSpeechGeneration = 0
     let callerSpeaking = false
-    let pendingOpeningCallerTurn = false
+    // A caller may have finished speaking before this sideband attached.
+    // Start with unknown history pending, then let observed speech/responses
+    // supersede it while the opener plays.
+    let pendingOpeningCallerTurn = true
+    let openingCallerResponseEventId: string | null = null
     let turnDetectionRestoreRequested = false
     let turnDetectionRestored = false
     let completedGreeting: BellLiveGreetingResult | null = null
@@ -1597,9 +1605,12 @@ export async function startBellLiveGreeting(
       }
       pendingOpeningCallerTurn = false
       try {
+        openingCallerResponseEventId = `evt_bell_opening_${randomUUID()}`
         connection.send({
+          event_id: openingCallerResponseEventId,
           type: 'response.create',
           response: {
+            instructions: `${PHONE_BELL_INSTRUCTIONS}\n\nAFTER THE OPENING\nRespond to the latest actual caller input already in the conversation, including any input that arrived before the opening greeting or before this control connection attached. Do not repeat the opening. The assistant's opening and its examples are not caller requests. If there is no caller input, say exactly "How can I help?" and wait.`,
             metadata: { purpose: 'bell_opening_caller_turn' },
             output_modalities: ['audio'],
           },
@@ -2027,6 +2038,20 @@ export async function startBellLiveGreeting(
       })()
     })
     connection.on('error', (error) => {
+      // Automatic VAD may start a response before its response.created event
+      // reaches this socket. Only this correlated startup race is harmless.
+      if (
+        openingCallerResponseEventId &&
+        error.error?.event_id === openingCallerResponseEventId &&
+        error.error.code === 'conversation_already_has_active_response'
+      ) {
+        openingCallerResponseEventId = null
+        emitLifecycle({
+          event: 'bell_live.opening_recovery',
+          outcome: 'superseded',
+        })
+        return
+      }
       observerHadError = true
       observerErrorGeneration += 1
       const providerCode = safeProviderIdentifier(error.error?.code)
