@@ -22,6 +22,7 @@ export const PHONE_IVR_FALLBACK_PROMPTS = {
   subscribed:
     'You are subscribed to new-post texts from philipithomas.com. Text STOP to unsubscribe or HELP for help. Goodbye.',
   voicemail: 'Leave a message after the tone.',
+  voicemailRecorded: 'Your voicemail has been recorded. Thank you. Goodbye.',
 } as const
 
 export type PhoneIvrFallbackKey = keyof typeof PHONE_IVR_FALLBACK_PROMPTS
