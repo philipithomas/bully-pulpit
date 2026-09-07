@@ -1101,6 +1101,35 @@ describe('Bell Live private action dispatch', () => {
     expect(continuations()).toHaveLength(0)
   })
 
+  it('does not recover an empty response while a voicemail action is pending or handed off', async () => {
+    const { socket, execute, hasHandedOff, greeting } = await startController()
+    const action = deferred<BellLiveActionResult>()
+    execute.mockReturnValueOnce(action.promise)
+    startCallerResponse(socket)
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_stopped' })
+    completeResponse(socket, [
+      functionCall('voicemail_call', 'start_voicemail', '{}'),
+    ])
+    await flushDispatch()
+    const emptyResponse = (id: string) => {
+      socket.emitServerEvent({
+        type: 'response.created',
+        response: { id, status: 'in_progress' },
+      })
+      completeResponse(socket, [], id)
+    }
+    emptyResponse('response_while_pending')
+    expect(continuations()).toHaveLength(0)
+
+    hasHandedOff.mockReturnValue(true)
+    emptyResponse('response_while_handing_off')
+    expect(continuations()).toHaveLength(0)
+    action.resolve({ status: 'handed_off', message: 'Voicemail is starting.' })
+    await greeting.conversation
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(continuations()).toHaveLength(0)
+  })
+
   it.each([
     'archive first',
     'action first',

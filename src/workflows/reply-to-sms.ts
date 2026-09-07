@@ -1,4 +1,6 @@
-import { getStepMetadata, RetryableError } from 'workflow'
+import { getStepMetadata, getWorkflowMetadata, RetryableError } from 'workflow'
+import { setBellGenerationWorkflowRunId } from '@/lib/db/queries/bell-generations'
+import { markPhoneWebhookEventProcessed } from '@/lib/db/queries/phone-webhook-events'
 import { findTextMessageById } from '@/lib/db/queries/text-messages'
 import {
   type BellSmsGenerationResult,
@@ -19,6 +21,34 @@ const FALLBACK_BELL_SMS_BODY = fixedBellSmsBody(
   'I could not answer that right now. Please try again.'
 )
 
+/** Only the durable owner of the webhook may generate or send a reply. */
+export async function acceptBellSmsWebhookStep(
+  input: BellSmsInput,
+  workflowRunId: string
+): Promise<boolean> {
+  'use step'
+  if (!(await findTextMessageById(input.inboundMessageId))) return false
+  // Older queued inputs predate the lease handoff. New routes always supply
+  // both fields; reject partial/invalid claims instead of authorizing them.
+  if (input.webhookEventId !== undefined || input.webhookLease !== undefined) {
+    if (input.webhookEventId === undefined || !input.webhookLease) return false
+    const lease = new Date(input.webhookLease)
+    if (Number.isNaN(lease.getTime())) return false
+    const accepted = await markPhoneWebhookEventProcessed(
+      input.webhookEventId,
+      lease,
+      getStepMetadata().stepId
+    )
+    if (!accepted) return false
+  }
+  // A lost acknowledgement retries this same step ID, which can recover the
+  // consumed lease without letting another workflow become a second winner.
+  await setBellGenerationWorkflowRunId(input.generationId, workflowRunId)
+  return true
+}
+
+acceptBellSmsWebhookStep.maxRetries = 5
+
 /** Generates the stable body once so delivery retries do not rewrite it. */
 export async function generateBellSmsStep(
   input: BellSmsInput
@@ -27,14 +57,25 @@ export async function generateBellSmsStep(
   console.log(
     `[replyToSms] generate START inboundMessageId=${input.inboundMessageId}`
   )
-  const body = await generateBellSmsBody(input)
+  let body: BellSmsGenerationResult
+  try {
+    body = await generateBellSmsBody(input)
+  } catch (error) {
+    const { attempt } = getStepMetadata()
+    // SDK retries repair individual requests. A durable retry also recovers
+    // whole-loop timeouts and temporary database outages without rapid loops.
+    throw new RetryableError(
+      error instanceof Error ? error.message : String(error),
+      { retryAfter: Math.min(120_000, 2 ** attempt * 5_000) }
+    )
+  }
   console.log(
     `[replyToSms] generate DONE inboundMessageId=${input.inboundMessageId}`
   )
   return body
 }
 
-generateBellSmsStep.maxRetries = 2
+generateBellSmsStep.maxRetries = 3
 
 /** Delivers the generated body; the durable result is recorded separately. */
 export async function sendBellSmsStep(
@@ -129,6 +170,14 @@ export async function replyToSmsWorkflow(input: BellSmsInput): Promise<void> {
   console.log(
     `[replyToSmsWorkflow] START inboundMessageId=${input.inboundMessageId}`
   )
+  if (
+    !(await acceptBellSmsWebhookStep(
+      input,
+      getWorkflowMetadata().workflowRunId
+    ))
+  ) {
+    return
+  }
 
   let generated: BellSmsGenerationResult
   try {

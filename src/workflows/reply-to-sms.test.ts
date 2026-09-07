@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('workflow', async (importActual) => {
   const actual = await importActual<typeof import('workflow')>()
-  return { ...actual, getStepMetadata: vi.fn() }
+  return {
+    ...actual,
+    getStepMetadata: vi.fn(),
+    getWorkflowMetadata: vi.fn(() => ({ workflowRunId: 'wrun_sms' })),
+  }
 })
 vi.mock('@/lib/phone/bell-sms', () => ({
   generateBellSmsBody: vi.fn(),
@@ -12,11 +16,19 @@ vi.mock('@/lib/phone/bell-sms', () => ({
 vi.mock('@/lib/db/queries/text-messages', () => ({
   findTextMessageById: vi.fn(),
 }))
+vi.mock('@/lib/db/queries/phone-webhook-events', () => ({
+  markPhoneWebhookEventProcessed: vi.fn(),
+}))
+vi.mock('@/lib/db/queries/bell-generations', () => ({
+  setBellGenerationWorkflowRunId: vi.fn(),
+}))
 vi.mock('@/lib/phone/notifications', () => ({
   sendIncomingSmsNotification: vi.fn(),
 }))
 
 import { getStepMetadata, RetryableError } from 'workflow'
+import { setBellGenerationWorkflowRunId } from '@/lib/db/queries/bell-generations'
+import { markPhoneWebhookEventProcessed } from '@/lib/db/queries/phone-webhook-events'
 import { findTextMessageById } from '@/lib/db/queries/text-messages'
 import {
   generateBellSmsBody,
@@ -27,6 +39,8 @@ import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
 import { sendIncomingSmsNotification } from '@/lib/phone/notifications'
 import { TwilioApiError } from '@/lib/phone/twilio'
 import {
+  acceptBellSmsWebhookStep,
+  generateBellSmsStep,
   recordBellSmsStep,
   replyToSmsWorkflow,
   sendBellSmsStep,
@@ -40,6 +54,8 @@ const INPUT = {
   conversationId: '11111111-1111-4111-8111-111111111111',
   userMessageId: '22222222-2222-4222-8222-222222222222',
   generationId: '33333333-3333-4333-8333-333333333333',
+  webhookEventId: 77,
+  webhookLease: '2026-09-07T12:34:56.789Z',
 }
 
 const GENERATED = {
@@ -88,6 +104,7 @@ beforeEach(() => {
     status: 'queued',
   })
   vi.mocked(findTextMessageById).mockResolvedValue(INBOUND)
+  vi.mocked(markPhoneWebhookEventProcessed).mockResolvedValue(true)
   vi.mocked(recordBellSms).mockResolvedValue(RECORDED)
   vi.mocked(sendIncomingSmsNotification).mockResolvedValue()
 })
@@ -103,6 +120,11 @@ describe('replyToSmsWorkflow', () => {
     await replyToSmsWorkflow(INPUT)
 
     expect(generateBellSmsBody).toHaveBeenCalledWith(INPUT)
+    expect(markPhoneWebhookEventProcessed).toHaveBeenCalledWith(
+      INPUT.webhookEventId,
+      new Date(INPUT.webhookLease),
+      'step-1'
+    )
     expect(sendBellSmsBody).toHaveBeenCalledWith(INPUT, '[Bell AI] Answer')
     expect(recordBellSms).toHaveBeenCalledWith(
       INPUT,
@@ -189,7 +211,19 @@ describe('replyToSmsWorkflow', () => {
 
     await replyToSmsWorkflow(INPUT)
 
+    expect(generateBellSmsBody).not.toHaveBeenCalled()
+    expect(sendBellSmsBody).not.toHaveBeenCalled()
     expect(sendIncomingSmsNotification).not.toHaveBeenCalled()
+  })
+
+  it('stops before generation when another workflow consumed the lease', async () => {
+    vi.mocked(markPhoneWebhookEventProcessed).mockResolvedValue(false)
+
+    await replyToSmsWorkflow(INPUT)
+
+    expect(generateBellSmsBody).not.toHaveBeenCalled()
+    expect(sendBellSmsBody).not.toHaveBeenCalled()
+    expect(setBellGenerationWorkflowRunId).not.toHaveBeenCalled()
   })
 
   it('does not replay Bell when the notification fails', async () => {
@@ -204,6 +238,67 @@ describe('replyToSmsWorkflow', () => {
     expect(sendBellSmsBody).toHaveBeenCalledTimes(1)
     expect(recordBellSms).toHaveBeenCalledTimes(1)
     expect(sendIncomingSmsNotification).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('acceptBellSmsWebhookStep', () => {
+  it('retries bookkeeping with the same stable lease owner', async () => {
+    vi.mocked(setBellGenerationWorkflowRunId).mockRejectedValueOnce(
+      new Error('database acknowledgement lost')
+    )
+
+    await expect(acceptBellSmsWebhookStep(INPUT, 'wrun_sms')).rejects.toThrow(
+      'database acknowledgement lost'
+    )
+    await expect(acceptBellSmsWebhookStep(INPUT, 'wrun_sms')).resolves.toBe(
+      true
+    )
+
+    expect(markPhoneWebhookEventProcessed).toHaveBeenNthCalledWith(
+      2,
+      INPUT.webhookEventId,
+      new Date(INPUT.webhookLease),
+      'step-1'
+    )
+  })
+
+  it('rejects invalid or partial claims without consuming a lease', async () => {
+    await expect(
+      acceptBellSmsWebhookStep(
+        { ...INPUT, webhookLease: 'invalid' },
+        'wrun_sms'
+      )
+    ).resolves.toBe(false)
+    await expect(
+      acceptBellSmsWebhookStep(
+        { ...INPUT, webhookEventId: undefined },
+        'wrun_sms'
+      )
+    ).resolves.toBe(false)
+
+    expect(markPhoneWebhookEventProcessed).not.toHaveBeenCalled()
+    expect(setBellGenerationWorkflowRunId).not.toHaveBeenCalled()
+  })
+})
+
+describe('generateBellSmsStep', () => {
+  it('backs off a whole generation after request retries fail', async () => {
+    vi.mocked(generateBellSmsBody).mockRejectedValueOnce(
+      new Error('temporary gateway outage')
+    )
+
+    const startedAt = Date.now()
+    const error = await generateBellSmsStep(INPUT).catch((error) => error)
+    expect(error).toBeInstanceOf(RetryableError)
+    expect(error).toMatchObject({
+      message: 'temporary gateway outage',
+    })
+    expect(error.retryAfter.getTime()).toBeGreaterThanOrEqual(
+      startedAt + 10_000
+    )
+    expect(error.retryAfter.getTime()).toBeLessThanOrEqual(Date.now() + 10_000)
+    expect(generateBellSmsStep.maxRetries).toBe(3)
+    expect(sendBellSmsBody).not.toHaveBeenCalled()
   })
 })
 

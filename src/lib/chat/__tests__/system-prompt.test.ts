@@ -296,17 +296,23 @@ describe('getSystemPrompt research scope', () => {
     )
   })
 
-  it('keeps cross-post SMS research compact', () => {
+  it('allows deep SMS research while keeping only the final answer compact', () => {
     const prompt = getSystemPrompt({ surface: 'sms' })
 
+    expect(prompt).toContain('For cross-post synthesis, fetch every result')
     expect(prompt).toContain(
-      'For cross-post synthesis, read the 1-2 most useful sources that add distinct evidence'
+      'the SMS size limit applies only to the final prose'
     )
-    expect(prompt).not.toContain('For cross-post synthesis, fetch every result')
-    expect(prompt).not.toContain('reproduce its complete text in order')
-    expect(prompt).not.toContain(
-      'use as many materially useful tool steps and sources as needed'
+    expect(prompt).toContain('Use additional targeted searches')
+    expect(prompt).toContain('Revise a query when its results are poor')
+    expect(prompt).toContain('compare source dates')
+    expect(prompt).toContain('check exceptions or changes of view')
+    expect(prompt).toContain(
+      'A tool error is unavailable evidence, not an empty archive'
     )
+    expect(prompt).not.toContain('read the 1-2 most useful sources')
+    expect(prompt).not.toContain('Run one searchPosts call')
+    expect(prompt).toContain('Reply in one compact plain-text paragraph')
   })
 })
 

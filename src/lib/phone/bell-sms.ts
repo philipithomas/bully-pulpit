@@ -2,13 +2,16 @@ import { generateText } from 'ai'
 import { bucketDuration, bucketTurn } from '@/lib/analytics/events'
 import { trackServerEvent } from '@/lib/analytics/server'
 import {
+  BELL_GENERATION_MAX_RETRIES,
+  BELL_MAX_OUTPUT_TOKENS,
+  BELL_SMS_TIMEOUT_MS,
   bellGatewayCost,
   bellModel,
   bellSmsStopWhen,
   bellTools,
+  createBellPrepareStep,
   getBellProviderOptions,
   getBellReasoning,
-  prepareBellSmsStep,
 } from '@/lib/chat/bell-generation'
 import { smsIdentityHash } from '@/lib/chat/bell-identity'
 import { scrubLeakedToolJson } from '@/lib/chat/scrub-leaked-tool-json'
@@ -41,6 +44,8 @@ export type BellSmsInput = {
   conversationId: string
   userMessageId: string
   generationId: string
+  webhookEventId?: number
+  webhookLease?: string
 }
 
 export type BellSmsGenerationResult = {
@@ -59,7 +64,6 @@ export const BELL_SMS_MAX_UCS2_UNITS = 132
 const MAX_HISTORY_CHARACTERS = 6_000
 const MAX_HISTORY_MESSAGE_CHARACTERS = 1_200
 const MAX_CURRENT_MESSAGE_CHARACTERS = 1_600
-const GENERATION_TIMEOUT_MS = 45_000
 const FALLBACK_TEXT = 'I could not answer that right now. Please try again.'
 const LEGACY_BELL_SMS_COMPLIANCE_FOOTER =
   'philipithomas.com: Reply STOP to end.'
@@ -211,17 +215,20 @@ function stripLegacyBellSmsComplianceFooter(value: string): string {
   return stripped
 }
 
-/** Converts defensive Markdown output to one bounded, prefixed SMS body. */
-export function formatBellSmsBody(markdown: string): string {
+function bellSmsPlaintext(markdown: string): string {
   const scrubbed = scrubLeakedToolJson(markdown)
     .replace(/<((?:https?:\/\/|mailto:)[^>\s]+)>/g, '$1')
     .replace(/~~([^~]+)~~/g, '$1')
-  const plain = stripLegacyBellSmsComplianceFooter(
+  return stripLegacyBellSmsComplianceFooter(
     normalizeSmsTypography(
       markdownToPlaintext(scrubbed, 10_000, { preserveParagraphs: true })
     ).replace(/^\[Bell AI\]\s*/i, '')
   )
-  const content = plain || FALLBACK_TEXT
+}
+
+/** Converts defensive Markdown output to one bounded, prefixed SMS body. */
+export function formatBellSmsBody(markdown: string): string {
+  const content = bellSmsPlaintext(markdown) || FALLBACK_TEXT
   return truncateToSmsBudget(`${BELL_SMS_PREFIX} ${content}`)
 }
 
@@ -276,11 +283,12 @@ export async function generateBellSmsBody(
         surface: 'sms',
         pseudonymousUser: `sms:${smsIdentityHash(input.from)}`,
       }),
-      // Reasoning tokens share this budget. Leave enough room for xhigh
-      // reasoning and tool use; the formatter still caps the delivered SMS.
-      maxOutputTokens: 2048,
-      maxRetries: 0,
-      abortSignal: AbortSignal.timeout(GENERATION_TIMEOUT_MS),
+      // Research and reasoning use a generous budget independently of the
+      // compact SMS answer. Retry failed requests inside the current loop so
+      // a transient Gateway error does not discard earlier research.
+      maxOutputTokens: BELL_MAX_OUTPUT_TOKENS,
+      maxRetries: BELL_GENERATION_MAX_RETRIES,
+      abortSignal: AbortSignal.timeout(BELL_SMS_TIMEOUT_MS),
       runtimeContext: { surface: 'sms' },
       telemetry: {
         isEnabled: true,
@@ -293,8 +301,13 @@ export async function generateBellSmsBody(
       prompt: buildBellSmsPrompt(history),
       tools: bellTools,
       stopWhen: bellSmsStopWhen,
-      prepareStep: prepareBellSmsStep,
+      prepareStep: createBellPrepareStep('sms', startedAt),
     })
+    if (!bellSmsPlaintext(generated.text)) {
+      // Tool calls or reasoning can exhaust a model response without prose.
+      // This is a retryable generation failure, not a successful fixed reply.
+      throw new Error('Bell SMS generation ended without a final answer')
+    }
     const body = formatBellSmsBody(generated.text)
     const assistant = await createBellMessage({
       conversationId: input.conversationId,
@@ -326,13 +339,13 @@ export async function generateBellSmsBody(
       provider: generated.finalStep.model.provider,
       callId: generated.finalStep.callId,
       gatewayGenerationId: gateway.gatewayGenerationId,
-      inputTokens: generated.usage.inputTokens ?? null,
-      outputTokens: generated.usage.outputTokens ?? null,
-      totalTokens: generated.usage.totalTokens ?? null,
+      inputTokens: generated.totalUsage.inputTokens ?? null,
+      outputTokens: generated.totalUsage.outputTokens ?? null,
+      totalTokens: generated.totalUsage.totalTokens ?? null,
       cachedInputTokens:
-        generated.usage.inputTokenDetails.cacheReadTokens ?? null,
+        generated.totalUsage.inputTokenDetails.cacheReadTokens ?? null,
       reasoningTokens:
-        generated.usage.outputTokenDetails.reasoningTokens ?? null,
+        generated.totalUsage.outputTokenDetails.reasoningTokens ?? null,
       costUsd: gateway.costUsd,
       latencyMs: Date.now() - startedAt,
       finishReason: generated.finishReason,
@@ -348,7 +361,12 @@ export async function generateBellSmsBody(
         history.filter((message) => message.direction === 'inbound').length
       ),
     })
-    return { body, assistantMessageId: assistant.message.id }
+    // A retried generation may meet an assistant row committed before a lost
+    // database acknowledgement. Deliver the canonical persisted body.
+    return {
+      body: assistant.inserted ? body : assistant.message.content,
+      assistantMessageId: assistant.message.id,
+    }
   } catch (error) {
     await failBellGeneration(input.generationId, error, Date.now() - startedAt)
     await trackServerEvent(null, 'Bell reply finished', {

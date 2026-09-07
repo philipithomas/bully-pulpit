@@ -17,13 +17,17 @@ vi.mock('@/lib/auth/jwt', async (importOriginal) => {
   return { ...actual, getVerifiedSession: vi.fn(async () => null) }
 })
 vi.mock('@/lib/chat/bell-generation', () => ({
+  BELL_GENERATION_MAX_RETRIES: 2,
+  BELL_MAX_OUTPUT_TOKENS: 32_768,
+  BELL_WEB_TIMEOUT_MS: 720_000,
   bellGatewayCost: vi.fn(),
   bellModel: {},
   bellWebStopWhen: [],
   bellTools: {},
   getBellReasoning: vi.fn(() => 'none'),
   getBellProviderOptions: vi.fn(() => ({})),
-  prepareBellWebStep: vi.fn(),
+  createBellPrepareStep: vi.fn(() => vi.fn()),
+  requireBellAnswer: vi.fn(),
 }))
 vi.mock('@/lib/db/queries/bell-conversations', () => ({
   createWebBellTurn: vi.fn(),
@@ -51,6 +55,10 @@ import {
   createWebBellTurn,
   getOrCreateWebBellConversation,
 } from '@/lib/db/queries/bell-conversations'
+import {
+  completeBellGeneration,
+  failBellGeneration,
+} from '@/lib/db/queries/bell-generations'
 import { checkRateLimitStatus } from '@/lib/rate-limit'
 
 const rateLimit = vi.mocked(checkRateLimitStatus)
@@ -304,6 +312,9 @@ describe('POST /api/chat request bounds', () => {
     expect(model).toHaveBeenCalledWith(
       expect.objectContaining({
         maxOutputTokens: 32_768,
+        maxRetries: 2,
+        timeout: 720_000,
+        experimental_transform: expect.any(Function),
         stopWhen: [],
         prepareStep: expect.any(Function),
       })
@@ -345,6 +356,24 @@ describe('POST /api/chat request bounds', () => {
         part: { type: 'finish', finishReason: 'stop' },
       })
     ).toBeUndefined()
+  })
+
+  it('does not overwrite a stream error with the final provider step outcome', async () => {
+    model.mockReturnValue({
+      toUIMessageStreamResponse: () => new Response('stream'),
+    } as never)
+    await POST(chatRequest(JSON.stringify(validBody)))
+    const callbacks = model.mock.calls[0]?.[0]
+    const error = new Error('Bell generation ended without a final answer')
+    await callbacks?.onError?.({ error })
+    // v7 onEnd exposes the final step's original finish reason, even after a
+    // transform has emitted an error for that empty answer.
+    await (callbacks?.onEnd as (event: unknown) => Promise<void>)({
+      finishReason: 'length',
+      text: '',
+    })
+    expect(failBellGeneration).toHaveBeenCalled()
+    expect(completeBellGeneration).not.toHaveBeenCalled()
   })
 
   it('grounds an explicit passage request and attaches its canonical section', async () => {

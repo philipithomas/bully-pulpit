@@ -15,13 +15,17 @@ import {
   SessionLookupUnavailableError,
 } from '@/lib/auth/jwt'
 import {
+  BELL_GENERATION_MAX_RETRIES,
+  BELL_MAX_OUTPUT_TOKENS,
+  BELL_WEB_TIMEOUT_MS,
   bellGatewayCost,
   bellModel,
   bellTools,
   bellWebStopWhen,
+  createBellPrepareStep,
   getBellProviderOptions,
   getBellReasoning,
-  prepareBellWebStep,
+  requireBellAnswer,
 } from '@/lib/chat/bell-generation'
 import {
   canAppendToWebBellConversation,
@@ -257,7 +261,10 @@ export async function POST(request: Request) {
     }),
     // A final answer may reproduce a complete post or synthesize many tool
     // results. Reasoning and visible prose share this per-step budget.
-    maxOutputTokens: 32_768,
+    maxOutputTokens: BELL_MAX_OUTPUT_TOKENS,
+    maxRetries: BELL_GENERATION_MAX_RETRIES,
+    timeout: BELL_WEB_TIMEOUT_MS,
+    experimental_transform: requireBellAnswer,
     // Stop upstream generation when the visitor hits Stop or disconnects.
     abortSignal: request.signal,
     runtimeContext: { path: path ?? 'unknown' },
@@ -274,12 +281,16 @@ export async function POST(request: Request) {
     messages,
     tools: bellTools,
     stopWhen: bellWebStopWhen,
-    prepareStep: prepareBellWebStep,
+    prepareStep: createBellPrepareStep('web', startedAt),
     onEnd: async (event) => {
       // AI SDK reports provider failures through onError. Do not let the
       // terminal onEnd callback overwrite that authoritative error outcome.
-      if (event.finishReason === 'error') {
-        generationOutcome = 'error'
+      if (
+        event.finishReason === 'error' ||
+        generationOutcome === 'error' ||
+        generationOutcome === 'aborted'
+      ) {
+        if (event.finishReason === 'error') generationOutcome = 'error'
         return
       }
       const gateway = await bellGatewayCost(
@@ -297,12 +308,13 @@ export async function POST(request: Request) {
         provider: event.model.provider,
         callId: event.callId,
         gatewayGenerationId: gateway.gatewayGenerationId,
-        inputTokens: event.usage.inputTokens ?? null,
-        outputTokens: event.usage.outputTokens ?? null,
-        totalTokens: event.usage.totalTokens ?? null,
+        inputTokens: event.totalUsage.inputTokens ?? null,
+        outputTokens: event.totalUsage.outputTokens ?? null,
+        totalTokens: event.totalUsage.totalTokens ?? null,
         cachedInputTokens:
-          event.usage.inputTokenDetails.cacheReadTokens ?? null,
-        reasoningTokens: event.usage.outputTokenDetails.reasoningTokens ?? null,
+          event.totalUsage.inputTokenDetails.cacheReadTokens ?? null,
+        reasoningTokens:
+          event.totalUsage.outputTokenDetails.reasoningTokens ?? null,
         costUsd: gateway.costUsd,
         latencyMs: Date.now() - startedAt,
         finishReason: event.finishReason,
