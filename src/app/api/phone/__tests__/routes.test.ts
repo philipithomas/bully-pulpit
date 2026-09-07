@@ -582,7 +582,44 @@ describe('POST /api/phone/recording-status', () => {
 })
 
 describe('POST /api/phone/recording-complete', () => {
-  it('thanks the caller and hangs up', async () => {
+  const recording = {
+    RecordingDuration: '12',
+    RecordingUrl:
+      'https://api.twilio.com/2010-04-01/Accounts/AC123/Recordings/RE123',
+  }
+
+  it('confirms a captured voicemail before hanging up without requiring status-callback fields', async () => {
+    const response = await recordingCompletePost(
+      twilioPost('/api/phone/recording-complete', recording)
+    )
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(playedTexts(xml)).toEqual([
+      'Your voicemail has been recorded. Thank you. Goodbye.',
+    ])
+    expect(xml.indexOf('</Play>')).toBeLessThan(xml.indexOf('<Hangup/>'))
+  })
+
+  it.each<Record<string, string>>([
+    { RecordingDuration: '0' },
+    { RecordingDuration: '-1' },
+    { RecordingDuration: '1.5' },
+    { RecordingDuration: 'not-a-duration' },
+    { RecordingDuration: '9007199254740992' },
+    { RecordingUrl: '' },
+    { RecordingUrl: 'https://example.com/Recordings/RE123' },
+    { RecordingStatus: 'absent' },
+    { RecordingStatus: 'failed' },
+  ])('does not claim a recorded voicemail for invalid callback data %j', async (invalid) => {
+    const response = await recordingCompletePost(
+      twilioPost('/api/phone/recording-complete', { ...recording, ...invalid })
+    )
+    const xml = await response.text()
+    expect(playedTexts(xml)).toEqual(['Thank you. Goodbye.'])
+    expect(xml).toContain('<Hangup/>')
+  })
+
+  it('uses a neutral goodbye when recording details are missing', async () => {
     const response = await recordingCompletePost(
       twilioPost('/api/phone/recording-complete', {})
     )
@@ -590,5 +627,15 @@ describe('POST /api/phone/recording-complete', () => {
     const xml = await response.text()
     expect(playedTexts(xml)).toEqual(['Thank you. Goodbye.'])
     expect(xml).toContain('<Hangup/>')
+  })
+
+  it('rejects an unsigned recording confirmation', async () => {
+    const response = await recordingCompletePost(
+      twilioPost('/api/phone/recording-complete', recording, {
+        signature: 'invalid',
+      })
+    )
+    expect(response.status).toBe(401)
+    expect(await response.text()).not.toContain('<Play>')
   })
 })
