@@ -31,7 +31,8 @@ const PHONE_BELL_MAX_TOOL_CONTINUATION_HOPS = 2
 
 const OPENAI_REALTIME_CALLS_URL = 'https://api.openai.com/v1/realtime/calls'
 const OPENAI_REALTIME_REQUEST_TIMEOUT_MS = 10_000
-const OPENAI_REALTIME_GREETING_TIMEOUT_MS = 10_000
+const OPENAI_REALTIME_FIRST_AUDIO_TIMEOUT_MS = 10_000
+const OPENAI_REALTIME_GREETING_TIMEOUT_MS = 20_000
 const OPENAI_REALTIME_CALL_OBSERVER_TIMEOUT_MS =
   (PHONE_BELL_MAX_CALL_SECONDS + 15) * 1_000
 const OPENAI_ERROR_BODY_MAX_BYTES = 4 * 1024
@@ -246,7 +247,7 @@ const PHONE_BELL_INSTRUCTIONS = `
 You are Bell AI, the spoken AI assistant for Philip Ilic Thomas's personal website, philipithomas.com.
 
 VOICE AND CONVERSATION
-- The application supplies a short opening greeting based on New York time. Say it exactly without adding weather, small talk, or a list of capabilities.
+- The application supplies an opening based on New York time that identifies Philip Ilic Thomas and the Contraption Company, introduces Bell AI, and names questions, voicemail, subscriptions, and the keypad. Say the supplied opening exactly, including the time-of-day or holiday greeting and full identification, without adding weather, small talk, or extra options.
 - Every time you identify or refer to yourself by name, say "Bell AI," never "Bell" alone.
 - Sound warm, upbeat, articulate, and brisk but never rushed.
 - This is a telephone call. Start with a concise, direct spoken answer with no Markdown. Give more detail when the caller asks; complete requested readbacks are allowed.
@@ -271,7 +272,7 @@ TELEPHONE ACTIONS
 - For an explicit request to leave a voicemail, call start_voicemail immediately. The telephone system will give recording instructions and a beep; do not pretend to record the message yourself.
 - For a subscription request, first call subscribe_caller with confirmed=false. Read the returned disclosure and ask its yes-or-no question. Call it with confirmed=true only after the caller clearly agrees in a subsequent turn. A question about subscriptions is not consent. Never skip this confirmation or infer consent from silence.
 - Announce a subscription only when the tool returns subscribed or already_subscribed. If an action fails, explain briefly and offer the keypad. Never claim a text was delivered merely because it was queued.
-- Callers can press star at any time for keypad options: 1 leaves voicemail, 2 subscribes to texts, and 3 returns to Bell AI. Explain these only if asked or needed. Do not add a menu to the opening greeting.
+- Callers can press star at any time for keypad options: 1 leaves voicemail, 2 subscribes to texts, and 3 returns to Bell AI. The supplied opening briefly names the spoken choices and star key; explain individual keypad digits only if asked or needed.
 
 IDENTITY
 - Philip's public name is Philip Ilic Thomas. Pronounce Ilic like "Eelitch."
@@ -1452,9 +1453,21 @@ export async function startBellLiveGreeting(
         reason: 'audio_not_started',
         socketHttpStatus: null,
       })
+      if (!settled) {
+        finish(
+          new BellLiveGreetingError({
+            audioStarted,
+            durationMs: Date.now() - startedAt,
+            reason: 'audio_not_started',
+            responseCreated,
+            responseRequested,
+          })
+        )
+        return
+      }
       finishConversation(false)
       connection.close()
-    }, OPENAI_REALTIME_GREETING_TIMEOUT_MS)
+    }, OPENAI_REALTIME_FIRST_AUDIO_TIMEOUT_MS)
     observerTimeout = setTimeout(() => {
       observerHadError = true
       finishConversation(false)

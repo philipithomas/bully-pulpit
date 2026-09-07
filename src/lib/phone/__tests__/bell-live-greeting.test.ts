@@ -15,7 +15,7 @@ describe('phoneBellInitialGreeting', () => {
     ['2026-06-02T21:00:00Z', 'Good evening'],
   ])('uses NYC time at %s', (instant, opening) => {
     expect(phoneBellInitialGreeting(new Date(instant))).toBe(
-      `${opening}, this is Bell AI. How can I help? Press star for keypad options.`
+      `${opening}. You've reached Philip Eelitch Thomas and the Contraption Company. This is Bell AI. You can ask me a question, leave a voicemail, or subscribe to new-post texts. Press star for keypad options.`
     )
   })
 
@@ -26,7 +26,7 @@ describe('phoneBellInitialGreeting', () => {
     '2026-11-01T06:00:00Z',
   ])('keeps the local overnight greeting across a DST transition at %s', (instant) => {
     expect(phoneBellInitialGreeting(new Date(instant))).toMatch(
-      /^Good evening,/
+      /^Good evening\./
     )
   })
 
@@ -47,7 +47,7 @@ describe('phoneBellInitialGreeting', () => {
     ['2026-11-19T12:00:00Z', 'Good morning'],
   ])('uses actual NYC holiday dates at %s', (instant, opening) => {
     expect(phoneBellInitialGreeting(new Date(instant))).toMatch(
-      new RegExp(`^${opening},`)
+      new RegExp(`^${opening}\\.`)
     )
   })
 
@@ -55,7 +55,7 @@ describe('phoneBellInitialGreeting', () => {
     vi.useFakeTimers()
     try {
       vi.setSystemTime(new Date('2026-09-07T15:00:00Z'))
-      expect(phoneBellInitialGreeting()).toMatch(/^Happy Labor Day,/)
+      expect(phoneBellInitialGreeting()).toMatch(/^Happy Labor Day\./)
     } finally {
       vi.useRealTimers()
     }

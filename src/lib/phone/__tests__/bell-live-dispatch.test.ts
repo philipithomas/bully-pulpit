@@ -334,7 +334,7 @@ describe('Bell Live private action dispatch', () => {
     socket.acknowledgeSessionUpdates = false
     const close = vi.spyOn(socket, 'close')
 
-    await vi.advanceTimersByTimeAsync(10_000)
+    await vi.advanceTimersByTimeAsync(20_000)
 
     expect(await failure).toMatchObject({
       audioStarted: true,
@@ -342,6 +342,61 @@ describe('Bell Live private action dispatch', () => {
     })
     expect(close).toHaveBeenCalledTimes(1)
     expect(continuations()).toHaveLength(0)
+  })
+
+  it('allows the spoken opener to continue past the first-audio deadline', async () => {
+    vi.useFakeTimers()
+    FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 60_000
+    const pendingGreeting = startBellLiveGreeting('rtc_longer_opening')
+    await vi.advanceTimersByTimeAsync(0)
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    const close = vi.spyOn(socket, 'close')
+    const response = {
+      id: 'resp_greeting',
+      metadata: { purpose: 'bell_initial_greeting' },
+    }
+    socket.emitServerEvent({
+      type: 'response.created',
+      response: { ...response, status: 'in_progress' },
+    })
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.started',
+      response_id: response.id,
+    })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { ...response, status: 'completed' },
+    })
+
+    await vi.advanceTimersByTimeAsync(12_000)
+
+    expect(close).not.toHaveBeenCalled()
+    socket.emitServerEvent({
+      type: 'output_audio_buffer.stopped',
+      response_id: response.id,
+    })
+    await expect(pendingGreeting).resolves.toMatchObject({
+      audioStarted: true,
+      outcome: 'delivered',
+    })
+  })
+
+  it('rejects a still-pending greeting after ten seconds without playback', async () => {
+    vi.useFakeTimers()
+    FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 60_000
+    const pendingGreeting = startBellLiveGreeting('rtc_no_initial_audio')
+    const failure = pendingGreeting.catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(0)
+    const close = vi.spyOn(FakeOpenAiRealtimeWebSocket.sockets[0], 'close')
+
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    expect(await failure).toMatchObject({
+      audioStarted: false,
+      durationMs: 10_000,
+      reason: 'audio_not_started',
+    })
+    expect(close).toHaveBeenCalledTimes(1)
   })
 
   it('settles a call that closes while normal conversation is being restored', async () => {
