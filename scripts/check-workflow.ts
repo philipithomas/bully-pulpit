@@ -87,6 +87,9 @@ const config = assertObject(
 )
 assertQueueTrigger(config.workflows, '__wkf_workflow_*', 'Workflow handler')
 assertQueueTrigger(config.steps, '__wkf_step_*', 'Step handler')
+if (assertObject(config.steps, 'Step handler').maxDuration !== 'max') {
+  fail('Step handler must reserve the maximum duration for Bell research')
+}
 
 const manifest = assertObject(
   readJson(join(workflowDir, 'manifest.json')),
@@ -131,6 +134,12 @@ assertExport(
 assertExport(
   manifest.steps,
   'src/workflows/reply-to-sms.ts',
+  'acceptBellSmsWebhookStep',
+  'steps'
+)
+assertExport(
+  manifest.steps,
+  'src/workflows/reply-to-sms.ts',
   'generateBellSmsStep',
   'steps'
 )
@@ -144,6 +153,18 @@ assertExport(
   manifest.steps,
   'src/workflows/reply-to-sms.ts',
   'recordBellSmsStep',
+  'steps'
+)
+assertExport(
+  manifest.workflows,
+  'src/workflows/bell-smoke.ts',
+  'bellSmokeWorkflow',
+  'workflows'
+)
+assertExport(
+  manifest.steps,
+  'src/workflows/bell-smoke.ts',
+  'bellSmokeStep',
   'steps'
 )
 assertExport(
@@ -191,6 +212,14 @@ if (process.env.CHECK_VERCEL_WORKFLOW_OUTPUT === '1') {
     'Vercel flow function config'
   )
   assertQueueTrigger(stepConfig, '__wkf_step_*', 'Vercel step function config')
+  if (
+    typeof stepConfig.maxDuration !== 'number' ||
+    stepConfig.maxDuration <= 300
+  ) {
+    fail(
+      'Vercel step duration must leave headroom beyond the 300-second Bell generation timeout'
+    )
+  }
 }
 
 console.log('[workflow:check] Workflow handlers and queue triggers are present')

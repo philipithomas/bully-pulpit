@@ -1,18 +1,26 @@
 import { gateway } from '@ai-sdk/gateway'
+import { generateText, streamText, type TextStreamPart, tool } from 'ai'
+import { MockLanguageModelV4 } from 'ai/test'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { z } from 'zod/v4'
 import {
+  BELL_FINAL_ANSWER_RESERVE_MS,
+  BELL_MAX_OUTPUT_TOKENS,
   BELL_MODEL_ID,
   BELL_SMS_MAX_STEPS,
+  BELL_SMS_TIMEOUT_MS,
   BELL_WEB_MAX_STEPS,
   bellGatewayCost,
   bellSmsStopWhen,
   bellTools,
   bellWebStopWhen,
+  createBellPrepareStep,
   gatewayGenerationIdFromMetadata,
   getBellProviderOptions,
   getBellReasoning,
   prepareBellSmsStep,
   prepareBellWebStep,
+  requireBellAnswer,
 } from '@/lib/chat/bell-generation'
 
 afterEach(() => {
@@ -48,13 +56,19 @@ describe('Bell Gateway metadata', () => {
       bellWebStopWhen({ steps: Array.from({ length: 20 }) as never })
     ).toBe(true)
     expect(prepareBellWebStep({ stepNumber: 18 })).toBeUndefined()
-    expect(prepareBellWebStep({ stepNumber: 19 })).toEqual({ activeTools: [] })
+    expect(prepareBellWebStep({ stepNumber: 19 })).toMatchObject({
+      activeTools: [],
+      toolChoice: 'none',
+    })
 
-    expect(BELL_SMS_MAX_STEPS).toBe(7)
-    expect(bellSmsStopWhen({ steps: Array.from({ length: 7 }) as never })).toBe(
-      true
-    )
-    expect(prepareBellSmsStep({ stepNumber: 6 })).toEqual({ activeTools: [] })
+    expect(BELL_SMS_MAX_STEPS).toBe(20)
+    expect(
+      bellSmsStopWhen({ steps: Array.from({ length: 20 }) as never })
+    ).toBe(true)
+    expect(prepareBellSmsStep({ stepNumber: 19 })).toMatchObject({
+      activeTools: [],
+      toolChoice: 'none',
+    })
   })
 
   it('enables zero-data retention and uses only low-cardinality tags', () => {
@@ -64,7 +78,6 @@ describe('Bell Gateway metadata', () => {
     })
 
     expect(options.gateway).toMatchObject({
-      only: ['openai'],
       order: ['openai'],
       serviceTier: 'priority',
       zeroDataRetention: true,
@@ -75,13 +88,16 @@ describe('Bell Gateway metadata', () => {
         expect.stringMatching(/^env:(production|preview|development)$/),
       ],
     })
+    // OpenAI can temporarily be ineligible for ZDR even while Azure serves
+    // the same model with zero retention. Never pin to an ineligible host.
+    expect('only' in options.gateway).toBe(false)
     expect(options.gateway.tags).not.toContain('subscriber:reader-uuid')
     expect('models' in options.gateway).toBe(false)
   })
 
   it('does not request priority service outside web Bell', () => {
     const gateway = getBellProviderOptions({ surface: 'sms' }).gateway
-    expect(gateway.only).toEqual(['openai'])
+    expect('only' in gateway).toBe(false)
     expect('serviceTier' in gateway).toBe(false)
   })
 
@@ -91,7 +107,7 @@ describe('Bell Gateway metadata', () => {
   ] as const)('requests fast serving on %s while retaining automatic base-tier fallback', (surface) => {
     const options = getBellProviderOptions({ surface })
     expect(options.gateway.speed).toBe('fast')
-    expect(options.gateway.only).toEqual(['openai'])
+    expect('only' in options.gateway).toBe(false)
     expect(options.gateway.zeroDataRetention).toBe(true)
     expect('allowFallbackFromFast' in options.gateway).toBe(false)
     expect('models' in options.gateway).toBe(false)
@@ -208,5 +224,190 @@ describe('Bell Gateway metadata', () => {
     })
     expect(getGenerationInfo).toHaveBeenCalledTimes(4)
     expect(getGenerationInfo).toHaveBeenCalledWith({ id: 'gen_resolved' })
+  })
+})
+
+describe('Bell bounded research', () => {
+  it('preserves completed research and requests synthesis before the SMS deadline', async () => {
+    vi.useFakeTimers()
+    const startedAt = Date.now()
+    const prepareStep = createBellPrepareStep('sms', startedAt)
+    const usage = {
+      inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+      outputTokens: { total: 10, text: 5, reasoning: 5 },
+    }
+    const model = new MockLanguageModelV4({
+      doGenerate: async (options) => {
+        if (options.tools?.length) {
+          return {
+            content: [
+              {
+                type: 'tool-call',
+                toolCallId: 'read-1',
+                toolName: 'read',
+                input: '{}',
+              },
+            ],
+            finishReason: { unified: 'tool-calls', raw: 'tool_calls' },
+            usage,
+            warnings: [],
+          }
+        }
+        return {
+          content: [
+            { type: 'text', text: 'The archive supports a considered answer.' },
+          ],
+          finishReason: { unified: 'stop', raw: 'stop' },
+          usage,
+          warnings: [],
+        }
+      },
+    })
+    const read = vi.fn(async () => {
+      vi.setSystemTime(
+        startedAt + BELL_SMS_TIMEOUT_MS - BELL_FINAL_ANSWER_RESERVE_MS
+      )
+      return { title: 'A useful post', content: 'Distinct archive evidence.' }
+    })
+    const result = await generateText({
+      model,
+      prompt: 'Research the subject.',
+      reasoning: 'xhigh',
+      maxOutputTokens: BELL_MAX_OUTPUT_TOKENS,
+      tools: { read: tool({ inputSchema: z.object({}), execute: read }) },
+      stopWhen: bellSmsStopWhen,
+      prepareStep,
+    })
+    expect(result.text).toBe('The archive supports a considered answer.')
+    expect(read).toHaveBeenCalledOnce()
+    expect(model.doGenerateCalls).toHaveLength(2)
+    const finalCall = model.doGenerateCalls[1]
+    expect(finalCall.tools).toBeUndefined()
+    expect(finalCall.providerOptions?.openai).toMatchObject({
+      reasoningEffort: 'low',
+    })
+    expect(JSON.stringify(finalCall.prompt)).toContain(
+      'Distinct archive evidence.'
+    )
+    expect(JSON.stringify(finalCall.prompt)).toContain(
+      'Write the final answer now'
+    )
+  })
+})
+
+describe('Bell empty streaming answers', () => {
+  async function transform(parts: Array<TextStreamPart<typeof bellTools>>) {
+    const input = new ReadableStream<TextStreamPart<typeof bellTools>>({
+      start(controller) {
+        for (const part of parts) controller.enqueue(part)
+        controller.close()
+      },
+    })
+    const transformed = input.pipeThrough(
+      requireBellAnswer({ tools: bellTools, stopStream: vi.fn() })
+    )
+    const reader = transformed.getReader()
+    const output: Array<TextStreamPart<typeof bellTools>> = []
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      output.push(value)
+    }
+    return output
+  }
+  const finish = {
+    type: 'finish',
+    finishReason: 'length',
+    totalUsage: {},
+  } as TextStreamPart<typeof bellTools>
+
+  it('reports an empty final answer as an error after earlier research commentary', async () => {
+    const output = await transform([
+      { type: 'text-delta', id: 'research', text: 'I will read the archive.' },
+      { type: 'start-step' } as TextStreamPart<typeof bellTools>,
+      { type: 'text-delta', id: 'answer', text: '   ' },
+      finish,
+    ])
+    expect(output.at(-2)).toMatchObject({
+      type: 'error',
+      error: expect.any(Error),
+    })
+    expect(output.at(-1)).toMatchObject({
+      type: 'finish',
+      finishReason: 'error',
+    })
+  })
+
+  it('sends the browser an error before SDK onEnd for reasoning-only output', async () => {
+    const onError = vi.fn()
+    const onEnd = vi.fn()
+    const model = new MockLanguageModelV4({
+      doStream: {
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: 'stream-start', warnings: [] })
+            controller.enqueue({ type: 'reasoning-start', id: 'reasoning' })
+            controller.enqueue({
+              type: 'reasoning-delta',
+              id: 'reasoning',
+              delta: 'Internal research.',
+            })
+            controller.enqueue({ type: 'reasoning-end', id: 'reasoning' })
+            controller.enqueue({
+              type: 'finish',
+              finishReason: { unified: 'length', raw: 'max_output_tokens' },
+              usage: {
+                inputTokens: {
+                  total: 10,
+                  noCache: 10,
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                },
+                outputTokens: { total: 100, text: 0, reasoning: 100 },
+              },
+            })
+            controller.close()
+          },
+        }),
+      },
+    })
+    const result = streamText({
+      model,
+      prompt: 'Research the archive.',
+      tools: bellTools,
+      experimental_transform: requireBellAnswer,
+      onError,
+      onEnd,
+    })
+    const response = result.toUIMessageStreamResponse({
+      sendReasoning: false,
+      onError: () => 'Please try again.',
+    })
+    const body = await response.text()
+    expect(body).toContain('Please try again.')
+    expect(body).not.toContain('Internal research.')
+    expect(onError).toHaveBeenCalledOnce()
+    // AI SDK onEnd reports the last provider step's finish reason, even when
+    // a later transform reports an error. The route must preserve onError.
+    expect(onEnd).toHaveBeenCalledWith(
+      expect.objectContaining({ finishReason: 'length', text: '' })
+    )
+    expect(onError.mock.invocationCallOrder[0]).toBeLessThan(
+      onEnd.mock.invocationCallOrder[0]
+    )
+  })
+
+  it('preserves real answers and does not duplicate provider errors', async () => {
+    const text = {
+      type: 'text-delta',
+      id: 'answer',
+      text: 'A sourced answer.',
+    } as const
+    expect(await transform([text, finish])).toEqual([text, finish])
+    const error = {
+      type: 'error',
+      error: new Error('Provider unavailable'),
+    } as const
+    expect(await transform([error, finish])).toEqual([error, finish])
   })
 })

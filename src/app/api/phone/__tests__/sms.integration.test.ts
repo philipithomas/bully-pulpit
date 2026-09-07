@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { sleep } from 'workflow'
+import { getStepMetadata, sleep } from 'workflow'
 
 const afterTasks = vi.hoisted(() => [] as Promise<void>[])
 
@@ -33,16 +33,23 @@ vi.mock('@/lib/rate-limit', () => ({
 }))
 vi.mock('workflow', async (importOriginal) => {
   const actual = await importOriginal<typeof import('workflow')>()
-  return { ...actual, sleep: vi.fn(async () => {}) }
+  return {
+    ...actual,
+    sleep: vi.fn(async () => {}),
+    getStepMetadata: vi.fn(() => ({ stepId: 'step/sms-claim' })),
+  }
 })
 vi.mock('workflow/api', () => ({ start: vi.fn() }))
-vi.mock('@/workflows/reply-to-sms', () => ({
-  replyToSmsWorkflow: vi.fn(),
-}))
+vi.mock('@/workflows/reply-to-sms', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/workflows/reply-to-sms')>()
+  return { ...actual, replyToSmsWorkflow: vi.fn() }
+})
 
 import { start } from 'workflow/api'
 import { POST as smsPost } from '@/app/api/phone/sms/route'
 import { POST as voiceMenuPost } from '@/app/api/phone/voice-menu/route'
+import { claimPhoneWebhookEvent } from '@/lib/db/queries/phone-webhook-events'
 import { resetFailedSmsBySlug } from '@/lib/db/queries/sms-sends'
 import {
   claimBellContactCard,
@@ -55,11 +62,13 @@ import {
   bellConversations,
   bellGenerations,
   bellMessages,
+  phoneWebhookEvents,
   smsSends,
   smsSubscribers,
   textMessages,
 } from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
+import type { BellSmsInput } from '@/lib/phone/bell-sms'
 import { fixedBellSmsBody } from '@/lib/phone/bell-sms-copy'
 import { verifyPhoneIvrAudioToken } from '@/lib/phone/ivr-audio'
 import {
@@ -71,7 +80,10 @@ import { sendSms } from '@/lib/phone/twilio'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { db, resetDb } from '@/test/integration/db'
 import { twilioPostRequest } from '@/test/twilio'
-import { replyToSmsWorkflow } from '@/workflows/reply-to-sms'
+import {
+  acceptBellSmsWebhookStep,
+  replyToSmsWorkflow,
+} from '@/workflows/reply-to-sms'
 import {
   type SmsSignupOnboardingInput,
   smsSignupOnboardingWorkflow,
@@ -134,6 +146,10 @@ beforeEach(async () => {
     if (workflow === smsSignupOnboardingWorkflow) {
       const [input] = args as unknown as [SmsSignupOnboardingInput]
       await smsSignupOnboardingWorkflow(input)
+    }
+    if (workflow === replyToSmsWorkflow) {
+      const [input] = args as unknown as [BellSmsInput]
+      await acceptBellSmsWebhookStep(input, 'wrun_sms')
     }
     return {
       runId: 'wrun_sms',
@@ -210,6 +226,8 @@ describe('POST /api/phone/sms', () => {
         conversationId: expect.any(String),
         userMessageId: expect.any(String),
         generationId: expect.any(String),
+        webhookEventId: expect.any(Number),
+        webhookLease: expect.any(String),
       }),
     ])
     const conversations = await db.select().from(bellConversations)
@@ -334,6 +352,80 @@ describe('POST /api/phone/sms', () => {
     expect(response.status).toBe(200)
     expect(start).toHaveBeenCalledTimes(2)
     expect(await db.select().from(textMessages)).toHaveLength(1)
+  })
+
+  it('leaves enqueue bookkeeping to the durable lease owner', async () => {
+    vi.mocked(start).mockResolvedValueOnce({
+      runId: 'wrun_deferred',
+      // biome-ignore lint/suspicious/noExplicitAny: partial workflow run
+    } as any)
+    const form = {
+      From: '+15551234567',
+      To: '+12123473190',
+      Body: 'Tell me about the archive',
+      MessageSid: 'SM_DEFERRED',
+    }
+
+    expect((await smsPost(smsRequest(form))).status).toBe(200)
+    const [event] = await db.select().from(phoneWebhookEvents)
+    expect(event.processingAt).toBeInstanceOf(Date)
+    expect(event.processedAt).toBeNull()
+    const [generation] = await db.select().from(bellGenerations)
+    expect(generation.workflowRunId).toBeNull()
+    const [input] = vi.mocked(start).mock.calls[0][1] as [BellSmsInput]
+
+    expect(await acceptBellSmsWebhookStep(input, 'wrun_deferred')).toBe(true)
+    const [recorded] = await db.select().from(bellGenerations)
+    expect(recorded.workflowRunId).toBe('wrun_deferred')
+    expect((await smsPost(smsRequest(form))).status).toBe(200)
+    expect(start).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows only the current lease to authorize an ambiguously enqueued run', async () => {
+    vi.mocked(start).mockResolvedValueOnce({
+      runId: 'wrun_stale',
+      // biome-ignore lint/suspicious/noExplicitAny: partial workflow run
+    } as any)
+    await smsPost(
+      smsRequest({
+        From: '+15551234567',
+        To: '+12123473190',
+        Body: 'What should I read?',
+        MessageSid: 'SM_STALE_LEASE',
+      })
+    )
+    const [input] = vi.mocked(start).mock.calls[0][1] as [BellSmsInput]
+    await db
+      .update(phoneWebhookEvents)
+      .set({ processingAt: new Date(Date.now() - 180_000) })
+      .where(eq(phoneWebhookEvents.id, input.webhookEventId as number))
+    const replacementLease = await claimPhoneWebhookEvent(
+      input.webhookEventId as number
+    )
+
+    expect(await acceptBellSmsWebhookStep(input, 'wrun_stale')).toBe(false)
+    const replacement = {
+      ...input,
+      webhookLease: replacementLease?.toISOString(),
+    }
+    expect(await acceptBellSmsWebhookStep(replacement, 'wrun_current')).toBe(
+      true
+    )
+    // A lost acknowledgement retries the same durable step successfully.
+    expect(await acceptBellSmsWebhookStep(replacement, 'wrun_current')).toBe(
+      true
+    )
+    vi.mocked(getStepMetadata).mockReturnValueOnce({
+      stepId: 'step/another-run',
+      stepName: 'acceptBellSmsWebhookStep',
+      attempt: 1,
+      stepStartedAt: new Date(),
+    })
+    expect(await acceptBellSmsWebhookStep(replacement, 'wrun_duplicate')).toBe(
+      false
+    )
+    const [generation] = await db.select().from(bellGenerations)
+    expect(generation.workflowRunId).toBe('wrun_current')
   })
 
   it('subscribes an SMS sender and emails an admin notification with Twilio metadata', async () => {

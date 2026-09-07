@@ -6,7 +6,6 @@ import {
   createSmsBellTurn,
   getOrCreateSmsBellConversation,
 } from '@/lib/db/queries/bell-conversations'
-import { setBellGenerationWorkflowRunId } from '@/lib/db/queries/bell-generations'
 import {
   claimPhoneWebhookEvent,
   findOrCreatePhoneWebhookEvent,
@@ -228,7 +227,7 @@ export async function POST(request: Request) {
         inboundTextMessageId: inbound.message.id,
         traceId: activeSpan?.traceId,
       })
-      const run = await start(replyToSmsWorkflow, [
+      await start(replyToSmsWorkflow, [
         {
           from,
           to,
@@ -236,9 +235,14 @@ export async function POST(request: Request) {
           conversationId: conversation.id,
           userMessageId: turn.userMessage.id,
           generationId: turn.generation.id,
+          webhookEventId: webhookEvent?.event.id,
+          webhookLease: lease?.toISOString(),
         },
       ])
-      await setBellGenerationWorkflowRunId(turn.generation.id, run.runId)
+      // The first durable step consumes this exact lease and records its own
+      // run ID. Do not release or complete it after a successful enqueue:
+      // route bookkeeping failure must never authorize a second SMS run.
+      return twimlResponse(emptyTwiml())
     }
     if (webhookEvent && lease) {
       const marked = await markPhoneWebhookEventProcessed(

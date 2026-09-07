@@ -1,5 +1,5 @@
 import { gateway } from '@ai-sdk/gateway'
-import { isStepCount } from 'ai'
+import { isStepCount, type ModelMessage, type StreamTextTransform } from 'ai'
 import { fetchPage } from '@/lib/chat/fetch-page-tool'
 import { fetchPost } from '@/lib/chat/fetch-post-tool'
 import { fetchPublicUrl } from '@/lib/chat/fetch-public-url-tool'
@@ -113,21 +113,90 @@ export const bellTools = {
   fetchPublicUrl,
 }
 
-export const BELL_SMS_MAX_STEPS = 7
+// Reasoning consumes the same output budget as visible text. The former SMS
+// limit of 2,048 could end a successful reasoning call without any answer.
+export const BELL_MAX_OUTPUT_TOKENS = 32_768
+export const BELL_GENERATION_MAX_RETRIES = 2
+export const BELL_SMS_TIMEOUT_MS = 300_000
+export const BELL_WEB_TIMEOUT_MS = 720_000
+export const BELL_FINAL_ANSWER_RESERVE_MS = 90_000
+export const BELL_SMS_MAX_STEPS = 20
 export const BELL_WEB_MAX_STEPS = 20
 
 export const bellSmsStopWhen = isStepCount(BELL_SMS_MAX_STEPS)
 export const bellWebStopWhen = isStepCount(BELL_WEB_MAX_STEPS)
 
-/** Each surface reserves its final step for prose instead of another tool. */
-function prepareBellStep(stepNumber: number, maximumSteps: number) {
-  return stepNumber >= maximumSteps - 1 ? { activeTools: [] } : undefined
+const FINAL_ANSWER_INSTRUCTION =
+  'Research is complete for this turn. Write the final answer now using the evidence already retrieved. Follow the original source, citation, and surface-format rules. State material uncertainty or missing evidence honestly. Do not call tools, describe future research, or return an empty answer.'
+
+type BellStepInput = { stepNumber: number; messages?: ModelMessage[] }
+
+/** Reserve a final prose step, including when research is near its deadline. */
+function prepareBellStep(
+  { stepNumber, messages }: BellStepInput,
+  maximumSteps: number,
+  deadline?: number
+) {
+  const shouldFinish =
+    stepNumber >= maximumSteps - 1 ||
+    (stepNumber > 0 &&
+      deadline !== undefined &&
+      Date.now() >= deadline - BELL_FINAL_ANSWER_RESERVE_MS)
+  if (!shouldFinish) return undefined
+  return {
+    activeTools: [],
+    toolChoice: 'none' as const,
+    // The archive analysis is already in context. Allocate this last call to
+    // expressing it; provider reasoningEffort overrides top-level reasoning.
+    providerOptions: { openai: { reasoningEffort: 'low' } },
+    ...(messages
+      ? {
+          messages: [
+            ...messages,
+            { role: 'system' as const, content: FINAL_ANSWER_INSTRUCTION },
+          ],
+        }
+      : {}),
+  }
 }
 
-export function prepareBellSmsStep({ stepNumber }: { stepNumber: number }) {
-  return prepareBellStep(stepNumber, BELL_SMS_MAX_STEPS)
+export function prepareBellSmsStep(input: BellStepInput) {
+  return prepareBellStep(input, BELL_SMS_MAX_STEPS)
 }
 
-export function prepareBellWebStep({ stepNumber }: { stepNumber: number }) {
-  return prepareBellStep(stepNumber, BELL_WEB_MAX_STEPS)
+export function prepareBellWebStep(input: BellStepInput) {
+  return prepareBellStep(input, BELL_WEB_MAX_STEPS)
+}
+
+export function createBellPrepareStep(
+  surface: 'web' | 'sms',
+  startedAt = Date.now()
+) {
+  const timeout = surface === 'sms' ? BELL_SMS_TIMEOUT_MS : BELL_WEB_TIMEOUT_MS
+  const maximumSteps =
+    surface === 'sms' ? BELL_SMS_MAX_STEPS : BELL_WEB_MAX_STEPS
+  return (input: BellStepInput) =>
+    prepareBellStep(input, maximumSteps, startedAt + timeout)
+}
+
+/** An empty final stream is a failure, even if reasoning/tool calls succeeded. */
+export const requireBellAnswer: StreamTextTransform<typeof bellTools> = () => {
+  let hasFinalText = false
+  let hasError = false
+  return new TransformStream({
+    transform(part, controller) {
+      if (part.type === 'start-step') hasFinalText = false
+      if (part.type === 'text-delta' && part.text.trim()) hasFinalText = true
+      if (part.type === 'error' || part.type === 'abort') hasError = true
+      if (part.type === 'finish' && !hasFinalText && !hasError) {
+        controller.enqueue({
+          type: 'error',
+          error: new Error('Bell generation ended without a final answer'),
+        })
+        controller.enqueue({ ...part, finishReason: 'error' })
+        return
+      }
+      controller.enqueue(part)
+    },
+  })
 }

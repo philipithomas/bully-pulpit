@@ -37,9 +37,9 @@ function getSharedProviderOptions(input: {
       reasoningSummary: null,
     },
     gateway: {
-      // Ordering alone allows other providers as fallbacks; restrict the
-      // allowed set so every surface stays on direct OpenAI endpoints.
-      only: ['openai'],
+      // Prefer OpenAI, but let Gateway fail over to another host of the same
+      // model when that endpoint is unavailable or cannot meet ZDR. A hard
+      // OpenAI-only filter previously made every Bell request fail.
       order: ['openai'],
       sort: 'ttft',
       // Also covers caller-selected evaluation models. Unsupported models

@@ -14,9 +14,13 @@ async function main() {
     '/api/cron/workflow-smoke',
     baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`
   )
+  if (process.env.WORKFLOW_SMOKE_MODE === 'bell') {
+    url.searchParams.set('mode', 'bell')
+  }
   const response = await fetch(url, {
     method: 'POST',
     headers: { authorization: `Bearer ${secret}` },
+    signal: AbortSignal.timeout(180_000),
   })
   const text = await response.text()
   console.log(text)

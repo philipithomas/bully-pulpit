@@ -3,13 +3,16 @@ import path from 'node:path'
 import { gateway } from '@ai-sdk/gateway'
 import { generateText } from 'ai'
 import {
+  BELL_GENERATION_MAX_RETRIES,
+  BELL_MAX_OUTPUT_TOKENS,
   BELL_MODEL_ID,
+  BELL_SMS_TIMEOUT_MS,
+  BELL_WEB_TIMEOUT_MS,
   bellSmsStopWhen,
   bellTools,
   bellWebStopWhen,
+  createBellPrepareStep,
   getBellReasoning,
-  prepareBellSmsStep,
-  prepareBellWebStep,
 } from '@/lib/chat/bell-generation'
 import { bellEvalCases } from '@/lib/chat/evals/cases'
 import { runDeterministicBellEvals } from '@/lib/chat/evals/deterministic'
@@ -120,17 +123,24 @@ async function main() {
             testCase.surface,
             testCase.id
           ),
-          maxOutputTokens: testCase.surface === 'sms' ? 2048 : 32_768,
+          maxOutputTokens: BELL_MAX_OUTPUT_TOKENS,
+          maxRetries: BELL_GENERATION_MAX_RETRIES,
+          timeout:
+            testCase.surface === 'sms'
+              ? BELL_SMS_TIMEOUT_MS
+              : BELL_WEB_TIMEOUT_MS,
           system,
           prompt,
           tools: bellTools,
           stopWhen:
             testCase.surface === 'sms' ? bellSmsStopWhen : bellWebStopWhen,
-          prepareStep:
-            testCase.surface === 'sms'
-              ? prepareBellSmsStep
-              : prepareBellWebStep,
+          prepareStep: createBellPrepareStep(testCase.surface),
         })
+        if (!result.text.trim()) {
+          throw new Error(
+            `Bell returned no final answer (${result.finishReason})`
+          )
+        }
         const toolCalls = result.steps.flatMap((step) => step.toolCalls)
         const tools = Array.from(
           new Set(toolCalls.map((call) => call.toolName))

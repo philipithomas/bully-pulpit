@@ -120,6 +120,27 @@ export const bellEvalCases: readonly BellEvalCase[] = [
     ],
   },
   {
+    id: 'sms-print-evolution',
+    category: 'cross-post-synthesis',
+    surface: 'sms',
+    prompt:
+      'How did Philip develop the print edition from his first snail-mail experiment, and is it still available?',
+    expectation: {
+      kind: 'search',
+      query: 'snail-mail first physical letter print experiment',
+      scope: 'posts',
+      expectedUrls: ['/snail-mail', '/introducing-the-print-edition'],
+    },
+    review: [
+      'Reads at least two distinct substantive sources, including the early experiment and the launch, before synthesizing.',
+      'Reads /print to verify present availability and says ordering has ended.',
+      'Connects the experiment to the launched edition without mistaking historical claims for current status.',
+      'Returns a complete plain-text answer with the Bell AI prefix and at most one complete source URL.',
+      'Stays within two toll-free SMS segments: at most 300 GSM-7 units or 132 UCS-2 units, including the prefix.',
+      'Does not substitute a generic failure message or truncate a source URL.',
+    ],
+  },
+  {
     id: 'noma-archive-synthesis',
     category: 'cross-post-synthesis',
     surface: 'web',

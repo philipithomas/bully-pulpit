@@ -713,6 +713,64 @@ describe('Bell Live Realtime session', () => {
     await greeting.conversation
   })
 
+  it.each([
+    { output: 'source text' },
+    { output: '' },
+    { output: null, error: { type: 'tool_execution_error' } },
+  ])('resumes from the terminal MCP result in response.done: %j', async (result) => {
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    const completed = {
+      type: 'response.done',
+      response: {
+        id: 'resp_tool',
+        status: 'completed',
+        output: [
+          { id: 'item_tool', type: 'mcp_call', name: 'fetch', ...result },
+        ],
+      },
+    }
+    socket?.emitServerEvent(completed)
+    socket?.emitServerEvent(completed)
+
+    expect(sentResponseEvents()).toHaveLength(2)
+    expect(sentResponseEvents()[1]).toMatchObject({
+      response: { metadata: { purpose: 'bell_tool_continuation' } },
+    })
+    socket?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('keeps null MCP output behind the result barrier', async () => {
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    const item = {
+      id: 'item_tool',
+      type: 'mcp_call',
+      name: 'fetch',
+      output: null,
+      error: null,
+    }
+    socket?.emitServerEvent({
+      type: 'response.done',
+      response: { id: 'resp_tool', status: 'completed', output: [item] },
+    })
+    socket?.emitServerEvent({
+      type: 'response.output_item.done',
+      response_id: 'resp_tool',
+      item,
+    })
+    expect(sentResponseEvents()).toHaveLength(1)
+    socket?.emitServerEvent({
+      type: 'response.output_item.done',
+      response_id: 'resp_tool',
+      item: { ...item, output: 'source text' },
+    })
+    expect(sentResponseEvents()).toHaveLength(2)
+    socket?.closeFromServer()
+    await greeting.conversation
+  })
+
   it('waits for a failed tool final item before resuming', async () => {
     const lifecycle: BellLiveLifecycleEvent[] = []
     const greeting = await startBellLiveGreeting('rtc_call_greeting', {
@@ -1296,7 +1354,6 @@ describe('Bell Live Realtime session', () => {
             id: 'item_tool',
             type: 'mcp_call',
             name: 'search',
-            output: 'result',
           },
         ],
       },
@@ -1338,6 +1395,307 @@ describe('Bell Live Realtime session', () => {
       })
     )
 
+    socket?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('keeps the call open when its continuation loses an active-response race', async () => {
+    const lifecycle: BellLiveLifecycleEvent[] = []
+    const greeting = await startBellLiveGreeting('rtc_call_greeting', {
+      onLifecycleEvent: (event) => lifecycle.push(event),
+    })
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket?.emitServerEvent({
+      type: 'response.done',
+      response: {
+        id: 'resp_tool',
+        status: 'completed',
+        output: [
+          {
+            id: 'item_tool',
+            type: 'mcp_call',
+            name: 'search',
+            output: 'source text',
+          },
+        ],
+      },
+    })
+    const request = sentResponseEvents()[1] as { event_id: string }
+    socket?.emitServerEvent({
+      type: 'error',
+      error: {
+        event_id: request.event_id,
+        type: 'invalid_request_error',
+        code: 'conversation_already_has_active_response',
+      },
+    })
+    expect(lifecycle).toContainEqual({
+      event: 'bell_live.tool_continuation',
+      hop: 1,
+      toolsAllowed: true,
+      outcome: 'superseded',
+    })
+    expect(lifecycle).not.toContainEqual(
+      expect.objectContaining({ event: 'bell_live.observer' })
+    )
+    socket?.closeFromServer()
+    await expect(greeting.conversation).resolves.toMatchObject({
+      observerCompleted: true,
+    })
+  })
+
+  it('reserves time for speech after a delayed archive result', async () => {
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket?.emitServerEvent({
+      type: 'response.done',
+      response: {
+        id: 'resp_tool',
+        status: 'completed',
+        output: [{ id: 'item_tool', type: 'mcp_call', name: 'fetch' }],
+      },
+    })
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.now() + 260_000)
+    socket?.emitServerEvent({
+      type: 'response.output_item.done',
+      response_id: 'resp_tool',
+      item: {
+        id: 'item_tool',
+        type: 'mcp_call',
+        name: 'fetch',
+        output: 'source text',
+      },
+    })
+    expect(sentResponseEvents()[1]).toMatchObject({
+      response: {
+        metadata: { purpose: 'bell_tool_final_answer' },
+        instructions: expect.stringContaining('seconds remain in this call'),
+        tool_choice: 'none',
+        tools: [],
+      },
+    })
+    socket?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('recovers one silent answer per caller turn without enabling any tools', async () => {
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    const silentResponse = (id: string) => {
+      socket?.emitServerEvent({
+        type: 'response.created',
+        response: { id, status: 'in_progress' },
+      })
+      socket?.emitServerEvent({
+        type: 'response.done',
+        response: { id, status: 'completed', output: [] },
+      })
+    }
+    silentResponse('resp_empty')
+    expect(sentResponseEvents()).toHaveLength(2)
+    expect(sentResponseEvents()[1]).toMatchObject({
+      response: {
+        metadata: { purpose: 'bell_empty_answer_recovery' },
+        tool_choice: 'none',
+        tools: [],
+      },
+    })
+    silentResponse('resp_recovery_also_empty')
+    expect(sentResponseEvents()).toHaveLength(2)
+    socket?.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket?.emitServerEvent({ type: 'input_audio_buffer.speech_stopped' })
+    // A duplicate completion from the old turn must not consume the new turn's
+    // recovery or answer its superseded question.
+    socket?.emitServerEvent({
+      type: 'response.done',
+      response: { id: 'resp_empty', status: 'completed', output: [] },
+    })
+    expect(sentResponseEvents()).toHaveLength(2)
+    silentResponse('resp_next_turn_empty')
+    expect(sentResponseEvents()).toHaveLength(3)
+    socket?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('replaces a rejected empty-answer recovery when the winning response is also silent', async () => {
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket?.emitServerEvent({
+      type: 'response.created',
+      response: { id: 'resp_empty', status: 'in_progress' },
+    })
+    socket?.emitServerEvent({
+      type: 'response.done',
+      response: { id: 'resp_empty', status: 'completed', output: [] },
+    })
+    const rejected = sentResponseEvents()[1] as { event_id: string }
+    socket?.emitServerEvent({
+      type: 'response.created',
+      response: { id: 'resp_automatic', status: 'in_progress' },
+    })
+    socket?.emitServerEvent({
+      type: 'error',
+      error: {
+        event_id: rejected.event_id,
+        type: 'invalid_request_error',
+        code: 'conversation_already_has_active_response',
+      },
+    })
+    socket?.emitServerEvent({
+      type: 'response.done',
+      response: { id: 'resp_automatic', status: 'completed', output: [] },
+    })
+    expect(sentResponseEvents()).toHaveLength(3)
+    expect(sentResponseEvents()[2]).toMatchObject({
+      response: {
+        metadata: { purpose: 'bell_empty_answer_recovery' },
+        tool_choice: 'none',
+        tools: [],
+      },
+    })
+    socket?.emitServerEvent({
+      type: 'response.created',
+      response: { id: 'resp_recovery', status: 'in_progress' },
+    })
+    socket?.emitServerEvent({
+      type: 'response.done',
+      response: { id: 'resp_recovery', status: 'completed', output: [] },
+    })
+    expect(sentResponseEvents()).toHaveLength(3)
+    socket?.closeFromServer()
+    await expect(greeting.conversation).resolves.toMatchObject({
+      observerCompleted: true,
+    })
+  })
+
+  it('bounds repeated empty-recovery races and resets the request budget only for a new caller turn', async () => {
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    const silentResponse = (id: string) => {
+      socket?.emitServerEvent({
+        type: 'response.created',
+        response: { id, status: 'in_progress' },
+      })
+      socket?.emitServerEvent({
+        type: 'response.done',
+        response: { id, status: 'completed', output: [] },
+      })
+    }
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      silentResponse(`resp_empty_${attempt}`)
+      const request = sentResponseEvents()[attempt + 1] as {
+        event_id: string
+      }
+      socket?.emitServerEvent({
+        type: 'error',
+        error: {
+          event_id: request.event_id,
+          type: 'invalid_request_error',
+          code: 'conversation_already_has_active_response',
+        },
+      })
+    }
+    silentResponse('resp_third_race')
+    expect(sentResponseEvents()).toHaveLength(3)
+    socket?.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket?.emitServerEvent({ type: 'input_audio_buffer.speech_stopped' })
+    silentResponse('resp_new_caller_turn')
+    expect(sentResponseEvents()).toHaveLength(4)
+    socket?.closeFromServer()
+    await expect(greeting.conversation).resolves.toMatchObject({
+      observerCompleted: true,
+    })
+  })
+
+  it('does not let a delayed recovery rejection reset a newer caller turn', async () => {
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    const silentResponse = (id: string) => {
+      socket?.emitServerEvent({
+        type: 'response.created',
+        response: { id, status: 'in_progress' },
+      })
+      socket?.emitServerEvent({
+        type: 'response.done',
+        response: { id, status: 'completed', output: [] },
+      })
+    }
+    silentResponse('resp_old_turn')
+    const oldRequest = sentResponseEvents()[1] as { event_id: string }
+    socket?.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket?.emitServerEvent({ type: 'input_audio_buffer.speech_stopped' })
+    silentResponse('resp_new_turn')
+    socket?.emitServerEvent({
+      type: 'error',
+      error: {
+        event_id: oldRequest.event_id,
+        type: 'invalid_request_error',
+        code: 'conversation_already_has_active_response',
+      },
+    })
+    silentResponse('resp_new_turn_recovery')
+    expect(sentResponseEvents()).toHaveLength(3)
+    socket?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it.each([
+    'cancelled',
+    'failed',
+    'incomplete',
+  ])('does not replay a %s silent response', async (status) => {
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket?.emitServerEvent({
+      type: 'response.created',
+      response: { id: 'resp_empty', status: 'in_progress' },
+    })
+    socket?.emitServerEvent({
+      type: 'response.done',
+      response: { id: 'resp_empty', status, output: [] },
+    })
+    expect(sentResponseEvents()).toHaveLength(1)
+    socket?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('does not replace a subscription disclosure with a freeform silent-answer recovery', async () => {
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    const metadata = { purpose: 'bell_subscription_disclosure' }
+    socket?.emitServerEvent({
+      type: 'response.created',
+      response: { id: 'resp_disclosure', status: 'in_progress', metadata },
+    })
+    socket?.emitServerEvent({
+      type: 'response.done',
+      response: {
+        id: 'resp_disclosure',
+        status: 'completed',
+        output: [],
+        metadata,
+      },
+    })
+    expect(sentResponseEvents()).toHaveLength(1)
+    socket?.closeFromServer()
+    await greeting.conversation
+  })
+
+  it('does not recover an empty response superseded by caller speech', async () => {
+    const greeting = await startBellLiveGreeting('rtc_call_greeting')
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket?.emitServerEvent({
+      type: 'response.created',
+      response: { id: 'resp_old', status: 'in_progress' },
+    })
+    socket?.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket?.emitServerEvent({ type: 'input_audio_buffer.speech_stopped' })
+    socket?.emitServerEvent({
+      type: 'response.done',
+      response: { id: 'resp_old', status: 'completed', output: [] },
+    })
+    expect(sentResponseEvents()).toHaveLength(1)
     socket?.closeFromServer()
     await greeting.conversation
   })

@@ -80,7 +80,6 @@ it.each([
   const providerOptions = getBellEvalProviderOptions(surface, 'test-case')
   expect(providerOptions.gateway).toMatchObject({
     speed: 'fast',
-    only: ['openai'],
     zeroDataRetention: true,
     user: 'bell-eval:test-case',
   })

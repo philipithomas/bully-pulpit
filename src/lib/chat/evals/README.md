@@ -43,8 +43,9 @@ pnpm bell:eval:live -- --models openai/gpt-5.6-luna-fast,openai/gpt-5.4-mini-fas
 
 Every evaluation requests [AI Gateway fast mode](https://vercel.com/docs/ai-gateway/models-and-providers/fast-mode),
 including explicit `--models` overrides. Reasoning remains `high` for web and
-`xhigh` for SMS, and routing remains restricted to OpenAI with zero data
-retention. Gateway can fall back to the same base model at standard speed when
+`xhigh` for SMS. Routing prefers OpenAI and permits other eligible providers
+of the same model while requiring zero data retention. Do not restrict the
+provider list to OpenAI: its direct route may not support the required ZDR policy. Gateway can fall back to the same base model at standard speed when
 fast capacity is unavailable; an override without a fast tier runs at standard
 speed. The existing web Priority hint is retained. Realtime voice,
 transcription, speech generation, and embeddings are separate paths without
@@ -52,3 +53,18 @@ applicable verified fast aliases.
 
 The live runner reads only checked-in public content and synthetic fixtures. It
 does not read stored Bell conversations or subscriber data.
+
+## Deployed Bell Workflow smoke
+
+```bash
+WORKFLOW_SMOKE_MODE=bell WORKFLOW_SMOKE_BASE_URL=https://<deployment> pnpm workflow:smoke
+```
+
+This manual, CRON_SECRET-protected check executes the actual SMS model configuration
+and a homepage tool read through Vercel Workflow. It requires a complete answer
+and zero data retention on every model step. It sends no messages and reads no
+stored conversations. The default smoke command remains a no-op queue check.
+
+Research evaluations use the production retry, token, step, and time budgets.
+The last step or final 90 seconds are reserved for synthesis; SMS formatting
+limits the delivered answer independently of the research behind it.

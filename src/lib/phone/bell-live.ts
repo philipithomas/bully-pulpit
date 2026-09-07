@@ -28,6 +28,11 @@ export const PHONE_BELL_MAX_CALL_SECONDS = 300
 const PHONE_BELL_GREETING_PURPOSE = 'bell_initial_greeting'
 const PHONE_BELL_TOOL_CONTINUATION_PURPOSE = 'bell_tool_continuation'
 const PHONE_BELL_TOOL_FINAL_ANSWER_PURPOSE = 'bell_tool_final_answer'
+const PHONE_BELL_EMPTY_ANSWER_RECOVERY_PURPOSE = 'bell_empty_answer_recovery'
+// One recovery may lose a response.create race before any inference begins.
+// Permit one replacement request, while bounding repeated races per caller turn.
+const PHONE_BELL_MAX_EMPTY_ANSWER_RECOVERY_REQUESTS = 2
+const PHONE_BELL_FINAL_ANSWER_RESERVE_SECONDS = 45
 // Leave room to read a full result set after discovery, while still bounding
 // runaway lookup loops. Two continuations cut broad questions off after one post.
 const PHONE_BELL_MAX_TOOL_CONTINUATION_HOPS = 11
@@ -269,6 +274,8 @@ SCOPE AND TOOLS
 - Use list_posts only when the caller explicitly asks to list or browse the latest, recent, chronological, or newsletter-specific archive.
 - After search or list_posts, use fetch when the answer needs content beyond the returned titles, dates, and excerpts. Excerpts help choose sources; they are not a substitute for reading a post you will interpret or compare.
 - Broad questions such as "What does Philip think of X?", "How did X evolve?", or "What has he done with X?" require synthesis across posts unless the caller names just one source. Read the materially relevant, distinct sources before answering: often three to six posts or pages, and more when they add useful evidence. Do not stop merely because you have read two posts. Choose sources that add different evidence, perspectives, or dates; skip incidental mentions. Reuse sources already read in this conversation rather than fetching them again. A follow-up about the same subject can build on that evidence without a fresh search.
+- For a broad or multi-part question, identify the aspects that need evidence, then use distinct focused searches and full-source reads to fill those gaps. Look for qualifications and counterexamples, and check dates before claiming a view is current or has changed. Continue researching while another lookup would materially improve the answer; do not mistake a long answer or many searches for thorough evidence.
+- A failed or unavailable lookup is not evidence that no relevant writing exists. Retry a failed read once if useful, or use another relevant source. Do not repeat a successful identical lookup, and never invent a source or imply an unavailable source was read.
 - For synthesis, lead with the shared idea or answer, then connect concrete examples and any meaningful contrast or change over time. Explain how the posts fit together, not just a list of separate summaries. Distinguish Philip's stated views from your interpretation, do not invent continuity or contradictions, and do not present one post as his complete position. If only one relevant source is available, give that narrower answer honestly.
 - Keep a first synthesis easy to follow aloud: usually one short paragraph with two or three connected points. Name one or two titles naturally when helpful, avoid a citation after every sentence, and expand when asked.
 - Prefer the site's tools over memory for claims about Philip or the archive. If the tools do not support a claim, say you could not verify it.
@@ -767,6 +774,10 @@ export type BellLiveLifecycleEvent =
       event: 'bell_live.opening_recovery'
       outcome: 'superseded'
     }
+  | {
+      event: 'bell_live.empty_answer_recovery'
+      outcome: 'failed' | 'requested' | 'superseded'
+    }
 
 interface BellLiveResponseProfile {
   hasPostToolAudio: boolean
@@ -815,9 +826,12 @@ function bellLiveMcpTool(value: unknown): BellLiveMcpTool {
     : 'unknown'
 }
 
-function bellLiveMcpCallItems(
-  output: unknown
-): Array<{ id: string; tool: BellLiveMcpTool }> {
+function bellLiveMcpCallItems(output: unknown): Array<{
+  id: string
+  tool: BellLiveMcpTool
+  outputReady: boolean
+  failed: boolean
+}> {
   if (!Array.isArray(output)) return []
   return output.flatMap((item) => {
     if (
@@ -835,6 +849,10 @@ function bellLiveMcpCallItems(
       {
         id: item.id,
         tool: bellLiveMcpTool('name' in item ? item.name : null),
+        outputReady:
+          ('output' in item && typeof item.output === 'string') ||
+          ('error' in item && item.error != null),
+        failed: 'error' in item && item.error != null,
       },
     ]
   })
@@ -959,6 +977,14 @@ export async function startBellLiveGreeting(
       string,
       BellLivePendingToolContinuation
     >()
+    const recoveryRequests = new Map<
+      string,
+      | { kind: 'tool'; hop: number; toolsAllowed: boolean }
+      | { kind: 'empty'; callerTurn: number }
+    >()
+    let recoveredEmptyCallerTurn: number | null = null
+    let emptyRecoveryAttempts: { callerTurn: number; count: number } | null =
+      null
     let settled = false
     let conversationSettled = false
     let observerHadError = false
@@ -1204,15 +1230,31 @@ export async function startBellLiveGreeting(
       pending: BellLivePendingToolContinuation
     ): boolean => {
       if (conversationSettled) return false
+      const remainingCallSeconds = Math.max(
+        0,
+        PHONE_BELL_MAX_CALL_SECONDS -
+          Math.ceil((Date.now() - startedAt) / 1_000)
+      )
+      // A delayed MCP result can consume the time reserved at response.done.
+      // Recheck at the actual continuation boundary before allowing more work.
+      pending.toolsAllowed &&=
+        remainingCallSeconds > PHONE_BELL_FINAL_ANSWER_RESERVE_SECONDS
+      const callTimeInstruction = `\n\nCALL TIME\nAt most ${remainingCallSeconds} seconds remain in this call, including reasoning and speech. Finish your spoken answer within that time. Keep only the most useful supported points if time is short.`
       const observerErrorGenerationBeforeSend = observerErrorGeneration
+      const eventId = `evt_bell_tool_${randomUUID()}`
+      recoveryRequests.set(eventId, {
+        kind: 'tool',
+        hop: pending.nextHop,
+        toolsAllowed: pending.toolsAllowed,
+      })
       try {
         connection.send({
-          event_id: `evt_bell_tool_${randomUUID()}`,
+          event_id: eventId,
           type: 'response.create',
           response: {
             instructions: pending.toolsAllowed
-              ? `${instructions}\n\nTOOL CONTINUATION\nThis continues the same caller turn after its archive tool result is ready. The brief thinking sound already happened; do not make it again or narrate the lookup. Review the completed archive results already in the conversation and do not repeat a completed lookup. Call another archive tool only if it is needed to answer correctly. When the available results are sufficient, give the caller the complete spoken answer. Never mention tool mechanics or stop before answering.`
-              : `${instructions}\n\nFINAL TOOL ANSWER\nThis continues the same caller turn after its archive tool result is ready. The brief thinking sound already happened; do not make it again or narrate the lookup. Do not call another tool. Give the caller the best complete spoken answer supported by the accumulated archive results. If they are insufficient, briefly state what you could not verify. Never mention tool mechanics or stop before answering.`,
+              ? `${instructions}\n\nTOOL CONTINUATION\nThis continues the same caller turn after its archive tool result is ready. The brief thinking sound already happened; do not make it again or narrate the lookup. Review the completed archive results already in the conversation and do not repeat a successful completed lookup. Retry an unavailable source at most once, or read another relevant source. Call another archive tool only if it is needed to answer correctly. When the available results are sufficient, give the caller the complete spoken answer. Never mention tool mechanics or stop before answering.${callTimeInstruction}`
+              : `${instructions}\n\nFINAL TOOL ANSWER\nThis continues the same caller turn after its archive tool result is ready. The brief thinking sound already happened; do not make it again or narrate the lookup. Do not call another tool. Give the caller the best complete spoken answer supported by the accumulated archive results. If they are insufficient, briefly state what you could not verify. Never mention tool mechanics or stop before answering.${callTimeInstruction}`,
             max_output_tokens: 'inf',
             // Spend reasoning on selecting and connecting sources. The opening
             // and immediate telephone actions retain the low-latency default.
@@ -1252,6 +1294,67 @@ export async function startBellLiveGreeting(
           hop: pending.nextHop,
           outcome: 'failed',
           toolsAllowed: pending.toolsAllowed,
+        })
+        return false
+      }
+    }
+    const requestEmptyAnswerRecovery = (): boolean => {
+      if (
+        conversationSettled ||
+        callerSpeaking ||
+        options.actions?.hasHandedOff() ||
+        pendingActionResponses.size > 0 ||
+        subscriptionDisclosure ||
+        recoveredEmptyCallerTurn === callerSpeechGeneration ||
+        (emptyRecoveryAttempts?.callerTurn === callerSpeechGeneration &&
+          emptyRecoveryAttempts.count >=
+            PHONE_BELL_MAX_EMPTY_ANSWER_RECOVERY_REQUESTS)
+      )
+        return false
+      emptyRecoveryAttempts = {
+        callerTurn: callerSpeechGeneration,
+        count:
+          emptyRecoveryAttempts?.callerTurn === callerSpeechGeneration
+            ? emptyRecoveryAttempts.count + 1
+            : 1,
+      }
+      recoveredEmptyCallerTurn = callerSpeechGeneration
+      const eventId = `evt_bell_empty_${randomUUID()}`
+      recoveryRequests.set(eventId, {
+        kind: 'empty',
+        callerTurn: callerSpeechGeneration,
+      })
+      const observerErrorGenerationBeforeSend = observerErrorGeneration
+      try {
+        connection.send({
+          event_id: eventId,
+          type: 'response.create',
+          response: {
+            instructions: `${instructions}\n\nSPOKEN ANSWER RECOVERY\nThe previous response completed without a spoken answer. Answer the caller's latest request using the verified evidence already available in this conversation. Do not repeat telephone actions or promise an action succeeded without its completed result. If the available evidence is insufficient, briefly explain what you could not verify. If a telephone action is still needed, offer the star-key keypad. Do not narrate this recovery or make another thinking sound.`,
+            metadata: { purpose: PHONE_BELL_EMPTY_ANSWER_RECOVERY_PURPOSE },
+            max_output_tokens: 'inf',
+            output_modalities: ['audio'],
+            reasoning: { effort: 'high' },
+            tool_choice: 'none',
+            tools: [],
+          },
+        })
+        if (observerErrorGeneration !== observerErrorGenerationBeforeSend) {
+          emitLifecycle({
+            event: 'bell_live.empty_answer_recovery',
+            outcome: 'failed',
+          })
+          return false
+        }
+        emitLifecycle({
+          event: 'bell_live.empty_answer_recovery',
+          outcome: 'requested',
+        })
+        return true
+      } catch {
+        emitLifecycle({
+          event: 'bell_live.empty_answer_recovery',
+          outcome: 'failed',
         })
         return false
       }
@@ -1383,6 +1486,7 @@ export async function startBellLiveGreeting(
       responsePurposes.clear()
       responseToolContinuations.clear()
       pendingToolContinuations.clear()
+      recoveryRequests.clear()
       const snapshot = transcript.snapshot()
       resolveConversation({
         durationMs: Date.now() - startedAt,
@@ -1732,7 +1836,7 @@ export async function startBellLiveGreeting(
     connection.on('response.output_item.done', (event) => {
       if (event.item.type !== 'mcp_call' || !event.item.id) return
       const outputReady =
-        'output' in event.item ||
+        typeof event.item.output === 'string' ||
         (event.item.error !== undefined && event.item.error !== null)
       const existing = mcpCalls.get(event.item.id)
       mcpCalls.set(event.item.id, {
@@ -1963,12 +2067,15 @@ export async function startBellLiveGreeting(
             const existing = mcpCalls.get(item.id)
             mcpCalls.set(item.id, {
               createdAt: existing?.createdAt ?? Date.now(),
-              outputReady: existing?.outputReady ?? false,
+              outputReady: existing?.outputReady === true || item.outputReady,
               responseId: existing?.responseId ?? responseId,
               startedAt: existing?.startedAt ?? null,
               terminal: existing?.terminal ?? false,
               tool: existing?.tool ?? item.tool,
             })
+            if (item.outputReady) {
+              finishMcpCall(item.id, item.failed ? 'failed' : 'completed', true)
+            }
           }
           if (supersededByCaller) {
             emitLifecycle({
@@ -1988,6 +2095,26 @@ export async function startBellLiveGreeting(
             recoveryQueued = continuation === 'waiting'
             recoveryRequested = continuation === 'requested'
           }
+        }
+        // A completed, silent non-action response otherwise leaves the caller
+        // waiting forever. Recover once per caller turn with all tools disabled
+        // so neither voicemail nor subscription side effects can be replayed.
+        if (
+          event.response.status === 'completed' &&
+          profile.outputKind === 'empty' &&
+          responseId &&
+          !responsesWithAudio.has(responseId) &&
+          !event.response.output?.some(
+            (item) => item.type === 'function_call'
+          ) &&
+          purpose !== 'bell_subscription_disclosure' &&
+          responseCallerSpeechGenerations.get(responseId) ===
+            callerSpeechGeneration &&
+          !Array.from(responseStartedAt.keys()).some(
+            (activeResponseId) => activeResponseId !== responseId
+          )
+        ) {
+          recoveryRequested = requestEmptyAnswerRecovery()
         }
         const status = event.response.status
         emitLifecycle({
@@ -2072,6 +2199,42 @@ export async function startBellLiveGreeting(
       })()
     })
     connection.on('error', (error) => {
+      const recovery = error.error?.event_id
+        ? recoveryRequests.get(error.error.event_id)
+        : undefined
+      // VAD or OpenAI's own MCP continuation can win the response.create race.
+      // A rejection tied to our exact request means the existing response will
+      // answer; it is not a broken control connection and must not end the call.
+      if (
+        recovery &&
+        error.error?.code === 'conversation_already_has_active_response'
+      ) {
+        recoveryRequests.delete(error.error.event_id ?? '')
+        if (
+          recovery.kind === 'empty' &&
+          recovery.callerTurn === callerSpeechGeneration &&
+          recoveredEmptyCallerTurn === recovery.callerTurn
+        ) {
+          // The rejected request performed no inference. Let the winning
+          // automatic response use the replacement slot if it is also silent.
+          // A delayed error from an older caller turn cannot reset this turn.
+          recoveredEmptyCallerTurn = null
+        }
+        emitLifecycle(
+          recovery.kind === 'tool'
+            ? {
+                event: 'bell_live.tool_continuation',
+                hop: recovery.hop,
+                outcome: 'superseded',
+                toolsAllowed: recovery.toolsAllowed,
+              }
+            : {
+                event: 'bell_live.empty_answer_recovery',
+                outcome: 'superseded',
+              }
+        )
+        return
+      }
       // Automatic VAD may start a response before its response.created event
       // reaches this socket. Only this correlated startup race is harmless.
       if (
