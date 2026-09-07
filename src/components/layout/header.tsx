@@ -171,24 +171,24 @@ export function Header() {
 
   return (
     <header className="py-3 sm:py-4 md:py-6">
-      <div className="container flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="relative h-6 flex items-center">
+      <div className="container flex items-center justify-between gap-3 sm:gap-4">
+        <div className="relative h-6 min-w-0 flex items-center">
           <div
-            className={`transition-opacity duration-200 ${newsletterLogo ? 'opacity-0' : 'opacity-100'}`}
+            className={`min-w-0 transition-opacity duration-200 ${newsletterLogo ? 'opacity-0' : 'opacity-100'}`}
           >
             <Logo />
           </div>
           {newsletter && newsletterLogo ? (
             <Link
               href={`/${newsletter}`}
-              className="-translate-y-1/2 absolute top-1/2 left-0 flex items-center"
+              className="-translate-y-1/2 absolute top-1/2 left-0 flex max-w-full items-center"
             >
               <NewsletterWordmark
                 src={newsletterLogo.src}
                 alt={siteConfig.newsletters[newsletter].name}
                 width={newsletterLogo.width}
                 height={newsletterLogo.height}
-                className={`dark-viewport-invert ${newsletterLogo.className}`}
+                className={`dark-viewport-invert object-contain object-left ${newsletterLogo.className}`}
                 style={{ width: 'auto' }}
               />
             </Link>
@@ -196,7 +196,7 @@ export function Header() {
         </div>
         <nav
           aria-label="Primary"
-          className="flex w-full items-center justify-end gap-6 sm:w-auto sm:gap-5"
+          className="flex shrink-0 items-center justify-end gap-6 sm:gap-5"
         >
           <button
             type="button"
