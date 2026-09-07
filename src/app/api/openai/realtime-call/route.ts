@@ -382,7 +382,7 @@ async function runBellLiveGreeting(input: {
         durationMs: greeting.durationMs,
         attemptNumber,
         audioStarted: greeting.audioStarted,
-        outcome: 'completed',
+        outcome: greeting.outcome,
         ...logContext,
       })
     }

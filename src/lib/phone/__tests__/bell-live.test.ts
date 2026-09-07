@@ -30,6 +30,15 @@ const NOW = new Date('2026-07-31T12:00:00Z')
 const CALL_SID = 'CA1234567890abcdef1234567890abcdef'
 const ORIGINAL_OPENAI_BASE_URL = process.env.OPENAI_BASE_URL
 
+function sentResponseEvents() {
+  return FakeOpenAiRealtimeWebSocket.sentEvents.filter(
+    (event) =>
+      (event as { type?: string }).type === 'response.create' &&
+      (event as { response?: { metadata?: { purpose?: string } } }).response
+        ?.metadata?.purpose !== 'bell_opening_caller_turn'
+  )
+}
+
 function headersFromSipUri(uri: string) {
   const query = new URLSearchParams(uri.slice(uri.indexOf('?') + 1))
   return Array.from(query, ([name, value]) => ({ name, value }))
@@ -163,8 +172,8 @@ describe('Bell Live Realtime session', () => {
           turn_detection: {
             type: 'semantic_vad',
             eagerness: 'high',
-            create_response: true,
-            interrupt_response: true,
+            create_response: false,
+            interrupt_response: false,
           },
         },
       },
@@ -356,7 +365,7 @@ describe('Bell Live Realtime session', () => {
       responseCreated: true,
     })
     expect(FakeOpenAiRealtimeWebSocket.sockets[0]?.closed).toBe(false)
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toEqual([
+    expect(sentResponseEvents()).toEqual([
       {
         type: 'response.create',
         response: {
@@ -364,6 +373,8 @@ describe('Bell Live Realtime session', () => {
           max_output_tokens: 512,
           metadata: { purpose: 'bell_initial_greeting' },
           output_modalities: ['audio'],
+          tool_choice: 'none',
+          tools: [],
         },
       },
     ])
@@ -500,7 +511,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     expect(lifecycle).toContainEqual(
       expect.objectContaining({
         event: 'bell_live.realtime_response',
@@ -525,7 +536,7 @@ describe('Bell Live Realtime session', () => {
       item_id: 'item_private_tool',
       output_index: 1,
     })
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
 
     socket?.emitServerEvent({
       type: 'response.output_item.done',
@@ -542,8 +553,8 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents[1]).toMatchObject({
+    expect(sentResponseEvents()).toHaveLength(2)
+    expect(sentResponseEvents()[1]).toMatchObject({
       event_id: expect.stringMatching(/^evt_bell_tool_/),
       type: 'response.create',
       response: {
@@ -559,8 +570,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
     expect(
-      (FakeOpenAiRealtimeWebSocket.sentEvents[1] as { response: object })
-        .response
+      (sentResponseEvents()[1] as { response: object }).response
     ).not.toHaveProperty('tools')
 
     await vi.waitFor(() => {
@@ -671,8 +681,8 @@ describe('Bell Live Realtime session', () => {
 
     const greeting = await startBellLiveGreeting('rtc_call_greeting')
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents[1]).toMatchObject({
+    expect(sentResponseEvents()).toHaveLength(2)
+    expect(sentResponseEvents()[1]).toMatchObject({
       response: {
         metadata: {
           purpose: 'bell_tool_continuation',
@@ -713,7 +723,7 @@ describe('Bell Live Realtime session', () => {
       output_index: 0,
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     socket?.emitServerEvent({
       type: 'response.output_item.done',
       event_id: 'evt_tool_item_done_without_result',
@@ -725,7 +735,7 @@ describe('Bell Live Realtime session', () => {
         name: 'fetch',
       },
     })
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     socket?.emitServerEvent({
       type: 'response.output_item.done',
       event_id: 'evt_tool_output_done',
@@ -739,7 +749,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
+    expect(sentResponseEvents()).toHaveLength(2)
     expect(
       lifecycle.filter((event) => event.event === 'bell_live.mcp_call')
     ).toEqual([
@@ -766,7 +776,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     socket?.emitServerEvent({
       type: 'response.output_item.done',
       event_id: 'evt_tool_output_done',
@@ -780,7 +790,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
+    expect(sentResponseEvents()).toHaveLength(2)
     FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
     await greeting.conversation
   })
@@ -813,7 +823,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     socket?.emitServerEvent({
       type: 'response.output_item.done',
       event_id: 'evt_fetch_done',
@@ -827,7 +837,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
+    expect(sentResponseEvents()).toHaveLength(2)
     FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
     await greeting.conversation
   })
@@ -847,7 +857,7 @@ describe('Bell Live Realtime session', () => {
         output: [{ id: 'item_old_tool', type: 'mcp_call', name: 'search' }],
       },
     })
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
 
     socket?.emitServerEvent({
       type: 'response.created',
@@ -889,7 +899,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     socket?.closeFromServer()
     await greeting.conversation
   })
@@ -939,7 +949,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     expect(lifecycle).toContainEqual({
       event: 'bell_live.tool_continuation',
       hop: 1,
@@ -1229,11 +1239,11 @@ describe('Bell Live Realtime session', () => {
     })
 
     await vi.waitFor(() => {
-      expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(4)
+      expect(sentResponseEvents()).toHaveLength(4)
     })
-    const continuationResponses = FakeOpenAiRealtimeWebSocket.sentEvents.slice(
-      1
-    ) as Array<{ response: Record<string, unknown> }>
+    const continuationResponses = sentResponseEvents().slice(1) as Array<{
+      response: Record<string, unknown>
+    }>
     expect(
       continuationResponses.map(({ response }) => response.metadata)
     ).toEqual([
@@ -1336,7 +1346,7 @@ describe('Bell Live Realtime session', () => {
 
     const greeting = await startBellLiveGreeting('rtc_call_greeting')
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
+    expect(sentResponseEvents()).toHaveLength(2)
     FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
     await greeting.conversation
   })
@@ -1376,7 +1386,7 @@ describe('Bell Live Realtime session', () => {
 
     const greeting = await startBellLiveGreeting('rtc_call_greeting')
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents[1]).toMatchObject({
+    expect(sentResponseEvents()[1]).toMatchObject({
       response: {
         metadata: {
           purpose: 'bell_tool_final_answer',
@@ -1420,7 +1430,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     socket?.emitServerEvent({
       type: 'response.output_item.done',
       event_id: 'evt_tool_output_done',
@@ -1434,7 +1444,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     expect(lifecycle).toContainEqual({
       event: 'bell_live.tool_continuation',
       hop: 1,
@@ -1497,7 +1507,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     socket?.emitServerEvent({
       type: 'response.output_item.done',
       event_id: 'evt_tool_output_done',
@@ -1511,7 +1521,7 @@ describe('Bell Live Realtime session', () => {
       },
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     expect(lifecycle).not.toContainEqual(
       expect.objectContaining({
         event: 'bell_live.tool_continuation',
@@ -1569,7 +1579,7 @@ describe('Bell Live Realtime session', () => {
       onLifecycleEvent: (event) => lifecycle.push(event),
     })
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     expect(lifecycle).toContainEqual(
       expect.objectContaining({
         event: 'bell_live.realtime_response',
@@ -1630,7 +1640,7 @@ describe('Bell Live Realtime session', () => {
     FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
     await greeting.conversation
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     expect(lifecycle).toContainEqual(
       expect.objectContaining({
         event: 'bell_live.audio_output',
@@ -1687,7 +1697,7 @@ describe('Bell Live Realtime session', () => {
 
     const greeting = await startBellLiveGreeting('rtc_call_greeting')
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(sentResponseEvents()).toHaveLength(1)
     FakeOpenAiRealtimeWebSocket.sockets[0]?.closeFromServer()
     await greeting.conversation
   })

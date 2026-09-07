@@ -278,7 +278,7 @@ describe('POST /api/phone/voice', () => {
     expect(sendMissedCallNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         from: '+15551234567',
-        greeting: expect.stringContaining('this is Bell AI'),
+        greeting: expect.stringContaining('This is Bell AI'),
       })
     )
   })

@@ -121,6 +121,14 @@ async function postAndFlush(request: Request): Promise<Response> {
   return result
 }
 
+function greetingRequests() {
+  return FakeOpenAiRealtimeWebSocket.sentEvents.filter(
+    (event) =>
+      (event as { response?: { metadata?: { purpose?: string } } }).response
+        ?.metadata?.purpose === 'bell_initial_greeting'
+  )
+}
+
 beforeEach(() => {
   afterTasks.length = 0
   afterControl.throwOnSchedule = false
@@ -134,6 +142,7 @@ beforeEach(() => {
   FakeOpenAiRealtimeWebSocket.emitAudioStarted = true
   FakeOpenAiRealtimeWebSocket.emitAudioStopped = true
   FakeOpenAiRealtimeWebSocket.finalStatus = 'completed'
+  FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 0
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatus = null
   FakeOpenAiRealtimeWebSocket.handshakeHttpStatuses = []
   FakeOpenAiRealtimeWebSocket.sentEvents = []
@@ -174,6 +183,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   delete process.env.OPENAI_API_KEY
   delete process.env.OPENAI_PROJECT_ID
   delete process.env.OPENAI_WEBHOOK_SECRET
@@ -183,6 +193,70 @@ afterEach(() => {
 })
 
 describe('POST /api/openai/realtime-call', () => {
+  it('returns a silently interrupted call to the keypad within the first-audio deadline', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    FakeOpenAiRealtimeWebSocket.autoCloseAfterGreeting = false
+    FakeOpenAiRealtimeWebSocket.greetingEventDelayMs = 60_000
+
+    expect((await POST(signedRequest(incomingEvent()))).status).toBe(204)
+    const background = flushAfterTasks()
+    await vi.advanceTimersByTimeAsync(0)
+    const socket = FakeOpenAiRealtimeWebSocket.sockets[0]
+    socket.emitServerEvent({
+      type: 'response.created',
+      response: {
+        id: 'resp_greeting',
+        status: 'in_progress',
+        metadata: { purpose: 'bell_initial_greeting' },
+      },
+    })
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: {
+        id: 'resp_greeting',
+        status: 'cancelled',
+        metadata: { purpose: 'bell_initial_greeting' },
+        output: [],
+      },
+    })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(console.info).toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({
+        event: 'bell_live.openai_greeting',
+        audioStarted: false,
+        outcome: 'interrupted',
+      })
+    )
+
+    // Replay the next silent cancellation from the production call. It must
+    // not reset the playback deadline or leave the parent call stranded.
+    socket.emitServerEvent({
+      type: 'response.created',
+      response: { id: 'resp_silent', status: 'in_progress' },
+    })
+    socket.emitServerEvent({ type: 'input_audio_buffer.speech_started' })
+    socket.emitServerEvent({
+      type: 'response.done',
+      response: { id: 'resp_silent', status: 'cancelled', output: [] },
+    })
+    await vi.advanceTimersByTimeAsync(10_000)
+    await background
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://api.openai.com/v1/realtime/calls/rtc_call_123/hangup',
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(greetingRequests()).toHaveLength(1)
+    expect(transcriptNotifications.send).toHaveBeenCalledWith(
+      expect.objectContaining({ observerCompleted: false })
+    )
+    vi.clearAllTimers()
+  })
+
   it('passes authenticated original caller metadata to private actions', async () => {
     const createController = vi.spyOn(
       bellLiveActions,
@@ -223,7 +297,7 @@ describe('POST /api/openai/realtime-call', () => {
         '[openai/realtime-call]',
         expect.objectContaining({
           event: 'bell_live.openai_greeting',
-          outcome: 'completed',
+          outcome: 'delivered',
         })
       )
     )
@@ -276,7 +350,7 @@ describe('POST /api/openai/realtime-call', () => {
     })
     expect(afterTasks).toHaveLength(1)
     expect(webhookEvents.findOrCreate).not.toHaveBeenCalled()
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(0)
+    expect(greetingRequests()).toHaveLength(0)
 
     await flushAfterTasks()
 
@@ -569,7 +643,7 @@ describe('POST /api/openai/realtime-call', () => {
     expect(
       await postAndFlush(signedRequest(liveIncomingEvent()))
     ).toHaveProperty('status', 204)
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(greetingRequests()).toHaveLength(1)
     expect(webhookEvents.markProcessed).toHaveBeenCalledOnce()
   })
 
@@ -610,7 +684,7 @@ describe('POST /api/openai/realtime-call', () => {
     await postAndFlush(signedRequest(reconnect))
 
     expect(FakeOpenAiRealtimeWebSocket.connections).toHaveLength(2)
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(2)
+    expect(greetingRequests()).toHaveLength(2)
     expect(webhookEvents.findOrCreate).toHaveBeenLastCalledWith({
       eventKey: `bell-live-greeting:${CALL_SID}:rtc_call_reconnected`,
       eventType: 'bell-live-greeting',
@@ -661,7 +735,7 @@ describe('POST /api/openai/realtime-call', () => {
       await postAndFlush(signedRequest(liveIncomingEvent()))
     ).toHaveProperty('status', 204)
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(greetingRequests()).toHaveLength(1)
     expect(webhookEvents.markProcessed).toHaveBeenCalledTimes(2)
     expect(webhookEvents.claimAttempt).toHaveBeenCalledOnce()
   })
@@ -710,7 +784,7 @@ describe('POST /api/openai/realtime-call', () => {
       await postAndFlush(signedRequest(liveIncomingEvent()))
     ).toHaveProperty('status', 204)
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(greetingRequests()).toHaveLength(1)
     expect(webhookEvents.markProcessed).toHaveBeenCalledTimes(3)
     expect(webhookEvents.markSideEffectObserved).toHaveBeenCalledOnce()
     expect(webhookEvents.claimAttempt).toHaveBeenCalledOnce()
@@ -756,7 +830,7 @@ describe('POST /api/openai/realtime-call', () => {
       await postAndFlush(signedRequest(liveIncomingEvent()))
     ).toHaveProperty('status', 204)
 
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(greetingRequests()).toHaveLength(1)
     expect(webhookEvents.markProcessed).toHaveBeenCalledTimes(3)
     expect(webhookEvents.markSideEffectObserved).toHaveBeenCalledTimes(3)
     expect(webhookEvents.claimAttempt).toHaveBeenCalledTimes(2)
@@ -810,7 +884,7 @@ describe('POST /api/openai/realtime-call', () => {
     expect(
       await postAndFlush(signedRequest(liveIncomingEvent()))
     ).toHaveProperty('status', 204)
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(0)
+    expect(greetingRequests()).toHaveLength(0)
     expect(webhookEvents.markProcessed).toHaveBeenCalledOnce()
     expect(webhookEvents.claimAttempt).toHaveBeenCalledOnce()
     expect(console.error).toHaveBeenCalledWith(
@@ -841,7 +915,7 @@ describe('POST /api/openai/realtime-call', () => {
       'https://api.openai.com/v1/realtime/calls/rtc_call_123/hangup',
       expect.objectContaining({ method: 'POST', redirect: 'error' })
     )
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(0)
+    expect(greetingRequests()).toHaveLength(0)
     expect(console.error).toHaveBeenCalledWith(
       '[openai/realtime-call]',
       expect.objectContaining({
@@ -862,7 +936,7 @@ describe('POST /api/openai/realtime-call', () => {
 
     expect(result.status).toBe(204)
     expect(FakeOpenAiRealtimeWebSocket.connections).toHaveLength(2)
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(greetingRequests()).toHaveLength(1)
     expect(webhookEvents.claimAttempt).toHaveBeenCalledOnce()
     expect(console.info).toHaveBeenCalledWith(
       '[openai/realtime-call]',
@@ -888,7 +962,7 @@ describe('POST /api/openai/realtime-call', () => {
 
     expect(result.status).toBe(204)
     expect(FakeOpenAiRealtimeWebSocket.connections).toHaveLength(1)
-    expect(FakeOpenAiRealtimeWebSocket.sentEvents).toHaveLength(1)
+    expect(greetingRequests()).toHaveLength(1)
     expect(console.info).not.toHaveBeenCalledWith(
       '[openai/realtime-call]',
       expect.objectContaining({ outcome: 'retrying_socket' })

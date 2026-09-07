@@ -1,3 +1,5 @@
+import { siteIdentity } from '@/lib/site-identity'
+
 const nycCalendar = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',
   month: 'numeric',
@@ -32,5 +34,6 @@ export function phoneBellInitialGreeting(now = new Date()): string {
     opening = 'Happy Thanksgiving'
   }
 
-  return `${opening}, this is Bell AI. How can I help? Press star for keypad options.`
+  const spokenName = siteIdentity.name.replace('Ilic', 'Eelitch')
+  return `${opening}. You've reached ${spokenName} and the Contraption Company. This is Bell AI. You can ask me a question, leave a voicemail, or subscribe to new-post texts. Press star for keypad options.`
 }
