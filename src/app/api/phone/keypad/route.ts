@@ -10,5 +10,7 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  return twimlResponse(phoneKeypadTwiml(form, { requestUrl: request.url }))
+  return twimlResponse(
+    await phoneKeypadTwiml(form, { requestUrl: request.url })
+  )
 }

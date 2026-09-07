@@ -2,6 +2,18 @@ import { and, eq, isNull, lt, or, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { type PhoneWebhookEvent, phoneWebhookEvents } from '@/lib/db/schema'
 
+/** Read existing retry state without creating or claiming a webhook event. */
+export async function findPhoneWebhookEventByKey(
+  eventKey: string
+): Promise<PhoneWebhookEvent | null> {
+  const [event] = await getDb()
+    .select()
+    .from(phoneWebhookEvents)
+    .where(eq(phoneWebhookEvents.eventKey, eventKey))
+    .limit(1)
+  return event ?? null
+}
+
 export async function findOrCreatePhoneWebhookEvent(input: {
   eventKey: string
   eventType: string

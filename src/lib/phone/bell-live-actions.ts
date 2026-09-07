@@ -1,16 +1,13 @@
 import {
   claimPhoneWebhookEvent,
   findOrCreatePhoneWebhookEvent,
+  findPhoneWebhookEventByKey,
   markPhoneWebhookEventSideEffectObserved,
   releasePhoneWebhookEvent,
 } from '@/lib/db/queries/phone-webhook-events'
-import { isE164, sitePhoneNumber } from '@/lib/phone/config'
-import {
-  getCall,
-  isTwilioCallSid,
-  redirectCallToVoicemail,
-  TwilioApiError,
-} from '@/lib/phone/twilio'
+import { verifiedBellLiveCaller } from '@/lib/phone/bell-live-caller'
+import { callerSubscriptionStatus } from '@/lib/phone/caller-subscription'
+import { redirectCallToVoicemail, TwilioApiError } from '@/lib/phone/twilio'
 import { subscribeVoiceCaller } from '@/lib/phone/voice-subscription'
 import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 
@@ -74,21 +71,6 @@ export function createBellLiveActionHandler(
     return cancelled
   }
 
-  async function verifiedCaller() {
-    if (!isTwilioCallSid(callSid)) return null
-    const call = await getCall(callSid)
-    if (
-      call.sid !== callSid ||
-      call.direction !== 'inbound' ||
-      call.status !== 'in-progress' ||
-      call.to !== sitePhoneNumber() ||
-      !isE164(call.from)
-    ) {
-      return null
-    }
-    return call
-  }
-
   async function perform(
     name: string,
     args: unknown,
@@ -106,7 +88,7 @@ export function createBellLiveActionHandler(
           message: 'The voicemail handoff is underway.',
         }
       }
-      if (!(await verifiedCaller())) return unavailable
+      if (!(await verifiedBellLiveCaller(callSid))) return unavailable
       if (!isCurrent()) return cancelAction(callerTurn)
       const { event } = await findOrCreatePhoneWebhookEvent({
         eventKey: `bell-live:${callSid}:voicemail`,
@@ -181,8 +163,31 @@ export function createBellLiveActionHandler(
     }
     if (!args.confirmed) {
       clearSubscriptionConfirmation()
-      if (!(await verifiedCaller())) return unavailable
+      const caller = await verifiedBellLiveCaller(callSid)
+      if (!caller) return unavailable
       if (!isCurrent()) return cancelAction(callerTurn)
+      const status = await callerSubscriptionStatus(caller.from)
+      if (!isCurrent()) return cancelAction(callerTurn)
+      if (status === 'unknown') return unavailable
+      if (status === 'subscribed') {
+        // A previous controller may have saved this subscription before its
+        // onboarding enqueue failed. Keep that call's durable retry reachable
+        // through fresh disclosure and consent; the signup helper owns its lease.
+        const existingSignup = await findPhoneWebhookEventByKey(
+          `voice-menu:${callSid}:2`
+        )
+        if (!isCurrent()) return cancelAction(callerTurn)
+        if (
+          existingSignup?.eventType !== 'voice-menu' ||
+          existingSignup.processedAt
+        ) {
+          return {
+            status: 'already_subscribed',
+            message:
+              'You are already subscribed to new-post texts. We can keep talking.',
+          }
+        }
+      }
       confirmationPreparedAt = callerTurn
       return {
         status: 'confirmation_required',
@@ -204,7 +209,7 @@ export function createBellLiveActionHandler(
       }
     }
     clearSubscriptionConfirmation()
-    const caller = await verifiedCaller()
+    const caller = await verifiedBellLiveCaller(callSid)
     if (!caller) return unavailable
     if (!isCurrent()) return cancelAction(callerTurn)
     const status = await subscribeVoiceCaller({

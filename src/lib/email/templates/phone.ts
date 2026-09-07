@@ -228,7 +228,7 @@ export type MissedCallEmailInput = {
   from: string
   to: string
   toLabel: string
-  greeting: string
+  greeting?: string
   metadata?: TwilioWebhookMetadata | null
   receivedAt: Date
 }
@@ -242,7 +242,9 @@ function missedCallContent(input: MissedCallEmailInput) {
       ...callerMetadataDetails(input.from, input.metadata),
       ['Received', formatTimestamp(input.receivedAt)],
     ] as Array<[string, string]>,
-    sections: [{ title: 'Greeting played', body: input.greeting }],
+    sections: input.greeting
+      ? [{ title: 'Greeting played', body: input.greeting }]
+      : [],
     footnote:
       'If the caller leaves a voicemail, a transcription follows in a separate email.',
   }

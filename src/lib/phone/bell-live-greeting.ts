@@ -1,3 +1,4 @@
+import type { CallerSubscriptionStatus } from '@/lib/phone/caller-subscription'
 import { siteIdentity } from '@/lib/site-identity'
 
 const nycCalendar = new Intl.DateTimeFormat('en-US', {
@@ -10,7 +11,10 @@ const nycCalendar = new Intl.DateTimeFormat('en-US', {
 })
 
 /** One short opening, derived from the actual NYC calendar without a model call. */
-export function phoneBellInitialGreeting(now = new Date()): string {
+export function phoneBellInitialGreeting(
+  now = new Date(),
+  subscriptionStatus: CallerSubscriptionStatus = 'unknown'
+): string {
   const parts = nycCalendar.formatToParts(now)
   const value = (type: Intl.DateTimeFormatPartTypes): string =>
     parts.find((part) => part.type === type)?.value ?? ''
@@ -35,5 +39,11 @@ export function phoneBellInitialGreeting(now = new Date()): string {
   }
 
   const spokenName = siteIdentity.name.replace('Ilic', 'Eelitch')
-  return `${opening}. You've reached ${spokenName} and the Contraption Company. This is Bell AI. You can ask me a question, leave a voicemail, or subscribe to new-post texts. Press star for keypad options.`
+  const choices =
+    subscriptionStatus === 'subscribed'
+      ? 'Your number is subscribed to new-post texts. You can ask me a question or leave a voicemail.'
+      : subscriptionStatus === 'not_subscribed'
+        ? 'You can ask me a question, leave a voicemail, or subscribe to new-post texts.'
+        : 'You can ask me a question or leave a voicemail.'
+  return `${opening}. You have reached ${spokenName} and the Contraption Company. This is Bell AI. ${choices} Press star for keypad options.`
 }

@@ -51,7 +51,7 @@ export async function sendBellLiveTranscriptNotification(input: {
 export async function sendMissedCallNotification(input: {
   from: string
   to: string
-  greeting: string
+  greeting?: string
   metadata?: TwilioWebhookMetadata | null
 }): Promise<void> {
   const toLabel = numberLabel(input.to)

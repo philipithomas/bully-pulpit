@@ -37,6 +37,7 @@ vi.mock('@/lib/phone/notifications', () => ({
 // sms.integration.test.ts instead of this unit file.
 import { start } from 'workflow/api'
 import { POST as bellCompletePost } from '@/app/api/phone/bell-complete/route'
+import { POST as keypadPost } from '@/app/api/phone/keypad/route'
 import { POST as recordingCompletePost } from '@/app/api/phone/recording-complete/route'
 import { POST as recordingStatusPost } from '@/app/api/phone/recording-status/route'
 import { POST as voicePost } from '@/app/api/phone/voice/route'
@@ -278,9 +279,11 @@ describe('POST /api/phone/voice', () => {
     expect(sendMissedCallNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         from: '+15551234567',
-        greeting: expect.stringContaining('This is Bell AI'),
       })
     )
+    expect(
+      vi.mocked(sendMissedCallNotification).mock.calls[0]?.[0]
+    ).not.toHaveProperty('greeting')
   })
 
   it('falls back to the manual signup menu if the signed form lacks a valid CallSid', async () => {
@@ -320,7 +323,9 @@ describe('POST /api/phone/voice', () => {
     vi.mocked(findSmsSubscriberByPhoneNumber).mockRejectedValueOnce(
       new Error('database unavailable')
     )
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleWarning = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => {})
 
     const response = await voicePost(
       twilioPost('/api/phone/voice', {
@@ -333,11 +338,10 @@ describe('POST /api/phone/voice', () => {
     const xml = await response.text()
     expect(xml).toContain('<Gather')
     expect(xml).toContain('/api/phone/voice-menu')
-    expect(consoleError).toHaveBeenCalledWith(
-      '[phone/voice] SMS subscription lookup failed:',
-      expect.any(Error)
+    expect(consoleWarning).toHaveBeenCalledWith(
+      '[phone/caller-subscription] SMS lookup unavailable'
     )
-    consoleError.mockRestore()
+    consoleWarning.mockRestore()
   })
 
   it('falls back to voicemail when the public phone number is unavailable', async () => {
@@ -363,6 +367,27 @@ describe('POST /api/phone/voice', () => {
 })
 
 describe('POST /api/phone/bell-complete', () => {
+  it('omits signup after the star escape for a confirmed SMS subscriber', async () => {
+    enableBellLive()
+    vi.mocked(findSmsSubscriberByPhoneNumber).mockResolvedValueOnce({
+      confirmedAt: new Date(),
+    } as NonNullable<
+      Awaited<ReturnType<typeof findSmsSubscriberByPhoneNumber>>
+    >)
+    const response = await bellCompletePost(
+      twilioPost('/api/phone/bell-complete', {
+        From: '+15551234567',
+        To: '+12123473190',
+        DialCallStatus: 'completed',
+      })
+    )
+
+    expect(playedTexts(await response.text())).toEqual([
+      PHONE_IVR_FALLBACK_PROMPTS.bellMenu,
+      PHONE_IVR_FALLBACK_PROMPTS.voicemail,
+    ])
+  })
+
   it('opens the keypad after a completed Bell leg, including the star escape', async () => {
     enableBellLive()
     const response = await bellCompletePost(
@@ -442,6 +467,82 @@ describe('POST /api/phone/bell-complete', () => {
       )
     )
     expect(response.status).toBe(401)
+  })
+})
+
+describe('POST /api/phone/keypad', () => {
+  it('offers subscribers voicemail and Bell without repeating signup', async () => {
+    enableBellLive()
+    vi.mocked(findSmsSubscriberByPhoneNumber).mockResolvedValueOnce({
+      confirmedAt: new Date(),
+    } as NonNullable<
+      Awaited<ReturnType<typeof findSmsSubscriberByPhoneNumber>>
+    >)
+
+    const response = await keypadPost(
+      twilioPost('/api/phone/keypad', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    expect(playedTexts(await response.text())).toEqual([
+      PHONE_IVR_FALLBACK_PROMPTS.bellMenu,
+      PHONE_IVR_FALLBACK_PROMPTS.voicemail,
+    ])
+  })
+
+  it('takes subscribers directly to voicemail when Bell is unavailable', async () => {
+    vi.mocked(findSmsSubscriberByPhoneNumber).mockResolvedValueOnce({
+      confirmedAt: new Date(),
+    } as NonNullable<
+      Awaited<ReturnType<typeof findSmsSubscriberByPhoneNumber>>
+    >)
+
+    const response = await keypadPost(
+      twilioPost('/api/phone/keypad', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    const xml = await response.text()
+    expect(playedTexts(xml)).toEqual([PHONE_IVR_FALLBACK_PROMPTS.voicemail])
+    expect(xml).not.toContain('<Gather')
+    expect(xml).toContain('<Record')
+  })
+
+  it('keeps the complete menu available when subscription status is unknown', async () => {
+    enableBellLive()
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.mocked(findSmsSubscriberByPhoneNumber).mockRejectedValueOnce(
+      new Error('database unavailable')
+    )
+
+    const response = await keypadPost(
+      twilioPost('/api/phone/keypad', {
+        From: '+15551234567',
+        To: '+12123473190',
+      })
+    )
+
+    expect(playedTexts(await response.text())).toEqual([
+      PHONE_IVR_FALLBACK_PROMPTS.menuWithBell,
+      PHONE_IVR_FALLBACK_PROMPTS.voicemail,
+    ])
+  })
+
+  it('rejects unsigned requests before subscription lookup', async () => {
+    const response = await keypadPost(
+      twilioPost(
+        '/api/phone/keypad',
+        { From: '+15551234567' },
+        { signature: 'invalid' }
+      )
+    )
+
+    expect(response.status).toBe(401)
+    expect(findSmsSubscriberByPhoneNumber).not.toHaveBeenCalled()
   })
 })
 

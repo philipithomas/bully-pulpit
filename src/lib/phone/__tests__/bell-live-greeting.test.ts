@@ -14,9 +14,29 @@ describe('phoneBellInitialGreeting', () => {
     ['2026-06-02T16:00:00Z', 'Good afternoon'],
     ['2026-06-02T21:00:00Z', 'Good evening'],
   ])('uses NYC time at %s', (instant, opening) => {
-    expect(phoneBellInitialGreeting(new Date(instant))).toBe(
-      `${opening}. You've reached Philip Eelitch Thomas and the Contraption Company. This is Bell AI. You can ask me a question, leave a voicemail, or subscribe to new-post texts. Press star for keypad options.`
+    expect(phoneBellInitialGreeting(new Date(instant), 'not_subscribed')).toBe(
+      `${opening}. You have reached Philip Eelitch Thomas and the Contraption Company. This is Bell AI. You can ask me a question, leave a voicemail, or subscribe to new-post texts. Press star for keypad options.`
     )
+  })
+
+  it('acknowledges an existing SMS subscription without offering signup', () => {
+    const greeting = phoneBellInitialGreeting(
+      new Date('2026-09-07T15:00:00Z'),
+      'subscribed'
+    )
+    expect(greeting).toBe(
+      'Happy Labor Day. You have reached Philip Eelitch Thomas and the Contraption Company. This is Bell AI. Your number is subscribed to new-post texts. You can ask me a question or leave a voicemail. Press star for keypad options.'
+    )
+    expect(greeting).not.toContain('or subscribe')
+  })
+
+  it('uses a neutral opening when subscription status is unknown', () => {
+    const greeting = phoneBellInitialGreeting(new Date('2026-02-02T17:00:00Z'))
+    expect(greeting).toContain(
+      'You can ask me a question or leave a voicemail.'
+    )
+    expect(greeting).not.toContain('subscrib')
+    expect(greeting).toContain('Press star for keypad options.')
   })
 
   it.each([

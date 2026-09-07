@@ -1,10 +1,9 @@
 import { after, NextResponse } from 'next/server'
 import { siteConfig } from '@/lib/config'
-import { findSmsSubscriberByPhoneNumber } from '@/lib/db/queries/sms-subscribers'
 import { validatedPhoneWebhookForm } from '@/lib/phone/auth'
 import { bellLiveSipUri } from '@/lib/phone/bell-live'
-import { phoneBellInitialGreeting } from '@/lib/phone/bell-live-greeting'
-import { isE164, sitePhoneNumber } from '@/lib/phone/config'
+import { callerSubscriptionStatus } from '@/lib/phone/caller-subscription'
+import { sitePhoneNumber } from '@/lib/phone/config'
 import { generateGreeting } from '@/lib/phone/greeting'
 import { sendMissedCallNotification } from '@/lib/phone/notifications'
 import {
@@ -18,20 +17,6 @@ import {
   phoneHandoffCallbackUrl,
   twilioWebhookMetadataFromForm,
 } from '@/lib/phone/webhook-metadata'
-
-async function hasConfirmedSmsSubscription(
-  phoneNumber: string
-): Promise<boolean> {
-  if (!isE164(phoneNumber)) return false
-
-  try {
-    const subscriber = await findSmsSubscriberByPhoneNumber(phoneNumber)
-    return Boolean(subscriber?.confirmedAt)
-  } catch (err) {
-    console.error('[phone/voice] SMS subscription lookup failed:', err)
-    return false
-  }
-}
 
 /**
  * Connects configured calls directly to Bell, which speaks its own short
@@ -59,7 +44,6 @@ export async function POST(request: Request) {
         await sendMissedCallNotification({
           from,
           to,
-          greeting: phoneBellInitialGreeting(),
           metadata,
         })
       } catch (err) {
@@ -79,11 +63,11 @@ export async function POST(request: Request) {
   }
 
   const publicPhoneNumber = sitePhoneNumber()
-  const [greeting, alreadySubscribed] = await Promise.all([
+  const [greeting, subscriptionStatus] = await Promise.all([
     generateGreeting(),
     publicPhoneNumber
-      ? hasConfirmedSmsSubscription(from)
-      : Promise.resolve(false),
+      ? callerSubscriptionStatus(from)
+      : Promise.resolve('unknown'),
   ])
 
   // Notify after the TwiML response is sent so the caller is not kept waiting
@@ -97,7 +81,7 @@ export async function POST(request: Request) {
   })
 
   const callbackUrls = voicemailCallbackUrls({ from, to, metadata })
-  if (!publicPhoneNumber || alreadySubscribed) {
+  if (!publicPhoneNumber || subscriptionStatus === 'subscribed') {
     return twimlResponse(voicemailTwiml({ greeting, ...callbackUrls }))
   }
 
