@@ -102,7 +102,8 @@ describe('renderEmailHeaderHtml', () => {
       null,
       null
     )
-    expect(html).not.toContain('<img')
+    expect(html).not.toContain('width="600"')
+    expect(html).not.toContain('max-width: 600px')
   })
 
   it('includes spacer div', () => {
@@ -111,12 +112,19 @@ describe('renderEmailHeaderHtml', () => {
     expect(html).toContain('&nbsp;')
   })
 
-  it('always includes author byline as link', () => {
+  it('includes the website author photo beside the linked name', () => {
     const html = renderEmailHeaderHtml('My Post', siteUrl, 'my-post')
     expect(html).toContain(`${siteConfig.author}</a>`)
     expect(html).toContain('href="https://www.philipithomas.com"')
     expect(html).toContain('font-size: 14px')
     expect(html).toContain('font-weight: 500')
+    expect(html).toContain('<table role="presentation" align="center"')
+    expect(html).toContain(
+      'src="https://www.philipithomas.com/_next/image?url=%2Fimages%2Fauthor.jpg&amp;w=96&amp;q=100"'
+    )
+    expect(html).toContain('alt="" width="36" height="36"')
+    expect(html).toContain('border-radius: 50%')
+    expect(html).toContain('padding: 0 12px 0 0')
   })
 
   it('renders date when publishedAt provided', () => {
