@@ -427,6 +427,16 @@ body:has(> * [data-bg="tidbits"]) {
   padding-right: 2rem;
 }
 
+@media (max-width: 639px) {
+  header nav .btn-primary {
+    padding-inline: 0.75rem;
+  }
+
+  header nav .btn-primary:hover {
+    padding-right: 2rem;
+  }
+}
+
 .btn-primary .btn-text {
   transition: transform 0.3s ease-in-out;
   color: white;

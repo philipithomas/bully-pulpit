@@ -10,7 +10,7 @@ export function Logo() {
         alt={siteIdentity.name}
         width={siteIdentity.wordmark.width}
         height={siteIdentity.wordmark.height}
-        className="wordmark dark-viewport-invert h-3 w-auto sm:h-[14px]"
+        className="wordmark dark-viewport-invert h-3 w-auto object-contain object-left sm:h-[14px]"
         priority
       />
     </Link>
