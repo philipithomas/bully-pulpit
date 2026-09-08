@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getPostsByNewsletter } from '@/lib/content/loader'
-import type { Post } from '@/lib/content/types'
+import { NEWSLETTERS, type Post } from '@/lib/content/types'
 import { buildEmailBodyHtml } from '@/lib/email/render-body'
 
 function makePost(content: string): Post {
@@ -89,6 +89,19 @@ describe('buildEmailBodyHtml with YouTube embeds', () => {
 })
 
 describe('buildEmailBodyHtml newsletter-specific blocks', () => {
+  it.each(
+    NEWSLETTERS
+  )('includes the author photo in %s without changing plaintext', async (newsletter) => {
+    const body = await buildEmailBodyHtml({
+      ...makePost('A short update.'),
+      newsletter,
+    })
+
+    expect(body.html.match(/url=%2Fimages%2Fauthor\.jpg/g)).toHaveLength(1)
+    expect(body.bodyText).toBe('A short update.')
+    expect(body.previewText).toBe('A short update.')
+  })
+
   it.each([
     'tidbits',
     'tsundoku',

@@ -183,7 +183,8 @@ export function renderEmailHeaderHtml(
     html += `<p style="font-family: 'Tiempos Text', Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 400; color: #625e58; line-height: 1.75; text-align: center; margin: 0 0 4px;">${escapeHtml(subtitle)}</p>`
   }
 
-  html += `<p style="font-family: 'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500; color: #625e58; text-align: center; margin: 0 0 24px;"><a href="${siteUrl}" style="color: #625e58; text-decoration: none;">${escapeHtml(siteConfig.author)}</a></p>`
+  const authorPhotoUrl = toVercelImageUrl(siteUrl, '/images/author.jpg', 96)
+  html += `<table role="presentation" align="center" border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto 24px;"><tr><td width="36" valign="middle" style="width: 36px; padding: 0 12px 0 0;"><img src="${escapeHtml(authorPhotoUrl)}" alt="" width="36" height="36" style="display: block; width: 36px; height: 36px; border: 0; border-radius: 50%;"></td><td valign="middle" style="padding: 0; font-family: ${SANS_STACK}; font-size: 14px; font-weight: 500; line-height: 20px; color: #625e58;"><a href="${escapeHtml(siteUrl)}" style="color: #625e58; text-decoration: none;">${escapeHtml(siteConfig.author)}</a></td></tr></table>`
 
   if (coverImage) {
     const emailPath = coverImage.startsWith('http')
