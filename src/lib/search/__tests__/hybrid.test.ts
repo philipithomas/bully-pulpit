@@ -52,6 +52,43 @@ describe('hybridSearchPosts', () => {
     expect(mockedEmbedQuery).not.toHaveBeenCalled()
   })
 
+  it('ranks the requested behind-the-scenes post first with prose excerpts', async () => {
+    const { results } = await hybridSearchPosts('behind the scenes', {
+      useVector: false,
+    })
+
+    expect(results[0]).toMatchObject({
+      type: 'post',
+      slug: 'bts-find-api',
+      title: 'Behind the scenes of the Find AI API',
+      description: '',
+    })
+    expect(results[0].excerpts.length).toBeGreaterThan(0)
+    expect(
+      results[0].excerpts.map((excerpt) => excerpt.text).join(' ')
+    ).toContain('Find AI API')
+    expect(
+      results[0].excerpts.map((excerpt) => excerpt.text).join(' ')
+    ).not.toContain('Americano at Sightglass Coffee in San Francisco')
+  })
+
+  it('retains image descriptions in explicit image search results', async () => {
+    const { results } = await hybridSearchPosts('Americano Sightglass', {
+      scope: 'images',
+      useVector: false,
+    })
+    const result = results.find((result) => result.slug === 'bts-find-api')
+
+    expect(result).toMatchObject({
+      type: 'image',
+      description: '',
+      image: {
+        description: 'Americano at Sightglass Coffee in San Francisco',
+      },
+      excerpts: [{ text: 'Americano at Sightglass Coffee in San Francisco' }],
+    })
+  })
+
   it('returns content pages in the default search scope', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
 

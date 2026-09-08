@@ -59,6 +59,51 @@ describe('GET /api/search', () => {
     })
   })
 
+  it.each([
+    'lexical',
+    'hybrid',
+  ])('includes post descriptions in the %s typeahead response', async (phase) => {
+    mockedHybridSearchPosts.mockResolvedValue({
+      mode: 'lexical',
+      results: [
+        {
+          type: 'post',
+          id: 'api-tour',
+          slug: 'api-tour',
+          title: 'Behind the scenes',
+          description: 'How we built the API',
+          url: '/api-tour',
+          newsletter: 'contraption',
+          coverImage: '/images/covers/api.jpg',
+          excerpts: [{ text: 'A passage about the API.' }],
+          images: [
+            {
+              id: 'api-tour#cover',
+              src: '/images/covers/api.jpg',
+              alt: 'Coffee on a table',
+              kind: 'cover-image',
+              url: '/api-tour',
+              description: 'Coffee on a table',
+            },
+          ],
+          score: 1,
+        },
+      ],
+    })
+
+    const response = await GET(
+      searchRequest(`q=behind&scope=posts&source=typeahead&phase=${phase}`)
+    )
+    const data = await response.json()
+
+    expect(data.results[0]).toMatchObject({
+      type: 'post',
+      description: 'How we built the API',
+      url: '/api-tour',
+      excerpts: ['A passage about the API.'],
+    })
+  })
+
   it('rejects oversized queries before rate limiting or search', async () => {
     const query = 'x'.repeat(MAX_SEARCH_QUERY_CHARACTERS + 1)
     const response = await GET(searchRequest(`q=${query}`))

@@ -163,8 +163,8 @@ export function buildLexicalIndex(corpus: CorpusPost[]): LexicalIndex {
       const needles = terms.map((t) => t.toLowerCase()).filter(Boolean)
       if (needles.length === 0) return []
 
-      // Title is rendered separately in every consumer; excerpt from prose
-      const chunks = post.chunks.filter((c) => c.kind !== 'title')
+      // Titles and image descriptions are metadata, not post excerpts.
+      const chunks = post.chunks.filter((c) => c.kind === 'body')
 
       const excerpts: string[] = []
       const usedRanges = new Map<number, [number, number][]>()

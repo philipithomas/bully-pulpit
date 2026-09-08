@@ -65,6 +65,7 @@ export interface HybridSearchResult {
   id: string
   slug: string
   title: string
+  description: string
   url: string
   newsletter: string
   publishedAt?: string | null
@@ -115,6 +116,7 @@ interface PostMeta
     CorpusPost,
     | 'contentType'
     | 'title'
+    | 'description'
     | 'url'
     | 'newsletter'
     | 'publishedAt'
@@ -148,6 +150,7 @@ function buildPostMeta(corpus: CorpusPost[]): Map<string, PostMeta> {
       post.slug,
       {
         title: post.title,
+        description: post.description,
         url: post.url,
         contentType: post.contentType,
         newsletter: post.newsletter,
@@ -350,6 +353,7 @@ export async function hybridSearchPosts(
         id,
         slug: entry.slug,
         title: meta.title,
+        description: meta.description,
         url: image.url,
         newsletter: meta.newsletter,
         publishedAt: meta.publishedAt,
@@ -441,7 +445,7 @@ export async function hybridSearchPosts(
           const bare = excerpt.replace(/^…|…$/g, '')
           if (excerpts.some((e) => e.text.includes(bare))) continue
           const source = meta.chunks.find(
-            (chunk) => chunk.kind !== 'title' && chunk.text.includes(bare)
+            (chunk) => chunk.kind === 'body' && chunk.text.includes(bare)
           )
           const section = toSection(meta, source?.heading)
           excerpts.push(
@@ -465,6 +469,7 @@ export async function hybridSearchPosts(
       id: slug,
       slug,
       title: meta.title,
+      description: meta.description,
       url: meta.url,
       newsletter: meta.newsletter,
       publishedAt: meta.publishedAt,

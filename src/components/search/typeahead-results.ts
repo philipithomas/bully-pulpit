@@ -6,12 +6,6 @@ interface TypeaheadResultIdentity {
   url: string
 }
 
-interface TypeaheadResultDestination {
-  url: string
-  image?: { url: string }
-  images?: { url: string }[]
-}
-
 function resultKey(result: TypeaheadResultIdentity): string {
   return result.id ?? result.url ?? result.slug
 }
@@ -33,8 +27,4 @@ export function mergeTypeaheadResults<T extends TypeaheadResultIdentity>(
   }
 
   return combined
-}
-
-export function typeaheadResultUrl(result: TypeaheadResultDestination): string {
-  return result.image?.url ?? result.images?.[0]?.url ?? result.url
 }

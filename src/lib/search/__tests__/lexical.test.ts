@@ -164,6 +164,18 @@ describe('extractExcerpts', () => {
     expect(index.extractExcerpts('titled', ['zebra'])).toEqual([])
   })
 
+  it('keeps cover alt searchable without using it as an excerpt fallback', () => {
+    const post = makeCorpusPost('a-trip', 'A trip', ['We went somewhere.'], {
+      coverAlt: 'A sailboat in the harbor at dusk',
+    })
+    post.chunks.push({ seq: 2, kind: 'cover-alt', text: post.coverAlt })
+    const index = buildLexicalIndex([post])
+    const [result] = index.search('sailboat')
+
+    expect(result?.slug).toBe('a-trip')
+    expect(index.extractExcerpts(result.slug, result.terms)).toEqual([])
+  })
+
   it('returns at most the requested number of excerpts', () => {
     const index = buildLexicalIndex([
       makeCorpusPost('many', 'Many', [

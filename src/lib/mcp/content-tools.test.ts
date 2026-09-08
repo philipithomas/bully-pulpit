@@ -140,6 +140,7 @@ describe('MCP public content helpers', () => {
       id: 'example',
       slug: 'example',
       title: 'Example',
+      description: '',
       url: '/example',
       newsletter: 'workshop',
       publishedAt: '2026-09-01',

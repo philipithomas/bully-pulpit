@@ -16,6 +16,7 @@ interface SearchResult {
   id: string
   slug: string
   title: string
+  description: string
   url: string
   newsletter: string
   coverImage: string
@@ -79,6 +80,7 @@ export async function GET(request: NextRequest) {
       id: result.id,
       slug: result.slug,
       title: result.title,
+      description: result.description,
       url: result.url,
       newsletter: result.newsletter,
       coverImage: result.coverImage,
