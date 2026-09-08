@@ -48,14 +48,16 @@ acceptReport.maxRetries = 5
 async function prepareReport(date: string, runId: string) {
   'use step'
   const existing = await getMorningReport(date)
-  const recipients = [...new Set(siteConfig.adminEmails)]
+  const recipients = existing?.recipients ?? [
+    ...new Set(siteConfig.adminEmails),
+  ]
   if (!recipients.length)
     throw new FatalError('Morning report has no admin recipients')
   return snapshotMorningReport(
     date,
     runId,
     existing?.content ?? buildMorningReportContent(date),
-    existing?.recipients ?? recipients
+    recipients
   )
 }
 prepareReport.maxRetries = 3

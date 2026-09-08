@@ -142,6 +142,31 @@ describe('durable morning report delivery', () => {
     expect((await getMorningReport(date))?.completedAt).toBeInstanceOf(Date)
   })
 
+  it('finishes a saved report with skips when every original admin is removed', async () => {
+    vi.mocked(sendSimpleEmail).mockRejectedValue(
+      Object.assign(new Error('Rejected'), { name: 'MessageRejected' })
+    )
+    await expect(morningReportWorkflow(date, 'token1')).rejects.toThrow(
+      'failed recipients'
+    )
+    vi.stubEnv('ADMIN_EMAILS', '')
+    await reserveMorningReport(date, 'token2', 'run1')
+    vi.mocked(getWorkflowMetadata).mockReturnValue({
+      workflowRunId: 'run2',
+    } as ReturnType<typeof getWorkflowMetadata>)
+    await expect(morningReportWorkflow(date, 'token2')).resolves.toBe('sent')
+    expect(sendSimpleEmail).toHaveBeenCalledTimes(2)
+    expect(
+      (await db.select().from(morningReportDeliveries)).every(
+        (row) =>
+          row.sentAt === null &&
+          row.skippedAt !== null &&
+          row.skipReason === 'admin_removed'
+      )
+    ).toBe(true)
+    expect((await getMorningReport(date))?.completedAt).toBeInstanceOf(Date)
+  })
+
   it('fails visibly with no admins instead of recording success', async () => {
     vi.stubEnv('ADMIN_EMAILS', '')
     await expect(morningReportWorkflow(date, 'token1')).rejects.toThrow(
