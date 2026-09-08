@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { FooterNycStatus } from '@/components/layout/footer-nyc-status'
 import { siteIdentity } from '@/lib/site-identity'
@@ -9,9 +10,15 @@ export function Footer() {
         <div className="grid gap-y-3 md:grid-cols-[minmax(10rem,1fr)_minmax(0,auto)] md:items-baseline md:gap-x-8">
           <Link
             href="/"
-            className="text-white font-semibold text-sm leading-snug hover:text-gray-300 transition-colors"
+            className="w-fit max-w-full hover:opacity-80 transition-opacity"
           >
-            {siteIdentity.name}
+            <Image
+              src={siteIdentity.wordmark.src}
+              alt={siteIdentity.name}
+              width={siteIdentity.wordmark.width}
+              height={siteIdentity.wordmark.height}
+              className="h-3 w-auto object-contain object-left invert sm:h-[14px]"
+            />
           </Link>
           <p className="order-2 text-xs leading-relaxed text-gray-500 md:order-none md:col-start-1 md:row-start-2">
             &copy; {new Date().getFullYear()}{' '}
