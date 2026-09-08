@@ -1,5 +1,5 @@
 {
-  "id": "69fbdfe3-cbbd-4f27-8406-302336c476c9",
+  "id": "9882e0f9-5166-44c1-892e-07cfed2d60f2",
   "prevId": "5e997696-42cc-450e-aabb-b573c9bca7e1",
   "version": "7",
   "dialect": "postgresql",
@@ -1253,6 +1253,18 @@
         "sent_at": {
           "name": "sent_at",
           "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "skipped_at": {
+          "name": "skipped_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "skip_reason": {
+          "name": "skip_reason",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }

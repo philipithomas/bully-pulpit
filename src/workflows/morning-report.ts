@@ -17,6 +17,7 @@ import {
   markMorningReportDelivered,
   morningReportDeliveryPending,
   saveMorningReportEmail,
+  skipMorningReportDelivery,
   snapshotMorningReport,
 } from '@/lib/db/queries/morning-reports'
 import { isPermanentSesError } from '@/lib/email/errors'
@@ -99,8 +100,10 @@ async function sendReport(
   'use step'
   if (process.env.VERCEL_ENV !== 'production')
     throw new FatalError('Morning reports require production')
-  if (!siteConfig.adminEmails.includes(recipient))
-    throw new FatalError('Morning report recipient is no longer an admin')
+  if (!siteConfig.adminEmails.includes(recipient)) {
+    await skipMorningReportDelivery(date, runId, recipient)
+    return false
+  }
   if (!(await morningReportDeliveryPending(date, runId, recipient)))
     return false
   try {

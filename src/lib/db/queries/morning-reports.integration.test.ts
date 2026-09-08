@@ -11,6 +11,7 @@ import {
   releaseMorningReport,
   reserveMorningReport,
   saveMorningReportEmail,
+  skipMorningReportDelivery,
   snapshotMorningReport,
 } from '@/lib/db/queries/morning-reports'
 import { morningReportDeliveries } from '@/lib/db/schema'
@@ -137,6 +138,37 @@ describe('morning report durable ownership', () => {
     await completeMorningReport(date, 'run2')
     await completeMorningReport(date, 'run2')
     expect(await reserveMorningReport(date, 'another', 'run2')).toBe(false)
+  })
+
+  it('fences skipped recipients by owner and preserves actual sent timestamps', async () => {
+    await accepted()
+    await snapshotMorningReport(date, 'run1', content, [
+      'a@example.com',
+      'b@example.com',
+    ])
+    await markMorningReportDelivered(date, 'run1', 'a@example.com')
+    await skipMorningReportDelivery(date, 'run1', 'a@example.com')
+    await skipMorningReportDelivery(date, 'wrong-run', 'b@example.com')
+    expect(
+      await morningReportDeliveryPending(date, 'run1', 'b@example.com')
+    ).toBe(true)
+    await skipMorningReportDelivery(date, 'run1', 'b@example.com')
+    const skippedAt = (await db.select().from(morningReportDeliveries)).find(
+      (row) => row.recipient === 'b@example.com'
+    )!.skippedAt
+    await skipMorningReportDelivery(date, 'run1', 'b@example.com')
+    await markMorningReportDelivered(date, 'run1', 'b@example.com')
+    const rows = await db.select().from(morningReportDeliveries)
+    expect(rows.find((row) => row.recipient === 'a@example.com')).toMatchObject(
+      { sentAt: expect.any(Date), skippedAt: null, skipReason: null }
+    )
+    expect(rows.find((row) => row.recipient === 'b@example.com')).toMatchObject(
+      { sentAt: null, skippedAt, skipReason: 'admin_removed' }
+    )
+    expect(
+      await morningReportDeliveryPending(date, 'run1', 'b@example.com')
+    ).toBe(false)
+    await expect(completeMorningReport(date, 'run1')).resolves.toBeUndefined()
   })
 
   it('rejects empty recipients and cannot complete an empty report', async () => {

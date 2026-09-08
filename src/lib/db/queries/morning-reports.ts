@@ -149,7 +149,10 @@ export async function morningReportDeliveryPending(
   recipient: string
 ) {
   const [row] = await getDb()
-    .select({ sentAt: morningReportDeliveries.sentAt })
+    .select({
+      sentAt: morningReportDeliveries.sentAt,
+      skippedAt: morningReportDeliveries.skippedAt,
+    })
     .from(morningReportDeliveries)
     .innerJoin(
       morningReports,
@@ -163,7 +166,7 @@ export async function morningReportDeliveryPending(
         eq(morningReportDeliveries.recipient, recipient)
       )
     )
-  return !!row && !row.sentAt
+  return !!row && !row.sentAt && !row.skippedAt
 }
 
 export async function markMorningReportDelivered(
@@ -179,6 +182,7 @@ export async function markMorningReportDelivered(
       and(
         eq(morningReportDeliveries.reportDate, date),
         eq(morningReportDeliveries.recipient, recipient),
+        isNull(morningReportDeliveries.skippedAt),
         sql`EXISTS (SELECT 1 FROM ${morningReports} WHERE ${morningReports.reportDate} = ${date} AND ${morningReports.workflowRunId} = ${runId})`
       )
     )
@@ -193,9 +197,31 @@ export async function completeMorningReport(date: string, runId: string) {
         eq(morningReports.reportDate, date),
         eq(morningReports.workflowRunId, runId),
         sql`EXISTS (SELECT 1 FROM ${morningReportDeliveries} WHERE ${morningReportDeliveries.reportDate} = ${date})`,
-        sql`NOT EXISTS (SELECT 1 FROM ${morningReportDeliveries} WHERE ${morningReportDeliveries.reportDate} = ${date} AND ${morningReportDeliveries.sentAt} IS NULL)`
+        sql`NOT EXISTS (SELECT 1 FROM ${morningReportDeliveries} WHERE ${morningReportDeliveries.reportDate} = ${date} AND ${morningReportDeliveries.sentAt} IS NULL AND ${morningReportDeliveries.skippedAt} IS NULL)`
       )
     )
     .returning()
   if (!row) throw new Error('Morning report still has pending deliveries')
+}
+
+/** Removed administrators become terminal without claiming an email was sent. */
+export async function skipMorningReportDelivery(
+  date: string,
+  runId: string,
+  recipient: string
+) {
+  await getDb()
+    .update(morningReportDeliveries)
+    .set({
+      skippedAt: sql`COALESCE(${morningReportDeliveries.skippedAt}, now())`,
+      skipReason: 'admin_removed',
+    })
+    .where(
+      and(
+        eq(morningReportDeliveries.reportDate, date),
+        eq(morningReportDeliveries.recipient, recipient),
+        isNull(morningReportDeliveries.sentAt),
+        sql`EXISTS (SELECT 1 FROM ${morningReports} WHERE ${morningReports.reportDate} = ${date} AND ${morningReports.workflowRunId} = ${runId})`
+      )
+    )
 }

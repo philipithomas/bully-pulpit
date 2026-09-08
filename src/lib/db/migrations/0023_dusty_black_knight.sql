@@ -2,7 +2,9 @@ CREATE TABLE "morning_report_deliveries" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"report_date" text NOT NULL,
 	"recipient" text NOT NULL,
-	"sent_at" timestamp with time zone
+	"sent_at" timestamp with time zone,
+	"skipped_at" timestamp with time zone,
+	"skip_reason" text
 );
 --> statement-breakpoint
 CREATE TABLE "morning_reports" (

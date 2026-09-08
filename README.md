@@ -269,7 +269,8 @@ fall back to useful deterministic copy if generation fails.
 Vercel invokes the protected cron every 15 minutes in both possible UTC hours.
 Only the local 7am hour proceeds; duplicate invocations share one durable report
 owner and each recipient has a completion row. A failed run can resume during
-that morning's catch-up window, while cancelled runs stay cancelled. Preview
+that morning's catch-up window, while cancelled runs stay cancelled. An admin
+removed after the snapshot is recorded as skipped without sending. Preview
 never sends. SES delivery is at-least-once: a provider acceptance followed by
 lost execution acknowledgement or exhausted completion persistence can still
 duplicate mail. The Health page monitors completed reports, not cron no-ops.

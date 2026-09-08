@@ -17,9 +17,10 @@ import {
   morningReportDeliveryPending,
   reserveMorningReport,
 } from '@/lib/db/queries/morning-reports'
+import { morningReportDeliveries } from '@/lib/db/schema'
 import { sendSimpleEmail } from '@/lib/email/ses'
 import { generateMorningReportCopy } from '@/lib/morning-report/copy'
-import { resetDb } from '@/test/integration/db'
+import { db, resetDb } from '@/test/integration/db'
 import { morningReportWorkflow } from '@/workflows/morning-report'
 
 const date = '2026-09-08'
@@ -107,6 +108,38 @@ describe('durable morning report delivery', () => {
       to: 'first@example.com',
       html: firstReport!.email!.html,
     })
+  })
+
+  it('records a removed admin as skipped when a failed report resumes', async () => {
+    vi.mocked(sendSimpleEmail).mockRejectedValueOnce(
+      Object.assign(new Error('Rejected'), { name: 'MessageRejected' })
+    )
+    await expect(morningReportWorkflow(date, 'token1')).rejects.toThrow(
+      'failed recipients'
+    )
+    vi.stubEnv('ADMIN_EMAILS', 'second@example.com')
+    await reserveMorningReport(date, 'token2', 'run1')
+    vi.mocked(getWorkflowMetadata).mockReturnValue({
+      workflowRunId: 'run2',
+    } as ReturnType<typeof getWorkflowMetadata>)
+    await expect(morningReportWorkflow(date, 'token2')).resolves.toBe('sent')
+    expect(sendSimpleEmail).toHaveBeenCalledTimes(2)
+    const rows = await db.select().from(morningReportDeliveries)
+    expect(
+      rows.find((row) => row.recipient === 'first@example.com')
+    ).toMatchObject({
+      sentAt: null,
+      skippedAt: expect.any(Date),
+      skipReason: 'admin_removed',
+    })
+    expect(
+      rows.find((row) => row.recipient === 'second@example.com')
+    ).toMatchObject({
+      sentAt: expect.any(Date),
+      skippedAt: null,
+      skipReason: null,
+    })
+    expect((await getMorningReport(date))?.completedAt).toBeInstanceOf(Date)
   })
 
   it('fails visibly with no admins instead of recording success', async () => {

@@ -592,6 +592,8 @@ export const morningReportDeliveries = pgTable(
       .references(() => morningReports.reportDate, { onDelete: 'cascade' }),
     recipient: text('recipient').notNull(),
     sentAt: timestamp('sent_at', { withTimezone: true }),
+    skippedAt: timestamp('skipped_at', { withTimezone: true }),
+    skipReason: text('skip_reason'),
   },
   (table) => [
     uniqueIndex('idx_morning_report_date_recipient').on(
