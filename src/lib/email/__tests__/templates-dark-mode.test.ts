@@ -27,6 +27,20 @@ describe('newsletter shell dark mode', () => {
     siteUrl: 'https://www.philipithomas.com',
   }
 
+  it('links directly to token-backed preferences alongside unsubscribe', () => {
+    const html = renderNewsletterShell({
+      ...baseInput,
+      unsubscribeUrl:
+        'https://www.philipithomas.com/unsubscribe?token=recipient-token&source=email',
+    })
+    expect(html).toMatch(
+      /href="https:\/\/www\.philipithomas\.com\/unsubscribe\?token=recipient-token&amp;source=email#newsletters"[^>]*>Manage subscriptions<\/a>/
+    )
+    expect(html).toMatch(
+      /href="https:\/\/www\.philipithomas\.com\/unsubscribe\?token=recipient-token&amp;source=email"[^>]*>Unsubscribe<\/a>/
+    )
+  })
+
   it('declares color-scheme meta tags', () => {
     const html = renderNewsletterShell(baseInput)
     expect(html).toContain(COLOR_SCHEME_META)

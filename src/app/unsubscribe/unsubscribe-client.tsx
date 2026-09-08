@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { siteConfig } from '@/lib/config'
+import { EMAIL_PREFERENCES_ANCHOR } from '@/lib/email/preferences-link'
 import { newsletterRows } from '@/lib/newsletters'
 
 const newsletterInfo = newsletterRows()
@@ -39,6 +40,18 @@ function UnsubscribeContent() {
   const [deleted, setDeleted] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const hasPreferences = prefs !== null
+
+  // The token lookup is asynchronous, so the browser's initial fragment
+  // navigation can run before this section exists. Scroll only after it loads.
+  useEffect(() => {
+    if (
+      hasPreferences &&
+      window.location.hash === `#${EMAIL_PREFERENCES_ANCHOR}`
+    ) {
+      document.getElementById(EMAIL_PREFERENCES_ANCHOR)?.scrollIntoView()
+    }
+  }, [hasPreferences])
 
   useEffect(() => {
     if (!token) {
@@ -175,7 +188,7 @@ function UnsubscribeContent() {
           <p className="text-gray-900">{prefs.email}</p>
         </section>
 
-        <section className="mb-10">
+        <section id={EMAIL_PREFERENCES_ANCHOR} className="mb-10 scroll-mt-6">
           <h2 className="font-mono text-xs font-medium tracking-[0.12em] uppercase text-gray-500 mb-4">
             Newsletters
           </h2>
