@@ -8,7 +8,6 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import {
   mergeTypeaheadResults,
   TYPEAHEAD_RESULT_LIMIT,
-  typeaheadResultUrl,
 } from '@/components/search/typeahead-results'
 import { Spinner } from '@/components/ui/spinner'
 import {
@@ -22,28 +21,15 @@ import { cn } from '@/lib/utils'
 import { useChatSidebar } from '@/stores/chat-store'
 
 interface SearchResult {
-  type?: 'post' | 'page' | 'image'
+  type?: 'post' | 'page'
   id?: string
   slug: string
   title: string
+  description: string
   url: string
   newsletter: string
   coverImage: string
   excerpts: string[]
-  images?: {
-    id: string
-    src: string
-    alt: string
-    url: string
-    description: string
-  }[]
-  image?: {
-    id: string
-    src: string
-    alt: string
-    url: string
-    description: string
-  }
 }
 
 interface SearchResponse {
@@ -74,6 +60,7 @@ async function requestSearchPhase(
 ): Promise<SearchResponse> {
   const params = new URLSearchParams({
     q: query,
+    scope: 'posts',
     source: 'typeahead',
     phase,
   })
@@ -146,11 +133,13 @@ export function SearchDialog({
                 (p: {
                   slug: string
                   title: string
+                  description: string
                   newsletter: string
                   coverImage: string
                 }) => ({
                   slug: p.slug,
                   title: p.title,
+                  description: p.description,
                   url: `/${p.slug}`,
                   newsletter: p.newsletter,
                   coverImage: p.coverImage,
@@ -274,7 +263,7 @@ export function SearchDialog({
         })
       }
       onOpenChange(false)
-      const url = typeaheadResultUrl(result)
+      const url = result.url
       router.push(url.startsWith('/') ? url : `/${url}`)
     },
     [query.length, router, onOpenChange]
@@ -379,10 +368,9 @@ export function SearchDialog({
                     className="max-h-80 overflow-y-auto p-2"
                   >
                     {displayResults.map((result, i) => {
-                      const matchedImage = result.image ?? result.images?.[0]
                       const snippet =
-                        matchedImage?.description ?? result.excerpts[0]
-                      const thumbnail = matchedImage?.src ?? result.coverImage
+                        result.description?.trim() || result.excerpts[0]
+                      const thumbnail = result.coverImage
                       return (
                         <li key={result.id ?? result.slug} role="presentation">
                           <button

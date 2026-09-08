@@ -11,6 +11,7 @@ export function GET() {
       slug: p.slug,
       newsletter: p.newsletter,
       title: p.frontmatter.title,
+      description: p.frontmatter.subtitle ?? p.frontmatter.description ?? '',
       coverImage: p.frontmatter.coverImage,
     })),
   })
