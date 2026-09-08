@@ -8,13 +8,13 @@ import { siteConfig } from '@/lib/config'
 import { photoMetadataItems } from '@/lib/content/photo-metadata'
 import type { PhotoMetadata, Post } from '@/lib/content/types'
 import { escapeHtml } from '@/lib/email/escape'
+import { toVercelImagePath, toVercelImageUrl } from '@/lib/email/images'
 
 const SANS_STACK = `'Sohne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`
 const SERIF_STACK = `'Tiempos Text', Georgia, 'Times New Roman', serif`
 const MONO_STACK = `'Sohne Mono', 'SF Mono', 'Fira Code', monospace`
 const EMAIL_IMAGE_WIDTH = 640
 const EMAIL_THUMBNAIL_WIDTH = 256
-const EMAIL_IMAGE_QUALITY = 100
 
 const tagStyles: Record<string, string> = {
   h1: `font-family: ${SANS_STACK}; font-size: 28px; font-weight: 700; color: #111110; line-height: 1.3; margin: 32px 0 12px;`,
@@ -76,24 +76,6 @@ function applyInlineStyles() {
     }
     visit(tree, null)
   }
-}
-
-function toVercelImagePath(
-  imagePath: string,
-  width: number,
-  quality = EMAIL_IMAGE_QUALITY
-): string {
-  const params = new URLSearchParams({
-    url: imagePath,
-    w: String(width),
-    q: String(quality),
-  })
-  return `/_next/image?${params.toString()}`
-}
-
-function toVercelImageUrl(siteUrl: string, imagePath: string, width: number) {
-  if (!imagePath.startsWith('/') || imagePath.startsWith('//')) return imagePath
-  return `${siteUrl}${toVercelImagePath(imagePath, width)}`
 }
 
 // In-article images render through Vercel Image Optimization in email too.

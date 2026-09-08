@@ -35,6 +35,16 @@ export const CRON_JOBS = [
     maxRuntimeMs: 15 * MINUTE,
     failureCode: 'subscriber_backup_failed',
   },
+  {
+    name: 'morning-report',
+    label: 'Admin morning report',
+    path: '/api/cron/morning-report',
+    schedule: '*/15 11,12 * * *',
+    cadence: 'Daily at 7am America/New_York',
+    staleAfterMs: 36 * HOUR,
+    maxRuntimeMs: 30 * MINUTE,
+    failureCode: 'morning_report_failed',
+  },
 ] as const
 
 export type CronJobDefinition = (typeof CRON_JOBS)[number]

@@ -20,6 +20,7 @@
     "tidbits:palettes": "tsx scripts/assign-tidbits-palettes.ts",
     "bell:eval": "tsx scripts/check-bell-evals.ts",
     "bell:eval:live": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env.development.local --env-file-if-exists=.env scripts/evaluate-bell.ts",
+    "morning-report:preview": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/preview-morning-report.ts",
     "phone:audio": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/generate-phone-ivr-audio.ts",
     "images:optimize": "tsx scripts/optimize-images.ts",
     "content:check": "tsx scripts/check-content.ts",

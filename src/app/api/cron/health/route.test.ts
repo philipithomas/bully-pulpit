@@ -14,17 +14,20 @@ function request(auth?: string) {
 
 function healthyRows(): CronJobHealth[] {
   const now = new Date()
-  return ['suppression-sync', 'bell-retention', 'subscriber-backup'].map(
-    (jobName) => ({
-      jobName,
-      monitoringStartedAt: now,
-      lastStartedAt: now,
-      lastSucceededAt: now,
-      lastFailedAt: null,
-      lastFailureCode: null,
-      updatedAt: now,
-    })
-  )
+  return [
+    'suppression-sync',
+    'bell-retention',
+    'subscriber-backup',
+    'morning-report',
+  ].map((jobName) => ({
+    jobName,
+    monitoringStartedAt: now,
+    lastStartedAt: now,
+    lastSucceededAt: now,
+    lastFailedAt: null,
+    lastFailureCode: null,
+    updatedAt: now,
+  }))
 }
 
 beforeEach(() => {
@@ -52,6 +55,7 @@ describe('GET cron health', () => {
       'suppression-sync',
       'bell-retention',
       'subscriber-backup',
+      'morning-report',
     ])
     expect(JSON.stringify(body)).not.toContain('errorMessage')
   })

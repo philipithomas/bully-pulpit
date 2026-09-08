@@ -560,3 +560,45 @@ export type BellMessage = typeof bellMessages.$inferSelect
 export type NewBellMessage = typeof bellMessages.$inferInsert
 export type BellGeneration = typeof bellGenerations.$inferSelect
 export type NewBellGeneration = typeof bellGenerations.$inferInsert
+
+// One immutable rendered report per New York calendar date. The enqueue token
+// fences late Workflow starts; an accepted run owns delivery until terminal.
+export const morningReports = pgTable('morning_reports', {
+  reportDate: text('report_date').primaryKey(),
+  enqueueToken: text('enqueue_token'),
+  enqueueAt: timestamp('enqueue_at', { withTimezone: true }),
+  workflowRunId: text('workflow_run_id'),
+  content:
+    jsonb('content').$type<
+      import('@/lib/morning-report/content').MorningReportContent
+    >(),
+  email:
+    jsonb('email').$type<
+      import('@/lib/morning-report/content').MorningReportEmail
+    >(),
+  recipients: jsonb('recipients').$type<string[]>(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+export const morningReportDeliveries = pgTable(
+  'morning_report_deliveries',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    reportDate: text('report_date')
+      .notNull()
+      .references(() => morningReports.reportDate, { onDelete: 'cascade' }),
+    recipient: text('recipient').notNull(),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    skippedAt: timestamp('skipped_at', { withTimezone: true }),
+    skipReason: text('skip_reason'),
+  },
+  (table) => [
+    uniqueIndex('idx_morning_report_date_recipient').on(
+      table.reportDate,
+      table.recipient
+    ),
+  ]
+)

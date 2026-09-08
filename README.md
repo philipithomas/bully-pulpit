@@ -164,8 +164,8 @@ Every scheduled route records best-effort start, success, and failure
 heartbeats in `cron_job_health`. The private Printing press Health page shows
 those timestamps and uses cadence-specific grace windows to identify failed or
 overdue jobs. Heartbeat writes are diagnostic: their failure never changes the
-result of the underlying suppression sync, Bell retention, or subscriber
-backup job. Preview deployments keep this health store read-only, even if they
+result of the underlying suppression sync, Bell retention, subscriber
+backup, or morning report job. Preview deployments keep this health store read-only, even if they
 share the production `DATABASE_URL`; `VERCEL_ENV=preview` disables both
 lifecycle writes and first-read activation. The schema migration creates empty
 health and activation tables.
@@ -255,3 +255,34 @@ Copyright (c) 2020-2026 The Contraption Company LLC. All rights reserved.
 
 This repository is source-available for viewing and reference, but no open
 license is granted. See [LICENSE](LICENSE).
+
+### Daily admin morning report
+
+At 7am New York time, the site emails each address in `ADMIN_EMAILS` a small
+selection from the archive: prior-year posts published on that calendar date,
+a word from Diction, a contraption, and a published photo with its recorded
+caption and camera metadata. Date-seeded choices and the rendered email are
+saved before delivery, so retries keep the same content. Astra through AI
+Gateway writes the subject, preview line, and introduction; bounded retries
+fall back to useful deterministic copy if generation fails.
+
+Vercel invokes the protected cron every 15 minutes in both possible UTC hours.
+Only the local 7am hour proceeds; duplicate invocations share one durable report
+owner and each recipient has a completion row. A failed run can resume during
+that morning's catch-up window, while cancelled runs stay cancelled. An admin
+removed after the snapshot is recorded as skipped without sending. Preview
+never sends. SES delivery is at-least-once: a provider acceptance followed by
+lost execution acknowledgement or exhausted completion persistence can still
+duplicate mail. The Health page monitors completed reports, not cron no-ops.
+
+To inspect an email without sending anything:
+
+```bash
+pnpm morning-report:preview 2026-09-08
+pnpm morning-report:preview 2026-09-08 --live # Uses AI_GATEWAY_API_KEY
+```
+
+The script writes `report.html`, `report.txt`, and `report.json` under
+`/tmp/morning-report-YYYY-MM-DD`. It has no email-delivery mode. Open the HTML
+in a browser to inspect the email; photos use the same production Vercel image
+optimizer as newsletter emails, and HTML has a fixed-width Outlook wrapper.

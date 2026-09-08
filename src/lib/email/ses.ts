@@ -28,6 +28,7 @@ export async function sendSimpleEmail(input: {
   subject: string
   html: string
   text?: string
+  abortSignal?: AbortSignal
 }): Promise<void> {
   const toAddresses = Array.isArray(input.to) ? input.to : [input.to]
   await getSesClient().send(
@@ -48,7 +49,8 @@ export async function sendSimpleEmail(input: {
           },
         },
       },
-    })
+    }),
+    { abortSignal: input.abortSignal }
   )
 }
 
