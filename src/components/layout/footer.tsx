@@ -17,7 +17,7 @@ export function Footer() {
               alt={siteIdentity.name}
               width={siteIdentity.wordmark.width}
               height={siteIdentity.wordmark.height}
-              className="h-3 w-auto object-contain object-left invert sm:h-[14px]"
+              className="h-3 w-auto invert sm:h-[14px]"
             />
           </Link>
           <p className="order-2 text-xs leading-relaxed text-gray-500 md:order-none md:col-start-1 md:row-start-2">
