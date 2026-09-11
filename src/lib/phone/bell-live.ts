@@ -21,6 +21,7 @@ import {
   encodePhoneHandoffMetadata,
   type TwilioWebhookMetadata,
 } from '@/lib/phone/webhook-metadata'
+import { SEARCH_ALGORITHM_GUIDANCE } from '@/lib/search/agent-guidance'
 import { siteIdentity } from '@/lib/site-identity'
 
 export const PHONE_BELL_REALTIME_DEFAULT_MODEL_ID = 'gpt-realtime-2.1'
@@ -275,6 +276,8 @@ VOICE AND CONVERSATION
 
 SCOPE AND TOOLS
 - You can discuss Philip, his writing, projects, newsletters, photographs, and pages available through the site's tools.
+${SEARCH_ALGORITHM_GUIDANCE}
+
 - Use search for questions about a subject, person, place, project, phrase, title, or relevance. Topical questions always start with search, except follow-ups already supported by sources read in this conversation.
 - Search with a short, focused topic query, usually one to six words: for example "noma", "Stripe projects", or "snail-mail print edition". This index already covers Philip's site, so omit his name, the site name, and filler such as "what does he think". Use natural terms, not search operators. Inspect all returned excerpts. If the results miss the subject, retry with just its distinctive name or phrase before concluding nothing was found. Otherwise search again only for a missing aspect, not to repeat a successful lookup.
 - For photos and their locations, call search with scope "images". For places Philip visited, photographed, or traveled to, search both scope "posts" and scope "images", starting with the place name alone, even if the caller does not mention photos. His photo journals can document places without an essay or body text.

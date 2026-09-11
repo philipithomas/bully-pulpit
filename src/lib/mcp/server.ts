@@ -10,6 +10,7 @@ import {
   searchOutputSchema,
   searchPublicContent,
 } from '@/lib/mcp/content-tools'
+import { SEARCH_ALGORITHM_GUIDANCE } from '@/lib/search/agent-guidance'
 import { siteIdentity } from '@/lib/site-identity'
 
 export type McpSearchAccess = 'hybrid' | 'lexical' | 'limited'
@@ -52,8 +53,9 @@ export function createSiteMcpServer(
       ],
     },
     {
-      instructions:
-        "Use search to find Philip Ilic Thomas's writing, photos, and pages by subject, person, place, project, phrase, title, or relevance. For photos or places he has photographed, use scope images and inspect authored locations and image descriptions as well as excerpts. Fetch the returned IDs for complete text and citation URLs. Photo locations can support where a photo was taken; an incidental cover cannot establish an essay's argument or Philip's opinion. For broad questions, compare sources that add distinct evidence instead of relying on one result. Use list_posts only when the user explicitly asks to list or browse the latest, recent, chronological, or newsletter-filtered archive. All tools are public, read-only, and require no authentication.",
+      instructions: `Use search to find Philip Ilic Thomas's writing, photos, and pages by subject, person, place, project, phrase, title, or relevance. For travel questions, search both posts and images and inspect authored locations and image descriptions as well as excerpts. Fetch the returned IDs for complete text and citation URLs. Photo locations can support where a photo was taken; an incidental cover cannot establish an essay's argument or Philip's opinion. For broad questions, compare sources that add distinct evidence instead of relying on one result. Use list_posts only when the user explicitly asks to list or browse the latest, recent, chronological, or newsletter-filtered archive. All tools are public, read-only, and require no authentication.
+
+${SEARCH_ALGORITHM_GUIDANCE}`,
     }
   )
 
