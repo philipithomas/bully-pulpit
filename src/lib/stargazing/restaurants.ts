@@ -162,6 +162,7 @@ export const stargazingRestaurants: readonly StargazingRestaurant[] = [
     name: 'SingleThread',
     city: 'Healdsburg',
     stars: 3,
+    distinction: 'Green Star',
     worldsBest: {
       rank: 80,
       url: WORLDS_BEST_51_100,
