@@ -1,8 +1,10 @@
 import { siteConfig } from '@/lib/config'
+import { findPhoneWebhookEventByKey } from '@/lib/db/queries/phone-webhook-events'
 import { phoneBellLiveConfigured } from '@/lib/phone/bell-live'
 import { callerSubscriptionStatus } from '@/lib/phone/caller-subscription'
 import { sitePhoneNumber } from '@/lib/phone/config'
 import { PHONE_IVR_FALLBACK_PROMPTS } from '@/lib/phone/ivr-audio'
+import { isTwilioCallSid } from '@/lib/phone/twilio'
 import { voiceMenuTwiml, voicemailTwiml } from '@/lib/phone/twiml'
 import { voicemailCallbackUrls } from '@/lib/phone/voicemail-callbacks'
 import {
@@ -27,7 +29,23 @@ export async function phoneKeypadTwiml(
   const subscriptionStatus = smsAvailable
     ? await callerSubscriptionStatus(from)
     : 'unknown'
-  const offerSignup = smsAvailable && subscriptionStatus !== 'subscribed'
+  const callSid = String(form.get('CallSid') ?? '')
+  const pendingSignup =
+    smsAvailable &&
+    subscriptionStatus === 'subscribed' &&
+    isTwilioCallSid(callSid)
+      ? await findPhoneWebhookEventByKey(`voice-menu:${callSid}:2`).catch(
+          () => {
+            // A recovery lookup outage must not remove voicemail/keypad access.
+            console.warn('[phone/keypad] Signup recovery lookup unavailable')
+            return null
+          }
+        )
+      : null
+  const resumingSignup =
+    pendingSignup?.eventType === 'voice-menu' && !pendingSignup.processedAt
+  const offerSignup =
+    smsAvailable && (subscriptionStatus !== 'subscribed' || resumingSignup)
   const greeting = options.bellUnavailable
     ? PHONE_IVR_FALLBACK_PROMPTS.bellUnavailable
     : undefined

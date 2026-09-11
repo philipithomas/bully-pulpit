@@ -45,6 +45,7 @@ function headersFromSipUri(uri: string) {
 }
 
 beforeEach(() => {
+  process.env.OPENAI_PHONE_VOICE_ENGINE = 'realtime'
   delete process.env.OPENAI_BASE_URL
   FakeOpenAiRealtimeWebSocket.afterContinuationEventBatches = []
   FakeOpenAiRealtimeWebSocket.afterContinuationEvents = []
@@ -69,6 +70,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  delete process.env.OPENAI_PHONE_VOICE_ENGINE
   vi.useRealTimers()
   delete process.env.OPENAI_API_KEY
   delete process.env.OPENAI_PROJECT_ID
@@ -112,7 +114,7 @@ describe('Bell Live SIP invitation', () => {
     const uri = bellLiveSipUri(CALL_SID, NOW)
     expect(uri).not.toBeNull()
     expect(uri).toMatch(
-      /^sip:proj_test123@sip\.api\.openai\.com;transport=tls\?/
+      /^sip:proj_test123@sip\.api\.openai\.com;transport=tls;secure=true\?/
     )
     expect(uri?.length).toBeLessThanOrEqual(255)
     expect(uri).not.toContain('test-twilio-secret')

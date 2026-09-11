@@ -1127,7 +1127,7 @@ describe('POST /api/phone/voice-menu', () => {
       '<Dial action="https://www.philipithomas.com/api/phone/bell-complete?phoneMetadata='
     )
     expect(xml).toContain(
-      '<Sip>sip:proj_test123@sip.api.openai.com;transport=tls?'
+      '<Sip>sip:proj_test123@sip.api.openai.com;transport=tls;secure=true?'
     )
     expect(xml).toContain('x-bp-call-sid=CA1234567890abcdef1234567890abcdef')
     expect(xml).toContain('&amp;x-bp-token=')

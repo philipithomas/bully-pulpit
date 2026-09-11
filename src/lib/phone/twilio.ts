@@ -198,9 +198,9 @@ export async function getCall(callSid: string): Promise<TwilioCall> {
   return data as TwilioCall
 }
 
-/** Interrupt the parent call's active TwiML with our fixed voicemail route. */
-export async function redirectCallToVoicemail(
+async function redirectCallToPhoneRoute(
   callSid: string,
+  destination: 'voicemail' | 'keypad',
   metadata?: TwilioWebhookMetadata
 ): Promise<void> {
   const { accountSid, authToken } = twilioCredentials()
@@ -212,7 +212,7 @@ export async function redirectCallToVoicemail(
     },
     body: new URLSearchParams({
       Url: phoneHandoffCallbackUrl(
-        new URL('/api/phone/voicemail', siteConfig.url).href,
+        new URL(`/api/phone/${destination}`, siteConfig.url).href,
         metadata
       ),
       Method: 'POST',
@@ -221,6 +221,25 @@ export async function redirectCallToVoicemail(
     signal: AbortSignal.timeout(10_000),
   })
   if (!response.ok) {
-    throw new TwilioApiError('Twilio voicemail handoff failed', response.status)
+    throw new TwilioApiError(
+      `Twilio ${destination} handoff failed`,
+      response.status
+    )
   }
+}
+
+/** Interrupt the parent call's active TwiML with our fixed voicemail route. */
+export function redirectCallToVoicemail(
+  callSid: string,
+  metadata?: TwilioWebhookMetadata
+): Promise<void> {
+  return redirectCallToPhoneRoute(callSid, 'voicemail', metadata)
+}
+
+/** Opens the trusted keypad without enrolling the caller in text messages. */
+export function redirectCallToKeypad(
+  callSid: string,
+  metadata?: TwilioWebhookMetadata
+): Promise<void> {
+  return redirectCallToPhoneRoute(callSid, 'keypad', metadata)
 }

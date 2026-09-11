@@ -1,6 +1,6 @@
 import { type GatewayProviderOptions, gateway } from '@ai-sdk/gateway'
 
-/** Shared GPT-5.6 Sol fast-serving model for Bell's web and SMS surfaces. */
+/** Shared GPT-5.6 Sol fast-serving model for Bell's research surfaces. */
 export const BELL_MODEL_ID = 'openai/gpt-5.6-sol-fast'
 export const bellModel = gateway(BELL_MODEL_ID)
 
@@ -60,7 +60,7 @@ function getSharedProviderOptions(input: {
 }
 
 export function getBellProviderOptions(input: {
-  surface: 'web' | 'sms'
+  surface: GenerationSurface
   pseudonymousUser?: string | null
 }) {
   return getSharedProviderOptions({ feature: 'bell', ...input })

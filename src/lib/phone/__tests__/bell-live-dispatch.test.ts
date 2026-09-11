@@ -165,6 +165,7 @@ function startDisclosureResponse(
 }
 
 beforeEach(() => {
+  vi.stubEnv('OPENAI_PHONE_VOICE_ENGINE', 'realtime')
   FakeOpenAiRealtimeWebSocket.afterContinuationEventBatches = []
   FakeOpenAiRealtimeWebSocket.afterContinuationEvents = []
   FakeOpenAiRealtimeWebSocket.connections = []

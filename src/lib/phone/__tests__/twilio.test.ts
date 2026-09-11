@@ -3,6 +3,7 @@ import {
   createCall,
   getCall,
   isRetryableTwilioError,
+  redirectCallToKeypad,
   redirectCallToVoicemail,
   sendSms,
   TwilioApiError,
@@ -238,6 +239,9 @@ describe('verified live call actions', () => {
     await expect(redirectCallToVoicemail(sid)).rejects.toThrow(
       'Invalid Twilio CallSid'
     )
+    await expect(redirectCallToKeypad(sid)).rejects.toThrow(
+      'Invalid Twilio CallSid'
+    )
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -312,5 +316,54 @@ describe('verified live call actions', () => {
       fromState: 'CA',
     })
     expect(body.get('Method')).toBe('POST')
+  })
+
+  it('opens only the fixed keypad with authentication and trusted caller metadata', async () => {
+    const fetchMock = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify(call))
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await redirectCallToKeypad(sid, { callSid: sid, callerName: 'Jane' })
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(
+      `https://api.twilio.com/2010-04-01/Accounts/AC_test/Calls/${sid}.json`
+    )
+    expect(init).toMatchObject({
+      method: 'POST',
+      redirect: 'error',
+      headers: {
+        Authorization: twilioBasicAuthHeader('AC_test', 'token_test'),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    })
+    expect(init?.signal).toBeInstanceOf(AbortSignal)
+    const body = new URLSearchParams(String(init?.body))
+    const destination = new URL(body.get('Url') ?? '')
+    expect(destination.origin + destination.pathname).toBe(
+      'https://www.philipithomas.com/api/phone/keypad'
+    )
+    expect(
+      decodePhoneHandoffMetadata(
+        destination.searchParams.get('phoneMetadata') ?? ''
+      )
+    ).toEqual({ callerName: 'Jane' })
+    expect(body.get('Method')).toBe('POST')
+    expect([...body.keys()]).toEqual(['Url', 'Method'])
+  })
+
+  it('redacts provider errors when a keypad redirect is rejected', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json(
+          { message: `Invalid number ${call.from}` },
+          { status: 400 }
+        )
+      )
+    )
+    await expect(redirectCallToKeypad(sid)).rejects.toThrow(
+      'Twilio keypad handoff failed'
+    )
   })
 })
