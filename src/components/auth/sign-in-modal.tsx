@@ -158,7 +158,8 @@ export function SignInModal({ onSuccess }: { onSuccess?: () => void }) {
         <DialogHeader>
           <DialogTitle>Sign in or join</DialogTitle>
           <DialogDescription>
-            Enter your email to sign in or create an account.
+            Continue below to sign in. If you are new, this creates an account
+            and subscribes you to every current newsletter by email.
           </DialogDescription>
         </DialogHeader>
         <div className="mt-6 space-y-4">

@@ -10,6 +10,7 @@ import {
   createOrRetrieve,
   InvalidEmailError,
   SuppressedEmailError,
+  subscribedNewslettersForSubscriber,
   UndeliverableEmailError,
 } from '@/lib/auth/subscriber-service'
 import { NEWSLETTERS } from '@/lib/content/types'
@@ -71,10 +72,11 @@ export async function handleSubscribeRequest(
   }
 
   try {
-    // For a new email this creates the row (applying name, source, and the
-    // default public newsletter set) and sends a confirmation code. Existing
-    // confirmed subscribers sign in by default. Email-only opt-in is limited to
-    // server-owned endpoints that constrain the target newsletter.
+    // For a new email this creates the row (applying name, source, and an
+    // explicit active newsletter selection, or the all-active fallback) and
+    // sends a confirmation code. Existing confirmed subscribers sign in by
+    // default. Email-only opt-in is limited to server-owned endpoints that
+    // constrain the target newsletter.
     const result = await createOrRetrieve({
       email,
       name,
@@ -85,12 +87,17 @@ export async function handleSubscribeRequest(
     })
 
     const placement = parseAnalyticsPlacement(analytics_placement)
-    const newsletter = summarizeNewsletters(requestedNewsletters)
     if (result.nextStep === 'verification_sent') {
+      // An unconfirmed row's stored scope is immutable across unauthenticated
+      // retries, so report what this verification email actually confirms.
+      // Returning readers can still carry a pending explicit opt-in request.
+      const verificationNewsletters = result.subscriber.confirmedAt
+        ? requestedNewsletters
+        : subscribedNewslettersForSubscriber(result.subscriber)
       await trackServerEvent(request, 'Newsletter verification sent', {
         method: 'email',
         placement,
-        newsletter,
+        newsletter: summarizeNewsletters(verificationNewsletters),
         new_subscriber: result.isNew,
       })
     } else if (options.allowExistingSubscriberOptIn) {

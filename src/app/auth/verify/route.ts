@@ -11,6 +11,7 @@ import {
   applyNewsletterOptIns,
   normalizedNewsletters,
   notifyExistingSubscriberOptIns,
+  subscribedNewslettersForSubscriber,
 } from '@/lib/auth/subscriber-service'
 
 export async function GET(request: NextRequest) {
@@ -26,15 +27,18 @@ export async function GET(request: NextRequest) {
     const requestedNewsletters =
       request.nextUrl.searchParams.getAll('newsletter')
     const newsletters = normalizedNewsletters(requestedNewsletters)
-    const beforeOptIns = subscriber
-    subscriber = await applyNewsletterOptIns(subscriber, newsletters)
-    await notifyExistingSubscriberOptIns(
-      beforeOptIns,
-      subscriber,
-      !verification.newlyConfirmed
-    )
+    if (!verification.newlyConfirmed) {
+      const beforeOptIns = subscriber
+      subscriber = await applyNewsletterOptIns(subscriber, newsletters)
+      await notifyExistingSubscriberOptIns(beforeOptIns, subscriber, true)
+    }
+    const effectiveNewsletters = verification.newlyConfirmed
+      ? subscribedNewslettersForSubscriber(subscriber)
+      : requestedNewsletters
     const jwt = await signSession(subscriber)
-    const isTidbitsSignup = newsletters.includes('tidbits')
+    const isTidbitsSignup = verification.newlyConfirmed
+      ? effectiveNewsletters.includes('tidbits')
+      : newsletters.includes('tidbits')
     // Complete analytics on a second, query-free request. Vercel's server SDK
     // prefers the platform request context, so passing this token-bearing
     // request directly would expose the magic token as the event URL.
@@ -43,7 +47,7 @@ export async function GET(request: NextRequest) {
     )
     setSessionCookies(response, jwt)
     await setMagicLinkCompletionCookie(response, {
-      newsletter: summarizeNewsletters(requestedNewsletters),
+      newsletter: summarizeNewsletters(effectiveNewsletters),
       newSubscriber: verification.newlyConfirmed,
       destination: isTidbitsSignup ? 'account' : 'home',
     })
