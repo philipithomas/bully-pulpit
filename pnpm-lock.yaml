@@ -120,8 +120,8 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0(@types/react@19.2.17)(react@19.2.7)
       openai:
-        specifier: 6.49.0
-        version: 6.49.0(@aws-sdk/credential-provider-node@3.972.64)(@smithy/signature-v4@5.6.2)(ws@8.21.0)(zod@4.4.3)
+        specifier: 7.15.0
+        version: 7.15.0(@aws-sdk/credential-provider-node@3.972.64)(@smithy/signature-v4@5.6.2)(undici@7.29.0)(ws@8.21.0)(zod@4.4.3)
       react:
         specifier: ^19.2.7
         version: 19.2.7
@@ -5184,13 +5184,15 @@ packages:
     resolution: {integrity: sha512-XgFPPM+B28FtCCgSb9I+s9szOC1vZRSwgWsRUA5ylIxRTgKozqjOCrVOqGsYABPYK5qnfqClxZTFBa8PKt2v6Q==}
     engines: {node: '>=12'}
 
-  openai@6.49.0:
-    resolution: {integrity: sha512-aYCc0C6L864eR6WSYIwQGyXriw/nIyZx0ObvhzOEVuk0zoBDpynjSbrionWI7q65B5H8jJX0DXR9snEzM6bfPg==}
+  openai@7.15.0:
+    resolution: {integrity: sha512-2DIwesnPSduw68MFx7nAdgvshrgvS8WOan5W8+tgUMlAy/tY+Q41g80Pa+w/v64rHA6rtn+dketa8QvMVxU96w==}
+    engines: {node: '>=22.0.0'}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
       '@smithy/hash-node': '>=4.3.0 <5'
       '@smithy/signature-v4': '>=5.4.0 <6'
-      ws: ^8.18.0
+      undici: 7.29.0
+      ws: ^8.21.0
       zod: ^3.25 || ^4.0
     peerDependenciesMeta:
       '@aws-sdk/credential-provider-node':
@@ -5198,6 +5200,8 @@ packages:
       '@smithy/hash-node':
         optional: true
       '@smithy/signature-v4':
+        optional: true
+      undici:
         optional: true
       ws:
         optional: true
@@ -11337,10 +11341,11 @@ snapshots:
       is-docker: 2.2.1
       is-wsl: 2.2.0
 
-  openai@6.49.0(@aws-sdk/credential-provider-node@3.972.64)(@smithy/signature-v4@5.6.2)(ws@8.21.0)(zod@4.4.3):
+  openai@7.15.0(@aws-sdk/credential-provider-node@3.972.64)(@smithy/signature-v4@5.6.2)(undici@7.29.0)(ws@8.21.0)(zod@4.4.3):
     optionalDependencies:
       '@aws-sdk/credential-provider-node': 3.972.64
       '@smithy/signature-v4': 5.6.2
+      undici: 7.29.0
       ws: 8.21.0
       zod: 4.4.3
 

@@ -5,6 +5,10 @@ import type {
   BellLiveActionHandler,
   BellLiveActionResult,
 } from '@/lib/phone/bell-live-actions'
+import {
+  phoneBellGptLiveSession,
+  phoneBellVoiceEngine,
+} from '@/lib/phone/bell-live-config'
 import { phoneBellInitialGreeting } from '@/lib/phone/bell-live-greeting'
 import {
   BellLiveTranscriptCollector,
@@ -82,9 +86,11 @@ function configuredRealtimeModel(): string | null {
 
 /** Bell Live is advertised only when every server-side dependency is ready. */
 export function phoneBellLiveConfigured(): boolean {
+  const engine = phoneBellVoiceEngine()
   return Boolean(
     configuredProjectId() &&
-      configuredRealtimeModel() &&
+      engine &&
+      (engine === 'gpt-live-1' || configuredRealtimeModel()) &&
       process.env.OPENAI_API_KEY?.trim() &&
       process.env.OPENAI_WEBHOOK_SECRET?.trim() &&
       twilioSecret()
@@ -147,7 +153,7 @@ export function bellLiveSipUri(
     [SIP_HEADER_TOKEN]: token,
   })
   if (encodedMetadata) query.set(SIP_HEADER_METADATA, encodedMetadata)
-  const address = `sip:${projectId}@sip.api.openai.com;transport=tls`
+  const address = `sip:${projectId}@sip.api.openai.com;transport=tls;secure=true`
   const headers = query.toString()
   // Twilio bounds the SIP address and appended custom headers separately:
   // https://www.twilio.com/docs/voice/twiml/sip#custom-headers
@@ -624,10 +630,16 @@ async function openAiCallAction(
     throw new Error('Invalid OpenAI Realtime call ID')
   }
   const startedAt = Date.now()
+  const engine = phoneBellVoiceEngine()
+  if (!engine) throw new Error('OPENAI_PHONE_VOICE_ENGINE is not supported')
+  const callsUrl =
+    engine === 'gpt-live-1'
+      ? 'https://api.openai.com/v1/live/sessions'
+      : OPENAI_REALTIME_CALLS_URL
   let response: Response
   try {
     response = await fetch(
-      `${OPENAI_REALTIME_CALLS_URL}/${encodeURIComponent(callId)}/${action}`,
+      `${callsUrl}/${encodeURIComponent(callId)}/${action}`,
       {
         method: 'POST',
         headers: {
@@ -681,7 +693,9 @@ export async function acceptBellLiveCall(
   return openAiCallAction(
     callId,
     'accept',
-    phoneBellRealtimeSession(subscriptionStatus)
+    phoneBellVoiceEngine() === 'gpt-live-1'
+      ? { session: phoneBellGptLiveSession(subscriptionStatus) }
+      : phoneBellRealtimeSession(subscriptionStatus)
   )
 }
 
@@ -911,7 +925,7 @@ export interface BellLiveGreetingResult {
   audioStarted: boolean
   conversation: Promise<BellLiveConversationResult>
   durationMs: number
-  outcome: 'delivered' | 'interrupted'
+  outcome: 'delivered' | 'interrupted' | 'generated'
   responseCheckpointed: boolean
   responseCreated: boolean
 }
@@ -930,6 +944,12 @@ export async function startBellLiveGreeting(
     subscriptionStatus?: CallerSubscriptionStatus
   } = {}
 ): Promise<BellLiveGreetingResult> {
+  if (phoneBellVoiceEngine() === 'gpt-live-1') {
+    const { startBellGptLiveSession } = await import(
+      '@/lib/phone/bell-live-session'
+    )
+    return startBellGptLiveSession(callId, options)
+  }
   if (!isOpenAiRealtimeCallId(callId)) {
     throw new Error('Invalid OpenAI Realtime call ID')
   }

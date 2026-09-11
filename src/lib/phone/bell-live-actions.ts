@@ -7,7 +7,11 @@ import {
 } from '@/lib/db/queries/phone-webhook-events'
 import { verifiedBellLiveCaller } from '@/lib/phone/bell-live-caller'
 import { callerSubscriptionStatus } from '@/lib/phone/caller-subscription'
-import { redirectCallToVoicemail, TwilioApiError } from '@/lib/phone/twilio'
+import {
+  redirectCallToKeypad,
+  redirectCallToVoicemail,
+  TwilioApiError,
+} from '@/lib/phone/twilio'
 import { subscribeVoiceCaller } from '@/lib/phone/voice-subscription'
 import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
 
@@ -49,7 +53,8 @@ function exactArguments(
  */
 export function createBellLiveActionHandler(
   callSid: string,
-  metadata?: TwilioWebhookMetadata
+  metadata?: TwilioWebhookMetadata,
+  controllerId?: string
 ) {
   let handedOff = false
   let confirmationPreparedAt: number | null = null
@@ -79,19 +84,50 @@ export function createBellLiveActionHandler(
   ): Promise<BellLiveActionResult> {
     if (!Number.isSafeInteger(callerTurn) || callerTurn < 0) return unavailable
     if (!isCurrent()) return cancelAction(callerTurn)
-    if (name === 'start_voicemail') {
+    if (name === 'start_voicemail' || name === 'open_signup_menu') {
       if (!exactArguments(args, [])) return unavailable
       clearSubscriptionConfirmation()
       if (handedOff) {
         return {
           status: 'handed_off',
-          message: 'The voicemail handoff is underway.',
+          message: 'The telephone handoff is underway. Stop speaking.',
         }
       }
-      if (!(await verifiedBellLiveCaller(callSid))) return unavailable
+      const caller = await verifiedBellLiveCaller(callSid)
+      if (!caller) return unavailable
       if (!isCurrent()) return cancelAction(callerTurn)
+      const destination =
+        name === 'start_voicemail' ? 'voicemail' : 'signup-menu'
+      if (name === 'open_signup_menu') {
+        const status = await callerSubscriptionStatus(caller.from)
+        if (!isCurrent()) return cancelAction(callerTurn)
+        if (status === 'unknown') return unavailable
+        if (status === 'subscribed') {
+          // A saved subscriber may still need this call's interrupted
+          // onboarding enqueue to finish through the existing keypad flow.
+          const existingSignup = await findPhoneWebhookEventByKey(
+            `voice-menu:${callSid}:2`
+          )
+          if (!isCurrent()) return cancelAction(callerTurn)
+          if (
+            existingSignup?.eventType !== 'voice-menu' ||
+            existingSignup.processedAt
+          ) {
+            return {
+              status: 'already_subscribed',
+              message:
+                'You are already subscribed to new-post texts. We can keep talking.',
+            }
+          }
+        }
+      }
+      // Keypad option 3 opens a fresh AI leg on the same parent call. Scope
+      // menu handoff deduplication to that controller so signup stays reachable.
+      const eventKey = `bell-live:${callSid}:${destination}${
+        name === 'open_signup_menu' && controllerId ? `:${controllerId}` : ''
+      }`
       const { event } = await findOrCreatePhoneWebhookEvent({
-        eventKey: `bell-live:${callSid}:voicemail`,
+        eventKey,
         eventType: 'bell-live-action',
       })
       if (!isCurrent()) return cancelAction(callerTurn)
@@ -99,7 +135,7 @@ export function createBellLiveActionHandler(
         handedOff = true
         return {
           status: 'handed_off',
-          message: 'The voicemail handoff is underway.',
+          message: 'The telephone handoff is underway. Stop speaking.',
         }
       }
       const lease = await claimPhoneWebhookEvent(event.id)
@@ -111,14 +147,18 @@ export function createBellLiveActionHandler(
         handedOff = true
         return {
           status: 'handoff_pending',
-          message: 'The voicemail handoff is pending.',
+          message: 'The telephone handoff is pending. Stop speaking.',
         }
       }
       // Updating parent TwiML closes the SIP leg before its REST response may
       // arrive. Suppress the sideband's failure fallback before that race.
       handedOff = true
       try {
-        await redirectCallToVoicemail(callSid, { ...metadata, callSid })
+        const redirect =
+          name === 'start_voicemail'
+            ? redirectCallToVoicemail
+            : redirectCallToKeypad
+        await redirect(callSid, { ...metadata, callSid })
       } catch (error) {
         if (
           error instanceof TwilioApiError &&
@@ -134,14 +174,11 @@ export function createBellLiveActionHandler(
         return {
           status: 'handoff_pending',
           message:
-            'The voicemail handoff could not be confirmed. Do not repeat the action.',
+            'The telephone handoff could not be confirmed. Do not repeat the action.',
         }
       }
       try {
-        await markPhoneWebhookEventSideEffectObserved(
-          event.id,
-          `bell-live:${callSid}:voicemail`
-        )
+        await markPhoneWebhookEventSideEffectObserved(event.id, eventKey)
       } catch {
         console.error(
           '[phone/bell-live-action] Could not record completed handoff'
@@ -149,7 +186,10 @@ export function createBellLiveActionHandler(
       }
       return {
         status: 'handed_off',
-        message: 'Voicemail is starting. Stop speaking.',
+        message:
+          name === 'start_voicemail'
+            ? 'Voicemail is starting. Stop speaking.'
+            : 'The keypad is opening. This has not subscribed the caller; they must hear the menu disclosure and press 2. Stop speaking.',
       }
     }
 

@@ -10,6 +10,11 @@ import { FakeOpenAiRealtimeWebSocket } from '@/test/fake-openai-realtime-websock
 
 const afterTasks = vi.hoisted(() => [] as Array<() => Promise<void>>)
 const afterControl = vi.hoisted(() => ({ throwOnSchedule: false }))
+const liveSession = vi.hoisted(() => vi.fn())
+
+vi.mock('@/lib/phone/bell-live-session', () => ({
+  startBellGptLiveSession: liveSession,
+}))
 
 vi.mock('@/lib/phone/bell-live-caller', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/phone/bell-live-caller')>()),
@@ -137,6 +142,22 @@ function greetingRequests() {
 }
 
 beforeEach(() => {
+  process.env.OPENAI_PHONE_VOICE_ENGINE = 'realtime'
+  liveSession.mockReset()
+  liveSession.mockImplementation(async (_callId, options) => ({
+    audioStarted: true,
+    outcome: 'generated',
+    durationMs: 1,
+    responseCreated: false,
+    responseCheckpointed: await options.onGreetingConsumed(),
+    conversation: Promise.resolve({
+      durationMs: 1,
+      inputFailureCount: 0,
+      missingTranscriptCount: 0,
+      observerCompleted: true,
+      turns: [],
+    }),
+  }))
   vi.mocked(bellLiveCallerSubscriptionStatus).mockReset()
   vi.mocked(bellLiveCallerSubscriptionStatus).mockResolvedValue('unknown')
   afterTasks.length = 0
@@ -192,6 +213,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  delete process.env.OPENAI_PHONE_VOICE_ENGINE
   vi.useRealTimers()
   delete process.env.OPENAI_API_KEY
   delete process.env.OPENAI_PROJECT_ID
@@ -199,6 +221,273 @@ afterEach(() => {
   delete process.env.TWILIO_SECRET
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
+})
+
+describe('GPT-Live incoming calls', () => {
+  it.each([
+    'live.transport.incoming',
+    'live.call.incoming',
+  ])('accepts %s with its original Live session identifier', async (type) => {
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const event = {
+      ...liveIncomingEvent(),
+      type,
+      data: {
+        session_id: 'live_original_session',
+        ...(type === 'live.transport.incoming' ? { type: 'sip' } : {}),
+        sip_headers: sipHeaders(),
+      },
+    }
+    const result = await postAndFlush(signedRequest(event))
+    expect(result.status).toBe(204)
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.openai.com/v1/live/sessions/live_original_session/accept',
+      expect.objectContaining({
+        body: expect.stringContaining('"model":"gpt-live-1"'),
+      })
+    )
+    expect(liveSession).toHaveBeenCalledWith(
+      'live_original_session',
+      expect.objectContaining({ subscriptionStatus: 'unknown' })
+    )
+    expect(greetingRequests()).toHaveLength(0)
+  })
+
+  it('ignores the paired Realtime invitation when Live owns acceptance', async () => {
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await POST(signedRequest(incomingEvent()))).status).toBe(204)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(afterTasks).toHaveLength(0)
+  })
+
+  it('ignores a deprecated Live event carrying the other API identifier', async () => {
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await POST(signedRequest(liveIncomingEvent()))).status).toBe(204)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(afterTasks).toHaveLength(0)
+  })
+
+  it('does not control an invitation already accepted during deployment cutover', async () => {
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    const fetchMock = vi.fn(async () => new Response(null, { status: 409 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const event = liveIncomingEvent()
+    event.data.session_id = 'live_original_session'
+    expect((await POST(signedRequest(event))).status).toBe(204)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(afterTasks).toHaveLength(0)
+    expect(liveSession).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed Live transport events and unsigned invitations', async () => {
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    const event = {
+      ...liveIncomingEvent(),
+      type: 'live.transport.incoming',
+      data: {
+        session_id: 'live_session',
+        type: 'webrtc',
+        sip_headers: sipHeaders(),
+      },
+    }
+    expect((await POST(signedRequest(event))).status).toBe(400)
+    expect((await POST(signedRequest(event, false))).status).toBe(401)
+    expect(afterTasks).toHaveLength(0)
+  })
+
+  it('leaves Live invitations alone during explicit Realtime rollback', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const event = liveIncomingEvent()
+    event.data.session_id = 'live_original_session'
+    expect((await POST(signedRequest(event))).status).toBe(204)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(afterTasks).toHaveLength(0)
+  })
+})
+
+describe('uncertain Bell call acceptance', () => {
+  function liveEvent() {
+    const event = liveIncomingEvent()
+    event.data.session_id = 'live_uncertain_session'
+    return event
+  }
+
+  it.each([
+    new DOMException('The accept response was lost', 'TimeoutError'),
+    new TypeError('The accept connection was lost'),
+  ])('ends the exact Live child after an accept transport failure: %s', async (error) => {
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(error)
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await POST(signedRequest(liveEvent()))).status).toBe(204)
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'https://api.openai.com/v1/live/sessions/live_uncertain_session/accept',
+      'https://api.openai.com/v1/live/sessions/live_uncertain_session/hangup',
+    ])
+    expect(afterTasks).toHaveLength(0)
+    expect(liveSession).not.toHaveBeenCalled()
+    expect(greetingRequests()).toHaveLength(0)
+    expect(console.info).toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({
+        event: 'bell_live.uncertain_accept_fallback',
+        outcome: 'ended',
+        attemptNumber: 1,
+      })
+    )
+  })
+
+  it('retries missing and conflicting hangups while the accepted call finishes setup', async () => {
+    vi.useFakeTimers()
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    let callActive = false
+    let hangupAttempts = 0
+    let resolveInitialHangup!: () => void
+    const initialHangup = new Promise<void>((resolve) => {
+      resolveInitialHangup = resolve
+    })
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/accept')) {
+        // The provider accepted the call, but the HTTP response never arrived.
+        callActive = true
+        throw new DOMException('Response timed out', 'TimeoutError')
+      }
+      expect(url).toBe(
+        'https://api.openai.com/v1/live/sessions/live_uncertain_session/hangup'
+      )
+      hangupAttempts += 1
+      resolveInitialHangup()
+      if (hangupAttempts === 1) return new Response(null, { status: 404 })
+      if (hangupAttempts === 2) return new Response(null, { status: 409 })
+      callActive = false
+      return new Response(null, { status: 200 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const result = POST(signedRequest(liveEvent()))
+    await initialHangup
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(249)
+    expect(hangupAttempts).toBe(1)
+    expect(callActive).toBe(true)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(hangupAttempts).toBe(2)
+    await vi.advanceTimersByTimeAsync(750)
+    expect((await result).status).toBe(204)
+    expect(hangupAttempts).toBe(3)
+    expect(callActive).toBe(false)
+    expect(afterTasks).toHaveLength(0)
+    expect(liveSession).not.toHaveBeenCalled()
+  })
+
+  it('bounds cleanup of an absent child without starting a sideband', async () => {
+    vi.useFakeTimers()
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    let resolveInitialHangup!: () => void
+    const initialHangup = new Promise<void>((resolve) => {
+      resolveInitialHangup = resolve
+    })
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/accept')) throw new TypeError('Connection failed')
+      resolveInitialHangup()
+      return new Response(null, { status: 404 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const result = POST(signedRequest(liveEvent()))
+    await initialHangup
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect((await result).status).toBe(204)
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(afterTasks).toHaveLength(0)
+  })
+
+  it('keeps a failed cleanup retryable without taking over a later accept conflict', async () => {
+    vi.useFakeTimers()
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    let acceptAttempts = 0
+    let resolveInitialHangup!: () => void
+    const initialHangup = new Promise<void>((resolve) => {
+      resolveInitialHangup = resolve
+    })
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/accept')) {
+        acceptAttempts += 1
+        if (acceptAttempts === 1) throw new TypeError('Connection failed')
+        return new Response(null, { status: 409 })
+      }
+      resolveInitialHangup()
+      return new Response(null, { status: 503 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const result = POST(signedRequest(liveEvent()))
+    await initialHangup
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect((await result).status).toBe(502)
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(console.error).toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({
+        event: 'bell_live.uncertain_accept_fallback',
+        outcome: 'failed',
+        attemptNumber: 3,
+        httpStatus: 503,
+      })
+    )
+    expect((await POST(signedRequest(liveEvent()))).status).toBe(204)
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(afterTasks).toHaveLength(0)
+    expect(liveSession).not.toHaveBeenCalled()
+  })
+
+  it('does not retry permanent hangup authorization failures', async () => {
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Connection failed'))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await POST(signedRequest(liveEvent()))).status).toBe(502)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(afterTasks).toHaveLength(0)
+  })
+
+  it('uses the same bounded fallback during explicit Realtime rollback', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Connection failed'))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await POST(signedRequest(incomingEvent()))).status).toBe(204)
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'https://api.openai.com/v1/realtime/calls/rtc_call_123/accept',
+      'https://api.openai.com/v1/realtime/calls/rtc_call_123/hangup',
+    ])
+    expect(afterTasks).toHaveLength(0)
+    expect(greetingRequests()).toHaveLength(0)
+  })
+
+  it.each([
+    400, 429, 503,
+  ])('leaves definite accept HTTP %s failures unchanged', async (status) => {
+    process.env.OPENAI_PHONE_VOICE_ENGINE = 'gpt-live-1'
+    const fetchMock = vi.fn(async () => new Response(null, { status }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect((await POST(signedRequest(liveEvent()))).status).toBe(502)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(afterTasks).toHaveLength(0)
+    expect(liveSession).not.toHaveBeenCalled()
+  })
 })
 
 describe('POST /api/openai/realtime-call', () => {
@@ -330,12 +619,16 @@ describe('POST /api/openai/realtime-call', () => {
       )
     )
     expect(response.status).toBe(204)
-    expect(createController).toHaveBeenCalledWith(CALL_SID, {
-      callSid: CALL_SID,
-      callerName: 'Ada Caller',
-      fromCity: 'Brooklyn',
-      fromState: 'NY',
-    })
+    expect(createController).toHaveBeenCalledWith(
+      CALL_SID,
+      {
+        callSid: CALL_SID,
+        callerName: 'Ada Caller',
+        fromCity: 'Brooklyn',
+        fromState: 'NY',
+      },
+      'rtc_call_123'
+    )
   })
 
   it('ends the AI child promptly after a post-greeting provider error', async () => {
@@ -885,7 +1178,7 @@ describe('POST /api/openai/realtime-call', () => {
     expect(greetingRequests()).toHaveLength(1)
     expect(webhookEvents.markProcessed).toHaveBeenCalledTimes(3)
     expect(webhookEvents.markSideEffectObserved).toHaveBeenCalledTimes(3)
-    expect(webhookEvents.claimAttempt).toHaveBeenCalledTimes(2)
+    expect(webhookEvents.claimAttempt).toHaveBeenCalledTimes(1)
     expect(webhookEvents.claimAttempt).toHaveBeenNthCalledWith(1, 1, {
       leaseMs: 6_000,
       maxAttempts: 1,

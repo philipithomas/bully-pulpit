@@ -1,6 +1,8 @@
 packages: []
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
+  # Required for the documented GPT-Live session and sideband APIs.
+  - openai@7.15.0
   - fast-uri@3.1.6
   - qs@6.16.0
 allowBuilds:

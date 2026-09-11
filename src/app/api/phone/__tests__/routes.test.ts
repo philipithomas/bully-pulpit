@@ -14,6 +14,7 @@ vi.mock('workflow/api', () => ({
   start: vi.fn(async () => ({ runId: 'run_test' })),
 }))
 vi.mock('@/lib/db/queries/phone-webhook-events', () => ({
+  findPhoneWebhookEventByKey: vi.fn(async () => null),
   findOrCreatePhoneWebhookEvent: vi.fn(async () => ({
     event: { id: 1, processedAt: null },
     inserted: true,
@@ -255,7 +256,7 @@ describe('POST /api/phone/voice', () => {
     const xml = await response.text()
     expect(playedTexts(xml)).toEqual([])
     expect(xml).toContain(
-      '<Sip>sip:proj_test123@sip.api.openai.com;transport=tls?'
+      '<Sip>sip:proj_test123@sip.api.openai.com;transport=tls;secure=true?'
     )
     expect(xml).toContain('x-bp-call-sid=CA123')
     expect(xml).toContain('hangupOnStar="true"')

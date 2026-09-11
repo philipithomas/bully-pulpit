@@ -25,6 +25,7 @@ import {
   createBellLiveActionHandler,
 } from '@/lib/phone/bell-live-actions'
 import { bellLiveCallerSubscriptionStatus } from '@/lib/phone/bell-live-caller'
+import { phoneBellVoiceEngine } from '@/lib/phone/bell-live-config'
 import type { CallerSubscriptionStatus } from '@/lib/phone/caller-subscription'
 import { sendBellLiveTranscriptNotification } from '@/lib/phone/notifications'
 import type { TwilioWebhookMetadata } from '@/lib/phone/webhook-metadata'
@@ -44,11 +45,15 @@ const GREETING_MAX_ATTEMPTS = 1
 const GREETING_CHECKPOINT_ATTEMPTS = 3
 const GREETING_SOCKET_ATTEMPTS = 2
 const GREETING_SOCKET_RETRY_DELAY_MS = 150
+const UNCERTAIN_ACCEPT_HANGUP_DELAYS_MS = [0, 250, 750] as const
 
 interface IncomingCallEvent {
   callId: string
   eventId: string | null
-  eventType: 'live.call.incoming' | 'realtime.call.incoming'
+  eventType:
+    | 'live.transport.incoming'
+    | 'live.call.incoming'
+    | 'realtime.call.incoming'
   sipHeaders: OpenAiSipHeader[]
 }
 
@@ -182,6 +187,51 @@ async function returnBellCallToKeypad(
   }
 }
 
+/** A lost accept acknowledgement must not leave a silent, uncontrolled AI leg. */
+async function endUncertainBellAcceptance(
+  callId: string,
+  logContext: Record<string, unknown>
+): Promise<boolean> {
+  let lastStatus: number | null = null
+  let attemptNumber = 0
+  for (const delayMs of UNCERTAIN_ACCEPT_HANGUP_DELAYS_MS) {
+    attemptNumber += 1
+    if (delayMs) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+    }
+    try {
+      const result = await hangupBellLiveCall(callId)
+      lastStatus = result.status
+      if (result.outcome === 'handled') {
+        console.info('[openai/realtime-call]', {
+          event: 'bell_live.uncertain_accept_fallback',
+          outcome: 'ended',
+          attemptNumber,
+          httpStatus: lastStatus,
+          ...logContext,
+        })
+        return true
+      }
+      // The accept can still be completing after its HTTP response is lost.
+      // Retry an initially missing/conflicting child before treating it as gone.
+    } catch (error) {
+      lastStatus = error instanceof OpenAiCallActionError ? error.status : null
+      if (lastStatus === 401 || lastStatus === 403) break
+    }
+  }
+  const absent = lastStatus === 404
+  const details = {
+    event: 'bell_live.uncertain_accept_fallback',
+    outcome: absent ? 'not_found' : 'failed',
+    attemptNumber,
+    httpStatus: lastStatus,
+    ...logContext,
+  }
+  if (absent) console.info('[openai/realtime-call]', details)
+  else console.error('[openai/realtime-call]', details)
+  return absent
+}
+
 function isSipHeader(value: unknown): value is OpenAiSipHeader {
   return Boolean(
     value &&
@@ -203,7 +253,8 @@ function incomingCallEvent(value: unknown): IncomingCallEvent | null {
   if (!value || typeof value !== 'object' || !('type' in value)) return null
   if (
     value.type !== 'realtime.call.incoming' &&
-    value.type !== 'live.call.incoming'
+    value.type !== 'live.call.incoming' &&
+    value.type !== 'live.transport.incoming'
   ) {
     return null
   }
@@ -214,9 +265,13 @@ function incomingCallEvent(value: unknown): IncomingCallEvent | null {
     call_id?: unknown
     session_id?: unknown
     sip_headers?: unknown
+    type?: unknown
   }
-  // OpenAI may emit both event types for one pending SIP session. The Live
-  // session_id and Realtime call_id identify the same rtc_... invitation.
+  if (value.type === 'live.transport.incoming' && data.type !== 'sip') {
+    return null
+  }
+  // Preserve the identifier from the selected API's event. Live and Realtime
+  // have distinct opaque identifiers; never rewrite a prefix to invent one.
   const callId =
     value.type === 'realtime.call.incoming' ? data.call_id : data.session_id
   if (
@@ -243,6 +298,7 @@ function actionLogContext(
     callId: incoming.callId,
     eventId: incoming.eventId,
     eventType: incoming.eventType,
+    voiceEngine: phoneBellVoiceEngine(),
     webhookId: opaqueId(request.headers.get('webhook-id')),
   }
 }
@@ -370,7 +426,11 @@ async function runBellLiveGreeting(input: {
       logContext,
       onGreetingConsumed: checkpointGreeting,
       onLifecycleEvent: (event) => logBellLiveLifecycle(event, logContext),
-      actions: createBellLiveActionHandler(twilioCallSid, input.metadata),
+      actions: createBellLiveActionHandler(
+        twilioCallSid,
+        input.metadata,
+        callId
+      ),
       subscriptionStatus: input.subscriptionStatus,
     })
     if (!greeting.responseCheckpointed) {
@@ -511,7 +571,8 @@ export async function POST(request: Request): Promise<Response> {
   if (event && typeof event === 'object' && 'type' in event) {
     if (
       event.type !== 'realtime.call.incoming' &&
-      event.type !== 'live.call.incoming'
+      event.type !== 'live.call.incoming' &&
+      event.type !== 'live.transport.incoming'
     ) {
       return response(204)
     }
@@ -520,6 +581,17 @@ export async function POST(request: Request): Promise<Response> {
   const incoming = incomingCallEvent(event)
   if (!incoming) {
     return response(400)
+  }
+  const engine = phoneBellVoiceEngine()
+  if (
+    (engine === 'gpt-live-1' &&
+      (incoming.eventType === 'realtime.call.incoming' ||
+        !incoming.callId.startsWith('live_'))) ||
+    (engine === 'realtime' && incoming.callId.startsWith('live_'))
+  ) {
+    // Both APIs may announce one pending SIP invitation. Only the selected
+    // API owns acceptance; its matching webhook will configure the call.
+    return response(204)
   }
   const metadata = verifiedBellLiveSipMetadata(incoming.sipHeaders)
   const twilioCallSid = metadata?.callSid
@@ -560,8 +632,27 @@ export async function POST(request: Request): Promise<Response> {
     })
   } catch (error) {
     logActionFailure(request, incoming, 'accept', error)
+    if (
+      error instanceof OpenAiCallActionError &&
+      error.status === null &&
+      (error.reason === 'timeout' || error.reason === 'network_error')
+    ) {
+      // OpenAI may have accepted this request before its acknowledgement was
+      // lost. Close only this child; Twilio then resumes its signed keypad path.
+      // A future 409 must still leave another deployment's controller alone.
+      const ended = await endUncertainBellAcceptance(
+        incoming.callId,
+        actionLogContext(request, incoming)
+      )
+      if (ended) return response(204)
+    }
     return response(502)
   }
+
+  // The successful accept owns its controller. In particular, a paired
+  // invitation may already have been accepted by the previous deployment's
+  // other API during cutover; attaching/hanging up here could disrupt it.
+  if (result.outcome === 'already_handled') return response(204)
 
   const logContext = actionLogContext(request, incoming)
   try {

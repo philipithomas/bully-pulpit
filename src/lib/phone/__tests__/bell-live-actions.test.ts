@@ -10,6 +10,7 @@ vi.mock('@/lib/db/queries/phone-webhook-events', () => ({
 vi.mock('@/lib/phone/twilio', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/phone/twilio')>()),
   getCall: vi.fn(),
+  redirectCallToKeypad: vi.fn(),
   redirectCallToVoicemail: vi.fn(),
 }))
 vi.mock('@/lib/phone/voice-subscription', () => ({
@@ -34,6 +35,7 @@ import {
 import { callerSubscriptionStatus } from '@/lib/phone/caller-subscription'
 import {
   getCall,
+  redirectCallToKeypad,
   redirectCallToVoicemail,
   TwilioApiError,
 } from '@/lib/phone/twilio'
@@ -69,6 +71,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.stubEnv('PHONE_NUMBER', call.to)
   vi.mocked(getCall).mockResolvedValue(call)
+  vi.mocked(redirectCallToKeypad).mockResolvedValue()
   vi.mocked(redirectCallToVoicemail).mockResolvedValue()
   vi.mocked(claimPhoneWebhookEvent).mockResolvedValue(lease)
   vi.mocked(findOrCreatePhoneWebhookEvent).mockResolvedValue({
@@ -87,6 +90,8 @@ describe('private Bell Live actions', () => {
     ['other', {}],
     ['start_voicemail', { phone: call.from }],
     ['start_voicemail', []],
+    ['open_signup_menu', { phone: call.from }],
+    ['open_signup_menu', []],
     ['subscribe_caller', {}],
     ['subscribe_caller', { confirmed: 'true' }],
     ['subscribe_caller', { confirmed: true, phone: call.from }],
@@ -98,6 +103,7 @@ describe('private Bell Live actions', () => {
     expect(getCall).not.toHaveBeenCalled()
     expect(subscribeVoiceCaller).not.toHaveBeenCalled()
     expect(redirectCallToVoicemail).not.toHaveBeenCalled()
+    expect(redirectCallToKeypad).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -614,5 +620,235 @@ describe('private Bell Live actions', () => {
       callerName: 'Jane',
       fromCity: 'San Francisco',
     })
+  })
+})
+
+describe('Bell Live signup keypad handoff', () => {
+  it('opens the keypad without enrolling, arming spoken consent, or accepting a supplied number', async () => {
+    const actions = createBellLiveActionHandler(
+      callSid,
+      { callSid: 'CAwrong', callerName: 'Jane' },
+      'rtc_live_123'
+    )
+    vi.mocked(redirectCallToKeypad).mockImplementationOnce(async () => {
+      expect(actions.hasHandedOff()).toBe(true)
+    })
+    expect(await actions.execute('open_signup_menu', {}, 1)).toMatchObject({
+      status: 'handed_off',
+      message: expect.stringContaining('This has not subscribed the caller'),
+    })
+    expect(getCall).toHaveBeenCalledExactlyOnceWith(callSid)
+    expect(callerSubscriptionStatus).toHaveBeenCalledExactlyOnceWith(call.from)
+    expect(findOrCreatePhoneWebhookEvent).toHaveBeenCalledExactlyOnceWith({
+      eventKey: `bell-live:${callSid}:signup-menu:rtc_live_123`,
+      eventType: 'bell-live-action',
+    })
+    expect(redirectCallToKeypad).toHaveBeenCalledExactlyOnceWith(callSid, {
+      callSid,
+      callerName: 'Jane',
+    })
+    expect(markPhoneWebhookEventSideEffectObserved).toHaveBeenCalledWith(
+      1,
+      `bell-live:${callSid}:signup-menu:rtc_live_123`
+    )
+    expect(actions.markSubscriptionDisclosureDelivered(1)).toBe(false)
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+    expect(redirectCallToVoicemail).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { status: 'ringing' },
+    { status: 'completed' },
+    { from: 'anonymous' },
+    { to: '+15551112222' },
+    { direction: 'outbound-api' },
+    { sid: 'CAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
+  ])('requires the verified active inbound caller: %j', async (override) => {
+    vi.mocked(getCall).mockResolvedValue({ ...call, ...override })
+    const actions = createBellLiveActionHandler(callSid)
+    expect(await actions.execute('open_signup_menu', {}, 1)).toMatchObject({
+      status: 'unavailable',
+    })
+    expect(callerSubscriptionStatus).not.toHaveBeenCalled()
+    expect(findOrCreatePhoneWebhookEvent).not.toHaveBeenCalled()
+    expect(redirectCallToKeypad).not.toHaveBeenCalled()
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it('keeps already subscribed callers in the conversation', async () => {
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('subscribed')
+    const actions = createBellLiveActionHandler(callSid)
+    expect(await actions.execute('open_signup_menu', {}, 1)).toMatchObject({
+      status: 'already_subscribed',
+    })
+    expect(findPhoneWebhookEventByKey).toHaveBeenCalledExactlyOnceWith(
+      `voice-menu:${callSid}:2`
+    )
+    expect(actions.hasHandedOff()).toBe(false)
+    expect(findOrCreatePhoneWebhookEvent).not.toHaveBeenCalled()
+    expect(redirectCallToKeypad).not.toHaveBeenCalled()
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it('opens the menu for a partially saved signup from this parent call', async () => {
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('subscribed')
+    vi.mocked(findPhoneWebhookEventByKey).mockResolvedValue(
+      pendingSignupEvent()
+    )
+    const actions = createBellLiveActionHandler(callSid)
+    expect(await actions.execute('open_signup_menu', {}, 1)).toMatchObject({
+      status: 'handed_off',
+    })
+    expect(redirectCallToKeypad).toHaveBeenCalledExactlyOnceWith(callSid, {
+      callSid,
+    })
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { processedAt: new Date() },
+    { eventType: 'voice-menu-existing' },
+    { eventType: 'bell-live-action' },
+  ])('does not resume an unrelated or completed signup: %j', async (override) => {
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('subscribed')
+    vi.mocked(findPhoneWebhookEventByKey).mockResolvedValue(
+      pendingSignupEvent(override)
+    )
+    const actions = createBellLiveActionHandler(callSid)
+    expect(await actions.execute('open_signup_menu', {}, 1)).toMatchObject({
+      status: 'already_subscribed',
+    })
+    expect(redirectCallToKeypad).not.toHaveBeenCalled()
+  })
+
+  it('does not offer signup while subscription status is unavailable', async () => {
+    vi.mocked(callerSubscriptionStatus).mockResolvedValue('unknown')
+    const actions = createBellLiveActionHandler(callSid)
+    expect(await actions.execute('open_signup_menu', {}, 1)).toMatchObject({
+      status: 'unavailable',
+    })
+    expect(findOrCreatePhoneWebhookEvent).not.toHaveBeenCalled()
+    expect(redirectCallToKeypad).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    'caller',
+    'subscription',
+    'pending_signup',
+    'lease',
+  ])('cancels the handoff if superseded during %s lookup', async (stage) => {
+    let current = true
+    if (stage === 'caller') {
+      vi.mocked(getCall).mockImplementationOnce(async () => {
+        current = false
+        return call
+      })
+    } else if (stage === 'subscription') {
+      vi.mocked(callerSubscriptionStatus).mockImplementationOnce(async () => {
+        current = false
+        return 'not_subscribed'
+      })
+    } else if (stage === 'pending_signup') {
+      vi.mocked(callerSubscriptionStatus).mockResolvedValue('subscribed')
+      vi.mocked(findPhoneWebhookEventByKey).mockImplementationOnce(async () => {
+        current = false
+        return pendingSignupEvent()
+      })
+    } else {
+      vi.mocked(claimPhoneWebhookEvent).mockImplementationOnce(async () => {
+        current = false
+        return lease
+      })
+    }
+    const actions = createBellLiveActionHandler(callSid)
+    expect(
+      await actions.execute('open_signup_menu', {}, 1, () => current)
+    ).toMatchObject({ status: 'cancelled' })
+    expect(actions.hasHandedOff()).toBe(false)
+    expect(redirectCallToKeypad).not.toHaveBeenCalled()
+    if (stage === 'lease') {
+      expect(releasePhoneWebhookEvent).toHaveBeenCalledWith(1, lease)
+    }
+  })
+
+  it('serializes keypad and voicemail requests and never redirects an accepted handoff twice', async () => {
+    const actions = createBellLiveActionHandler(callSid)
+    const results = await Promise.all([
+      actions.execute('open_signup_menu', {}, 1),
+      actions.execute('start_voicemail', {}, 1),
+      actions.execute('open_signup_menu', {}, 1),
+    ])
+    expect(results.map((result) => result.status)).toEqual([
+      'handed_off',
+      'handed_off',
+      'handed_off',
+    ])
+    expect(redirectCallToKeypad).toHaveBeenCalledTimes(1)
+    expect(redirectCallToVoicemail).not.toHaveBeenCalled()
+    expect(subscribeVoiceCaller).not.toHaveBeenCalled()
+  })
+
+  it("retains another controller's menu lease without redirecting", async () => {
+    vi.mocked(claimPhoneWebhookEvent).mockResolvedValue(null)
+    const actions = createBellLiveActionHandler(callSid)
+    expect(await actions.execute('open_signup_menu', {}, 1)).toMatchObject({
+      status: 'handoff_pending',
+    })
+    expect(actions.hasHandedOff()).toBe(true)
+    expect(redirectCallToKeypad).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    new TypeError('fetch failed'),
+    new TwilioApiError('server error', 503),
+  ])('fences an ambiguous keypad redirect result', async (error) => {
+    vi.mocked(redirectCallToKeypad).mockRejectedValueOnce(error)
+    const actions = createBellLiveActionHandler(callSid)
+    expect(await actions.execute('open_signup_menu', {}, 1)).toMatchObject({
+      status: 'handoff_pending',
+    })
+    await actions.execute('start_voicemail', {}, 2)
+    await actions.execute('open_signup_menu', {}, 2)
+    expect(actions.hasHandedOff()).toBe(true)
+    expect(redirectCallToKeypad).toHaveBeenCalledTimes(1)
+    expect(redirectCallToVoicemail).not.toHaveBeenCalled()
+    expect(releasePhoneWebhookEvent).not.toHaveBeenCalled()
+  })
+
+  it('releases a definitively rejected menu handoff for retry', async () => {
+    vi.mocked(redirectCallToKeypad).mockRejectedValueOnce(
+      new TwilioApiError('rejected', 400)
+    )
+    const actions = createBellLiveActionHandler(callSid)
+    expect(await actions.execute('open_signup_menu', {}, 1)).toMatchObject({
+      status: 'unavailable',
+    })
+    expect(actions.hasHandedOff()).toBe(false)
+    expect(releasePhoneWebhookEvent).toHaveBeenCalledWith(1, lease)
+    await actions.execute('open_signup_menu', {}, 2)
+    expect(redirectCallToKeypad).toHaveBeenCalledTimes(2)
+    expect(actions.hasHandedOff()).toBe(true)
+  })
+
+  it('allows a fresh SIP controller to open the menu again on the same parent call', async () => {
+    await createBellLiveActionHandler(callSid, undefined, 'rtc_first').execute(
+      'open_signup_menu',
+      {},
+      1
+    )
+    await createBellLiveActionHandler(callSid, undefined, 'rtc_second').execute(
+      'open_signup_menu',
+      {},
+      1
+    )
+    expect(findOrCreatePhoneWebhookEvent).toHaveBeenNthCalledWith(1, {
+      eventKey: `bell-live:${callSid}:signup-menu:rtc_first`,
+      eventType: 'bell-live-action',
+    })
+    expect(findOrCreatePhoneWebhookEvent).toHaveBeenNthCalledWith(2, {
+      eventKey: `bell-live:${callSid}:signup-menu:rtc_second`,
+      eventType: 'bell-live-action',
+    })
+    expect(redirectCallToKeypad).toHaveBeenCalledTimes(2)
   })
 })
