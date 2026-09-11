@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { getPageBySlug } from '@/lib/content/loader'
+import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
 import type { Post } from '@/lib/content/types'
 import { publicAppPage, publicAppPages } from '@/lib/public-pages'
 import {
   buildCorpus,
+  buildCorpusFromPosts,
   buildCorpusFromPublicAppPages,
   chunkPage,
   chunkPost,
@@ -13,6 +14,8 @@ import {
   MAX_CHUNK_CHARS,
   stripToPlaintext,
 } from '@/lib/search/corpus'
+import { buildLexicalIndex } from '@/lib/search/lexical'
+import { buildMerkleTree } from '@/lib/search/merkle'
 
 function makePost(overrides: Partial<Post> = {}): Post {
   return {
@@ -88,6 +91,26 @@ describe('chunkPost', () => {
       },
     })
     expect(chunkPost(post)[0].text).toBe('My title. A description')
+  })
+
+  it('indexes a distinct description as well as the displayed subtitle', () => {
+    const post = makePost()
+    post.frontmatter.subtitle = 'An editorial subtitle'
+    post.frontmatter.description = 'A different searchable description'
+
+    expect(chunkPost(post)[0].text).toBe(
+      'Test post. An editorial subtitle. A different searchable description'
+    )
+    const corpus = buildCorpusFromPosts([post])
+    expect(corpus[0].description).toBe('An editorial subtitle')
+    expect(corpus[0].searchDescription).toBe(
+      'An editorial subtitle. A different searchable description'
+    )
+    expect(buildLexicalIndex(corpus).search('searchable')[0]?.slug).toBe(
+      post.slug
+    )
+    post.frontmatter.description = post.frontmatter.subtitle
+    expect(chunkPost(post)[0].text).toBe('Test post. An editorial subtitle')
   })
 
   it('groups paragraphs into chunks of roughly the size limit', () => {
@@ -193,6 +216,65 @@ describe('chunkPublicAppPage', () => {
 })
 
 describe('extractImageAssets', () => {
+  it('embeds public cover metadata without assigning it to body images', () => {
+    const post = makePost()
+    post.frontmatter = {
+      ...post.frontmatter,
+      subtitle: 'An editorial subtitle',
+      description: 'A description of the trip',
+      coverImage: '/images/covers/portrait.jpg',
+      coverImageAlt: 'A mirror portrait',
+      location: {
+        name: '  Kamimeguro  ',
+        url: 'https://example.com/map?query=not-a-place-name',
+      },
+      photo: {
+        camera: 'Leica M11-P',
+        lens: 'Summicron-M 35 f/2 ASPH.',
+        focalLength: '35 mm',
+        aperture: 'f/4',
+        apertureEstimated: true,
+        exposureTime: '1/60 s',
+        iso: 250,
+      },
+    }
+    // Defense in depth: only the public schema's named fields are indexed,
+    // even if unexpected private metadata reaches this pure function.
+    Object.assign(post.frontmatter.photo!, {
+      gpsLatitude: 'private-gps-latitude',
+      gpsLongitude: 'private-gps-longitude',
+    })
+    post.content = '![An unrelated diagram](/images/posts/diagram.jpg)'
+
+    const [cover, body] = extractImageAssets(post)
+    expect(cover.location).toEqual({
+      name: 'Kamimeguro',
+      url: post.frontmatter.location!.url,
+    })
+    expect(cover.alt).toBe('A mirror portrait')
+    expect(cover.text).toContain('Post: Test post')
+    expect(cover.text).toContain(
+      'Post description: An editorial subtitle. A description of the trip'
+    )
+    expect(cover.text).toContain('Description: A mirror portrait')
+    expect(cover.text).toContain('Location: Kamimeguro')
+    expect(cover.text).toContain('Aperture: f/4 (estimated)')
+    expect(cover.text).toContain('Exposure time: 1/60 s; ISO: 250')
+    expect(body.alt).toBe('An unrelated diagram')
+    expect(body.location).toBeUndefined()
+    expect(body.text).not.toContain('Location:')
+    expect(body.text).not.toContain('Camera:')
+    expect(body.text).toContain('Description: An unrelated diagram')
+    const indexedText = [
+      ...chunkPost(post).map((chunk) => chunk.text),
+      cover.text,
+      body.text,
+    ].join('\n')
+    expect(indexedText).not.toContain('private-gps')
+    expect(indexedText).not.toContain('not-a-place-name')
+    expect(indexedText).not.toContain('https://')
+  })
+
   it('extracts cover and body images with deterministic metadata', () => {
     const post = makePost({
       frontmatter: {
@@ -232,6 +314,59 @@ describe('extractImageAssets', () => {
       content: '![External](https://example.com/image.jpg)',
     })
     expect(extractImageAssets(post)).toEqual([])
+  })
+})
+
+describe('authored photo location indexing', () => {
+  it.each([
+    ['first-photo', 'Kamimeguro'],
+    ['torii', 'Fushimi Inari-taisha'],
+    ['bamboo', 'Arashiyama'],
+  ])('includes %s location in text and actual-image embedding inputs', (slug, place) => {
+    const post = getPostBySlug(slug)
+    expect(post).not.toBeNull()
+    const location = post!.frontmatter.location!
+    expect(location.name).toContain(place)
+    const [entry] = buildCorpusFromPosts([post!])
+
+    expect(entry.location).toEqual(location)
+    expect(entry.title).toBe(post!.frontmatter.title)
+    expect(entry.coverAlt).toBe(post!.frontmatter.coverImageAlt)
+    expect(entry.chunks.find((chunk) => chunk.kind === 'location')).toEqual({
+      seq: expect.any(Number),
+      kind: 'location',
+      text: `Location: ${location.name}`,
+    })
+    expect(
+      entry.chunks.find((chunk) => chunk.kind === 'photo-metadata')?.text
+    ).toContain('Camera: Leica M11-P')
+    expect(entry.images[0].src).toBe(post!.frontmatter.coverImage)
+    expect(entry.images[0].location).toEqual(entry.location)
+    expect(entry.images[0].text).toContain(`Location: ${location.name}`)
+    expect(entry.images[0].text).toContain('Camera: Leica M11-P')
+  })
+
+  it('invalidates text and cover vectors when only the authored location changes', () => {
+    const post = makePost()
+    post.frontmatter.coverImage = '/images/covers/portrait.jpg'
+    post.frontmatter.coverImageAlt = 'A mirror portrait'
+    post.frontmatter.location = {
+      name: 'Kamimeguro',
+      url: 'https://example.com/map',
+    }
+    post.content = '![An unrelated diagram](/images/posts/diagram.jpg)'
+    const before = buildMerkleTree(buildCorpusFromPosts([post]), 'model', 768)
+    post.frontmatter.location.name = 'Kyoto'
+    const after = buildMerkleTree(buildCorpusFromPosts([post]), 'model', 768)
+
+    expect(after.root).not.toBe(before.root)
+    expect(after.posts[0].chunks.at(-1)?.hash).not.toBe(
+      before.posts[0].chunks.at(-1)?.hash
+    )
+    expect(after.posts[0].images[0].hash).not.toBe(
+      before.posts[0].images[0].hash
+    )
+    expect(after.posts[0].images[1].hash).toBe(before.posts[0].images[1].hash)
   })
 })
 

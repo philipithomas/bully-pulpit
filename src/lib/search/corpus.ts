@@ -1,5 +1,6 @@
 import { extractRenderedHeadings } from '@/lib/content/headings'
 import { getAllPosts, getPages } from '@/lib/content/loader'
+import { photoMetadataLabeledText } from '@/lib/content/photo-metadata'
 import type { Frontmatter, Page, Post } from '@/lib/content/types'
 import { type PublicAppPage, publicAppPages } from '@/lib/public-pages'
 import { stargazingPageContent } from '@/lib/stargazing/restaurants'
@@ -17,7 +18,12 @@ import { stargazingPageContent } from '@/lib/stargazing/restaurants'
  * headings are attached can never invalidate the committed vector index.
  */
 
-export type ChunkKind = 'title' | 'body' | 'cover-alt'
+export type ChunkKind =
+  | 'title'
+  | 'body'
+  | 'cover-alt'
+  | 'location'
+  | 'photo-metadata'
 export type ImageAssetKind = 'cover-image' | 'body-image'
 export type SearchContentType = 'post' | 'page'
 
@@ -37,6 +43,12 @@ export interface PostChunk {
   heading?: ChunkHeading
 }
 
+/** Public, authored place metadata; never inferred from image files or URLs. */
+export interface CorpusLocation {
+  name: string
+  url: string
+}
+
 export interface CorpusImageAsset {
   /** Stable within the post; stored in the committed index */
   id: string
@@ -47,6 +59,8 @@ export interface CorpusImageAsset {
   alt: string
   /** Deterministic textual description embedded alongside the image bytes */
   text: string
+  /** The authored cover location, never inherited by arbitrary body images. */
+  location?: CorpusLocation
   /** Present for body images below a heading */
   heading?: ChunkHeading
   /** Optional SHA-256 over the public image file for offline index checks */
@@ -61,8 +75,11 @@ export interface CorpusPost {
   newsletter: string
   publishedAt?: string | null
   description: string
+  /** All distinct authored subtitle/description text, indexed once lexically. */
+  searchDescription?: string
   coverImage: string
   coverAlt: string
+  location?: CorpusLocation
   chunks: PostChunk[]
   images: CorpusImageAsset[]
 }
@@ -214,24 +231,53 @@ function headingAtLine(
   return current ? { text: current.text, anchor: current.anchor } : undefined
 }
 
+function authoredLocation(
+  frontmatter: Frontmatter
+): CorpusLocation | undefined {
+  const name = frontmatter.location?.name.trim().replace(/\s+/g, ' ')
+  return name && frontmatter.location
+    ? { name, url: frontmatter.location.url }
+    : undefined
+}
+
+function postDescriptions(frontmatter: Frontmatter): string[] {
+  return [
+    ...new Set(
+      [frontmatter.subtitle, frontmatter.description].filter(
+        (value): value is string => Boolean(value)
+      )
+    ),
+  ]
+}
+
 function imageText({
   post,
   kind,
   alt,
   heading,
+  location,
 }: {
   post: Post
   kind: ImageAssetKind
   alt: string
   heading?: ChunkHeading
+  location?: CorpusLocation
 }): string {
   const role = kind === 'cover-image' ? 'cover image' : 'embedded image'
+  const description = postDescriptions(post.frontmatter).join('. ')
+  const photo =
+    kind === 'cover-image'
+      ? photoMetadataLabeledText(post.frontmatter.photo)
+      : ''
   return [
     `Post: ${post.frontmatter.title}`,
     `Newsletter: ${post.newsletter}`,
+    description ? `Post description: ${description}` : null,
     `Image role: ${role}`,
     heading ? `Section: ${heading.text}` : null,
     `Description: ${alt || post.frontmatter.title}`,
+    location ? `Location: ${location.name}` : null,
+    photo || null,
   ]
     .filter((part): part is string => Boolean(part))
     .join('\n')
@@ -259,7 +305,9 @@ export function extractImageAssets(
     heading?: ChunkHeading
   }) => {
     if (!PUBLIC_IMAGE_RE.test(src)) return
-    const text = imageText({ post, kind, alt, heading })
+    const location =
+      kind === 'cover-image' ? authoredLocation(post.frontmatter) : undefined
+    const text = imageText({ post, kind, alt, heading, location })
     const sourceHash = options.imageDigest?.(src)
     assets.push({
       id,
@@ -268,6 +316,7 @@ export function extractImageAssets(
       src,
       alt,
       text,
+      ...(location ? { location } : {}),
       ...(heading ? { heading } : {}),
       ...(sourceHash ? { sourceHash } : {}),
     })
@@ -402,7 +451,7 @@ function chunkContent(item: ChunkableContent): PostChunk[] {
 
   const titleText = [
     item.frontmatter.title,
-    item.frontmatter.subtitle ?? item.frontmatter.description ?? '',
+    ...postDescriptions(item.frontmatter),
   ]
     .filter(Boolean)
     .join('. ')
@@ -425,6 +474,19 @@ function chunkContent(item: ChunkableContent): PostChunk[] {
       kind: 'cover-alt',
       text: item.frontmatter.coverImageAlt,
     })
+  }
+
+  const location = authoredLocation(item.frontmatter)
+  if (location) {
+    chunks.push({
+      seq: seq++,
+      kind: 'location',
+      text: `Location: ${location.name}`,
+    })
+  }
+  const photo = photoMetadataLabeledText(item.frontmatter.photo)
+  if (photo) {
+    chunks.push({ seq: seq++, kind: 'photo-metadata', text: photo })
   }
 
   return chunks
@@ -469,8 +531,10 @@ export function buildCorpusFromPosts(
     publishedAt: post.frontmatter.publishedAt,
     description:
       post.frontmatter.subtitle ?? post.frontmatter.description ?? '',
+    searchDescription: postDescriptions(post.frontmatter).join('. '),
     coverImage: post.frontmatter.coverImage ?? '',
     coverAlt: post.frontmatter.coverImageAlt ?? '',
+    location: authoredLocation(post.frontmatter),
     chunks: chunkPost(post),
     images: extractImageAssets(post, options),
   }))
@@ -486,8 +550,10 @@ export function buildCorpusFromPages(pages: Page[]): CorpusPost[] {
     publishedAt: page.frontmatter.publishedAt ?? null,
     description:
       page.frontmatter.subtitle ?? page.frontmatter.description ?? '',
+    searchDescription: postDescriptions(page.frontmatter).join('. '),
     coverImage: page.frontmatter.coverImage ?? '',
     coverAlt: page.frontmatter.coverImageAlt ?? '',
+    location: authoredLocation(page.frontmatter),
     chunks: chunkPage(page),
     images: [],
   }))

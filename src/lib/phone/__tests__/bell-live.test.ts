@@ -250,6 +250,40 @@ describe('Bell Live Realtime session', () => {
     expect(session.tools[0]).not.toHaveProperty('allowed_callers')
   })
 
+  it('researches travel questions using authored photo locations and both search scopes', () => {
+    const { instructions } = phoneBellRealtimeSession()
+
+    expect(instructions).toContain(
+      'search both scope "posts" and scope "images", starting with the place name alone'
+    )
+    expect(instructions).toContain('even if the caller does not mention photos')
+    expect(instructions).toContain(
+      'Authored photo locations, captions, and image descriptions are evidence for photo and travel questions'
+    )
+    expect(instructions).toContain(
+      'Fetch the original photo post using its returned id'
+    )
+    expect(instructions).toContain(
+      'do not discard a photo source merely because it has no body text'
+    )
+    expect(instructions).toContain(
+      'Distinguish a photographed location from an explicit account of a visit'
+    )
+    expect(instructions).toContain(
+      'Do not infer opinions or essay coverage from incidental cover metadata'
+    )
+    expect(instructions).toContain('identify places by visual guessing')
+    expect(instructions).toContain(
+      'treat publication dates as capture or visit dates'
+    )
+    expect(instructions).toContain(
+      "Verify a place's connection to the requested city from retrieved sources"
+    )
+    expect(instructions).toContain(
+      'Give documented examples, not an exhaustive itinerary'
+    )
+  })
+
   it('accepts and rejects calls through the direct OpenAI call API', async () => {
     const fetchMock = vi.fn(
       async (_input: string | URL | Request, _init?: RequestInit) =>

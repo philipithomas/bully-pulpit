@@ -43,16 +43,26 @@ export interface LexicalIndex {
 const FIELD_BOOSTS = {
   title: 6,
   description: 2,
-  body: 1,
-  coverAlt: 1.5,
+  body: 2,
+  coverAlt: 1,
   imageText: 2,
+  location: 1.5,
+  photoMetadata: 1,
 }
 const IMAGE_FIELD_BOOSTS = { alt: 5, title: 2, heading: 2, text: 1 }
 const EXCERPT_CHARS = 120
 
 export function buildLexicalIndex(corpus: CorpusPost[]): LexicalIndex {
   const mini = new MiniSearch({
-    fields: ['title', 'description', 'body', 'coverAlt', 'imageText'],
+    fields: [
+      'title',
+      'description',
+      'body',
+      'coverAlt',
+      'imageText',
+      'location',
+      'photoMetadata',
+    ],
     storeFields: ['slug', 'title', 'url', 'newsletter', 'coverImage'],
     idField: 'slug',
   })
@@ -74,13 +84,29 @@ export function buildLexicalIndex(corpus: CorpusPost[]): LexicalIndex {
     corpus.map((post) => ({
       slug: post.slug,
       title: post.title,
-      description: post.description,
+      description: post.searchDescription ?? post.description,
       body: post.chunks
         .filter((c) => c.kind === 'body')
         .map((c) => c.text)
         .join('\n'),
-      coverAlt: post.coverAlt,
-      imageText: post.images.map((image) => image.text).join('\n'),
+      coverAlt:
+        post.coverAlt ||
+        post.images.find((image) => image.kind === 'cover-image')?.alt ||
+        '',
+      location: post.location?.name ?? '',
+      photoMetadata: post.chunks
+        .filter((chunk) => chunk.kind === 'photo-metadata')
+        .map((chunk) => chunk.text)
+        .join('\n'),
+      // The multimodal embedding context repeats the post title, description,
+      // and cover metadata for each asset. Index each in its own field here so
+      // adding camera/location context cannot multiply their keyword weight.
+      imageText: post.images
+        .filter((image) => image.kind === 'body-image')
+        .map((image) =>
+          [image.alt, image.heading?.text].filter(Boolean).join('\n')
+        )
+        .join('\n'),
       url: post.url,
       newsletter: post.newsletter,
       coverImage: post.coverImage,
@@ -105,19 +131,27 @@ export function buildLexicalIndex(corpus: CorpusPost[]): LexicalIndex {
 
   const bySlug = new Map(corpus.map((post) => [post.slug, post]))
 
-  const runSearch = (query: string, combineWith: 'AND' | 'OR') =>
+  const runSearch = (
+    query: string,
+    combineWith: 'AND' | 'OR',
+    prefix: boolean
+  ) =>
     mini.search(query, {
       boost: FIELD_BOOSTS,
       // Typeahead: the final token is usually mid-word, so prefix-match it
-      prefix: (_term, i, terms) => i === terms.length - 1,
-      fuzzy: 0.15,
+      prefix: prefix ? (_term, i, terms) => i === terms.length - 1 : false,
+      fuzzy: prefix ? 0.15 : false,
       combineWith,
     })
 
   return {
     search(query, limit = 10) {
-      let hits = runSearch(query, 'AND')
-      if (hits.length === 0) hits = runSearch(query, 'OR')
+      // Prefer complete named subjects (Noma) over unrelated prefix matches
+      // (Nomad). Prefix expansion still supports an unfinished typeahead word.
+      let hits = runSearch(query, 'AND', false)
+      if (hits.length === 0) hits = runSearch(query, 'AND', true)
+      if (hits.length === 0) hits = runSearch(query, 'OR', false)
+      if (hits.length === 0) hits = runSearch(query, 'OR', true)
       return hits.slice(0, limit).map((hit) => ({
         slug: hit.slug as string,
         title: hit.title as string,

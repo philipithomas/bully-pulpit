@@ -9,6 +9,12 @@ interface FetchPostOutput {
   url: string
   publishedAt: string | null
   newsletter: string | null
+  location: { name: string; url: string } | null
+  photo: { camera: string } | null
+  images: {
+    kind: 'cover-image' | 'body-image'
+    location?: { name: string; url: string }
+  }[]
   outline: { heading: string; anchor: string; url: string }[]
   content: string
   error?: string
@@ -20,6 +26,20 @@ async function run(slug: string): Promise<FetchPostOutput> {
 }
 
 describe('fetchPost tool outline', () => {
+  it('confirms authored location and cover metadata for a photo with no body text', async () => {
+    const result = await run('bamboo')
+    expect(result.content.trim()).toBe('')
+    expect(result.location).toEqual({
+      name: 'Arashiyama, Kyoto',
+      url: 'https://maps.app.goo.gl/zXjFwry8DY3eEzYx6',
+    })
+    expect(result.images[0]).toMatchObject({
+      kind: 'cover-image',
+      location: result.location,
+    })
+    expect(result.photo?.camera).toBe('Leica M11-P')
+  })
+
   it('returns the heading outline with anchors and section urls', async () => {
     const result = await run('finding-a-software-job')
     expect(result.error).toBeUndefined()

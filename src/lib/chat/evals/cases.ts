@@ -159,6 +159,7 @@ export const bellEvalCases: readonly BellEvalCase[] = [
       'Starts with a short search for noma itself, even though the current page contains one answer.',
       'Reads /stargazing and /2024-05 as well as relevant craft coverage; does not stop with only craft essays.',
       'Reads multiple sources that add distinct perspectives on noma.',
+      'Does not treat incidental cover or photo location metadata as an opinion or a visit to noma; respects explicit statements that he did not visit a particular pop-up.',
       'Does not assert that the archive has no restaurant review or food opinions; uses the retrieved restaurant entry and visit account.',
       "Synthesizes Philip's craft ideas, personal experiences, and preferences.",
     ],
@@ -198,6 +199,68 @@ export const bellEvalCases: readonly BellEvalCase[] = [
     review: [
       'Uses image search rather than guessing from text alone.',
       'Returns a real image and its exact post or section URL.',
+    ],
+  },
+  {
+    id: 'kyoto-photo-travel',
+    category: 'images',
+    surface: 'web',
+    prompt: 'What places did Philip visit in Kyoto?',
+    expectation: {
+      kind: 'search',
+      query: 'Kyoto',
+      scope: 'images',
+      expectedUrls: ['/wild-boar-shrine', '/downpour', '/weekenders-coffee'],
+    },
+    review: [
+      'Searches Kyoto in both posts and images even though the question does not explicitly ask about photographs.',
+      'Uses authored photo locations and reads the original photo posts before answering; does not discard photo sources for lacking essays.',
+      'Gives several grounded places, including Goō Shrine, Jōkō-in Temple, and Weekenders Coffee, with exact source links.',
+      'Distinguishes places in Kyoto from nearby places and does not infer city membership from the appearance of an image.',
+      'Does not claim he attended the noma Kyoto pop-up: the Weekenders Coffee post explicitly says he never made it there.',
+      'Does not claim an exhaustive itinerary or treat post publication dates as dates of visits.',
+    ],
+  },
+  {
+    id: 'kanazawa-photo-travel',
+    category: 'images',
+    surface: 'web',
+    prompt:
+      'What places did Philip visit in Kanazawa? Use his photographs as evidence too.',
+    expectation: {
+      kind: 'search',
+      query: 'Kanazawa',
+      scope: 'images',
+      expectedUrls: [
+        '/dt-suzuki-bench',
+        '/dt-suzuki-hallway',
+        '/dt-suzuki-reflecting-pool',
+        '/listening',
+      ],
+    },
+    review: [
+      'Searches both posts and images for Kanazawa and reads the photo sources.',
+      'Identifies the D. T. Suzuki Museum and Jazz Spot Bokunen from their authored locations.',
+      'Treats the three museum photos as one place, and cites source posts.',
+      'Keeps Kyoto and Tokyo places out of the Kanazawa examples.',
+    ],
+  },
+  {
+    id: 'photo-location-without-body',
+    category: 'images',
+    surface: 'web',
+    prompt: 'Where did Philip take his Bamboo Forest photograph?',
+    expectation: {
+      kind: 'search',
+      query: 'Bamboo Forest',
+      scope: 'images',
+      expectedUrls: ['/bamboo-forest'],
+    },
+    review: [
+      'Uses image search and fetches the original Bamboo Forest photo post.',
+      'Answers Arashiyama from the authored location even though the post has no body text.',
+      'Cites the exact photo post URL and does not pretend the location was identified visually.',
+      'Does not invent a precise venue, visit date, opinion, or longer essay based on the image description.',
     ],
   },
   {

@@ -211,6 +211,38 @@ describe('POST /mcp', () => {
     )
   })
 
+  it('searches photo locations through MCP and returns IDs that fetch can read', async () => {
+    const { response, payload } = await postJson(
+      toolCallRequest(30, 'search', { query: 'Arashiyama', scope: 'images' })
+    )
+    expect(response.status).toBe(200)
+    const structured = expectStructuredTextResult(resultObject(payload))
+    const results = structured.results as Array<{
+      id: string
+      type: string
+      location?: { name: string }
+      images: Array<{ src: string; location?: { name: string } }>
+    }>
+    expect(results).toContainEqual(
+      expect.objectContaining({
+        id: 'bamboo',
+        type: 'image',
+        location: expect.objectContaining({ name: 'Arashiyama, Kyoto' }),
+      })
+    )
+    const photo = results.find((result) => result.id === 'bamboo')!
+    expect(photo.images[0].location?.name).toBe('Arashiyama, Kyoto')
+    expect(
+      photo.images[0].src.startsWith('https://www.philipithomas.com/images/')
+    ).toBe(true)
+
+    const fetched = await postJson(
+      toolCallRequest(31, 'fetch', { id: photo.id })
+    )
+    const content = expectStructuredTextResult(resultObject(fetched.payload))
+    expect(content.text).toContain('Location: Arashiyama, Kyoto')
+  })
+
   it('fetches complete public content with structured and text output', async () => {
     const { payload } = await postJson(
       toolCallRequest(4, 'fetch', { id: 'mcp-and-the-future-of-ai' })

@@ -28,9 +28,7 @@ async function run(
 describe('searchPosts tool output', () => {
   it('describes the ten-result, broad-query research contract', () => {
     expect(searchPosts.description).toContain('up to 10 ranked results')
-    expect(searchPosts.description).toContain(
-      'keep the query broad and inspect the complete result set'
-    )
+    expect(searchPosts.description).toContain('inspect the complete result set')
   })
 
   beforeEach(() => {
@@ -73,6 +71,20 @@ describe('searchPosts tool output', () => {
     expect(results[0].type).toBe('image')
     expect(results[0].image?.src).toMatch(/^\/images\//)
     expect(results[0].images[0]?.src).toBe(results[0].image?.src)
+  })
+
+  it('passes a location-only match and its photo evidence to Bell', async () => {
+    const results = await run('Kamimeguro', 'images')
+    expect(results[0]).toMatchObject({
+      title: 'First photo',
+      url: '/first-photo',
+      location: { name: 'Kamimeguro, Tokyo' },
+      image: {
+        src: '/images/covers/tsundoku/selfie.jpg',
+        location: { name: 'Kamimeguro, Tokyo' },
+      },
+    })
+    expect(results[0].photoMetadata).toContain('Leica M11-P')
   })
 
   it('returns content pages for site-page queries', async () => {

@@ -8,6 +8,24 @@ vi.mock('@/lib/search/corpus', async (importOriginal) => {
     buildCorpus: () =>
       actual.buildCorpusFromPosts([
         {
+          slug: 'location-only-photo',
+          newsletter: 'tsundoku',
+          frontmatter: {
+            title: 'Morning garden',
+            publishedAt: '2026-06-25',
+            coverImage: '/images/covers/garden.jpg',
+            coverImageAlt: 'A quiet garden beside a pond',
+            location: {
+              name: 'Tenryū-ji, Kyoto',
+              url: 'https://example.com/temple',
+            },
+            featured: false,
+            draft: false,
+          },
+          content: '',
+          excerpt: '',
+        },
+        {
           slug: 'subtitle-example',
           newsletter: 'workshop',
           frontmatter: {
@@ -33,6 +51,33 @@ vi.mock('@/lib/search/index-file', async (importOriginal) => {
 })
 
 describe('hybrid search metadata', () => {
+  it('retrieves a location-only photo without a vector index and keeps metadata distinct from prose', async () => {
+    const { results } = await hybridSearchPosts('Kyoto', { useVector: false })
+    expect(results[0]).toMatchObject({
+      slug: 'location-only-photo',
+      excerpts: [],
+      location: { name: 'Tenryū-ji, Kyoto' },
+      images: [{ location: { name: 'Tenryū-ji, Kyoto' } }],
+    })
+  })
+
+  it('keeps image search usable when vectors are missing', async () => {
+    const { mode, results } = await hybridSearchPosts('Kyoto', {
+      scope: 'images',
+      useVector: false,
+    })
+    expect(mode).toBe('lexical')
+    expect(results[0]).toMatchObject({
+      type: 'image',
+      slug: 'location-only-photo',
+      location: { name: 'Tenryū-ji, Kyoto' },
+      image: {
+        alt: 'A quiet garden beside a pond',
+        location: { name: 'Tenryū-ji, Kyoto' },
+      },
+    })
+  })
+
   it('carries the post subtitle through as its description', async () => {
     const { results } = await hybridSearchPosts('example', { useVector: false })
 

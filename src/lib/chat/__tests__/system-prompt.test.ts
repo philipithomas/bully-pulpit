@@ -292,6 +292,43 @@ describe('getSystemPrompt research scope', () => {
       'Stop when the remaining results are unlikely to change the answer'
     )
     expect(prompt).toContain(
+      "For questions about opinions or essays, incidental cover or image metadata alone does not establish Philip's views"
+    )
+  })
+
+  it.each([
+    'web',
+    'sms',
+  ] as const)('uses authored photo locations for travel research on %s', (surface) => {
+    const prompt = getSystemPrompt({ surface })
+
+    expect(prompt).toContain(
+      'For questions about places Philip visited, photographed, or traveled to, search both scope "posts" and scope "images"'
+    )
+    expect(prompt).toContain('even when the visitor does not mention photos')
+    expect(prompt).toContain(
+      'authored photo locations, captions, and image descriptions are relevant evidence'
+    )
+    expect(prompt).toContain('even when the post has no body text')
+    expect(prompt).toContain(
+      'Fetch the original photo post to confirm its authored location and context, and cite its exact source URL'
+    )
+    expect(prompt).toContain(
+      'distinguish a photographed location from an explicit account of a visit'
+    )
+    expect(prompt).toContain(
+      'A publication date is not a capture or visit date unless the source says so'
+    )
+    expect(prompt).toContain(
+      'Never infer a location by visually guessing from an image'
+    )
+    expect(prompt).toContain(
+      "When a place's city is not established by the retrieved sources, verify that connection"
+    )
+    expect(prompt).toContain(
+      'Present documented examples rather than claiming an exhaustive list'
+    )
+    expect(prompt).not.toContain(
       'Ignore a result when only its cover or image metadata mentions the subject'
     )
   })

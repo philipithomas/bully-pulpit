@@ -45,6 +45,7 @@ export const fetchPost = tool({
             ? `/${item.slug}#${image.heading.anchor}`
             : `/${item.slug}`,
           description: image.alt,
+          ...(image.location ? { location: image.location } : {}),
           ...(image.heading
             ? {
                 section: {
@@ -61,9 +62,11 @@ export const fetchPost = tool({
       title: item.frontmatter.title,
       url: `/${item.slug}`,
       description: item.frontmatter.description ?? null,
+      subtitle: item.frontmatter.subtitle ?? null,
       publishedAt: item.frontmatter.publishedAt ?? null,
       newsletter: 'newsletter' in item ? item.newsletter : null,
       photo: item.frontmatter.photo ?? null,
+      location: item.frontmatter.location ?? null,
       outline,
       images,
       content,

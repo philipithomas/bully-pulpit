@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { checkRateLimitStatus } from '@/lib/rate-limit'
+import type { CorpusLocation } from '@/lib/search/corpus'
 import { hybridSearchPosts, type SearchScope } from '@/lib/search/hybrid'
 
 export const MAX_SEARCH_QUERY_CHARACTERS = 300
@@ -17,6 +18,8 @@ interface SearchResult {
   slug: string
   title: string
   description: string
+  location?: CorpusLocation
+  photoMetadata?: string
   url: string
   newsletter: string
   coverImage: string
@@ -27,6 +30,8 @@ interface SearchResult {
     alt: string
     url: string
     description: string
+    location?: CorpusLocation
+    photoMetadata?: string
   }[]
   image?: {
     id: string
@@ -34,6 +39,8 @@ interface SearchResult {
     alt: string
     url: string
     description: string
+    location?: CorpusLocation
+    photoMetadata?: string
   }
 }
 
@@ -81,6 +88,8 @@ export async function GET(request: NextRequest) {
       slug: result.slug,
       title: result.title,
       description: result.description,
+      ...(result.location ? { location: result.location } : {}),
+      ...(result.photoMetadata ? { photoMetadata: result.photoMetadata } : {}),
       url: result.url,
       newsletter: result.newsletter,
       coverImage: result.coverImage,
@@ -91,6 +100,8 @@ export async function GET(request: NextRequest) {
         alt: image.alt,
         url: image.url,
         description: image.description,
+        ...(image.location ? { location: image.location } : {}),
+        ...(image.photoMetadata ? { photoMetadata: image.photoMetadata } : {}),
       })),
       ...(result.image
         ? {
@@ -100,6 +111,12 @@ export async function GET(request: NextRequest) {
               alt: result.image.alt,
               url: result.image.url,
               description: result.image.description,
+              ...(result.image.location
+                ? { location: result.image.location }
+                : {}),
+              ...(result.image.photoMetadata
+                ? { photoMetadata: result.image.photoMetadata }
+                : {}),
             },
           }
         : {}),
