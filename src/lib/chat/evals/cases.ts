@@ -222,6 +222,30 @@ export const bellEvalCases: readonly BellEvalCase[] = [
     ],
   },
   {
+    id: 'kanazawa-photo-travel',
+    category: 'images',
+    surface: 'web',
+    prompt:
+      'What places did Philip visit in Kanazawa? Use his photographs as evidence too.',
+    expectation: {
+      kind: 'search',
+      query: 'Kanazawa',
+      scope: 'images',
+      expectedUrls: [
+        '/dt-suzuki-bench',
+        '/dt-suzuki-hallway',
+        '/dt-suzuki-reflecting-pool',
+        '/listening',
+      ],
+    },
+    review: [
+      'Searches both posts and images for Kanazawa and reads the photo sources.',
+      'Identifies the D. T. Suzuki Museum and Jazz Spot Bokunen from their authored locations.',
+      'Treats the three museum photos as one place, and cites source posts.',
+      'Keeps Kyoto and Tokyo places out of the Kanazawa examples.',
+    ],
+  },
+  {
     id: 'photo-location-without-body',
     category: 'images',
     surface: 'web',

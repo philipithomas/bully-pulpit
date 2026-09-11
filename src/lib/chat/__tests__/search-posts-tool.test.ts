@@ -78,10 +78,10 @@ describe('searchPosts tool output', () => {
     expect(results[0]).toMatchObject({
       title: 'First photo',
       url: '/first-photo',
-      location: { name: 'Kamimeguro' },
+      location: { name: 'Kamimeguro, Tokyo' },
       image: {
         src: '/images/covers/tsundoku/selfie.jpg',
-        location: { name: 'Kamimeguro' },
+        location: { name: 'Kamimeguro, Tokyo' },
       },
     })
     expect(results[0].photoMetadata).toContain('Leica M11-P')
