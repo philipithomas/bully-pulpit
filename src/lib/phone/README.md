@@ -52,8 +52,9 @@ set it to `realtime`, retain `realtime.call.incoming` on the webhook, and use
 `OPENAI_PHONE_REALTIME_MODEL=gpt-realtime-2.1` (or the supported mini). That
 rollback retains the previous semantic-VAD and playback-gated spoken signup.
 
-Before activation, verify Live session access with the production project key,
-the Live webhook subscription, and the actual SIP/media path. Run the delivery-free
+Before activation, verify Live session access with the production project key
+and the Live webhook subscription. After activation, verify the SIP/media path
+with an inbound call. Run the delivery-free
 `pnpm phone:live:smoke` to verify WebRTC audio, the real sideband controller,
 greeting, and graceful close. It requires Chrome and a Playwright runtime;
 set `BELL_LIVE_PLAYWRIGHT_PATH` if Playwright is installed outside the project.
