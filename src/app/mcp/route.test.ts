@@ -232,9 +232,9 @@ describe('POST /mcp', () => {
     )
     const photo = results.find((result) => result.id === 'bamboo')!
     expect(photo.images[0].location?.name).toBe('Arashiyama, Kyoto')
-    expect(photo.images[0].src).toMatch(
-      /^https:\/\/www.philipithomas.com\/images\//
-    )
+    expect(
+      photo.images[0].src.startsWith('https://www.philipithomas.com/images/')
+    ).toBe(true)
 
     const fetched = await postJson(
       toolCallRequest(31, 'fetch', { id: photo.id })
