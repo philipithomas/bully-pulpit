@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from '@/app/api/openai/realtime-call/route'
-import { bellLiveSipUri } from '@/lib/phone/bell-live'
+import { BellLiveGreetingError, bellLiveSipUri } from '@/lib/phone/bell-live'
 import * as bellLiveActions from '@/lib/phone/bell-live-actions'
 import { bellLiveCallerSubscriptionStatus } from '@/lib/phone/bell-live-caller'
 import { phoneBellInitialGreeting } from '@/lib/phone/bell-live-greeting'
@@ -224,6 +224,61 @@ afterEach(() => {
 })
 
 describe('GPT-Live incoming calls', () => {
+  it.each([
+    'gpt-live-1',
+    undefined,
+  ])('falls back without reattaching after a pre-greeting Live 503 with engine %s', async (engine) => {
+    if (engine) process.env.OPENAI_PHONE_VOICE_ENGINE = engine
+    else delete process.env.OPENAI_PHONE_VOICE_ENGINE
+    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    liveSession.mockRejectedValueOnce(
+      new BellLiveGreetingError({
+        reason: 'socket_error',
+        durationMs: 1,
+        socketHttpStatus: 503,
+        audioStarted: false,
+        responseRequested: false,
+      })
+    )
+
+    const result = await postAndFlush(
+      signedRequest({
+        ...liveIncomingEvent(),
+        type: 'live.transport.incoming',
+        data: {
+          type: 'sip',
+          session_id: 'live_original_session',
+          sip_headers: sipHeaders(),
+        },
+      })
+    )
+
+    expect(result.status).toBe(204)
+    expect(liveSession).toHaveBeenCalledOnce()
+    expect(FakeOpenAiRealtimeWebSocket.connections).toHaveLength(0)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://api.openai.com/v1/live/sessions/live_original_session/hangup',
+      expect.objectContaining({ method: 'POST', redirect: 'error' })
+    )
+    expect(transcriptNotifications.send).not.toHaveBeenCalled()
+    expect(console.info).not.toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({ outcome: 'retrying_socket' })
+    )
+    expect(console.error).toHaveBeenCalledWith(
+      '[openai/realtime-call]',
+      expect.objectContaining({
+        event: 'bell_live.openai_greeting',
+        outcome: 'error',
+        socketHttpStatus: 503,
+        retryable: false,
+        terminalCheckpointed: true,
+      })
+    )
+  })
+
   it.each([
     'live.transport.incoming',
     'live.call.incoming',

@@ -137,9 +137,13 @@ async function startBellLiveGreetingWithRetry(input: {
   actions: BellLiveActionHandler
   subscriptionStatus: CallerSubscriptionStatus
 }): Promise<Awaited<ReturnType<typeof startBellLiveGreeting>>> {
+  // Live owns child cleanup on every attachment failure, so retrying would
+  // attach a second controller while the first is already hanging up its call.
+  const maxSocketAttempts =
+    phoneBellVoiceEngine() === 'gpt-live-1' ? 1 : GREETING_SOCKET_ATTEMPTS
   for (
     let socketAttempt = 1;
-    socketAttempt <= GREETING_SOCKET_ATTEMPTS;
+    socketAttempt <= maxSocketAttempts;
     socketAttempt += 1
   ) {
     try {
@@ -151,7 +155,7 @@ async function startBellLiveGreetingWithRetry(input: {
       })
     } catch (error) {
       if (
-        socketAttempt >= GREETING_SOCKET_ATTEMPTS ||
+        socketAttempt >= maxSocketAttempts ||
         !canRetryBellLiveGreeting(error)
       ) {
         throw error
