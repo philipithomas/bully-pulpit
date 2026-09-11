@@ -4,12 +4,13 @@ import { getPageBySlug, getPostBySlug } from '@/lib/content/loader'
 import { getAllPostsWithoutImages } from '@/lib/content/loader-without-images'
 import { newsletterSchema } from '@/lib/content/types'
 import { publicAppPageBellText, publicAppPages } from '@/lib/public-pages'
-import { hybridSearchPosts } from '@/lib/search/hybrid'
+import { hybridSearchPosts, type SearchScope } from '@/lib/search/hybrid'
 import { siteIdentity } from '@/lib/site-identity'
 
 export const MCP_SEARCH_MAX_CHARACTERS = 300
 export const MCP_SEARCH_MAX_RESULTS = 10
 export const MCP_SEARCH_MAX_EXCERPTS = 2
+export const MCP_SEARCH_MAX_IMAGES = 3
 export const MCP_SEARCH_EXCERPT_MAX_CHARACTERS = 600
 export const MCP_FETCH_MAX_CHARACTERS = 50_000
 export const MCP_LIST_MAX_POSTS = 10
@@ -22,8 +23,32 @@ export const searchInputSchema = z
       .min(2)
       .max(MCP_SEARCH_MAX_CHARACTERS)
       .describe(
-        "A natural-language query about Philip Ilic Thomas's public writing or website"
+        "A natural-language query about Philip Ilic Thomas's public writing, photos, places, or website"
       ),
+    scope: z
+      .enum(['posts', 'images'])
+      .optional()
+      .describe(
+        'Use images for photos and places photographed; defaults to posts'
+      ),
+  })
+  .strict()
+
+const locationSchema = z.object({ name: z.string(), url: z.url() }).strict()
+
+const searchImageSchema = z
+  .object({
+    id: z.string(),
+    src: z.url(),
+    alt: z.string(),
+    url: z.url(),
+    kind: z.enum(['cover-image', 'body-image']),
+    location: locationSchema.optional(),
+    photoMetadata: z.string().optional(),
+    section: z
+      .object({ heading: z.string(), url: z.url() })
+      .strict()
+      .optional(),
   })
   .strict()
 
@@ -39,6 +64,10 @@ export const searchOutputSchema = z
             type: z.enum(['post', 'page', 'image']),
             newsletter: z.string(),
             publishedAt: z.string().nullable(),
+            description: z.string(),
+            location: locationSchema.optional(),
+            photoMetadata: z.string().optional(),
+            images: z.array(searchImageSchema).max(MCP_SEARCH_MAX_IMAGES),
             excerpts: z
               .array(
                 z
@@ -149,24 +178,45 @@ function absoluteUrl(path: string): string {
 
 export async function searchPublicContent(
   query: string,
-  options: { useVector?: boolean } = {}
+  options: { useVector?: boolean; scope?: SearchScope } = {}
 ): Promise<SearchOutput> {
   const search = await hybridSearchPosts(query, {
-    scope: 'posts',
+    scope: options.scope ?? 'posts',
     limit: MCP_SEARCH_MAX_RESULTS,
     maxExcerpts: MCP_SEARCH_MAX_EXCERPTS,
-    maxImages: 0,
+    maxImages: MCP_SEARCH_MAX_IMAGES,
     useVector: options.useVector,
   })
 
   return {
     results: search.results.slice(0, MCP_SEARCH_MAX_RESULTS).map((result) => ({
-      id: result.id,
+      // Even image hits keep the owning post ID so fetch accepts every result.
+      id: result.slug,
       title: result.title,
       url: absoluteUrl(result.url),
       type: result.type,
       newsletter: result.newsletter,
       publishedAt: result.publishedAt ?? null,
+      description: result.description,
+      ...(result.location ? { location: result.location } : {}),
+      ...(result.photoMetadata ? { photoMetadata: result.photoMetadata } : {}),
+      images: result.images.slice(0, MCP_SEARCH_MAX_IMAGES).map((image) => ({
+        id: image.id,
+        src: absoluteUrl(image.src),
+        alt: image.alt,
+        url: absoluteUrl(image.url),
+        kind: image.kind,
+        ...(image.location ? { location: image.location } : {}),
+        ...(image.photoMetadata ? { photoMetadata: image.photoMetadata } : {}),
+        ...(image.section
+          ? {
+              section: {
+                heading: image.section.heading,
+                url: absoluteUrl(image.section.url),
+              },
+            }
+          : {}),
+      })),
       excerpts: result.excerpts
         .filter((excerpt) => excerpt.text.trim())
         .slice(0, MCP_SEARCH_MAX_EXCERPTS)

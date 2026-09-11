@@ -51,6 +51,18 @@ describe('MCP content schemas', () => {
     ).toBe(false)
   })
 
+  it('accepts an explicit image search scope', () => {
+    expect(
+      searchInputSchema.parse({ query: 'Kyoto', scope: 'images' })
+    ).toEqual({
+      query: 'Kyoto',
+      scope: 'images',
+    })
+    expect(
+      searchInputSchema.safeParse({ query: 'Kyoto', scope: 'private' }).success
+    ).toBe(false)
+  })
+
   it('defaults list pagination and rejects invalid or unknown inputs', () => {
     expect(listPostsInputSchema.parse({})).toEqual({ limit: 5, offset: 0 })
     expect(listPostsInputSchema.safeParse({ limit: 0 }).success).toBe(false)
@@ -66,6 +78,35 @@ describe('MCP content schemas', () => {
 })
 
 describe('MCP public content helpers', () => {
+  it('returns authored photo locations and image evidence with fetchable post IDs', async () => {
+    const output = await searchPublicContent('Kamimeguro', {
+      scope: 'images',
+      useVector: false,
+    })
+    const photo = output.results.find((result) => result.id === 'first-photo')
+    expect(photo).toMatchObject({
+      type: 'image',
+      location: { name: expect.stringContaining('Kamimeguro') },
+      images: [
+        {
+          id: 'first-photo#cover',
+          src: 'https://www.philipithomas.com/images/covers/tsundoku/selfie.jpg',
+          location: { name: expect.stringContaining('Kamimeguro') },
+        },
+      ],
+    })
+    expect(() => searchOutputSchema.parse(output)).not.toThrow()
+    expect(() => fetchPublicContent(photo!.id)).not.toThrow()
+  })
+
+  it('exposes a photo-only match in default search without inventing a body excerpt', async () => {
+    const output = await searchPublicContent('Kamimeguro', { useVector: false })
+    const photo = output.results.find((result) => result.id === 'first-photo')
+    expect(photo?.location?.name).toContain('Kamimeguro')
+    expect(photo?.images[0]?.alt).toBeTruthy()
+    expect(photo?.excerpts).toEqual([])
+  })
+
   it('searches the local corpus and returns bounded absolute URLs', async () => {
     const output = await searchPublicContent('MCP', { useVector: false })
 

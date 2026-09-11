@@ -52,6 +52,32 @@ describe('buildLexicalIndex', () => {
     expect(index.search('keyb')[0]?.slug).toBe('keyboards')
   })
 
+  it('prefers a complete place name over unrelated prefixes', () => {
+    const index = buildLexicalIndex([
+      makeCorpusPost('noma', 'Dinner', ['A visit to Noma.']),
+      makeCorpusPost('nomad', 'Nomad', ['Notes on travel.']),
+    ])
+    expect(index.search('noma').map((result) => result.slug)).toEqual(['noma'])
+    expect(index.search('nom').map((result) => result.slug)).toContain('nomad')
+  })
+
+  it('keeps researched Noma coverage in the first ten results after adding photo locations', async () => {
+    const { buildCorpus } = await import('@/lib/search/corpus')
+    const index = buildLexicalIndex(buildCorpus())
+    const results = index.search('Noma')
+    expect(results.map((result) => result.slug)).toEqual(
+      expect.arrayContaining(['stargazing', '2024-05', '2026-09'])
+    )
+    expect(index.searchImages('Kyoto').map((result) => result.slug)).toEqual(
+      expect.arrayContaining([
+        'bamboo',
+        'bamboo-forest',
+        'torii',
+        'weekenders-coffee',
+      ])
+    )
+  })
+
   it('requires all terms (AND) but falls back to OR on zero results', () => {
     const index = buildLexicalIndex([
       makeCorpusPost('espresso', 'Espresso', ['Grinding coffee beans daily.']),

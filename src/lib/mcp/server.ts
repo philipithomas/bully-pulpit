@@ -53,7 +53,7 @@ export function createSiteMcpServer(
     },
     {
       instructions:
-        "Use search to find Philip Ilic Thomas's writing and pages by subject, person, place, project, phrase, title, or relevance. Read the returned excerpts to select useful sources, then fetch their IDs for complete text and citation URLs. For broad questions, compare sources that add distinct evidence instead of relying on one result. Use list_posts only when the user explicitly asks to list or browse the latest, recent, chronological, or newsletter-filtered archive. All tools are public, read-only, and require no authentication.",
+        "Use search to find Philip Ilic Thomas's writing, photos, and pages by subject, person, place, project, phrase, title, or relevance. For photos or places he has photographed, use scope images and inspect authored locations and image descriptions as well as excerpts. Fetch the returned IDs for complete text and citation URLs. Photo locations can support where a photo was taken; an incidental cover cannot establish an essay's argument or Philip's opinion. For broad questions, compare sources that add distinct evidence instead of relying on one result. Use list_posts only when the user explicitly asks to list or browse the latest, recent, chronological, or newsletter-filtered archive. All tools are public, read-only, and require no authentication.",
     }
   )
 
@@ -62,13 +62,13 @@ export function createSiteMcpServer(
     {
       title: "Search Philip's writing",
       description:
-        "Find Philip Ilic Thomas's writing or site pages by subject, person, place, project, phrase, title, topic, or relevance. Use a short focused query such as 'noma' or 'snail-mail print edition'; omit Philip's name and generic question wording because this index only covers his site. Returns up to ten matches with dates, content type, and relevant excerpts. Inspect excerpts across the full result set to distinguish useful sources from incidental mentions, then call fetch for complete text before interpreting or comparing posts.",
+        "Find Philip Ilic Thomas's writing, photos, or site pages by subject, person, place, project, phrase, title, topic, or relevance. Use a short focused query such as 'Kyoto', 'noma', or 'snail-mail print edition'; omit Philip's name and generic question wording because this index only covers his site. Use scope images for photos and places he has photographed; the default posts scope includes writing and photo posts. Returns up to ten matches with dates, descriptions, authored photo locations, image metadata, and relevant excerpts. Inspect the complete result set, then call fetch with a result's id for complete text before interpreting or comparing sources. Image IDs are separate from the fetchable result id.",
       inputSchema: searchInputSchema,
       outputSchema: searchOutputSchema,
       annotations: readOnlyAnnotations,
       _meta: noAuthMeta,
     },
-    async ({ query }) => {
+    async ({ query, scope }) => {
       if (searchAccess === 'limited') {
         return {
           isError: true,
@@ -83,6 +83,7 @@ export function createSiteMcpServer(
 
       return toolResult(
         await searchPublicContent(query, {
+          scope,
           useVector: searchAccess === 'hybrid',
         })
       )

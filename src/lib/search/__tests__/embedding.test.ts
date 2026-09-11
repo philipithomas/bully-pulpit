@@ -1,10 +1,71 @@
-import { describe, expect, it } from 'vitest'
+import sharp from 'sharp'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { getPostBySlug } from '@/lib/content/loader'
+import { extractImageAssets } from '@/lib/search/corpus'
 import {
   decodeVector,
   EMBEDDING_DIMS,
+  embedImageWithDescription,
   encodeVector,
+  GATEWAY_EMBEDDINGS_URL,
+  IMAGE_EMBED_MAX_EDGE,
   truncateAndNormalize,
 } from '@/lib/search/embedding'
+import { publicImageFilePath } from '@/lib/search/image-source'
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
+})
+
+describe('embedImageWithDescription', () => {
+  it('pairs the actual public photo with its authored location and public metadata', async () => {
+    vi.stubEnv('AI_GATEWAY_API_KEY', 'test-gateway-key')
+    const fetchMock = vi.fn(async () =>
+      Response.json({ data: [{ embedding: [3, 4] }] })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const post = getPostBySlug('first-photo')
+    expect(post).not.toBeNull()
+    const [cover] = extractImageAssets(post!)
+
+    const vector = await embedImageWithDescription({
+      imagePath: publicImageFilePath(cover.src),
+      text: cover.text,
+    })
+
+    expect(vector).toEqual([0.6, 0.8])
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledWith(
+      GATEWAY_EMBEDDINGS_URL,
+      expect.objectContaining({ method: 'POST' })
+    )
+    const [, request] = vi.mocked(fetch).mock.calls[0]
+    const body = JSON.parse(String(request?.body))
+    expect(body.input).toEqual([
+      { type: 'text', text: cover.text },
+      {
+        type: 'image_url',
+        image_url: {
+          url: expect.stringMatching(/^data:image\/jpeg;base64,/),
+        },
+      },
+    ])
+    expect(body.input[0].text).toContain('Location: Kamimeguro')
+    expect(body.input[0].text).toContain('Camera: Leica M11-P')
+    const bytes = Buffer.from(
+      body.input[1].image_url.url.split(',')[1],
+      'base64'
+    )
+    const image = await sharp(bytes).metadata()
+    expect(image.format).toBe('jpeg')
+    expect(Math.max(image.width!, image.height!)).toBeLessThanOrEqual(
+      IMAGE_EMBED_MAX_EDGE
+    )
+    expect(image.exif).toBeUndefined()
+    expect(image.xmp).toBeUndefined()
+  })
+})
 
 describe('truncateAndNormalize', () => {
   it('truncates to the requested dims', () => {

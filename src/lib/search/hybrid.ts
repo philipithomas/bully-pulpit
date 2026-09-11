@@ -1,6 +1,7 @@
 import type {
   ChunkHeading,
   CorpusImageAsset,
+  CorpusLocation,
   CorpusPost,
   PostChunk,
 } from '@/lib/search/corpus'
@@ -57,6 +58,8 @@ export interface SearchImageMatch {
   kind: CorpusImageAsset['kind']
   url: string
   description: string
+  location?: CorpusLocation
+  photoMetadata?: string
   section?: SearchExcerptSection
 }
 
@@ -66,6 +69,8 @@ export interface HybridSearchResult {
   slug: string
   title: string
   description: string
+  location?: CorpusLocation
+  photoMetadata?: string
   url: string
   newsletter: string
   publishedAt?: string | null
@@ -101,11 +106,14 @@ interface TextVectorEntry {
   vector: Float32Array
 }
 
-interface ImageVectorEntry {
-  type: 'image'
+interface ImageEntry {
   id: string
   slug: string
   image: CorpusImageAsset
+}
+
+interface ImageVectorEntry extends ImageEntry {
+  type: 'image'
   vector: Float32Array
 }
 
@@ -121,6 +129,7 @@ interface PostMeta
     | 'newsletter'
     | 'publishedAt'
     | 'coverImage'
+    | 'location'
   > {
   chunks: PostChunk[]
   images: CorpusImageAsset[]
@@ -129,7 +138,7 @@ interface PostMeta
 interface VectorStore {
   entries: VectorEntry[]
   meta: Map<string, PostMeta>
-  images: Map<string, ImageVectorEntry>
+  images: Map<string, ImageEntry>
 }
 
 const DEFAULT_LIMIT = 10
@@ -156,6 +165,7 @@ function buildPostMeta(corpus: CorpusPost[]): Map<string, PostMeta> {
         newsletter: post.newsletter,
         publishedAt: post.publishedAt,
         coverImage: post.coverImage,
+        location: post.location,
         chunks: post.chunks,
         images: post.images,
       },
@@ -169,7 +179,16 @@ function getVectorStore(): Promise<VectorStore> {
       const corpus = buildCorpus()
       const meta = buildPostMeta(corpus)
       const entries: VectorEntry[] = []
-      const images = new Map<string, ImageVectorEntry>()
+      // Image metadata must remain available in lexical search even if the
+      // committed vector index is missing or incompatible.
+      const images = new Map<string, ImageEntry>(
+        corpus.flatMap((post) =>
+          post.images.map((image) => {
+            const id = imageKey(post.slug, image.id)
+            return [id, { id, slug: post.slug, image }] as const
+          })
+        )
+      )
 
       const index = loadSearchIndex()
       if (
@@ -219,7 +238,6 @@ function getVectorStore(): Promise<VectorStore> {
             vector: decodeVector(vector),
           }
           entries.push(entry)
-          images.set(entry.id, entry)
         }
       }
 
@@ -279,8 +297,18 @@ function toImageMatch(
     kind: image.kind,
     url: section?.url ?? meta.url,
     description: image.alt || meta.title,
+    ...(image.location ? { location: image.location } : {}),
+    ...(image.kind === 'cover-image' ? photoMetadata(meta) : {}),
     ...(section ? { section } : {}),
   }
+}
+
+function photoMetadata(meta: PostMeta): { photoMetadata?: string } {
+  const text = meta.chunks
+    .filter((chunk) => chunk.kind === 'photo-metadata')
+    .map((chunk) => chunk.text)
+    .join('\n')
+  return text ? { photoMetadata: text } : {}
 }
 
 function logEmbeddingFailureOnce(err: unknown) {
@@ -318,7 +346,10 @@ export async function hybridSearchPosts(
     const vectorRanking: string[] = []
     let mode: HybridSearchResponse['mode'] = 'lexical'
 
-    if (useVector && store.images.size > 0) {
+    const imageVectors = store.entries.filter(
+      (entry): entry is ImageVectorEntry => entry.type === 'image'
+    )
+    if (useVector && imageVectors.length > 0) {
       try {
         const queryVector = await embedQueryWithTimeout(
           query,
@@ -326,7 +357,7 @@ export async function hybridSearchPosts(
         )
         const top = topKBySimilarity(
           queryVector,
-          [...store.images.values()],
+          imageVectors,
           (entry) => entry.vector,
           vectorLimit
         )
@@ -354,6 +385,8 @@ export async function hybridSearchPosts(
         slug: entry.slug,
         title: meta.title,
         description: meta.description,
+        ...(image.location ? { location: image.location } : {}),
+        ...(image.photoMetadata ? { photoMetadata: image.photoMetadata } : {}),
         url: image.url,
         newsletter: meta.newsletter,
         publishedAt: meta.publishedAt,
@@ -379,7 +412,7 @@ export async function hybridSearchPosts(
   const termsBySlug = new Map(lexicalHits.map((hit) => [hit.slug, hit.terms]))
 
   const chunksBySlug = new Map<string, TextVectorEntry[]>()
-  const imagesBySlug = new Map<string, ImageVectorEntry[]>()
+  const imagesBySlug = new Map<string, ImageEntry[]>()
   const vectorRanking: string[] = []
   let mode: HybridSearchResponse['mode'] = 'lexical'
 
@@ -470,6 +503,8 @@ export async function hybridSearchPosts(
       slug,
       title: meta.title,
       description: meta.description,
+      ...(meta.location ? { location: meta.location } : {}),
+      ...photoMetadata(meta),
       url: meta.url,
       newsletter: meta.newsletter,
       publishedAt: meta.publishedAt,
