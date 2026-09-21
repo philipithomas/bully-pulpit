@@ -5,6 +5,14 @@
     "description": "A collection of words worth knowing.",
     "entries": [
       {
+        "term": "Promulgate",
+        "definition": "to make an idea, belief, or rule widely known; to announce a law or regulation officially.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Promulgation"
+        }
+      },
+      {
         "term": "Behooves",
         "definition": "it is right, necessary, or advantageous for someone to do something."
       },
