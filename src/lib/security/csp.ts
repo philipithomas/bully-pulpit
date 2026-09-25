@@ -33,7 +33,7 @@ function buildContentSecurityPolicy(options: {
     // challenge from a same-origin /…/fp path (withBotId proxies it first-party).
     "frame-src 'self' https://accounts.google.com https://maps.google.com https://www.google.com https://www.youtube.com https://open.spotify.com https://podcasters.spotify.com",
     "object-src 'none'",
-    "base-uri 'self'",
+    "base-uri 'none'",
     "form-action 'self'",
     "frame-ancestors 'none'",
     ...(options.reportOnly

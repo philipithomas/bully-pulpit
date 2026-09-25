@@ -10,7 +10,7 @@ import {
 describe('Content Security Policy', () => {
   it('blocks common injection follow-ons without allowing eval', () => {
     expect(CONTENT_SECURITY_POLICY).toContain("object-src 'none'")
-    expect(CONTENT_SECURITY_POLICY).toContain("base-uri 'self'")
+    expect(CONTENT_SECURITY_POLICY).toContain("base-uri 'none'")
     expect(CONTENT_SECURITY_POLICY).toContain("form-action 'self'")
     expect(CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'")
     expect(CONTENT_SECURITY_POLICY).toContain("manifest-src 'self'")
