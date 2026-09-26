@@ -4,6 +4,10 @@ import { jwtVerify } from 'jose'
 import { NextRequest, type NextResponse } from 'next/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+const { trackServerEventMock } = vi.hoisted(() => ({
+  trackServerEventMock: vi.fn(async () => {}),
+}))
+
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('botid/server', () =>
   import('@/test/integration/mocks').then((m) => m.botidMock())
@@ -11,6 +15,9 @@ vi.mock('botid/server', () =>
 vi.mock('@/lib/email/ses', () =>
   import('@/test/integration/mocks').then((m) => m.sesMock())
 )
+vi.mock('@/lib/analytics/server', () => ({
+  trackServerEvent: trackServerEventMock,
+}))
 // The subscribe handler checks domain deliverability via DNS before sending.
 // Stub the resolver so the test never touches the network: every domain
 // resolves to a working MX record.
@@ -341,6 +348,124 @@ describe('POST /api/auth/verify', () => {
     expect(tidbitsOptInNotificationCalls()).toHaveLength(0)
   })
 
+  it.each([
+    ['code', 'code-bound@example.com'],
+    ['magic link', 'magic-bound@example.com'],
+  ] as const)('keeps the first pending scope bound to an earlier %s after a repeat request', async (method, email) => {
+    await subscribe(email, { newsletters: ['workshop'] })
+
+    const initial = await subscriberByEmail(email)
+    const { token: originalCode } = await latestCodeLogin(initial.id)
+    const { token: originalMagicToken } = await latestMagicLogin(initial.id)
+    expect(initial).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTidbits: false,
+    })
+
+    sesSend.mockClear()
+    await subscribe(email, {
+      newsletters: ['contraption', 'workshop', 'postcard', 'tidbits'],
+    })
+
+    const unchanged = await subscriberByEmail(email)
+    expect(unchanged).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTidbits: false,
+    })
+    expect(sesSend).toHaveBeenCalledTimes(1)
+    expect(sesSend.mock.calls[0][0].text).toContain(
+      'Thanks for subscribing to Workshop at philipithomas.com.'
+    )
+    expect(sesSend.mock.calls[0][0].text).not.toContain(
+      'subscribing to tidbits'
+    )
+
+    if (method === 'code') {
+      const response = await verify(email, originalCode, [
+        'contraption',
+        'workshop',
+        'postcard',
+        'tidbits',
+      ])
+      expect(response.status).toBe(200)
+      expect(await response.json()).toMatchObject({
+        user: {
+          subscribed_contraption: false,
+          subscribed_workshop: true,
+          subscribed_postcard: false,
+          subscribed_tidbits: false,
+        },
+      })
+      expect(trackServerEventMock).toHaveBeenLastCalledWith(
+        expect.any(Request),
+        'Newsletter signup completed',
+        expect.objectContaining({
+          method: 'email_code',
+          newsletter: 'workshop',
+          new_subscriber: true,
+        })
+      )
+    } else {
+      const response = await verifyMagicLinkGet(
+        new NextRequest(
+          `https://www.philipithomas.com/auth/verify?token=${originalMagicToken}&newsletter=contraption&newsletter=workshop&newsletter=postcard&newsletter=tidbits`
+        )
+      )
+      expect(response.headers.get('location')).toBe(
+        'https://www.philipithomas.com/auth/complete'
+      )
+      expect(await magicLinkCompletionFrom(response)).toEqual({
+        newsletter: 'workshop',
+        newSubscriber: true,
+        destination: 'home',
+      })
+    }
+
+    expect(await subscriberByEmail(email)).toMatchObject({
+      confirmedAt: expect.any(Date),
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTidbits: false,
+    })
+  })
+
+  it('uses the stored Tidbits scope for a first magic-link completion and account destination', async () => {
+    const response = await subscribeTidbitsPost(
+      jsonPost('http://localhost/api/subscribe/tidbits', {
+        email: 'new-magic-tidbits-reader@example.com',
+      })
+    )
+    expect(response.status).toBe(200)
+
+    const subscriber = await subscriberByEmail(
+      'new-magic-tidbits-reader@example.com'
+    )
+    const { token } = await latestMagicLogin(subscriber.id)
+    const magicResponse = await verifyMagicLinkGet(
+      new NextRequest(
+        `https://www.philipithomas.com/auth/verify?token=${token}&newsletter=contraption`
+      )
+    )
+
+    expect(await magicLinkCompletionFrom(magicResponse)).toEqual({
+      newsletter: 'tidbits',
+      newSubscriber: true,
+      destination: 'account',
+    })
+    expect(await subscriberByEmail(subscriber.email)).toMatchObject({
+      confirmedAt: expect.any(Date),
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTidbits: true,
+    })
+  })
+
   it('returns 400 (not 500) for a malformed JSON body', async () => {
     const res = await verifyPost(
       new Request('http://localhost/api/auth/verify', {
@@ -626,9 +751,9 @@ describe('POST /api/auth/verify', () => {
       'https://www.philipithomas.com/auth/complete'
     )
     expect(await magicLinkCompletionFrom(response)).toEqual({
-      newsletter: 'unspecified',
+      newsletter: 'all',
       newSubscriber: true,
-      destination: 'home',
+      destination: 'account',
     })
     const marker = response.cookies.get(NEW_SUBSCRIBER_ONBOARDING_COOKIE)?.value
     expect(marker).toBeTruthy()

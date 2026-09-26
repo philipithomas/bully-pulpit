@@ -3,6 +3,10 @@ import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { emailSuppressions, logins, subscribers } from '@/lib/db/schema'
 
+const { trackServerEventMock } = vi.hoisted(() => ({
+  trackServerEventMock: vi.fn(async () => {}),
+}))
+
 vi.mock('@/lib/db/client', () => import('@/test/integration/db'))
 vi.mock('botid/server', () =>
   import('@/test/integration/mocks').then((m) => m.botidMock())
@@ -11,6 +15,9 @@ vi.mock('botid/server', () =>
 vi.mock('@/lib/email/ses', () =>
   import('@/test/integration/mocks').then((m) => m.sesMock())
 )
+vi.mock('@/lib/analytics/server', () => ({
+  trackServerEvent: trackServerEventMock,
+}))
 // Mock the resolver seam only — @/lib/email/deliverability stays real so the
 // MX deliverability check runs its actual logic against canned DNS answers.
 vi.mock('node:dns/promises', () => ({
@@ -44,6 +51,7 @@ beforeEach(async () => {
   await resetDb()
   vi.mocked(checkBotId).mockClear()
   vi.mocked(sendSimpleEmail).mockClear()
+  trackServerEventMock.mockClear()
   // Default DNS answer: every domain has a working MX record. Tests that
   // exercise the deliverability check override these per domain.
   clearDeliverabilityCache()
@@ -178,6 +186,39 @@ describe('POST /api/subscribe', () => {
     }
   })
 
+  it('creates a new subscriber on only the explicitly requested active newsletters', async () => {
+    const res = await POST(
+      subscribeRequest({
+        email: 'workshop-only@example.com',
+        newsletters: ['workshop', 'tsundoku'],
+      })
+    )
+
+    expect(res.status).toBe(200)
+    const [row] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.email, 'workshop-only@example.com'))
+    expect(row).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: true,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+      subscribedTidbits: false,
+    })
+
+    const [message] = vi.mocked(sendSimpleEmail).mock.calls[0]
+    expect(message.subject).toBe(
+      'Confirm your subscription to philipithomas.com'
+    )
+    expect(message.text).toContain(
+      'Thanks for subscribing to Workshop at philipithomas.com.'
+    )
+    expect(message.text).not.toContain('subscribing to Contraption')
+    expect(message.text).not.toContain('subscribing to Postcard')
+    expect(message.text).not.toContain('subscribing to tidbits')
+  })
+
   it('ignores an inactive focused newsletter and applies active defaults to a new subscriber', async () => {
     const res = await POST(
       subscribeRequest({
@@ -214,25 +255,27 @@ describe('POST /api/subscribe', () => {
     )
   })
 
-  it('opts an existing subscriber into explicitly requested newsletters without rewriting identity fields', async () => {
-    await db.insert(subscribers).values({
-      email: 'returning@example.com',
-      name: 'Original Name',
-      source: 'https://news.ycombinator.com',
-      subscribedContraption: true,
-      subscribedWorkshop: false,
-      subscribedPostcard: false,
-      subscribedTsundoku: false,
-      subscribedTidbits: false,
-    })
+  it('keeps and reports an unconfirmed subscriber on the first stored scope when a later request asks for more', async () => {
+    const first = await POST(
+      subscribeRequest({
+        email: 'returning@example.com',
+        name: 'Original Name',
+        source: 'https://news.ycombinator.com',
+        newsletters: ['workshop'],
+      })
+    )
+    expect(first.status).toBe(200)
+    vi.mocked(sendSimpleEmail).mockClear()
+    trackServerEventMock.mockClear()
 
-    // Requested newsletter flags opt in, while name and source remain untouched.
+    // A repeat unauthenticated request cannot rewrite pending consent, identity,
+    // or attribution. The reader can change preferences after confirming.
     const res = await POST(
       subscribeRequest({
         email: 'returning@example.com',
         name: 'Imposter Name',
         source: 'https://www.google.com',
-        newsletters: ['contraption', 'workshop', 'postcard'],
+        newsletters: ['contraption', 'workshop', 'postcard', 'tidbits'],
       })
     )
     expect(res.status).toBe(200)
@@ -248,9 +291,9 @@ describe('POST /api/subscribe', () => {
       .from(subscribers)
       .where(eq(subscribers.email, 'returning@example.com'))
     expect(rows).toHaveLength(1)
-    expect(rows[0].subscribedContraption).toBe(true)
+    expect(rows[0].subscribedContraption).toBe(false)
     expect(rows[0].subscribedWorkshop).toBe(true)
-    expect(rows[0].subscribedPostcard).toBe(true)
+    expect(rows[0].subscribedPostcard).toBe(false)
     expect(rows[0].subscribedTsundoku).toBe(false)
     expect(rows[0].subscribedTidbits).toBe(false)
     expect(rows[0].name).toBe('Original Name')
@@ -264,7 +307,19 @@ describe('POST /api/subscribe', () => {
       'Confirm your subscription to philipithomas.com'
     )
     expect(resend.text).toContain(
-      'Thanks for subscribing to Contraption, Workshop, and Postcard at philipithomas.com.'
+      'Thanks for subscribing to Workshop at philipithomas.com.'
+    )
+    expect(resend.text).not.toContain('subscribing to Contraption')
+    expect(resend.text).not.toContain('subscribing to Postcard')
+    expect(trackServerEventMock).toHaveBeenLastCalledWith(
+      expect.any(Request),
+      'Newsletter verification sent',
+      {
+        method: 'email',
+        placement: 'unknown',
+        newsletter: 'workshop',
+        new_subscriber: false,
+      }
     )
   })
 
@@ -565,6 +620,12 @@ describe('POST /api/subscribe', () => {
       .select()
       .from(subscribers)
       .where(eq(subscribers.email, 'open-page@example.com'))
-    expect(subscriber.subscribedTidbits).toBe(true)
+    expect(subscriber).toMatchObject({
+      subscribedContraption: false,
+      subscribedWorkshop: false,
+      subscribedPostcard: false,
+      subscribedTsundoku: false,
+      subscribedTidbits: true,
+    })
   })
 })

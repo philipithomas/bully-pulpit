@@ -68,17 +68,26 @@ export type CreateResult = {
   nextStep: 'confirmed' | 'verification_sent'
 }
 
+const subscriberNewsletterPreferences = [
+  ['contraption', 'subscribedContraption'],
+  ['workshop', 'subscribedWorkshop'],
+  ['postcard', 'subscribedPostcard'],
+  ['tidbits', 'subscribedTidbits'],
+] as const
+
+export function subscribedNewslettersForSubscriber(
+  subscriber: Subscriber
+): Newsletter[] {
+  return subscriberNewsletterPreferences
+    .filter(([, key]) => subscriber[key])
+    .map(([newsletter]) => newsletter)
+}
+
 function changedNewsletterOptIns(
   before: Subscriber,
   after: Subscriber
 ): Newsletter[] {
-  const preferences = [
-    ['contraption', 'subscribedContraption'],
-    ['workshop', 'subscribedWorkshop'],
-    ['postcard', 'subscribedPostcard'],
-    ['tidbits', 'subscribedTidbits'],
-  ] as const
-  return preferences
+  return subscriberNewsletterPreferences
     .filter(([, key]) => !before[key] && after[key])
     .map(([newsletter]) => newsletter)
 }
@@ -127,16 +136,33 @@ export async function applyNewsletterOptIns(
   return updated
 }
 
-function creationPrefsForNewSubscriber() {
-  const defaults = new Set(defaultSignupNewsletters)
+function creationPrefsForNewSubscriber(newsletters: Newsletter[]) {
+  // A focused CTA is an explicit subscription choice. Generic entry points
+  // either omit the list or send the full default set; an empty normalized
+  // list (including archived/invalid-only input) deliberately falls back to
+  // the active defaults so an obsolete client cannot create a zero-list row.
+  const selected = new Set(
+    newsletters.length > 0 ? newsletters : defaultSignupNewsletters
+  )
   return {
-    subscribedContraption: defaults.has('contraption'),
-    subscribedWorkshop: defaults.has('workshop'),
-    subscribedPostcard: defaults.has('postcard'),
-    subscribedTidbits: defaults.has('tidbits'),
+    subscribedContraption: selected.has('contraption'),
+    subscribedWorkshop: selected.has('workshop'),
+    subscribedPostcard: selected.has('postcard'),
+    subscribedTidbits: selected.has('tidbits'),
     // Archived newsletter columns remain for historical data only.
     subscribedTsundoku: false,
   }
+}
+
+async function replacePendingNewsletterSelection(
+  subscriber: Subscriber,
+  newsletters: Newsletter[]
+): Promise<Subscriber> {
+  const updated = await updateSubscriber(
+    subscriber.uuid,
+    creationPrefsForNewSubscriber(newsletters)
+  )
+  return updated ?? subscriber
 }
 
 /**
@@ -217,11 +243,13 @@ async function sendLoginOrRejectSuppressed(
  * when the call is actually a sign-in.
  *
  * `name` and `source` apply only when the row is created. New public signups
- * start on every newsletter that is accepting subscriptions. For existing
- * confirmed subscribers, public forms sign them in without changing
- * preferences unless the caller explicitly allows email-only opt-in. Existing
- * unconfirmed rows may still update active newsletter flags before the
- * confirmation email is resent.
+ * honor a non-empty explicit list of active newsletters; absent, empty, or
+ * invalid-only lists use the all-active default. For existing confirmed
+ * subscribers, public forms sign them in without changing preferences unless
+ * the caller explicitly allows email-only opt-in. An unconfirmed row keeps the
+ * first signup's stored scope across unauthenticated retries. A verified Google
+ * identity replaces that pending scope with its current surface's exact
+ * selection (or the active defaults for a generic sign-in) before confirming.
  */
 export async function createOrRetrieve(input: {
   email: string
@@ -258,9 +286,15 @@ export async function createOrRetrieve(input: {
   if (existing) {
     let subscriber = existing
 
-    if (
+    if (googleVerified && existing.confirmedAt == null) {
+      subscriber = await replacePendingNewsletterSelection(
+        existing,
+        newsletters
+      )
+    } else if (
       hasRequestedNewsletterOptIn &&
-      (existing.confirmedAt == null || allowExistingSubscriberOptIn)
+      existing.confirmedAt != null &&
+      allowExistingSubscriberOptIn
     ) {
       subscriber = await applyNewsletterOptIns(existing, newsletters)
     }
@@ -325,7 +359,7 @@ export async function createOrRetrieve(input: {
     email,
     name: input.name,
     source: input.source,
-    ...creationPrefsForNewSubscriber(),
+    ...creationPrefsForNewSubscriber(newsletters),
   })
 
   if (googleVerified) {

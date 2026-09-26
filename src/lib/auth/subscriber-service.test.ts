@@ -23,6 +23,7 @@ vi.mock('@/lib/email/send', () => ({
 import {
   normalizedNewsletters,
   notifyExistingSubscriberOptIns,
+  subscribedNewslettersForSubscriber,
 } from '@/lib/auth/subscriber-service'
 
 const existingSubscriber = {
@@ -65,5 +66,20 @@ describe('normalizedNewsletters', () => {
     expect(
       normalizedNewsletters(['umami', 'tidbits', 'not-a-newsletter'])
     ).toEqual(['tidbits'])
+  })
+})
+
+describe('subscribedNewslettersForSubscriber', () => {
+  it('returns only active newsletters selected on the stored subscriber', () => {
+    expect(
+      subscribedNewslettersForSubscriber({
+        ...existingSubscriber,
+        subscribedContraption: false,
+        subscribedWorkshop: true,
+        subscribedPostcard: false,
+        subscribedTidbits: false,
+        subscribedTsundoku: true,
+      })
+    ).toEqual(['workshop'])
   })
 })
