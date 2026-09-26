@@ -25,7 +25,7 @@ describe('CollectionIndex', () => {
 
     expect(html).toContain('type="search"')
     expect(html).toContain('aria-live="polite"')
-    expect(html).toContain('154 entries')
+    expect(html).toContain('155 entries')
     expect(html).toContain('id="capricious"')
     expect(html).toContain('id="behooves"')
     expect(html).toContain('id="gavage"')

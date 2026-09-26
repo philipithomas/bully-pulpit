@@ -944,6 +944,14 @@
           "label": "Wikipedia",
           "href": "https://en.wikipedia.org/wiki/Block_%28sailing%29#Sailing_terms_in_everyday_English"
         }
+      },
+      {
+        "term": "Penury",
+        "definition": "extreme poverty; destitution.",
+        "reference": {
+          "label": "Wikipedia",
+          "href": "https://en.wikipedia.org/wiki/Extreme_poverty"
+        }
       }
     ]
   },
