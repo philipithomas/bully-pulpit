@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-09-26T05:02:27.954Z",
+  "generatedAt": "2026-10-03T20:49:31.907Z",
   "posts": {
+    "2026-10": {
+      "related": [
+        {
+          "slug": "2026-08",
+          "score": 0.066403
+        },
+        {
+          "slug": "2024-11",
+          "score": 0.0687886
+        },
+        {
+          "slug": "2026-04",
+          "score": 0.0718789
+        }
+      ]
+    },
     "cooking-class": {
       "related": [
         {
@@ -300,8 +316,8 @@
           "score": 0.1490591
         },
         {
-          "slug": "2023-10",
-          "score": 0.1748871
+          "slug": "2026-10",
+          "score": 0.1744379
         }
       ]
     },
@@ -344,12 +360,12 @@
           "score": 0.1272102
         },
         {
-          "slug": "2023-10",
-          "score": 0.1771971
+          "slug": "2026-10",
+          "score": 0.1653948
         },
         {
-          "slug": "2026-08",
-          "score": 0.1774772
+          "slug": "2023-10",
+          "score": 0.1771971
         }
       ]
     },
@@ -620,8 +636,8 @@
           "score": 0.1350063
         },
         {
-          "slug": "2026-08",
-          "score": 0.1453378
+          "slug": "2026-10",
+          "score": 0.1429192
         }
       ]
     },
@@ -764,8 +780,8 @@
           "score": 0.1028626
         },
         {
-          "slug": "build-and-tinker",
-          "score": 0.1072394
+          "slug": "2026-10",
+          "score": 0.1065347
         }
       ]
     },
@@ -1028,16 +1044,16 @@
     "sync-phone-numbers-and-webhooks": {
       "related": [
         {
+          "slug": "2026-10",
+          "score": 0.1037461
+        },
+        {
           "slug": "spring-cleaning",
           "score": 0.1102305
         },
         {
           "slug": "tacit-knowledge-in-software",
           "score": 0.1118749
-        },
-        {
-          "slug": "code-as-content-and-digital-proprioception",
-          "score": 0.1132932
         }
       ]
     },
@@ -1064,12 +1080,12 @@
           "score": 0.126003
         },
         {
-          "slug": "workshop-welcome",
-          "score": 0.1391279
+          "slug": "2026-10",
+          "score": 0.1350379
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.1423766
+          "slug": "workshop-welcome",
+          "score": 0.1391279
         }
       ]
     },
@@ -1080,12 +1096,12 @@
           "score": 0.1165597
         },
         {
-          "slug": "spring-cleaning",
-          "score": 0.1286955
+          "slug": "2026-10",
+          "score": 0.1230089
         },
         {
-          "slug": "tacit-knowledge-in-software",
-          "score": 0.1308455
+          "slug": "spring-cleaning",
+          "score": 0.1286955
         }
       ]
     },
@@ -1124,16 +1140,16 @@
     "code-as-content-and-digital-proprioception": {
       "related": [
         {
+          "slug": "2026-10",
+          "score": 0.0879416
+        },
+        {
           "slug": "software-in-the-ai-era",
           "score": 0.0907068
         },
         {
           "slug": "tacit-knowledge-in-software",
           "score": 0.1041842
-        },
-        {
-          "slug": "build-and-tinker",
-          "score": 0.1064556
         }
       ]
     },
@@ -1188,16 +1204,16 @@
     "tacit-knowledge-in-software": {
       "related": [
         {
+          "slug": "2026-10",
+          "score": 0.0909522
+        },
+        {
           "slug": "2026-04",
           "score": 0.1035368
         },
         {
           "slug": "build-and-tinker",
           "score": 0.1036427
-        },
-        {
-          "slug": "code-as-content-and-digital-proprioception",
-          "score": 0.1041842
         }
       ]
     },
@@ -1452,8 +1468,8 @@
           "score": 0.187818
         },
         {
-          "slug": "2026-04",
-          "score": 0.1994161
+          "slug": "2026-10",
+          "score": 0.1888011
         }
       ]
     },
@@ -1540,16 +1556,16 @@
     "my-favorite-tool-for-making-email-less-stressful": {
       "related": [
         {
+          "slug": "2026-10",
+          "score": 0.1544406
+        },
+        {
           "slug": "2023-10",
           "score": 0.1546333
         },
         {
           "slug": "launching-booklet",
           "score": 0.1574966
-        },
-        {
-          "slug": "2024-11",
-          "score": 0.1615743
         }
       ]
     },
@@ -2328,12 +2344,12 @@
           "score": 0.1813259
         },
         {
-          "slug": "build-and-tinker",
-          "score": 0.1860223
+          "slug": "2026-10",
+          "score": 0.1852084
         },
         {
-          "slug": "code-as-content-and-digital-proprioception",
-          "score": 0.1881077
+          "slug": "build-and-tinker",
+          "score": 0.1860223
         }
       ]
     },
