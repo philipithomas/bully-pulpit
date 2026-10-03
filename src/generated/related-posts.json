@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-10-03T20:02:44.052Z",
+  "generatedAt": "2026-10-03T20:17:07.238Z",
   "posts": {
     "2026-10": {
       "related": [
         {
-          "slug": "2026-04",
-          "score": 0.0700755
-        },
-        {
           "slug": "2026-08",
-          "score": 0.0705776
+          "score": 0.0664267
         },
         {
-          "slug": "2026-02",
-          "score": 0.073593
+          "slug": "2024-11",
+          "score": 0.0692198
+        },
+        {
+          "slug": "2026-04",
+          "score": 0.0721653
         }
       ]
     },
@@ -361,7 +361,7 @@
         },
         {
           "slug": "2026-10",
-          "score": 0.1566185
+          "score": 0.169321
         },
         {
           "slug": "2023-10",
@@ -780,8 +780,8 @@
           "score": 0.1028626
         },
         {
-          "slug": "2026-10",
-          "score": 0.1048174
+          "slug": "build-and-tinker",
+          "score": 0.1072394
         }
       ]
     },
@@ -1045,7 +1045,7 @@
       "related": [
         {
           "slug": "2026-10",
-          "score": 0.0940725
+          "score": 0.1056311
         },
         {
           "slug": "spring-cleaning",
@@ -1081,7 +1081,7 @@
         },
         {
           "slug": "2026-10",
-          "score": 0.1390504
+          "score": 0.137807
         },
         {
           "slug": "workshop-welcome",
@@ -1097,7 +1097,7 @@
         },
         {
           "slug": "2026-10",
-          "score": 0.1200276
+          "score": 0.1253814
         },
         {
           "slug": "spring-cleaning",
@@ -1140,12 +1140,12 @@
     "code-as-content-and-digital-proprioception": {
       "related": [
         {
-          "slug": "2026-10",
-          "score": 0.0872745
-        },
-        {
           "slug": "software-in-the-ai-era",
           "score": 0.0907068
+        },
+        {
+          "slug": "2026-10",
+          "score": 0.0916636
         },
         {
           "slug": "tacit-knowledge-in-software",
@@ -1205,7 +1205,7 @@
       "related": [
         {
           "slug": "2026-10",
-          "score": 0.0905102
+          "score": 0.0929302
         },
         {
           "slug": "2026-04",
@@ -1469,7 +1469,7 @@
         },
         {
           "slug": "2026-10",
-          "score": 0.1946938
+          "score": 0.1912021
         }
       ]
     },
@@ -1516,8 +1516,8 @@
           "score": 0.1222352
         },
         {
-          "slug": "2026-10",
-          "score": 0.1261077
+          "slug": "code-as-content-and-digital-proprioception",
+          "score": 0.1293454
         }
       ]
     },
@@ -1532,8 +1532,8 @@
           "score": 0.1200155
         },
         {
-          "slug": "2026-10",
-          "score": 0.132351
+          "slug": "sync-phone-numbers-and-webhooks",
+          "score": 0.1348662
         }
       ]
     },
@@ -1556,12 +1556,12 @@
     "my-favorite-tool-for-making-email-less-stressful": {
       "related": [
         {
-          "slug": "2026-10",
-          "score": 0.1541208
-        },
-        {
           "slug": "2023-10",
           "score": 0.1546333
+        },
+        {
+          "slug": "2026-10",
+          "score": 0.1560168
         },
         {
           "slug": "launching-booklet",
@@ -1656,12 +1656,12 @@
           "score": 0.1063919
         },
         {
-          "slug": "2026-10",
-          "score": 0.1262065
-        },
-        {
           "slug": "claude-launching-and-tools",
           "score": 0.1281182
+        },
+        {
+          "slug": "code-as-content-and-digital-proprioception",
+          "score": 0.1291618
         }
       ]
     },
@@ -2344,12 +2344,12 @@
           "score": 0.1813259
         },
         {
-          "slug": "2026-10",
-          "score": 0.1849538
-        },
-        {
           "slug": "build-and-tinker",
           "score": 0.1860223
+        },
+        {
+          "slug": "code-as-content-and-digital-proprioception",
+          "score": 0.1881077
         }
       ]
     },
