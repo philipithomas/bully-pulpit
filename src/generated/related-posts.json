@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-10-03T20:30:08.653Z",
+  "generatedAt": "2026-10-03T20:40:56.294Z",
   "posts": {
     "2026-10": {
       "related": [
         {
           "slug": "2026-08",
-          "score": 0.066118
+          "score": 0.067081
         },
         {
           "slug": "2024-11",
-          "score": 0.0684493
+          "score": 0.0693192
         },
         {
           "slug": "2026-04",
-          "score": 0.072687
+          "score": 0.0726202
         }
       ]
     },
@@ -316,8 +316,8 @@
           "score": 0.1490591
         },
         {
-          "slug": "2023-10",
-          "score": 0.1748871
+          "slug": "2026-10",
+          "score": 0.1747661
         }
       ]
     },
@@ -361,7 +361,7 @@
         },
         {
           "slug": "2026-10",
-          "score": 0.1682561
+          "score": 0.1655987
         },
         {
           "slug": "2023-10",
@@ -637,7 +637,7 @@
         },
         {
           "slug": "2026-10",
-          "score": 0.1450777
+          "score": 0.1439196
         }
       ]
     },
@@ -780,8 +780,8 @@
           "score": 0.1028626
         },
         {
-          "slug": "build-and-tinker",
-          "score": 0.1072394
+          "slug": "2026-10",
+          "score": 0.1064962
         }
       ]
     },
@@ -1045,7 +1045,7 @@
       "related": [
         {
           "slug": "2026-10",
-          "score": 0.105702
+          "score": 0.1044608
         },
         {
           "slug": "spring-cleaning",
@@ -1081,7 +1081,7 @@
         },
         {
           "slug": "2026-10",
-          "score": 0.1363031
+          "score": 0.1348536
         },
         {
           "slug": "workshop-welcome",
@@ -1097,7 +1097,7 @@
         },
         {
           "slug": "2026-10",
-          "score": 0.1252458
+          "score": 0.1233785
         },
         {
           "slug": "spring-cleaning",
@@ -1140,12 +1140,12 @@
     "code-as-content-and-digital-proprioception": {
       "related": [
         {
-          "slug": "software-in-the-ai-era",
-          "score": 0.0907068
+          "slug": "2026-10",
+          "score": 0.0885842
         },
         {
-          "slug": "2026-10",
-          "score": 0.0916897
+          "slug": "software-in-the-ai-era",
+          "score": 0.0907068
         },
         {
           "slug": "tacit-knowledge-in-software",
@@ -1205,7 +1205,7 @@
       "related": [
         {
           "slug": "2026-10",
-          "score": 0.0930909
+          "score": 0.09099
         },
         {
           "slug": "2026-04",
@@ -1469,7 +1469,7 @@
         },
         {
           "slug": "2026-10",
-          "score": 0.192029
+          "score": 0.1885407
         }
       ]
     },
@@ -1561,7 +1561,7 @@
         },
         {
           "slug": "2026-10",
-          "score": 0.1550354
+          "score": 0.1547392
         },
         {
           "slug": "launching-booklet",
@@ -2344,12 +2344,12 @@
           "score": 0.1813259
         },
         {
-          "slug": "build-and-tinker",
-          "score": 0.1860223
+          "slug": "2026-10",
+          "score": 0.1857359
         },
         {
-          "slug": "code-as-content-and-digital-proprioception",
-          "score": 0.1881077
+          "slug": "build-and-tinker",
+          "score": 0.1860223
         }
       ]
     },
