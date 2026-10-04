@@ -1,7 +1,7 @@
 import { type GatewayProviderOptions, gateway } from '@ai-sdk/gateway'
 
-/** Shared GPT-5.6 Sol fast-serving model for Bell's research surfaces. */
-export const BELL_MODEL_ID = 'openai/gpt-5.6-sol-fast'
+/** Shared GPT-6.1 Sol fast-serving model for Bell's research surfaces. */
+export const BELL_MODEL_ID = 'openai/gpt-6.1-sol-fast'
 export const bellModel = gateway(BELL_MODEL_ID)
 
 /** A short greeting choice does not need Bell's flagship model. */

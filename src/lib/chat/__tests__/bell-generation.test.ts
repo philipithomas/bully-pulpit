@@ -29,8 +29,8 @@ afterEach(() => {
 })
 
 describe('Bell Gateway metadata', () => {
-  it('uses GPT-5.6 Sol fast serving with surface-specific reasoning', () => {
-    expect(BELL_MODEL_ID).toBe('openai/gpt-5.6-sol-fast')
+  it('uses GPT-6.1 Sol fast serving with surface-specific reasoning', () => {
+    expect(BELL_MODEL_ID).toBe('openai/gpt-6.1-sol-fast')
     expect(getBellReasoning('web')).toBe('high')
     expect(getBellReasoning('web', 2)).toBe('high')
     expect(getBellReasoning('web', 8)).toBe('high')
