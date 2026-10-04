@@ -15,6 +15,7 @@ import { CoverPreload } from '@/components/posts/cover-preload'
 import { PwaLifecycle } from '@/components/pwa/pwa-lifecycle'
 import { ImageZoom } from '@/components/ui/image-zoom'
 import { Toaster } from '@/components/ui/sonner'
+import { SiteWebMcp } from '@/components/webmcp/site-webmcp'
 import { PublicAnalytics } from '@/lib/analytics/public-analytics'
 import { siteConfig } from '@/lib/config'
 import { feedDiscovery } from '@/lib/feeds/discovery'
@@ -150,6 +151,7 @@ export default function RootLayout({
             <PassageSelection />
             <PublicAnalytics />
             <PwaLifecycle />
+            <SiteWebMcp />
           </NewsletterProvider>
         </AuthProvider>
       </body>

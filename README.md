@@ -22,6 +22,32 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Browser WebMCP
+
+The root layout uses the experimental W3C WebMCP imperative API to register two
+same-origin browser tools when `document.modelContext` is available:
+
+- `search_philip_site` searches the existing public browser search API and
+  returns a bounded set of same-origin results.
+- `start_bell_question` opens the visible Bell sidebar and starts a fresh
+  question there. It reports that initiation immediately; Bell's eventual
+  answer remains visible in the site's interface.
+
+This browser integration is separate from the Streamable HTTP MCP server at
+`/mcp`. The HTTP server remains the richer remote interface for `search`,
+`fetch`, and `list_posts`; WebMCP shares the website's own UI and same-origin
+browser API instead of proxying that server.
+
+Registration is progressive enhancement. Unsupported browsers get a silent
+no-op. Chrome and Edge currently expose WebMCP through origin trials or local
+testing flags; an enrolled deployment can set `WEBMCP_ORIGIN_TRIAL_TOKEN` to
+emit its `Origin-Trial` response header. The site does not ship a polyfill or
+request cross-origin `exposedTo` access. Its permissions policy explicitly
+keeps `tools` same-origin, inputs are validated again at execution time,
+cancelled calls abort the underlying search request, and returned content is
+bounded. See the [WebMCP specification](https://webmachinelearning.github.io/webmcp/)
+and [Chrome's imperative API documentation](https://developer.chrome.com/docs/ai/webmcp/imperative-api).
+
 ### Local Printing press
 
 The admin uses the normal subscriber session in development. Bring the
