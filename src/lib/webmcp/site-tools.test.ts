@@ -111,10 +111,50 @@ describe('site WebMCP tools', () => {
     expect(output.results.length).toBeGreaterThan(0)
     expect(output.results.length).toBeLessThanOrEqual(5)
     expect(output.results[0]?.url).toBe(`${SITE_ORIGIN}/post-0`)
-    expect(output.results.every(({ url }) => url.startsWith(SITE_ORIGIN))).toBe(
-      true
-    )
+    expect(
+      output.results.every(({ url }) => new URL(url).origin === SITE_ORIGIN)
+    ).toBe(true)
     expect(output.hasMore).toBe(true)
+    expect(JSON.stringify(output).length).toBeLessThanOrEqual(
+      WEBMCP_OUTPUT_MAX_CHARACTERS
+    )
+  })
+
+  it('reserves the longer final boolean at the output budget boundary', async () => {
+    const { fetch, search } = toolHarness()
+    const fixedOutput = {
+      results: [
+        {
+          title: 'T',
+          url: `${SITE_ORIGIN}/`,
+          type: 'post',
+          snippet: 'D',
+        },
+      ],
+      hasMore: false,
+    }
+    const pathCharacters =
+      WEBMCP_OUTPUT_MAX_CHARACTERS - JSON.stringify(fixedOutput).length + 1
+    fetch.mockResolvedValue(
+      Response.json({
+        results: [
+          {
+            title: 'T',
+            url: `/${'x'.repeat(pathCharacters)}`,
+            type: 'post',
+            description: 'D',
+            excerpts: [],
+          },
+        ],
+      })
+    )
+
+    const output = (await search.execute(
+      { query: 'boundary' },
+      { signal: new AbortController().signal }
+    )) as { hasMore: boolean; results: unknown[] }
+
+    expect(output).toEqual({ results: [], hasMore: true })
     expect(JSON.stringify(output).length).toBeLessThanOrEqual(
       WEBMCP_OUTPUT_MAX_CHARACTERS
     )

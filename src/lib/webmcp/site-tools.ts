@@ -190,8 +190,8 @@ function boundedSearchOutput(value: unknown, origin: string): SearchToolOutput {
   for (const result of available) {
     const candidate: SearchToolOutput = {
       results: [...results, result],
-      // Reserve the longer boolean value while enforcing the output budget.
-      hasMore: true,
+      // Reserve the longer boolean spelling while enforcing the output budget.
+      hasMore: false,
     }
     if (JSON.stringify(candidate).length > WEBMCP_OUTPUT_MAX_CHARACTERS) break
     results.push(result)
