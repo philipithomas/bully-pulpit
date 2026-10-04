@@ -248,7 +248,7 @@ export async function POST(request: Request) {
   })
 
   const result = streamText({
-    // Shared with SMS so every Bell surface uses GPT-5.6 Sol.
+    // Shared with SMS so every Bell surface uses GPT-6.1 Sol.
     model: bellModel,
     reasoning: getBellReasoning('web', turnNumber),
     providerOptions: getBellProviderOptions({
