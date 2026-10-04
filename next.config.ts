@@ -9,15 +9,10 @@ import {
   CONTENT_SECURITY_POLICY_REPORT_ONLY,
   CSP_REPORTING_ENDPOINTS,
 } from '@/lib/security/csp'
+import { BROWSER_SECURITY_HEADERS } from '@/lib/security/headers'
 
 const securityHeaders = [
-  { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'X-Frame-Options', value: 'DENY' },
-  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  {
-    key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=()',
-  },
+  ...BROWSER_SECURITY_HEADERS,
   {
     key: 'Content-Security-Policy',
     value: CONTENT_SECURITY_POLICY,
@@ -33,6 +28,8 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  // Do not advertise the framework on self-hosted or non-Vercel responses.
+  poweredByHeader: false,
   // The Workflow step route pulls in AI SDK gateway serialization classes.
   // Externalize OIDC so Turbopack does not inline its CommonJS wrapper while
   // collecting page data for the generated workflow routes.
