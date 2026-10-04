@@ -16,7 +16,7 @@ const securityHeaders = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=()',
+    value: 'camera=(), microphone=(), geolocation=(), tools=(self)',
   },
   {
     key: 'Content-Security-Policy',
@@ -31,6 +31,14 @@ const securityHeaders = [
     value: CSP_REPORTING_ENDPOINTS,
   },
 ]
+
+const webMcpOriginTrialToken = process.env.WEBMCP_ORIGIN_TRIAL_TOKEN?.trim()
+if (webMcpOriginTrialToken) {
+  securityHeaders.push({
+    key: 'Origin-Trial',
+    value: webMcpOriginTrialToken,
+  })
+}
 
 const nextConfig: NextConfig = {
   // The Workflow step route pulls in AI SDK gateway serialization classes.
